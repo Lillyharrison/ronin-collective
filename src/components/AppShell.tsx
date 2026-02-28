@@ -18,6 +18,7 @@ import { MeetTeamSection } from "@/components/sections/MeetTeamSection";
 import { TravelSection } from "@/components/sections/TravelSection";
 import { AchievementsSection } from "@/components/sections/AchievementsSection";
 import { CalendarSection } from "@/components/sections/CalendarSection";
+import { MasterImportSection } from "@/components/sections/MasterImportSection";
 
 const sectionTitles: Record<string, string> = {
   dashboard:   "",              // uses logo
@@ -33,8 +34,9 @@ const sectionTitles: Record<string, string> = {
   orders:      "Orders",
   "meet-team": "Meet the Team",
   travel:      "Travel",
-  calendar:    "Calendar",
-  achievements:"Achievements",
+  calendar:       "Calendar",
+  achievements:   "Achievements",
+  "master-import":"Master Import",
 };
 
 function ActiveSection() {
@@ -54,8 +56,9 @@ function ActiveSection() {
     case "meet-team":   return <MeetTeamSection />;
     case "travel":      return <TravelSection />;
     case "calendar":    return <CalendarSection />;
-    case "achievements":return <AchievementsSection />;
-    default:            return <Dashboard />;
+    case "achievements":  return <AchievementsSection />;
+    case "master-import": return <MasterImportSection />;
+    default:              return <Dashboard />;
   }
 }
 

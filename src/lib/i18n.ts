@@ -56,6 +56,7 @@ export const translations = {
     cancel: "Cancel",
     save: "Save",
     achievements: "Achievements",
+    masterImport: "Master Import",
   },
   es: {
     home: "Inicio",
@@ -107,6 +108,7 @@ export const translations = {
     submit: "Enviar",
     cancel: "Cancelar",
     save: "Guardar",
+    masterImport: "Importación Maestra",
   },
 } as const;
 
