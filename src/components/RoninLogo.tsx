@@ -35,7 +35,7 @@ export function RoninWordmark({
     <img
       src={roninLogo}
       alt="Ronin"
-      style={{ height, width: "auto", objectFit: "contain", filter: "invert(1)" }}
+      style={{ height, width: "auto", objectFit: "contain" }}
       className={className}
     />
   );
