@@ -55,6 +55,7 @@ export const translations = {
     submit: "Submit",
     cancel: "Cancel",
     save: "Save",
+    achievements: "Achievements",
   },
   es: {
     home: "Inicio",
@@ -63,6 +64,7 @@ export const translations = {
     messages: "Mensajes",
     profile: "Perfil",
     more: "Más",
+    achievements: "Logros",
 
     commandCenter: "Centro de Mando",
     goodMorning: "Buenos días",

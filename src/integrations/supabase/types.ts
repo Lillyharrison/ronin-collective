@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          created_at: string
+          description_en: string | null
+          description_es: string | null
+          icon: string
+          id: string
+          key: string
+          points: number
+          title_en: string
+          title_es: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description_en?: string | null
+          description_es?: string | null
+          icon?: string
+          id?: string
+          key: string
+          points?: number
+          title_en: string
+          title_es?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description_en?: string | null
+          description_es?: string | null
+          icon?: string
+          id?: string
+          key?: string
+          points?: number
+          title_en?: string
+          title_es?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           category: Database["public"]["Enums"]["asset_category"]
@@ -437,6 +476,45 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          badges_earned: string[] | null
+          created_at: string
+          current_streak: number
+          id: string
+          last_activity_date: string | null
+          longest_streak: number
+          points_total: number
+          tasks_completed: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badges_earned?: string[] | null
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          points_total?: number
+          tasks_completed?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badges_earned?: string[] | null
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          points_total?: number
+          tasks_completed?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

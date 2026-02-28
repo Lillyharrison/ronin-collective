@@ -4,7 +4,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MapPin, Clock, CheckSquare, TriangleAlert,
-  UserCheck, Package, ChevronRight, Activity,
+  UserCheck, Package, ChevronRight, Activity, Trophy,
 } from "lucide-react";
 
 interface Property {
@@ -26,7 +26,7 @@ const statusConfig = {
 const quickActions = [
   { labelKey: "myTasks" as const,     labelEs: "Mis Tareas",          icon: <CheckSquare size={26} />, section: "tasks" as const },
   { labelKey: "reportIssue" as const, labelEs: "Reportar Problema",   icon: <TriangleAlert size={26} />, section: "maintenance" as const },
-  { labelKey: "houseManual" as const, labelEs: "Manual de Casa",      icon: <Package size={26} />, section: "manuals" as const },
+  { labelKey: "houseManual" as const, labelEs: "Logros",             icon: <Trophy size={26} />, section: "achievements" as const },
   { labelKey: "calendar" as const,    labelEs: "Calendario",          icon: <Clock size={26} />, section: "calendar" as const },
 ];
 
