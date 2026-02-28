@@ -1,0 +1,612 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      assets: {
+        Row: {
+          category: Database["public"]["Enums"]["asset_category"]
+          created_at: string
+          current_property_id: string | null
+          description: string | null
+          id: string
+          last_serviced_at: string | null
+          make: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          photo_url: string | null
+          purchase_date: string | null
+          purchase_value: number | null
+          qr_code_id: string | null
+          serial_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["asset_category"]
+          created_at?: string
+          current_property_id?: string | null
+          description?: string | null
+          id?: string
+          last_serviced_at?: string | null
+          make?: string | null
+          model?: string | null
+          name: string
+          notes?: string | null
+          photo_url?: string | null
+          purchase_date?: string | null
+          purchase_value?: number | null
+          qr_code_id?: string | null
+          serial_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["asset_category"]
+          created_at?: string
+          current_property_id?: string | null
+          description?: string | null
+          id?: string
+          last_serviced_at?: string | null
+          make?: string | null
+          model?: string | null
+          name?: string
+          notes?: string | null
+          photo_url?: string | null
+          purchase_date?: string | null
+          purchase_value?: number | null
+          qr_code_id?: string | null
+          serial_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_current_property_id_fkey"
+            columns: ["current_property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          last_message_at: string | null
+          participant_ids: string[] | null
+          property_id: string | null
+          title: string | null
+          type: Database["public"]["Enums"]["thread_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string | null
+          participant_ids?: string[] | null
+          property_id?: string | null
+          title?: string | null
+          type?: Database["public"]["Enums"]["thread_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string | null
+          participant_ids?: string[] | null
+          property_id?: string | null
+          title?: string | null
+          type?: Database["public"]["Enums"]["thread_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manuals: {
+        Row: {
+          category: string
+          content_en: string | null
+          content_es: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          file_url: string | null
+          id: string
+          is_universal: boolean
+          property_id: string | null
+          title_en: string
+          title_es: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content_en?: string | null
+          content_es?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_url?: string | null
+          id?: string
+          is_universal?: boolean
+          property_id?: string | null
+          title_en: string
+          title_es?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content_en?: string | null
+          content_es?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_url?: string | null
+          id?: string
+          is_universal?: boolean
+          property_id?: string | null
+          title_en?: string
+          title_es?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manuals_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content_media_url: string | null
+          content_text: string | null
+          created_at: string
+          id: string
+          is_ai_generated: boolean
+          media_type: string | null
+          reply_to_id: string | null
+          seen_by: string[] | null
+          sender_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          content_media_url?: string | null
+          content_text?: string | null
+          created_at?: string
+          id?: string
+          is_ai_generated?: boolean
+          media_type?: string | null
+          reply_to_id?: string | null
+          seen_by?: string[] | null
+          sender_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          content_media_url?: string | null
+          content_text?: string | null
+          created_at?: string
+          id?: string
+          is_ai_generated?: boolean
+          media_type?: string | null
+          reply_to_id?: string | null
+          seen_by?: string[] | null
+          sender_id?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          assigned_property_ids: string[] | null
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          job_title: string | null
+          language_pref: Database["public"]["Enums"]["language_pref"]
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_property_ids?: string[] | null
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          job_title?: string | null
+          language_pref?: Database["public"]["Enums"]["language_pref"]
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_property_ids?: string[] | null
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          language_pref?: Database["public"]["Enums"]["language_pref"]
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          name: string
+          status: Database["public"]["Enums"]["property_status"]
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          status?: Database["public"]["Enums"]["property_status"]
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          status?: Database["public"]["Enums"]["property_status"]
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      system_events: {
+        Row: {
+          ai_response: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          processed_by_ai: boolean
+          property_id: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          ai_response?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed_by_ai?: boolean
+          property_id?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          ai_response?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed_by_ai?: boolean
+          property_id?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_events_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          category: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description_en: string | null
+          description_es: string | null
+          due_date: string | null
+          id: string
+          photo_url: string | null
+          priority: number
+          property_id: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title_en: string
+          title_es: string | null
+          updated_at: string
+          voice_note_url: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          description_en?: string | null
+          description_es?: string | null
+          due_date?: string | null
+          id?: string
+          photo_url?: string | null
+          priority?: number
+          property_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title_en: string
+          title_es?: string | null
+          updated_at?: string
+          voice_note_url?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description_en?: string | null
+          description_es?: string | null
+          due_date?: string | null
+          id?: string
+          photo_url?: string | null
+          priority?: number
+          property_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title_en?: string
+          title_es?: string | null
+          updated_at?: string
+          voice_note_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+    }
+    Enums: {
+      app_role: "master_admin" | "admin" | "manager" | "staff" | "principal"
+      asset_category:
+        | "vehicle"
+        | "appliance"
+        | "art"
+        | "tech"
+        | "furniture"
+        | "other"
+      language_pref: "en" | "es"
+      property_status: "occupied" | "vacant" | "maintenance"
+      task_status: "pending" | "in_progress" | "completed" | "urgent"
+      thread_type: "private" | "group" | "system_ai" | "property"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["master_admin", "admin", "manager", "staff", "principal"],
+      asset_category: [
+        "vehicle",
+        "appliance",
+        "art",
+        "tech",
+        "furniture",
+        "other",
+      ],
+      language_pref: ["en", "es"],
+      property_status: ["occupied", "vacant", "maintenance"],
+      task_status: ["pending", "in_progress", "completed", "urgent"],
+      thread_type: ["private", "group", "system_ai", "property"],
+    },
+  },
+} as const
