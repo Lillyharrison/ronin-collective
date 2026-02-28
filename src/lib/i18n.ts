@@ -24,7 +24,6 @@ export const translations = {
     myTasks: "My Tasks",
     reportIssue: "Report an Issue",
     houseManual: "House Manual",
-    calendar: "Calendar",
 
     // Status
     occupied: "Occupied",
@@ -57,6 +56,7 @@ export const translations = {
     save: "Save",
     achievements: "Achievements",
     masterImport: "Master Import",
+    calendar: "Calendar",
   },
   es: {
     home: "Inicio",
@@ -80,7 +80,6 @@ export const translations = {
     myTasks: "Mis Tareas",
     reportIssue: "Reportar Problema",
     houseManual: "Manual de Casa",
-    calendar: "Calendario",
 
     occupied: "Ocupado",
     vacant: "Vacante",
@@ -109,6 +108,7 @@ export const translations = {
     cancel: "Cancelar",
     save: "Guardar",
     masterImport: "Importación Maestra",
+    calendar: "Calendario",
   },
 } as const;
 
