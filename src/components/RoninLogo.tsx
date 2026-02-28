@@ -1,39 +1,41 @@
-import roninLogo from "@/assets/ronin-logo.jpg";
+import roninIcon from "@/assets/ronin-icon.png";
+import roninLogo from "@/assets/ronin-logo.png";
 
-interface RoninLogoProps {
+interface RoninRProps {
   size?: number;
   className?: string;
 }
 
-// Crops just the "R" glyph from the Ronin wordmark using object-position
-export function RoninR({ size = 36, className = "" }: RoninLogoProps) {
+// The standalone R icon — transparent PNG, inverted to cream/white on dark bg
+export function RoninR({ size = 32, className = "" }: RoninRProps) {
   return (
-    <div
-      className={`rounded-sm overflow-hidden bg-charcoal flex items-center justify-center ${className}`}
-      style={{ width: size, height: size, minWidth: size }}
-    >
-      <img
-        src={roninLogo}
-        alt="R"
-        style={{
-          width: size * 5.5,
-          height: "auto",
-          objectFit: "cover",
-          marginLeft: `-${size * 0.1}px`,
-          filter: "invert(1)",
-        }}
-      />
-    </div>
+    <img
+      src={roninIcon}
+      alt="R"
+      style={{
+        width: size,
+        height: size,
+        objectFit: "contain",
+        filter: "invert(1)",
+      }}
+      className={className}
+    />
   );
 }
 
-// Full wordmark (for header center)
-export function RoninWordmark({ height = 22, className = "" }: { height?: number; className?: string }) {
+// Full RONIN wordmark — transparent PNG, inverted to cream/white on dark bg
+export function RoninWordmark({
+  height = 20,
+  className = "",
+}: {
+  height?: number;
+  className?: string;
+}) {
   return (
     <img
       src={roninLogo}
       alt="Ronin"
-      style={{ height, width: "auto", filter: "invert(1)" }}
+      style={{ height, width: "auto", objectFit: "contain", filter: "invert(1)" }}
       className={className}
     />
   );
