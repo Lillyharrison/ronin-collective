@@ -162,6 +162,24 @@ export type Database = {
           },
         ]
       }
+      job_title_suggestions: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       manuals: {
         Row: {
           category: string
@@ -276,34 +294,49 @@ export type Database = {
         Row: {
           assigned_property_ids: string[] | null
           avatar_url: string | null
+          birthday: string | null
           created_at: string
+          department: string | null
           full_name: string | null
           id: string
           job_title: string | null
           language_pref: Database["public"]["Enums"]["language_pref"]
+          level: string | null
+          notes: string | null
           phone: string | null
+          start_date: string | null
           updated_at: string
         }
         Insert: {
           assigned_property_ids?: string[] | null
           avatar_url?: string | null
+          birthday?: string | null
           created_at?: string
+          department?: string | null
           full_name?: string | null
           id: string
           job_title?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
+          level?: string | null
+          notes?: string | null
           phone?: string | null
+          start_date?: string | null
           updated_at?: string
         }
         Update: {
           assigned_property_ids?: string[] | null
           avatar_url?: string | null
+          birthday?: string | null
           created_at?: string
+          department?: string | null
           full_name?: string | null
           id?: string
           job_title?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
+          level?: string | null
+          notes?: string | null
           phone?: string | null
+          start_date?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -1,21 +1,23 @@
 import { useNavigation, ActiveSection } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { RoninWordmark } from "@/components/RoninLogo";
 import {
   X, Home, Wrench, MessageCircle, User,
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
-  Building2, Trophy, FileSpreadsheet,
+  Building2, Trophy, FileSpreadsheet, Calendar,
 } from "lucide-react";
+
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
 
-const items: SidebarItem[] = [
+const ALL_ITEMS: SidebarItem[] = [
   { section: "dashboard",    labelKey: "home",         icon: <Home size={20} /> },
   { section: "property",     labelKey: "property",     icon: <Building2 size={20} /> },
   { section: "maintenance",  labelKey: "maintenance",  icon: <Wrench size={20} /> },
@@ -26,18 +28,22 @@ const items: SidebarItem[] = [
   { section: "tasks",        labelKey: "tasks",        icon: <CheckSquare size={20} /> },
   { section: "contacts",     labelKey: "contacts",     icon: <Users size={20} /> },
   { section: "inventory",    labelKey: "inventory",    icon: <Package size={20} /> },
-  { section: "laundry",       labelKey: "laundry",      icon: <Shirt size={20} />, dividerBefore: true },
-  { section: "orders",        labelKey: "orders",       icon: <ShoppingCart size={20} /> },
-  { section: "meet-team",     labelKey: "meetTeam",     icon: <UsersRound size={20} /> },
-  { section: "travel",        labelKey: "travel",       icon: <Plane size={20} /> },
-  { section: "master-import", labelKey: "masterImport", icon: <FileSpreadsheet size={20} />, dividerBefore: true },
+  { section: "laundry",      labelKey: "laundry",      icon: <Shirt size={20} />, dividerBefore: true },
+  { section: "orders",       labelKey: "orders",       icon: <ShoppingCart size={20} /> },
+  { section: "meet-team",    labelKey: "meetTeam",     icon: <UsersRound size={20} /> },
+  { section: "travel",       labelKey: "travel",       icon: <Plane size={20} /> },
+  { section: "calendar",     labelKey: "calendar",     icon: <Calendar size={20} /> },
+  { section: "master-import",labelKey: "masterImport", icon: <FileSpreadsheet size={20} />, dividerBefore: true },
 ];
 
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen, activeSection, setActiveSection } = useNavigation();
   const { t } = useLanguage();
+  const { canSee, loading: permLoading } = usePermissions();
 
   if (!sidebarOpen) return null;
+
+  const items = permLoading ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
 
   return (
     <>

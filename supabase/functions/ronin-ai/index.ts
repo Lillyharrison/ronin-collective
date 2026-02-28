@@ -53,7 +53,73 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { type, content, thread_id, csv_content, property_id } = body;
+    const { type, content, thread_id, csv_content, property_id, action } = body;
+
+    // ─── INVITE USER (admin action) ───────────────────────────────────────────
+    if (action === "invite_user") {
+      if (!["master_admin", "admin"].includes(callerRole)) {
+        return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { email, full_name, job_title, level, department, role, start_date, birthday, notes } = body;
+      if (!email || !full_name || !level || !role) {
+        return new Response(JSON.stringify({ error: "Missing required fields" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 1. Create auth user via admin API
+      const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
+        email,
+        email_confirm: false,
+        user_metadata: { full_name },
+      });
+      if (createErr || !newUser?.user) {
+        return new Response(JSON.stringify({ error: createErr?.message ?? "Failed to create user" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const uid = newUser.user.id;
+
+      // 2. Upsert profile with extended fields
+      await adminClient.from("profiles").upsert({
+        id: uid,
+        full_name,
+        job_title: job_title || null,
+        level,
+        department: department || null,
+        start_date: start_date || null,
+        birthday: birthday || null,
+        notes: notes || null,
+      });
+
+      // 3. Assign role
+      await adminClient.from("user_roles").insert({ user_id: uid, role });
+
+      // 4. Initialize user stats
+      await adminClient.from("user_stats").insert({ user_id: uid }).select().maybeSingle();
+
+      // 5. Send password reset (invite) email
+      await adminClient.auth.admin.inviteUserByEmail(email);
+
+      // 6. Log system event
+      await adminClient.from("system_events").insert({
+        event_type: "user_invited",
+        entity_type: "profile",
+        entity_id: uid,
+        triggered_by: callerUserId,
+        payload: { email, full_name, level, role },
+        processed_by_ai: false,
+      });
+
+      return new Response(JSON.stringify({ success: true, user_id: uid }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // ─── SYSTEM PROMPT ────────────────────────────────────────────────────────
     const systemPrompt = `You are Ronin AI, the intelligent operations backbone for Ronin Collective — a luxury estate management platform.
