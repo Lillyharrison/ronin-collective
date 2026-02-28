@@ -5,30 +5,31 @@ import {
   X, Home, Wrench, MessageCircle, User,
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
-  Building2,
+  Building2, Trophy,
 } from "lucide-react";
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
 
 const items: SidebarItem[] = [
-  { section: "dashboard",   labelKey: "home",        icon: <Home size={20} /> },
-  { section: "property",    labelKey: "property",    icon: <Building2 size={20} /> },
-  { section: "maintenance", labelKey: "maintenance", icon: <Wrench size={20} /> },
-  { section: "messages",    labelKey: "messages",    icon: <MessageCircle size={20} /> },
-  { section: "profile",     labelKey: "profile",     icon: <User size={20} /> },
-  { section: "manuals",     labelKey: "manuals",     icon: <BookOpen size={20} />, dividerBefore: true },
-  { section: "tasks",       labelKey: "tasks",       icon: <CheckSquare size={20} /> },
-  { section: "contacts",    labelKey: "contacts",    icon: <Users size={20} /> },
-  { section: "inventory",   labelKey: "inventory",   icon: <Package size={20} /> },
-  { section: "laundry",     labelKey: "laundry",     icon: <Shirt size={20} />, dividerBefore: true },
-  { section: "orders",      labelKey: "orders",      icon: <ShoppingCart size={20} /> },
-  { section: "meet-team",   labelKey: "meetTeam",    icon: <UsersRound size={20} /> },
-  { section: "travel",      labelKey: "travel",      icon: <Plane size={20} /> },
+  { section: "dashboard",    labelKey: "home",         icon: <Home size={20} /> },
+  { section: "property",     labelKey: "property",     icon: <Building2 size={20} /> },
+  { section: "maintenance",  labelKey: "maintenance",  icon: <Wrench size={20} /> },
+  { section: "messages",     labelKey: "messages",     icon: <MessageCircle size={20} /> },
+  { section: "profile",      labelKey: "profile",      icon: <User size={20} /> },
+  { section: "achievements", labelKey: "achievements", icon: <Trophy size={20} />, dividerBefore: true },
+  { section: "manuals",      labelKey: "manuals",      icon: <BookOpen size={20} /> },
+  { section: "tasks",        labelKey: "tasks",        icon: <CheckSquare size={20} /> },
+  { section: "contacts",     labelKey: "contacts",     icon: <Users size={20} /> },
+  { section: "inventory",    labelKey: "inventory",    icon: <Package size={20} /> },
+  { section: "laundry",      labelKey: "laundry",      icon: <Shirt size={20} />, dividerBefore: true },
+  { section: "orders",       labelKey: "orders",       icon: <ShoppingCart size={20} /> },
+  { section: "meet-team",    labelKey: "meetTeam",     icon: <UsersRound size={20} /> },
+  { section: "travel",       labelKey: "travel",       icon: <Plane size={20} /> },
 ];
 
 export function Sidebar() {

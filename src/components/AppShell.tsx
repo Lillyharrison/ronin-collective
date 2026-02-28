@@ -16,6 +16,7 @@ import { LaundrySection } from "@/components/sections/LaundrySection";
 import { OrdersSection } from "@/components/sections/OrdersSection";
 import { MeetTeamSection } from "@/components/sections/MeetTeamSection";
 import { TravelSection } from "@/components/sections/TravelSection";
+import { AchievementsSection } from "@/components/sections/AchievementsSection";
 import { CalendarSection } from "@/components/sections/CalendarSection";
 
 const sectionTitles: Record<string, string> = {
@@ -33,6 +34,7 @@ const sectionTitles: Record<string, string> = {
   "meet-team": "Meet the Team",
   travel:      "Travel",
   calendar:    "Calendar",
+  achievements:"Achievements",
 };
 
 function ActiveSection() {
@@ -52,6 +54,7 @@ function ActiveSection() {
     case "meet-team":   return <MeetTeamSection />;
     case "travel":      return <TravelSection />;
     case "calendar":    return <CalendarSection />;
+    case "achievements":return <AchievementsSection />;
     default:            return <Dashboard />;
   }
 }
