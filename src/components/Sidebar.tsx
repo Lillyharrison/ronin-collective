@@ -43,7 +43,8 @@ export function Sidebar() {
 
   if (!sidebarOpen) return null;
 
-  const items = permLoading ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
+  // While loading OR if no role resolved (unauthenticated / dev mode), show all items
+  const items = (permLoading || !canSee("dashboard")) ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
 
   return (
     <>
