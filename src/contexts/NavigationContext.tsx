@@ -16,7 +16,8 @@ export type ActiveSection =
   | "meet-team"
   | "travel"
   | "calendar"
-  | "achievements";
+  | "achievements"
+  | "master-import";
 
 interface NavigationContextType {
   activeTab: ActiveTab;
