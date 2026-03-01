@@ -219,16 +219,14 @@ export function MeetTeamSection() {
             className="pl-8 h-9 bg-card border-border text-sm"
           />
         </div>
-        {(isMasterAdmin || isAdmin) && (
-          <Button
-            onClick={() => setShowAdd(true)}
-            size="sm"
-            className="bg-gold hover:bg-gold/90 text-charcoal font-semibold gap-1.5 shrink-0"
-          >
-            <Plus size={14} />
-            {isEN ? "Add User" : "Agregar"}
-          </Button>
-        )}
+        <Button
+          onClick={() => setShowAdd(true)}
+          size="sm"
+          className="bg-gold hover:bg-gold/90 text-charcoal font-semibold gap-1.5 shrink-0"
+        >
+          <Plus size={14} />
+          {isEN ? "Add User" : "Agregar"}
+        </Button>
       </div>
 
       {/* Level filter chips */}
