@@ -1,7 +1,9 @@
 import { PlaceholderSection } from "@/components/PlaceholderSection";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { User, Trophy, Star, Flame } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { User, Trophy, Star, Flame, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Mock earned badges for demo
 const DEMO_BADGES = [
@@ -16,6 +18,7 @@ const DEMO_BADGES = [
 export function ProfileSection() {
   const { setActiveSection } = useNavigation();
   const { language } = useLanguage();
+  const { user, signOut } = useAuth();
 
   return (
     <div className="animate-fade-in pb-4">
@@ -24,7 +27,7 @@ export function ProfileSection() {
         <div className="w-20 h-20 rounded-full bg-gold/20 border-2 border-gold/60 flex items-center justify-center mb-3">
           <span className="font-display text-gold text-3xl">L</span>
         </div>
-        <h1 className="font-display text-2xl text-cream">Lilly</h1>
+        <h1 className="font-display text-2xl text-cream">{user?.user_metadata?.full_name || user?.email || "Profile"}</h1>
         <span className="mt-1 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[10px] tracking-widest uppercase font-semibold">
           Master Admin
         </span>
@@ -61,6 +64,18 @@ export function ProfileSection() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Sign out */}
+      <div className="px-4 mt-2 mb-2">
+        <Button
+          variant="outline"
+          className="w-full gap-2 text-muted-foreground border-border hover:border-destructive hover:text-destructive"
+          onClick={signOut}
+        >
+          <LogOut size={15} />
+          {language === "es" ? "Cerrar sesión" : "Sign out"}
+        </Button>
       </div>
 
       {/* Badges section */}
