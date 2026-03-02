@@ -39,12 +39,16 @@ const ALL_ITEMS: SidebarItem[] = [
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen, activeSection, setActiveSection } = useNavigation();
   const { t } = useLanguage();
-  const { canSee, loading: permLoading, role } = usePermissions();
+  const { canSee, loading: permLoading, role, fullName, avatarUrl } = usePermissions();
 
   if (!sidebarOpen) return null;
 
-  // While loading OR if no role resolved, show all items to avoid flicker/missing items
-  const items = (permLoading || !role) ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
+  // While loading show all items; once loaded, filter by canSee
+  const items = permLoading ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
+
+  const displayName = fullName || "User";
+  const displayInitial = displayName[0].toUpperCase();
+  const displayRole = role ? role.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "";
 
   return (
     <>
@@ -70,12 +74,16 @@ export function Sidebar() {
         {/* Role badge */}
         <div className="px-5 py-3 border-b border-charcoal-light">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gold/20 border border-gold/40 flex items-center justify-center">
-              <span className="text-gold text-sm font-semibold">L</span>
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={displayName} className="w-9 h-9 rounded-full object-cover border border-gold/40" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gold/20 border border-gold/40 flex items-center justify-center">
+                <span className="text-gold text-sm font-semibold">{displayInitial}</span>
+              </div>
+            )}
             <div>
-              <p className="text-cream text-sm font-medium leading-none">Lilly</p>
-              <p className="text-gold text-[10px] tracking-widest uppercase mt-0.5">Master Admin</p>
+              <p className="text-cream text-sm font-medium leading-none">{displayName}</p>
+              <p className="text-gold text-[10px] tracking-widest uppercase mt-0.5">{displayRole}</p>
             </div>
           </div>
         </div>
