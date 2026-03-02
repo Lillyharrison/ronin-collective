@@ -405,6 +405,57 @@ function PropertyImageUploader({ value, onChange }: { value: string; onChange: (
   );
 }
 
+// ─── Timezone Select ─────────────────────────────────────────────────────────
+const ALL_TIMEZONES: string[] = (Intl as any).supportedValuesOf?.("timeZone") ?? [
+  "America/Los_Angeles","America/Denver","America/Chicago","America/New_York",
+  "America/Anchorage","Pacific/Honolulu","America/Phoenix","America/Toronto",
+  "America/Vancouver","America/Mexico_City","America/Bogota","America/Lima",
+  "America/Santiago","America/Sao_Paulo","America/Buenos_Aires",
+  "Europe/London","Europe/Dublin","Europe/Lisbon","Europe/Paris","Europe/Berlin",
+  "Europe/Madrid","Europe/Rome","Europe/Amsterdam","Europe/Brussels",
+  "Europe/Vienna","Europe/Zurich","Europe/Stockholm","Europe/Oslo","Europe/Copenhagen",
+  "Europe/Helsinki","Europe/Warsaw","Europe/Prague","Europe/Budapest",
+  "Europe/Bucharest","Europe/Athens","Europe/Istanbul","Europe/Moscow",
+  "Asia/Dubai","Asia/Karachi","Asia/Kolkata","Asia/Dhaka","Asia/Colombo",
+  "Asia/Bangkok","Asia/Jakarta","Asia/Singapore","Asia/Kuala_Lumpur",
+  "Asia/Manila","Asia/Hong_Kong","Asia/Shanghai","Asia/Taipei",
+  "Asia/Seoul","Asia/Tokyo","Asia/Vladivostok",
+  "Australia/Perth","Australia/Darwin","Australia/Adelaide",
+  "Australia/Brisbane","Australia/Sydney","Australia/Melbourne","Pacific/Auckland",
+  "Africa/Cairo","Africa/Johannesburg","Africa/Lagos","Africa/Nairobi",
+];
+
+function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [search, setSearch] = useState("");
+  const filtered = search
+    ? ALL_TIMEZONES.filter(tz => tz.toLowerCase().includes(search.toLowerCase()))
+    : ALL_TIMEZONES;
+
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Select timezone" />
+      </SelectTrigger>
+      <SelectContent className="max-h-64">
+        <div className="p-2 sticky top-0 bg-popover z-10">
+          <Input
+            placeholder="Search timezones…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-8 text-xs"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+        {filtered.slice(0, 200).map(tz => (
+          <SelectItem key={tz} value={tz} className="text-xs">
+            {tz.replace(/_/g, " ")}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 // ─── Form Dialog ──────────────────────────────────────────────────────────────
 function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onClose }: {
   open: boolean; editing: boolean;
@@ -426,7 +477,7 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
           </div>
           <div className="space-y-1">
             <Label>Address *</Label>
-            <Input value={form.address} onChange={e => set("address", e.target.value)} placeholder="123 Ocean Drive" />
+            <Input value={form.address} onChange={e => set("address", e.target.value)} placeholder="123 Ocean Drive" autoComplete="street-address" />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
@@ -438,23 +489,21 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
               <Input value={form.country} onChange={e => set("country", e.target.value)} placeholder="USA" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={v => set("status", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="occupied">Occupied</SelectItem>
-                  <SelectItem value="vacant">Vacant</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="under_construction">Under Construction</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Timezone</Label>
-              <Input value={form.timezone} onChange={e => set("timezone", e.target.value)} placeholder="America/LA" />
-            </div>
+          <div className="space-y-1">
+            <Label>Status</Label>
+            <Select value={form.status} onValueChange={v => set("status", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="occupied">Occupied</SelectItem>
+                <SelectItem value="vacant">Vacant</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="under_construction">Under Construction</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Timezone</Label>
+            <TimezoneSelect value={form.timezone} onChange={v => set("timezone", v)} />
           </div>
           {/* Primary toggle */}
           <button
