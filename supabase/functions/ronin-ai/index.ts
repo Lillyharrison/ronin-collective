@@ -274,16 +274,100 @@ ${csv_content}`;
     if (type === "message") {
       const { messages: conversationHistory = [] } = body;
 
-      // Load recent context: tasks count, open issues for this user/property
-      let contextNote = "";
-      if (callerUserId) {
-        const { data: pendingTasks } = await adminClient
+      // ── On-demand context injection based on keywords ──────────────────────
+      const msgLower = (content as string).toLowerCase();
+
+      const wantsProperties = /propert|house|home|ranch|estate|residence|villa|location/i.test(msgLower);
+      const wantsTasks = /task|job|todo|to-do|pending|urgent|maintenance|repair|work|chore/i.test(msgLower);
+      const wantsStaff = /staff|team|member|employee|who|person|people|contact|roster/i.test(msgLower);
+      const wantsAssets = /asset|vehicle|car|truck|appliance|inventory|equipment|item/i.test(msgLower);
+      const wantsEvents = /event|recent|last|latest|history|log|happened|update/i.test(msgLower);
+
+      const contextSections: string[] = [];
+
+      // Properties
+      if (wantsProperties) {
+        const { data: props } = await adminClient
+          .from("properties")
+          .select("id, name, address, city, country, status, is_primary, occupied_by, timezone")
+          .order("sort_order");
+        if (props && props.length > 0) {
+          const propLines = props.map((p: Record<string, unknown>) =>
+            `  - ${p.name} (${p.city ?? p.address}, ${p.country ?? ""}) | Status: ${p.status} | Primary: ${p.is_primary} | Occupied by: ${p.occupied_by ?? "N/A"} | Timezone: ${p.timezone}`
+          );
+          contextSections.push(`PROPERTIES (${props.length} total):\n${propLines.join("\n")}`);
+        } else {
+          contextSections.push("PROPERTIES: None found.");
+        }
+      }
+
+      // Tasks
+      if (wantsTasks) {
+        const { data: tasks } = await adminClient
           .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["pending", "in_progress"])
-          .eq("assigned_to", callerUserId);
-        const pendingCount = (pendingTasks as unknown as { count: number } | null)?.count ?? 0;
-        contextNote = `\nLive context: User has ${pendingCount} pending/in-progress tasks.`;
+          .select("id, title_en, status, priority, category, due_date, assigned_to, property_id")
+          .in("status", ["pending", "in_progress", "urgent"])
+          .order("priority")
+          .limit(30);
+        if (tasks && tasks.length > 0) {
+          const taskLines = tasks.map((t: Record<string, unknown>) =>
+            `  - [${t.status}] ${t.title_en} | Priority: ${t.priority} | Category: ${t.category ?? "general"} | Due: ${t.due_date ?? "none"}`
+          );
+          contextSections.push(`OPEN TASKS (${tasks.length} shown):\n${taskLines.join("\n")}`);
+        } else {
+          contextSections.push("OPEN TASKS: None found.");
+        }
+      }
+
+      // Staff
+      if (wantsStaff) {
+        const { data: staff } = await adminClient
+          .from("profiles")
+          .select("id, full_name, job_title, department, level, assigned_property_ids");
+        if (staff && staff.length > 0) {
+          const staffLines = staff.map((s: Record<string, unknown>) =>
+            `  - ${s.full_name ?? "Unknown"} | Role: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level}`
+          );
+          contextSections.push(`TEAM MEMBERS (${staff.length} total):\n${staffLines.join("\n")}`);
+        } else {
+          contextSections.push("TEAM MEMBERS: None found.");
+        }
+      }
+
+      // Assets
+      if (wantsAssets) {
+        const { data: assets } = await adminClient
+          .from("assets")
+          .select("id, name, category, make, model, serial_number, current_property_id")
+          .limit(40);
+        if (assets && assets.length > 0) {
+          const assetLines = assets.map((a: Record<string, unknown>) =>
+            `  - ${a.name} | Category: ${a.category} | Make: ${a.make ?? "N/A"} ${a.model ?? ""}`
+          );
+          contextSections.push(`ASSETS (${assets.length} shown):\n${assetLines.join("\n")}`);
+        } else {
+          contextSections.push("ASSETS: None found.");
+        }
+      }
+
+      // Recent events
+      if (wantsEvents) {
+        const { data: events } = await adminClient
+          .from("system_events")
+          .select("event_type, entity_type, created_at, payload, ai_response")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (events && events.length > 0) {
+          const eventLines = events.map((e: Record<string, unknown>) =>
+            `  - [${e.event_type}] ${e.entity_type ?? ""} at ${e.created_at}`
+          );
+          contextSections.push(`RECENT SYSTEM EVENTS:\n${eventLines.join("\n")}`);
+        }
+      }
+
+      let contextNote = "";
+      if (contextSections.length > 0) {
+        contextNote = "\n\n=== LIVE PLATFORM DATA ===\n" + contextSections.join("\n\n") + "\n=== END LIVE DATA ===";
       }
 
       const aiMessages = [
