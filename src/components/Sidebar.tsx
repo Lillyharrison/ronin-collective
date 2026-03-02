@@ -39,12 +39,12 @@ const ALL_ITEMS: SidebarItem[] = [
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen, activeSection, setActiveSection } = useNavigation();
   const { t } = useLanguage();
-  const { canSee, loading: permLoading } = usePermissions();
+  const { canSee, loading: permLoading, role } = usePermissions();
 
   if (!sidebarOpen) return null;
 
-  // While loading OR if no role resolved (unauthenticated / dev mode), show all items
-  const items = (permLoading || !canSee("dashboard")) ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
+  // While loading OR if no role resolved, show all items to avoid flicker/missing items
+  const items = (permLoading || !role) ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
 
   return (
     <>
