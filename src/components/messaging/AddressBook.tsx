@@ -15,12 +15,13 @@ interface Contact {
 interface AddressBookProps {
   currentUserId: string;
   currentUserLevel: string | null;
+  isMasterAdmin?: boolean;
   onBack: () => void;
   onStartDM: (userId: string) => void;
   onCreateGroup: (name: string, participantIds: string[]) => void;
 }
 
-export function AddressBook({ currentUserId, currentUserLevel, onBack, onStartDM, onCreateGroup }: AddressBookProps) {
+export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = false, onBack, onStartDM, onCreateGroup }: AddressBookProps) {
   const { language } = useLanguage();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [search, setSearch] = useState("");
@@ -55,7 +56,9 @@ export function AddressBook({ currentUserId, currentUserLevel, onBack, onStartDM
   const isStaff = currentUserLevel === "staff";
 
   // Privacy: staff can't initiate with family unless family messaged them first
+  // Master admin always has full access
   const canMessageContact = (contact: Contact): boolean => {
+    if (isMasterAdmin) return true;
     if (!isStaff) return true; // family/managers can message anyone
     const isFamily = contact.level === "principal" || contact.level === "extended_family";
     if (!isFamily) return true;
