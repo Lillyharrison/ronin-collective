@@ -22,6 +22,7 @@ interface Property {
   status: PropertyStatus;
   image_url: string | null;
   timezone: string;
+  is_primary: boolean;
 }
 
 const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon: React.ReactNode }> = {
@@ -39,7 +40,7 @@ const PROPERTY_SUB_SECTIONS = [
   { key: "calendar",    label: "Schedule",    icon: <Calendar size={20} />,     description: "Events & bookings" },
 ];
 
-const emptyForm = { name: "", address: "", city: "", country: "", timezone: "America/Los_Angeles", status: "vacant" as PropertyStatus, image_url: "" };
+const emptyForm = { name: "", address: "", city: "", country: "", timezone: "America/Los_Angeles", status: "vacant" as PropertyStatus, image_url: "", is_primary: false };
 
 export function PropertySection() {
   const { isMasterAdmin, assignedPropertyIds, loading: permLoading } = usePermissions();
@@ -71,7 +72,12 @@ export function PropertySection() {
       return;
     }
     const { data } = await query;
-    setProperties((data as Property[]) || []);
+    const sorted = ((data as Property[]) || []).sort((a, b) => {
+      if (a.is_primary && !b.is_primary) return -1;
+      if (!a.is_primary && b.is_primary) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    setProperties(sorted);
     setLoading(false);
   }
 
@@ -83,14 +89,18 @@ export function PropertySection() {
 
   function openEdit(p: Property, e: React.MouseEvent) {
     e.stopPropagation();
-    setForm({ name: p.name, address: p.address, city: p.city || "", country: p.country || "", timezone: p.timezone, status: p.status, image_url: p.image_url || "" });
+    setForm({ name: p.name, address: p.address, city: p.city || "", country: p.country || "", timezone: p.timezone, status: p.status, image_url: p.image_url || "", is_primary: p.is_primary });
     setEditingProperty(p);
     setShowForm(true);
   }
 
   async function saveProperty() {
     setSaving(true);
-    const payload = { name: form.name, address: form.address, city: form.city || null, country: form.country || null, timezone: form.timezone, status: form.status, image_url: form.image_url || null };
+    const payload = { name: form.name, address: form.address, city: form.city || null, country: form.country || null, timezone: form.timezone, status: form.status, image_url: form.image_url || null, is_primary: form.is_primary };
+    // If setting as primary, unset all others first
+    if (form.is_primary) {
+      await supabase.from("properties").update({ is_primary: false }).neq("id", editingProperty?.id ?? "");
+    }
     if (editingProperty) {
       await supabase.from("properties").update(payload).eq("id", editingProperty.id);
     } else {
@@ -217,8 +227,13 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
       {/* Scrim */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-      {/* Status badge top-left */}
-      <div className="absolute top-3 left-3">
+      {/* Status + Primary badges top-left */}
+      <div className="absolute top-3 left-3 flex flex-col gap-1">
+        {p.is_primary && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border backdrop-blur-sm bg-primary/80 text-primary-foreground border-primary/60">
+            ★ Primary
+          </span>
+        )}
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${cfg.color}`}>
           {cfg.icon} {cfg.label}
         </span>
@@ -439,6 +454,24 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
               <Input value={form.timezone} onChange={e => set("timezone", e.target.value)} placeholder="America/LA" />
             </div>
           </div>
+          {/* Primary toggle */}
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, is_primary: !form.is_primary })}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
+              form.is_primary
+                ? "bg-primary/10 border-primary/40 text-primary"
+                : "bg-muted/30 border-border text-muted-foreground hover:border-primary/30"
+            }`}
+          >
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <span>★</span>
+              <span>Set as Primary Residence</span>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors relative ${form.is_primary ? "bg-primary" : "bg-muted"}`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${form.is_primary ? "left-5" : "left-1"}`} />
+            </div>
+          </button>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
