@@ -236,14 +236,48 @@ export type Database = {
           },
         ]
       }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content_media_url: string | null
           content_text: string | null
           created_at: string
+          delivery_status: string
           id: string
           is_ai_generated: boolean
           media_type: string | null
+          reactions: Json | null
           reply_to_id: string | null
           seen_by: string[] | null
           sender_id: string | null
@@ -253,9 +287,11 @@ export type Database = {
           content_media_url?: string | null
           content_text?: string | null
           created_at?: string
+          delivery_status?: string
           id?: string
           is_ai_generated?: boolean
           media_type?: string | null
+          reactions?: Json | null
           reply_to_id?: string | null
           seen_by?: string[] | null
           sender_id?: string | null
@@ -265,9 +301,11 @@ export type Database = {
           content_media_url?: string | null
           content_text?: string | null
           created_at?: string
+          delivery_status?: string
           id?: string
           is_ai_generated?: boolean
           media_type?: string | null
+          reactions?: Json | null
           reply_to_id?: string | null
           seen_by?: string[] | null
           sender_id?: string | null
@@ -506,6 +544,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_presence: {
+        Row: {
+          is_online: boolean
+          last_seen_at: string
+          user_id: string
+        }
+        Insert: {
+          is_online?: boolean
+          last_seen_at?: string
+          user_id: string
+        }
+        Update: {
+          is_online?: boolean
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
