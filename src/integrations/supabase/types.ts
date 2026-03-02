@@ -354,6 +354,8 @@ export type Database = {
           image_url: string | null
           is_primary: boolean
           name: string
+          occupied_by: string | null
+          sort_order: number
           status: Database["public"]["Enums"]["property_status"]
           timezone: string
           updated_at: string
@@ -367,6 +369,8 @@ export type Database = {
           image_url?: string | null
           is_primary?: boolean
           name: string
+          occupied_by?: string | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
           updated_at?: string
@@ -380,6 +384,8 @@ export type Database = {
           image_url?: string | null
           is_primary?: boolean
           name?: string
+          occupied_by?: string | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
           updated_at?: string

@@ -3,7 +3,7 @@ export const translations = {
   en: {
     // Navigation
     home: "Home",
-    property: "Property",
+    property: "Properties",
     maintenance: "Maintenance",
     messages: "Messages",
     profile: "Profile",
@@ -60,7 +60,7 @@ export const translations = {
   },
   es: {
     home: "Inicio",
-    property: "Propiedad",
+    property: "Propiedades",
     maintenance: "Mantenimiento",
     messages: "Mensajes",
     profile: "Perfil",
