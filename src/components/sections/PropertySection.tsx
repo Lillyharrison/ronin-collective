@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 
 type PropertyStatus = "occupied" | "vacant" | "maintenance";
@@ -323,6 +323,72 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
   );
 }
 
+// ─── Image Uploader ───────────────────────────────────────────────────────────
+function PropertyImageUploader({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { data, error } = await supabase.storage.from("property-images").upload(path, file, { upsert: true });
+    if (!error && data) {
+      const { data: { publicUrl } } = supabase.storage.from("property-images").getPublicUrl(data.path);
+      onChange(publicUrl);
+    }
+    setUploading(false);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }
+
+  return (
+    <div className="space-y-1">
+      <Label>Photo</Label>
+      {value ? (
+        <div className="relative rounded-xl overflow-hidden h-36">
+          <img src={value} alt="Property" className="w-full h-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute top-2 right-2 p-1 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          className={`w-full h-36 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors ${
+            dragOver ? "border-primary bg-primary/10" : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50"
+          }`}
+        >
+          {uploading ? (
+            <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          ) : (
+            <>
+              <Upload size={20} className="text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Drop image or tap to upload</span>
+            </>
+          )}
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+    </div>
+  );
+}
+
 // ─── Form Dialog ──────────────────────────────────────────────────────────────
 function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onClose }: {
   open: boolean; editing: boolean;
@@ -337,6 +403,7 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
           <DialogTitle>{editing ? "Edit Property" : "Add Property"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
+          <PropertyImageUploader value={form.image_url} onChange={url => set("image_url", url)} />
           <div className="space-y-1">
             <Label>Name *</Label>
             <Input value={form.name} onChange={e => set("name", e.target.value)} placeholder="Villa Ronin" />
@@ -354,10 +421,6 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
               <Label>Country</Label>
               <Input value={form.country} onChange={e => set("country", e.target.value)} placeholder="USA" />
             </div>
-          </div>
-          <div className="space-y-1">
-            <Label>Image URL</Label>
-            <Input value={form.image_url} onChange={e => set("image_url", e.target.value)} placeholder="https://..." />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
