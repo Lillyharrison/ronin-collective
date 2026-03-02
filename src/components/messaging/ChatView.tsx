@@ -16,15 +16,16 @@ interface ChatViewProps {
   threadType: string;
   participants: { id: string; full_name: string | null; avatar_url: string | null }[];
   currentUserId: string;
+  isAdmin?: boolean;
   onBack: () => void;
   isAgentThread?: boolean;
 }
 
 export function ChatView({
-  threadId, threadTitle, threadType, participants, currentUserId, onBack, isAgentThread,
+  threadId, threadTitle, threadType, participants, currentUserId, isAdmin, onBack, isAgentThread,
 }: ChatViewProps) {
   const { language } = useLanguage();
-  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction } = useMessages(threadId);
+  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, deleteMessage } = useMessages(threadId);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [agentTyping, setAgentTyping] = useState(false);
@@ -227,7 +228,9 @@ export function ChatView({
                 message={msg}
                 isOwn={msg.sender_id === currentUserId}
                 currentUserId={currentUserId}
+                isAdmin={isAdmin}
                 onReact={(emoji) => toggleReaction(msg.id, currentUserId, emoji)}
+                onDelete={(id) => deleteMessage(id)}
                 quickEmojis={EMOJI_QUICK}
               />
             ))}

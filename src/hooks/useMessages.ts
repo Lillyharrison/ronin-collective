@@ -8,7 +8,6 @@ export function useMessages(threadId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch messages for thread
   const fetchMessages = useCallback(async () => {
     if (!threadId) { setMessages([]); return; }
     setLoading(true);
@@ -20,7 +19,6 @@ export function useMessages(threadId: string | null) {
       .limit(200);
     
     if (data) {
-      // Enrich with sender profiles
       const senderIds = [...new Set(data.filter(m => m.sender_id).map(m => m.sender_id!))];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -51,7 +49,6 @@ export function useMessages(threadId: string | null) {
         filter: `thread_id=eq.${threadId}`,
       }, async (payload) => {
         const newMsg = payload.new as Message;
-        // Enrich
         if (newMsg.sender_id) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -73,12 +70,19 @@ export function useMessages(threadId: string | null) {
       }, (payload) => {
         setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m));
       })
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "messages",
+        filter: `thread_id=eq.${threadId}`,
+      }, (payload) => {
+        setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [threadId]);
 
-  // Send a text message
   const sendMessage = async (content: string, senderId: string) => {
     if (!threadId) return;
     await supabase.from("messages").insert({
@@ -87,11 +91,9 @@ export function useMessages(threadId: string | null) {
       sender_id: senderId,
       delivery_status: "sent",
     });
-    // Update thread last_message_at
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
   };
 
-  // Send media message
   const sendMediaMessage = async (mediaUrl: string, mediaType: string, senderId: string, caption?: string) => {
     if (!threadId) return;
     await supabase.from("messages").insert({
@@ -105,7 +107,6 @@ export function useMessages(threadId: string | null) {
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
   };
 
-  // Mark messages as read
   const markAsRead = async (userId: string) => {
     if (!threadId) return;
     const unread = messages.filter(m => m.sender_id !== userId && !(m.seen_by ?? []).includes(userId));
@@ -118,7 +119,6 @@ export function useMessages(threadId: string | null) {
     }
   };
 
-  // Toggle reaction
   const toggleReaction = async (messageId: string, userId: string, emoji: string) => {
     const { data: existing } = await supabase
       .from("message_reactions")
@@ -135,5 +135,9 @@ export function useMessages(threadId: string | null) {
     }
   };
 
-  return { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, refetch: fetchMessages };
+  const deleteMessage = async (messageId: string) => {
+    await supabase.from("messages").delete().eq("id", messageId);
+  };
+
+  return { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, deleteMessage, refetch: fetchMessages };
 }
