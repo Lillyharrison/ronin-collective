@@ -27,6 +27,7 @@ export function ChatView({
   const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction } = useMessages(threadId);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [agentTyping, setAgentTyping] = useState(false);
   const [recording, setRecording] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -56,8 +57,8 @@ export function ChatView({
       // 1. Save user message to DB only once (edge fn does NOT re-save it)
       await sendMessage(text, currentUserId);
 
-      // 2. Simulate WhatsApp-style typing delay
-      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
+      // 2. Show typing indicator
+      setAgentTyping(true);
 
       // 3. Build conversation history for context
       const history = messages
@@ -82,6 +83,8 @@ export function ChatView({
         // Realtime subscription in useMessages will pick up the new AI message automatically
       } catch (e) {
         console.error("AI error:", e);
+      } finally {
+        setAgentTyping(false);
       }
     } else {
       await sendMessage(text, currentUserId);
@@ -230,6 +233,21 @@ export function ChatView({
             ))}
           </div>
         ))}
+        {/* Agent typing indicator */}
+        {agentTyping && (
+          <div className="flex items-end gap-2 mb-1">
+            <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
+              <span className="text-[10px]">🤖</span>
+            </div>
+            <div className="bg-card border border-accent/30 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
