@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X } from "lucide-react";
+import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 
 type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
@@ -23,6 +22,8 @@ interface Property {
   image_url: string | null;
   timezone: string;
   is_primary: boolean;
+  sort_order: number;
+  occupied_by: string | null;
 }
 
 const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon: React.ReactNode }> = {
@@ -32,7 +33,6 @@ const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon
   under_construction:{ label: "Under Construction",color: "bg-orange-500/20 text-orange-400 border-orange-500/30",   icon: <Wrench size={12} /> },
 };
 
-// Sub-sections available inside a property detail
 const PROPERTY_SUB_SECTIONS = [
   { key: "tasks",       label: "Tasks",       icon: <CheckCircle size={20} />,  description: "Open & assigned tasks" },
   { key: "maintenance", label: "Maintenance", icon: <Wrench size={20} />,       description: "Issues & requests" },
@@ -41,7 +41,11 @@ const PROPERTY_SUB_SECTIONS = [
   { key: "calendar",    label: "Schedule",    icon: <Calendar size={20} />,     description: "Events & bookings" },
 ];
 
-const emptyForm = { name: "", address: "", city: "", country: "", timezone: "America/Los_Angeles", status: "vacant" as PropertyStatus, image_url: "", is_primary: false };
+const emptyForm = {
+  name: "", address: "", city: "", country: "",
+  timezone: "America/Los_Angeles", status: "vacant" as PropertyStatus,
+  image_url: "", is_primary: false, occupied_by: "",
+};
 
 export function PropertySection() {
   const { isMasterAdmin, assignedPropertyIds, loading: permLoading } = usePermissions();
@@ -51,12 +55,16 @@ export function PropertySection() {
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
-  // CRUD state
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
+
+  // Drag reorder state
+  const dragIndexRef = useRef<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   useEffect(() => {
     if (!permLoading) fetchProperties();
@@ -64,7 +72,7 @@ export function PropertySection() {
 
   async function fetchProperties() {
     setLoading(true);
-    let query = supabase.from("properties").select("*").order("name");
+    let query = supabase.from("properties").select("*").order("sort_order").order("name");
     if (!isMasterAdmin && assignedPropertyIds.length > 0) {
       query = query.in("id", assignedPropertyIds);
     } else if (!isMasterAdmin) {
@@ -76,7 +84,7 @@ export function PropertySection() {
     const sorted = ((data as Property[]) || []).sort((a, b) => {
       if (a.is_primary && !b.is_primary) return -1;
       if (!a.is_primary && b.is_primary) return 1;
-      return a.name.localeCompare(b.name);
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
     });
     setProperties(sorted);
     setLoading(false);
@@ -88,17 +96,25 @@ export function PropertySection() {
     setShowForm(true);
   }
 
-  function openEdit(p: Property, e: React.MouseEvent) {
-    e.stopPropagation();
-    setForm({ name: p.name, address: p.address, city: p.city || "", country: p.country || "", timezone: p.timezone, status: p.status, image_url: p.image_url || "", is_primary: p.is_primary });
+  function openEdit(p: Property) {
+    setForm({
+      name: p.name, address: p.address, city: p.city || "",
+      country: p.country || "", timezone: p.timezone, status: p.status,
+      image_url: p.image_url || "", is_primary: p.is_primary,
+      occupied_by: p.occupied_by || "",
+    });
     setEditingProperty(p);
     setShowForm(true);
   }
 
   async function saveProperty() {
     setSaving(true);
-    const payload = { name: form.name, address: form.address, city: form.city || null, country: form.country || null, timezone: form.timezone, status: form.status, image_url: form.image_url || null, is_primary: form.is_primary };
-    // If setting as primary, unset all others first
+    const payload = {
+      name: form.name, address: form.address, city: form.city || null,
+      country: form.country || null, timezone: form.timezone, status: form.status,
+      image_url: form.image_url || null, is_primary: form.is_primary,
+      occupied_by: form.status === "occupied" && form.occupied_by ? form.occupied_by : null,
+    };
     if (form.is_primary) {
       await supabase.from("properties").update({ is_primary: false }).neq("id", editingProperty?.id ?? "");
     }
@@ -116,33 +132,92 @@ export function PropertySection() {
     if (!deleteTarget) return;
     await supabase.from("properties").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
+    if (selectedProperty?.id === deleteTarget.id) setSelectedProperty(null);
     fetchProperties();
+  }
+
+  // ── Drag to reorder ──────────────────────────────────────────────────────
+  function handleDragStart(index: number) {
+    dragIndexRef.current = index;
+    setDragging(index);
+  }
+
+  function handleDragEnter(index: number) {
+    setDragOver(index);
+  }
+
+  async function handleDragEnd() {
+    const from = dragIndexRef.current;
+    const to = dragOver;
+    setDragging(null);
+    setDragOver(null);
+    dragIndexRef.current = null;
+    if (from === null || to === null || from === to) return;
+
+    const reordered = [...properties];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    setProperties(reordered);
+
+    // Persist new sort_order
+    const updates = reordered.map((p, i) =>
+      supabase.from("properties").update({ sort_order: i }).eq("id", p.id)
+    );
+    await Promise.all(updates);
   }
 
   // — Detail view —
   if (selectedProperty) {
     return (
-      <PropertyDetail
-        property={selectedProperty}
-        isMasterAdmin={isMasterAdmin}
-        onBack={() => setSelectedProperty(null)}
-        onEdit={(e) => openEdit(selectedProperty, e)}
-        onDelete={() => setDeleteTarget(selectedProperty)}
-        onNavigate={(key) => {
-          setSelectedProperty(null);
-          setActiveSection(key as any);
-        }}
-      />
+      <>
+        <PropertyDetail
+          property={selectedProperty}
+          isMasterAdmin={isMasterAdmin}
+          onBack={() => setSelectedProperty(null)}
+          onEdit={() => openEdit(selectedProperty)}
+          onDelete={() => setDeleteTarget(selectedProperty)}
+          onNavigate={(key) => {
+            setSelectedProperty(null);
+            setActiveSection(key as any);
+          }}
+        />
+
+        {/* Edit dialog rendered OUTSIDE the detail so it's not clipped */}
+        <PropertyFormDialog
+          open={showForm}
+          editing={!!editingProperty}
+          form={form}
+          setForm={setForm}
+          saving={saving}
+          onSave={saveProperty}
+          onClose={() => setShowForm(false)}
+        />
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={deleteProperty} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
     );
   }
 
   // — List view —
   return (
     <div className="p-4 space-y-4">
-      {/* Header row */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{properties.length} propert{properties.length === 1 ? "y" : "ies"}</p>
+          {isMasterAdmin && properties.length > 1 && (
+            <p className="text-xs text-muted-foreground/60 mt-0.5">Hold and drag to reorder</p>
+          )}
         </div>
         {isMasterAdmin && (
           <Button size="sm" onClick={openAdd} className="gap-1.5">
@@ -151,7 +226,6 @@ export function PropertySection() {
         )}
       </div>
 
-      {/* Property tiles */}
       {loading ? (
         <div className="grid grid-cols-1 gap-4">
           {[1, 2].map(i => <div key={i} className="h-52 rounded-2xl bg-muted animate-pulse" />)}
@@ -163,20 +237,28 @@ export function PropertySection() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {properties.map(p => (
-            <PropertyTile
+          {properties.map((p, i) => (
+            <div
               key={p.id}
-              property={p}
-              isMasterAdmin={isMasterAdmin}
-              onClick={() => setSelectedProperty(p)}
-              onEdit={(e) => openEdit(p, e)}
-              onDelete={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
-            />
+              draggable={isMasterAdmin}
+              onDragStart={() => handleDragStart(i)}
+              onDragEnter={() => handleDragEnter(i)}
+              onDragOver={e => e.preventDefault()}
+              onDragEnd={handleDragEnd}
+              className={`transition-all ${dragging === i ? "opacity-40 scale-95" : ""} ${dragOver === i && dragging !== i ? "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-2xl" : ""}`}
+            >
+              <PropertyTile
+                property={p}
+                isMasterAdmin={isMasterAdmin}
+                onClick={() => setSelectedProperty(p)}
+                onEdit={(e) => { e.stopPropagation(); openEdit(p); }}
+                onDelete={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
+              />
+            </div>
           ))}
         </div>
       )}
 
-      {/* Add / Edit dialog */}
       <PropertyFormDialog
         open={showForm}
         editing={!!editingProperty}
@@ -187,7 +269,6 @@ export function PropertySection() {
         onClose={() => setShowForm(false)}
       />
 
-      {/* Delete confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -216,7 +297,6 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
       className="relative w-full rounded-2xl overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary group"
       style={{ height: 220 }}
     >
-      {/* Hero image */}
       {p.image_url ? (
         <img src={p.image_url} alt={p.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
       ) : (
@@ -224,11 +304,8 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
           <Building2 size={48} className="text-muted-foreground/40" />
         </div>
       )}
-
-      {/* Scrim */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-      {/* Status + Primary badges top-left */}
       <div className="absolute top-3 left-3 flex flex-col gap-1">
         {p.is_primary && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border backdrop-blur-sm bg-primary/80 text-primary-foreground border-primary/60">
@@ -238,9 +315,13 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${cfg.color}`}>
           {cfg.icon} {cfg.label}
         </span>
+        {p.status === "occupied" && p.occupied_by && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-black/50 text-white border-white/20">
+            {p.occupied_by}
+          </span>
+        )}
       </div>
 
-      {/* Admin actions top-right */}
       {isMasterAdmin && (
         <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={onEdit} className="p-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors">
@@ -252,7 +333,13 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
         </div>
       )}
 
-      {/* Name + location bottom */}
+      {/* Drag handle hint for admins */}
+      {isMasterAdmin && (
+        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-60 transition-opacity">
+          <GripVertical size={16} className="text-white" />
+        </div>
+      )}
+
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <h3 className="text-white font-semibold text-lg leading-tight">{p.name}</h3>
         {(p.city || p.country) && (
@@ -268,13 +355,12 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
 // ─── Property Detail ──────────────────────────────────────────────────────────
 function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, onNavigate }: {
   property: Property; isMasterAdmin: boolean;
-  onBack: () => void; onEdit: (e: React.MouseEvent) => void; onDelete: () => void;
+  onBack: () => void; onEdit: () => void; onDelete: () => void;
   onNavigate: (key: string) => void;
 }) {
   const cfg = STATUS_CONFIG[p.status];
   return (
     <div className="flex flex-col min-h-[calc(100vh-7rem)]">
-      {/* Hero */}
       <div className="relative h-64 shrink-0">
         {p.image_url ? (
           <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
@@ -285,28 +371,40 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-        {/* Back button */}
         <button onClick={onBack} className="absolute top-3 left-3 p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white">
           <ArrowLeft size={18} />
         </button>
 
-        {/* Admin actions */}
         {isMasterAdmin && (
           <div className="absolute top-3 right-3 flex gap-2">
-            <button onClick={onEdit} className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white hover:bg-black/70">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+            >
               <Pencil size={16} />
             </button>
-            <button onClick={onDelete} className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white hover:bg-destructive">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white hover:bg-destructive"
+            >
               <Trash2 size={16} />
             </button>
           </div>
         )}
 
-        {/* Title */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm mb-2 ${cfg.color}`}>
-            {cfg.icon} {cfg.label}
-          </span>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${cfg.color}`}>
+              {cfg.icon} {cfg.label}
+            </span>
+            {p.status === "occupied" && p.occupied_by && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-black/50 text-white border-white/20">
+                {p.occupied_by}
+              </span>
+            )}
+          </div>
           <h2 className="text-white text-2xl font-bold">{p.name}</h2>
           <p className="text-white/70 text-sm flex items-center gap-1 mt-0.5">
             <MapPin size={12} /> {[p.address, p.city, p.country].filter(Boolean).join(", ")}
@@ -314,7 +412,6 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
         </div>
       </div>
 
-      {/* Sub-section grid */}
       <div className="p-4 flex-1">
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">Sections</p>
         <div className="grid grid-cols-2 gap-3">
@@ -371,11 +468,7 @@ function PropertyImageUploader({ value, onChange }: { value: string; onChange: (
       {value ? (
         <div className="relative rounded-xl overflow-hidden h-36">
           <img src={value} alt="Property" className="w-full h-full object-cover" />
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="absolute top-2 right-2 p-1 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors"
-          >
+          <button type="button" onClick={() => onChange("")} className="absolute top-2 right-2 p-1 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors">
             <X size={14} />
           </button>
         </div>
@@ -386,9 +479,7 @@ function PropertyImageUploader({ value, onChange }: { value: string; onChange: (
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className={`w-full h-36 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors ${
-            dragOver ? "border-primary bg-primary/10" : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50"
-          }`}
+          className={`w-full h-36 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors ${dragOver ? "border-primary bg-primary/10" : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50"}`}
         >
           {uploading ? (
             <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -406,10 +497,8 @@ function PropertyImageUploader({ value, onChange }: { value: string; onChange: (
 }
 
 // ─── Timezone Select ─────────────────────────────────────────────────────────
-
-// City aliases → canonical IANA timezone (handles "Miami", "London", etc.)
 const CITY_ALIASES: Record<string, string> = {
-  miami: "America/New_York", "fort lauderdale": "America/New_York", "orlando": "America/New_York",
+  miami: "America/New_York", "fort lauderdale": "America/New_York", orlando: "America/New_York",
   jacksonville: "America/New_York", tampa: "America/New_York", atlanta: "America/New_York",
   boston: "America/New_York", "new york": "America/New_York", nyc: "America/New_York",
   philadelphia: "America/New_York", washington: "America/New_York", dc: "America/New_York",
@@ -420,7 +509,7 @@ const CITY_ALIASES: Record<string, string> = {
   phoenix: "America/Phoenix", tucson: "America/Phoenix",
   "los angeles": "America/Los_Angeles", la: "America/Los_Angeles", "san francisco": "America/Los_Angeles",
   seattle: "America/Los_Angeles", portland: "America/Los_Angeles", "las vegas": "America/Los_Angeles",
-  san_diego: "America/Los_Angeles", "san diego": "America/Los_Angeles",
+  "san diego": "America/Los_Angeles",
   anchorage: "America/Anchorage", honolulu: "Pacific/Honolulu", hawaii: "Pacific/Honolulu",
   toronto: "America/Toronto", montreal: "America/Toronto", ottawa: "America/Toronto",
   vancouver: "America/Vancouver", calgary: "America/Edmonton", edmonton: "America/Edmonton",
@@ -449,15 +538,12 @@ const CITY_ALIASES: Record<string, string> = {
   sydney: "Australia/Sydney", melbourne: "Australia/Melbourne", brisbane: "Australia/Brisbane",
   perth: "Australia/Perth", adelaide: "Australia/Adelaide",
   auckland: "Pacific/Auckland", fiji: "Pacific/Fiji",
-  cairo: "Africa/Cairo", johannesburg: "Africa/Johannesburg", capetown: "Africa/Johannesburg",
+  cairo: "Africa/Cairo", johannesburg: "Africa/Johannesburg",
   "cape town": "Africa/Johannesburg", lagos: "Africa/Lagos", nairobi: "Africa/Nairobi",
 };
 
-// Get full list from browser API, fallback to a comprehensive manual list
 const ALL_TIMEZONES: string[] = (() => {
-  try {
-    return (Intl as any).supportedValuesOf("timeZone") as string[];
-  } catch {
+  try { return (Intl as any).supportedValuesOf("timeZone") as string[]; } catch {
     return [
       "Africa/Abidjan","Africa/Accra","Africa/Algiers","Africa/Cairo","Africa/Casablanca",
       "Africa/Johannesburg","Africa/Lagos","Africa/Nairobi","Africa/Tripoli","Africa/Tunis",
@@ -491,15 +577,11 @@ const ALL_TIMEZONES: string[] = (() => {
 
 function formatTzLabel(tz: string): string {
   const city = tz.split("/").pop()?.replace(/_/g, " ") ?? tz;
-  const region = tz.includes("/") ? tz.split("/")[0] : "";
   try {
     const offset = new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" })
-      .formatToParts(new Date())
-      .find(p => p.type === "timeZoneName")?.value ?? "";
+      .formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value ?? "";
     return `${city}  ·  ${offset}`;
-  } catch {
-    return city;
-  }
+  } catch { return city; }
 }
 
 function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -510,24 +592,15 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: stri
   const filtered = (() => {
     if (!search.trim()) return ALL_TIMEZONES;
     const q = search.trim().toLowerCase();
-    // Check city alias first
     const aliasMatch = CITY_ALIASES[q];
-    // Filter by IANA name or city part
     const matches = ALL_TIMEZONES.filter(tz =>
       tz.toLowerCase().includes(q) ||
       tz.split("/").pop()?.toLowerCase().replace(/_/g, " ").includes(q)
     );
-    // Put alias match at the top if it exists and isn't already first
-    if (aliasMatch && !matches.includes(aliasMatch)) {
-      return [aliasMatch, ...matches];
-    }
-    if (aliasMatch && matches[0] !== aliasMatch) {
-      return [aliasMatch, ...matches.filter(m => m !== aliasMatch)];
-    }
+    if (aliasMatch && !matches.includes(aliasMatch)) return [aliasMatch, ...matches];
+    if (aliasMatch && matches[0] !== aliasMatch) return [aliasMatch, ...matches.filter(m => m !== aliasMatch)];
     return matches;
   })();
-
-  const displayValue = value ? formatTzLabel(value) : "Select timezone…";
 
   return (
     <div className="relative">
@@ -536,20 +609,13 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: stri
         onClick={() => { setOpen(o => !o); setTimeout(() => inputRef.current?.focus(), 50); }}
         className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
       >
-        <span className={value ? "text-foreground" : "text-muted-foreground"}>{displayValue}</span>
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>{value ? formatTzLabel(value) : "Select timezone…"}</span>
         <svg className="h-4 w-4 opacity-50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
       </button>
-
       {open && (
         <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-lg overflow-hidden">
           <div className="p-2 border-b">
-            <Input
-              ref={inputRef}
-              placeholder="Search city or timezone…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="h-8 text-xs"
-            />
+            <Input ref={inputRef} placeholder="Search city or timezone…" value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs" />
           </div>
           <div className="max-h-56 overflow-y-auto">
             {filtered.length === 0 ? (
@@ -582,7 +648,7 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
   form: typeof emptyForm; setForm: (f: typeof emptyForm) => void;
   saving: boolean; onSave: () => void; onClose: () => void;
 }) {
-  const set = (key: keyof typeof emptyForm, val: string) => setForm({ ...form, [key]: val });
+  const set = (key: keyof typeof emptyForm, val: string | boolean) => setForm({ ...form, [key]: val });
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-sm">
@@ -621,18 +687,26 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
               </SelectContent>
             </Select>
           </div>
+          {/* Occupied by — only shown when status is occupied */}
+          {form.status === "occupied" && (
+            <div className="space-y-1">
+              <Label>Occupied by</Label>
+              <Input
+                value={form.occupied_by}
+                onChange={e => set("occupied_by", e.target.value)}
+                placeholder="e.g. Family, John Smith, Guests…"
+              />
+            </div>
+          )}
           <div className="space-y-1">
             <Label>Timezone</Label>
             <TimezoneSelect value={form.timezone} onChange={v => set("timezone", v)} />
           </div>
-          {/* Primary toggle */}
           <button
             type="button"
             onClick={() => setForm({ ...form, is_primary: !form.is_primary })}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
-              form.is_primary
-                ? "bg-primary/10 border-primary/40 text-primary"
-                : "bg-muted/30 border-border text-muted-foreground hover:border-primary/30"
+              form.is_primary ? "bg-primary/10 border-primary/40 text-primary" : "bg-muted/30 border-border text-muted-foreground hover:border-primary/30"
             }`}
           >
             <div className="flex items-center gap-2 text-sm font-medium">
