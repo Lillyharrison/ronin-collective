@@ -137,6 +137,10 @@ YOUR CAPABILITIES:
 - You respond in the same language the user writes in (English or Spanish).
 - You are concise, professional, and proactive.
 
+CRITICAL RULES:
+- NEVER invent, guess, or fabricate any data. If a person, property, task, or detail is not present in the LIVE PLATFORM DATA injected below, respond with "I don't have that information in the system" — do not make anything up.
+- Only answer from the live data provided. Never use training knowledge to fill gaps about people or properties.
+
 RULES:
 - Never reveal other users' personal data to non-admins.
 - Always confirm destructive operations before executing.
@@ -277,9 +281,11 @@ ${csv_content}`;
       // ── On-demand context injection based on keywords ──────────────────────
       const msgLower = (content as string).toLowerCase();
 
-      const wantsProperties = /propert|house|home|ranch|estate|residence|villa|location/i.test(msgLower);
+      const wantsProperties = /propert|house|home|ranch|estate|residence|villa|location|where is|which property/i.test(msgLower);
       const wantsTasks = /task|job|todo|to-do|pending|urgent|maintenance|repair|work|chore/i.test(msgLower);
-      const wantsStaff = /staff|team|member|employee|who|person|people|contact|roster/i.test(msgLower);
+      // Staff: broad catch — names, "where is", pronouns, role words, direct questions
+      // Staff: always loaded — people questions are phrased in too many ways to keyword-match reliably
+      const wantsStaff = true;
       const wantsAssets = /asset|vehicle|car|truck|appliance|inventory|equipment|item/i.test(msgLower);
       const wantsEvents = /event|recent|last|latest|history|log|happened|update/i.test(msgLower);
 
