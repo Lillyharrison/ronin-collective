@@ -574,11 +574,29 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   async function handleDelete() {
     setDeleting(true);
     try {
-      await supabase.functions.invoke("ronin-ai", {
+      const { data, error } = await supabase.functions.invoke("ronin-ai", {
         body: { action: "delete_user", target_user_id: member.id },
       });
+      if (error) {
+        // Parse the actual error message from the response body
+        let msg = "Failed to delete user.";
+        try {
+          const parsed = typeof error.message === "string" && error.message.startsWith("{")
+            ? JSON.parse(error.message)
+            : null;
+          if (parsed?.error) msg = parsed.error;
+          else if (error.message) msg = error.message;
+        } catch { /* use default */ }
+        console.error("Delete user error:", msg);
+        import("sonner").then(({ toast }) => toast.error(msg));
+        setDeleting(false);
+        return;
+      }
       onDeleted();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error("Delete user exception:", e);
+      import("sonner").then(({ toast }) => toast.error("An unexpected error occurred."));
+    }
     setDeleting(false);
   }
 
