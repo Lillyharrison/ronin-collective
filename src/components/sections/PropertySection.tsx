@@ -406,53 +406,173 @@ function PropertyImageUploader({ value, onChange }: { value: string; onChange: (
 }
 
 // ─── Timezone Select ─────────────────────────────────────────────────────────
-const ALL_TIMEZONES: string[] = (Intl as any).supportedValuesOf?.("timeZone") ?? [
-  "America/Los_Angeles","America/Denver","America/Chicago","America/New_York",
-  "America/Anchorage","Pacific/Honolulu","America/Phoenix","America/Toronto",
-  "America/Vancouver","America/Mexico_City","America/Bogota","America/Lima",
-  "America/Santiago","America/Sao_Paulo","America/Buenos_Aires",
-  "Europe/London","Europe/Dublin","Europe/Lisbon","Europe/Paris","Europe/Berlin",
-  "Europe/Madrid","Europe/Rome","Europe/Amsterdam","Europe/Brussels",
-  "Europe/Vienna","Europe/Zurich","Europe/Stockholm","Europe/Oslo","Europe/Copenhagen",
-  "Europe/Helsinki","Europe/Warsaw","Europe/Prague","Europe/Budapest",
-  "Europe/Bucharest","Europe/Athens","Europe/Istanbul","Europe/Moscow",
-  "Asia/Dubai","Asia/Karachi","Asia/Kolkata","Asia/Dhaka","Asia/Colombo",
-  "Asia/Bangkok","Asia/Jakarta","Asia/Singapore","Asia/Kuala_Lumpur",
-  "Asia/Manila","Asia/Hong_Kong","Asia/Shanghai","Asia/Taipei",
-  "Asia/Seoul","Asia/Tokyo","Asia/Vladivostok",
-  "Australia/Perth","Australia/Darwin","Australia/Adelaide",
-  "Australia/Brisbane","Australia/Sydney","Australia/Melbourne","Pacific/Auckland",
-  "Africa/Cairo","Africa/Johannesburg","Africa/Lagos","Africa/Nairobi",
-];
+
+// City aliases → canonical IANA timezone (handles "Miami", "London", etc.)
+const CITY_ALIASES: Record<string, string> = {
+  miami: "America/New_York", "fort lauderdale": "America/New_York", "orlando": "America/New_York",
+  jacksonville: "America/New_York", tampa: "America/New_York", atlanta: "America/New_York",
+  boston: "America/New_York", "new york": "America/New_York", nyc: "America/New_York",
+  philadelphia: "America/New_York", washington: "America/New_York", dc: "America/New_York",
+  charlotte: "America/New_York", detroit: "America/Detroit",
+  chicago: "America/Chicago", houston: "America/Chicago", dallas: "America/Chicago",
+  "new orleans": "America/Chicago", minneapolis: "America/Chicago", milwaukee: "America/Chicago",
+  denver: "America/Denver", "salt lake city": "America/Denver", boise: "America/Boise",
+  phoenix: "America/Phoenix", tucson: "America/Phoenix",
+  "los angeles": "America/Los_Angeles", la: "America/Los_Angeles", "san francisco": "America/Los_Angeles",
+  seattle: "America/Los_Angeles", portland: "America/Los_Angeles", "las vegas": "America/Los_Angeles",
+  san_diego: "America/Los_Angeles", "san diego": "America/Los_Angeles",
+  anchorage: "America/Anchorage", honolulu: "Pacific/Honolulu", hawaii: "Pacific/Honolulu",
+  toronto: "America/Toronto", montreal: "America/Toronto", ottawa: "America/Toronto",
+  vancouver: "America/Vancouver", calgary: "America/Edmonton", edmonton: "America/Edmonton",
+  "mexico city": "America/Mexico_City", guadalajara: "America/Mexico_City",
+  bogota: "America/Bogota", lima: "America/Lima", santiago: "America/Santiago",
+  "sao paulo": "America/Sao_Paulo", "rio de janeiro": "America/Sao_Paulo",
+  "buenos aires": "America/Argentina/Buenos_Aires", caracas: "America/Caracas",
+  london: "Europe/London", dublin: "Europe/Dublin", edinburgh: "Europe/London",
+  lisbon: "Europe/Lisbon", paris: "Europe/Paris", berlin: "Europe/Berlin",
+  madrid: "Europe/Madrid", barcelona: "Europe/Madrid", rome: "Europe/Rome",
+  milan: "Europe/Rome", amsterdam: "Europe/Amsterdam", brussels: "Europe/Brussels",
+  vienna: "Europe/Vienna", zurich: "Europe/Zurich", geneva: "Europe/Zurich",
+  stockholm: "Europe/Stockholm", oslo: "Europe/Oslo", copenhagen: "Europe/Copenhagen",
+  helsinki: "Europe/Helsinki", warsaw: "Europe/Warsaw", prague: "Europe/Prague",
+  budapest: "Europe/Budapest", bucharest: "Europe/Bucharest", athens: "Europe/Athens",
+  istanbul: "Europe/Istanbul", moscow: "Europe/Moscow", kyiv: "Europe/Kyiv",
+  dubai: "Asia/Dubai", "abu dhabi": "Asia/Dubai", riyadh: "Asia/Riyadh",
+  karachi: "Asia/Karachi", lahore: "Asia/Karachi",
+  mumbai: "Asia/Kolkata", delhi: "Asia/Kolkata", bangalore: "Asia/Kolkata", india: "Asia/Kolkata",
+  dhaka: "Asia/Dhaka", colombo: "Asia/Colombo", kathmandu: "Asia/Kathmandu",
+  bangkok: "Asia/Bangkok", jakarta: "Asia/Jakarta", bali: "Asia/Makassar",
+  singapore: "Asia/Singapore", "kuala lumpur": "Asia/Kuala_Lumpur", kl: "Asia/Kuala_Lumpur",
+  manila: "Asia/Manila", "hong kong": "Asia/Hong_Kong", hk: "Asia/Hong_Kong",
+  shanghai: "Asia/Shanghai", beijing: "Asia/Shanghai", taipei: "Asia/Taipei",
+  seoul: "Asia/Seoul", tokyo: "Asia/Tokyo", osaka: "Asia/Tokyo",
+  sydney: "Australia/Sydney", melbourne: "Australia/Melbourne", brisbane: "Australia/Brisbane",
+  perth: "Australia/Perth", adelaide: "Australia/Adelaide",
+  auckland: "Pacific/Auckland", fiji: "Pacific/Fiji",
+  cairo: "Africa/Cairo", johannesburg: "Africa/Johannesburg", capetown: "Africa/Johannesburg",
+  "cape town": "Africa/Johannesburg", lagos: "Africa/Lagos", nairobi: "Africa/Nairobi",
+};
+
+// Get full list from browser API, fallback to a comprehensive manual list
+const ALL_TIMEZONES: string[] = (() => {
+  try {
+    return (Intl as any).supportedValuesOf("timeZone") as string[];
+  } catch {
+    return [
+      "Africa/Abidjan","Africa/Accra","Africa/Algiers","Africa/Cairo","Africa/Casablanca",
+      "Africa/Johannesburg","Africa/Lagos","Africa/Nairobi","Africa/Tripoli","Africa/Tunis",
+      "America/Anchorage","America/Argentina/Buenos_Aires","America/Bogota","America/Chicago",
+      "America/Denver","America/Detroit","America/Edmonton","America/Halifax",
+      "America/Indiana/Indianapolis","America/Lima","America/Los_Angeles","America/Mexico_City",
+      "America/New_York","America/Phoenix","America/Regina","America/Santiago",
+      "America/Sao_Paulo","America/St_Johns","America/Toronto","America/Vancouver",
+      "America/Winnipeg","Asia/Almaty","Asia/Amman","Asia/Baghdad","Asia/Baku",
+      "Asia/Bangkok","Asia/Beirut","Asia/Colombo","Asia/Dhaka","Asia/Dubai",
+      "Asia/Ho_Chi_Minh","Asia/Hong_Kong","Asia/Jakarta","Asia/Jerusalem",
+      "Asia/Kabul","Asia/Karachi","Asia/Kathmandu","Asia/Kolkata","Asia/Krasnoyarsk",
+      "Asia/Kuala_Lumpur","Asia/Makassar","Asia/Manila","Asia/Muscat","Asia/Nicosia",
+      "Asia/Novosibirsk","Asia/Omsk","Asia/Riyadh","Asia/Seoul","Asia/Shanghai",
+      "Asia/Singapore","Asia/Taipei","Asia/Tashkent","Asia/Tehran","Asia/Tokyo",
+      "Asia/Ulaanbaatar","Asia/Vladivostok","Asia/Yakutsk","Asia/Yangon","Asia/Yekaterinburg",
+      "Atlantic/Azores","Atlantic/Cape_Verde","Atlantic/Reykjavik","Atlantic/South_Georgia",
+      "Australia/Adelaide","Australia/Brisbane","Australia/Darwin","Australia/Melbourne",
+      "Australia/Perth","Australia/Sydney","Europe/Amsterdam","Europe/Athens","Europe/Belgrade",
+      "Europe/Berlin","Europe/Brussels","Europe/Bucharest","Europe/Budapest","Europe/Copenhagen",
+      "Europe/Dublin","Europe/Helsinki","Europe/Istanbul","Europe/Kyiv","Europe/Lisbon",
+      "Europe/London","Europe/Luxembourg","Europe/Madrid","Europe/Malta","Europe/Moscow",
+      "Europe/Oslo","Europe/Paris","Europe/Prague","Europe/Riga","Europe/Rome",
+      "Europe/Sofia","Europe/Stockholm","Europe/Tallinn","Europe/Vienna","Europe/Vilnius",
+      "Europe/Warsaw","Europe/Zurich","Pacific/Auckland","Pacific/Fiji","Pacific/Guam",
+      "Pacific/Honolulu","Pacific/Noumea","Pacific/Pago_Pago","Pacific/Port_Moresby",
+      "Pacific/Tahiti","UTC",
+    ];
+  }
+})();
+
+function formatTzLabel(tz: string): string {
+  const city = tz.split("/").pop()?.replace(/_/g, " ") ?? tz;
+  const region = tz.includes("/") ? tz.split("/")[0] : "";
+  try {
+    const offset = new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" })
+      .formatToParts(new Date())
+      .find(p => p.type === "timeZoneName")?.value ?? "";
+    return `${city}  ·  ${offset}`;
+  } catch {
+    return city;
+  }
+}
 
 function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [search, setSearch] = useState("");
-  const filtered = search
-    ? ALL_TIMEZONES.filter(tz => tz.toLowerCase().includes(search.toLowerCase()))
-    : ALL_TIMEZONES;
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = (() => {
+    if (!search.trim()) return ALL_TIMEZONES;
+    const q = search.trim().toLowerCase();
+    // Check city alias first
+    const aliasMatch = CITY_ALIASES[q];
+    // Filter by IANA name or city part
+    const matches = ALL_TIMEZONES.filter(tz =>
+      tz.toLowerCase().includes(q) ||
+      tz.split("/").pop()?.toLowerCase().replace(/_/g, " ").includes(q)
+    );
+    // Put alias match at the top if it exists and isn't already first
+    if (aliasMatch && !matches.includes(aliasMatch)) {
+      return [aliasMatch, ...matches];
+    }
+    if (aliasMatch && matches[0] !== aliasMatch) {
+      return [aliasMatch, ...matches.filter(m => m !== aliasMatch)];
+    }
+    return matches;
+  })();
+
+  const displayValue = value ? formatTzLabel(value) : "Select timezone…";
 
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder="Select timezone" />
-      </SelectTrigger>
-      <SelectContent className="max-h-64">
-        <div className="p-2 sticky top-0 bg-popover z-10">
-          <Input
-            placeholder="Search timezones…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="h-8 text-xs"
-            onClick={e => e.stopPropagation()}
-          />
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setTimeout(() => inputRef.current?.focus(), 50); }}
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>{displayValue}</span>
+        <svg className="h-4 w-4 opacity-50 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-lg overflow-hidden">
+          <div className="p-2 border-b">
+            <Input
+              ref={inputRef}
+              placeholder="Search city or timezone…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No timezones found</p>
+            ) : (
+              filtered.slice(0, 150).map(tz => (
+                <button
+                  key={tz}
+                  type="button"
+                  onClick={() => { onChange(tz); setSearch(""); setOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center justify-between ${tz === value ? "bg-accent text-accent-foreground font-medium" : "text-foreground"}`}
+                >
+                  <span>{tz.replace(/_/g, " ")}</span>
+                  <span className="text-muted-foreground text-[10px]">{
+                    (() => { try { return new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" }).formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value ?? ""; } catch { return ""; } })()
+                  }</span>
+                </button>
+              ))
+            )}
+          </div>
         </div>
-        {filtered.slice(0, 200).map(tz => (
-          <SelectItem key={tz} value={tz} className="text-xs">
-            {tz.replace(/_/g, " ")}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      )}
+    </div>
   );
 }
 
