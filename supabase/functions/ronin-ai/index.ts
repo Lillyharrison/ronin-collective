@@ -89,7 +89,12 @@ serve(async (req) => {
       });
       await adminClient.from("user_roles").insert({ user_id: uid, role });
       await adminClient.from("user_stats").insert({ user_id: uid }).select().maybeSingle();
-      await adminClient.auth.admin.inviteUserByEmail(email);
+      const siteUrl = Deno.env.get("SUPABASE_URL")!.includes("supabase.co")
+        ? `https://${Deno.env.get("SUPABASE_URL")!.split("//")[1].split(".")[0]}.lovable.app`
+        : Deno.env.get("SUPABASE_URL")!;
+      await adminClient.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app/reset-password`,
+      });
       await adminClient.from("system_events").insert({
         event_type: "user_invited", entity_type: "profile", entity_id: uid,
         triggered_by: callerUserId, payload: { email, full_name, level, role }, processed_by_ai: false,

@@ -15,8 +15,13 @@ export default function ResetPassword() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Handle both password reset and new user invite flows
     supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setValidSession(true);
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setValidSession(true);
+    });
+    // Also check if we already have a session (invite token already exchanged)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setValidSession(true);
     });
   }, []);
 
