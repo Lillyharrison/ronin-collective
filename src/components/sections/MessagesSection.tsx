@@ -16,7 +16,7 @@ const AGENT_RONIN_TITLE = "Agent Ronin";
 export function MessagesSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
-  const { level, userId } = usePermissions();
+  const { level, userId, isMasterAdmin } = usePermissions();
   const [view, setView] = useState<View>("threads");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,6 +126,7 @@ export function MessagesSection() {
         <AddressBook
           currentUserId={currentUserId}
           currentUserLevel={level}
+          isMasterAdmin={isMasterAdmin}
           onBack={() => setView("threads")}
           onStartDM={handleStartDM}
           onCreateGroup={handleCreateGroup}
