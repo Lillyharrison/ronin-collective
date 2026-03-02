@@ -136,6 +136,8 @@ export function useMessages(threadId: string | null) {
   };
 
   const deleteMessage = async (messageId: string) => {
+    // Optimistically remove from UI immediately
+    setMessages(prev => prev.filter(m => m.id !== messageId));
     await supabase.from("messages").delete().eq("id", messageId);
   };
 

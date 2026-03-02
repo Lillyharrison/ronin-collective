@@ -89,6 +89,9 @@ export function useThreads(userId: string | null) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
         fetchThreads();
       })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, () => {
+        fetchThreads();
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
