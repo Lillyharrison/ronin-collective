@@ -206,7 +206,7 @@ export function MeetTeamSection() {
       ...f,
       level,
       role: level ? ROLE_MAP[level] : "",
-      department: level === "staff" ? f.department : "",
+      department: (level === "staff" || level === "manager") ? f.department : "",
     }));
   }
 
@@ -413,7 +413,7 @@ function AddUserModal({ isEN, jobTitles, onClose, onSaved }: {
     setForm(f => ({
       ...f, level,
       role: level ? ROLE_MAP[level] : "",
-      department: level === "staff" ? f.department : "",
+      department: (level === "staff" || level === "manager") ? f.department : "",
     }));
   }
 
@@ -490,7 +490,7 @@ function AddUserModal({ isEN, jobTitles, onClose, onSaved }: {
             ))}
           </div>
 
-          {form.level === "staff" && (
+          {(form.level === "staff" || form.level === "manager") && (
             <>
               <FieldLabel label={isEN ? "Department" : "Departamento"} />
               <div className="flex flex-wrap gap-2">
@@ -612,7 +612,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         job_title: jobTitle,
         phone: phone || null,
         level,
-        department: level === "staff" ? (department || null) : null,
+        department: (level === "staff" || level === "manager") ? (department || null) : null,
         start_date: startDate || null,
         birthday: birthday || null,
         notes: notes || null,
@@ -685,7 +685,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
                     ))}
                   </div>
 
-                  {level === "staff" && (
+                  {(level === "staff" || level === "manager") && (
                     <>
                       <FieldLabel label={isEN ? "Department" : "Departamento"} />
                       <div className="flex flex-wrap gap-2">
