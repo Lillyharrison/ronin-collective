@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 
-type PropertyStatus = "occupied" | "vacant" | "maintenance";
+type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
 
 interface Property {
   id: string;
@@ -26,9 +26,10 @@ interface Property {
 }
 
 const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon: React.ReactNode }> = {
-  occupied:    { label: "Occupied",    color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: <CheckCircle size={12} /> },
-  vacant:      { label: "Vacant",      color: "bg-muted text-muted-foreground border-border",             icon: <Clock size={12} /> },
-  maintenance: { label: "Maintenance", color: "bg-amber-500/20 text-amber-400 border-amber-500/30",       icon: <AlertTriangle size={12} /> },
+  occupied:          { label: "Occupied",          color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: <CheckCircle size={12} /> },
+  vacant:            { label: "Vacant",            color: "bg-muted text-muted-foreground border-border",             icon: <Clock size={12} /> },
+  maintenance:       { label: "Maintenance",       color: "bg-amber-500/20 text-amber-400 border-amber-500/30",       icon: <AlertTriangle size={12} /> },
+  under_construction:{ label: "Under Construction",color: "bg-orange-500/20 text-orange-400 border-orange-500/30",   icon: <Wrench size={12} /> },
 };
 
 // Sub-sections available inside a property detail
@@ -446,6 +447,7 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
                   <SelectItem value="occupied">Occupied</SelectItem>
                   <SelectItem value="vacant">Vacant</SelectItem>
                   <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="under_construction">Under Construction</SelectItem>
                 </SelectContent>
               </Select>
             </div>

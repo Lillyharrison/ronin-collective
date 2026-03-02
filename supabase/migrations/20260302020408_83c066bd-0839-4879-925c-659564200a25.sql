@@ -1,0 +1,1 @@
+ALTER TYPE property_status ADD VALUE 'under_construction';
