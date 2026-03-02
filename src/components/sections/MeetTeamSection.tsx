@@ -104,6 +104,7 @@ const DEPT_OPTIONS: { value: Department; label: string; labelEs: string }[] = [
 ];
 
 const LEVEL_COLORS: Record<string, string> = {
+  master_admin:    "text-gold border-gold/60 bg-gold/15",
   principal:       "text-gold border-gold/40 bg-gold/10",
   extended_family: "text-amber-400 border-amber-400/40 bg-amber-400/10",
   manager:         "text-blue-400 border-blue-400/40 bg-blue-400/10",
@@ -256,11 +257,18 @@ export function MeetTeamSection() {
 
   const groups: Record<string, TeamMember[]> = {};
   filtered.forEach(m => {
-    const key = m.level || "staff";
+    const key = m.role === "master_admin" ? "master_admin" : (m.level || "staff");
     if (!groups[key]) groups[key] = [];
     groups[key].push(m);
   });
-  const levelOrder: Level[] = ["principal", "extended_family", "manager", "staff"];
+  const levelOrder = ["master_admin", "principal", "extended_family", "manager", "staff"] as const;
+  const LEVEL_LABELS: Record<string, { en: string; es: string }> = {
+    master_admin:    { en: "Master Admin",      es: "Master Admin" },
+    principal:       { en: "Main Family",       es: "Familia Principal" },
+    extended_family: { en: "Extended Family",   es: "Familia Extendida" },
+    manager:         { en: "Manager",           es: "Gerente" },
+    staff:           { en: "Staff",             es: "Personal" },
+  };
 
   return (
     <div className="animate-fade-in pb-6">
@@ -309,11 +317,11 @@ export function MeetTeamSection() {
         {levelOrder.map(lvl => {
           const group = groups[lvl];
           if (!group?.length) return null;
-          const lvlInfo = LEVEL_OPTIONS.find(l => l.value === lvl)!;
+          const lvlLabel = LEVEL_LABELS[lvl];
           return (
             <div key={lvl}>
               <p className={`text-[10px] font-bold tracking-widest uppercase mb-2 ${LEVEL_COLORS[lvl].split(" ")[0]}`}>
-                {isEN ? lvlInfo.label : lvlInfo.labelEs}
+                {isEN ? lvlLabel.en : lvlLabel.es}
                 <span className="ml-2 opacity-50">{group.length}</span>
               </p>
               <div className="space-y-2">
@@ -323,7 +331,7 @@ export function MeetTeamSection() {
                     onClick={() => setSelectedMember(m)}
                     className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 hover:border-gold/30 transition-all text-left"
                   >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.level || "staff"]}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.role === "master_admin" ? "master_admin" : (m.level || "staff")]}`}>
                       {m.avatar_url ? (
                         <img src={m.avatar_url} alt={m.full_name || ""} className="w-full h-full rounded-full object-cover" />
                       ) : (
