@@ -69,32 +69,36 @@ serve(async (req) => {
         });
       }
 
-      const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
-        email,
-        email_confirm: false,
-        user_metadata: { full_name },
+      // Use inviteUserByEmail — this creates the user AND sends the magic link in one step.
+      // Do NOT call createUser first or the invite token will be invalidated.
+      const redirectTo = body.redirect_url || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app/reset-password";
+      const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
+        data: { full_name },
+        redirectTo,
       });
-      if (createErr || !newUser?.user) {
-        return new Response(JSON.stringify({ error: createErr?.message ?? "Failed to create user" }), {
+      if (inviteErr || !inviteData?.user) {
+        return new Response(JSON.stringify({ error: inviteErr?.message ?? "Failed to invite user" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const uid = newUser.user.id;
+      const uid = inviteData.user.id;
 
       await adminClient.from("profiles").upsert({
         id: uid, full_name, job_title: job_title || null, level,
         department: department || null, start_date: start_date || null,
         birthday: birthday || null, notes: notes || null,
       });
-      await adminClient.from("user_roles").insert({ user_id: uid, role });
+
+      // Only insert role if not already created by the trigger
+      const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
+      if (!existingRole) {
+        await adminClient.from("user_roles").insert({ user_id: uid, role });
+      } else {
+        await adminClient.from("user_roles").update({ role }).eq("user_id", uid);
+      }
+
       await adminClient.from("user_stats").insert({ user_id: uid }).select().maybeSingle();
-      const siteUrl = Deno.env.get("SUPABASE_URL")!.includes("supabase.co")
-        ? `https://${Deno.env.get("SUPABASE_URL")!.split("//")[1].split(".")[0]}.lovable.app`
-        : Deno.env.get("SUPABASE_URL")!;
-      await adminClient.auth.admin.inviteUserByEmail(email, {
-        redirectTo: `https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app/reset-password`,
-      });
       await adminClient.from("system_events").insert({
         event_type: "user_invited", entity_type: "profile", entity_id: uid,
         triggered_by: callerUserId, payload: { email, full_name, level, role }, processed_by_ai: false,
