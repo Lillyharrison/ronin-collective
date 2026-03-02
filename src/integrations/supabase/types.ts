@@ -581,7 +581,11 @@ export type Database = {
         | "furniture"
         | "other"
       language_pref: "en" | "es"
-      property_status: "occupied" | "vacant" | "maintenance"
+      property_status:
+        | "occupied"
+        | "vacant"
+        | "maintenance"
+        | "under_construction"
       task_status: "pending" | "in_progress" | "completed" | "urgent"
       thread_type: "private" | "group" | "system_ai" | "property"
     }
@@ -721,7 +725,12 @@ export const Constants = {
         "other",
       ],
       language_pref: ["en", "es"],
-      property_status: ["occupied", "vacant", "maintenance"],
+      property_status: [
+        "occupied",
+        "vacant",
+        "maintenance",
+        "under_construction",
+      ],
       task_status: ["pending", "in_progress", "completed", "urgent"],
       thread_type: ["private", "group", "system_ai", "property"],
     },
