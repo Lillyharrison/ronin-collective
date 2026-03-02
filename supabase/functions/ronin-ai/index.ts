@@ -17,10 +17,9 @@ serve(async (req) => {
 
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Service-role client — full DB access for the agent
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Auth — identify the calling user
+    // ─── AUTH ─────────────────────────────────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
     let callerUserId: string | null = null;
     let callerProfile: Record<string, unknown> | null = null;
@@ -55,7 +54,7 @@ serve(async (req) => {
     const body = await req.json();
     const { type, content, thread_id, csv_content, property_id, action } = body;
 
-    // ─── INVITE USER (admin action) ───────────────────────────────────────────
+    // ─── INVITE USER ──────────────────────────────────────────────────────────
     if (action === "invite_user") {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
@@ -70,7 +69,6 @@ serve(async (req) => {
         });
       }
 
-      // 1. Create auth user via admin API
       const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
         email,
         email_confirm: false,
@@ -84,42 +82,23 @@ serve(async (req) => {
 
       const uid = newUser.user.id;
 
-      // 2. Upsert profile with extended fields
       await adminClient.from("profiles").upsert({
-        id: uid,
-        full_name,
-        job_title: job_title || null,
-        level,
-        department: department || null,
-        start_date: start_date || null,
-        birthday: birthday || null,
-        notes: notes || null,
+        id: uid, full_name, job_title: job_title || null, level,
+        department: department || null, start_date: start_date || null,
+        birthday: birthday || null, notes: notes || null,
       });
-
-      // 3. Assign role
       await adminClient.from("user_roles").insert({ user_id: uid, role });
-
-      // 4. Initialize user stats
       await adminClient.from("user_stats").insert({ user_id: uid }).select().maybeSingle();
-
-      // 5. Send password reset (invite) email
       await adminClient.auth.admin.inviteUserByEmail(email);
-
-      // 6. Log system event
       await adminClient.from("system_events").insert({
-        event_type: "user_invited",
-        entity_type: "profile",
-        entity_id: uid,
-        triggered_by: callerUserId,
-        payload: { email, full_name, level, role },
-        processed_by_ai: false,
+        event_type: "user_invited", entity_type: "profile", entity_id: uid,
+        triggered_by: callerUserId, payload: { email, full_name, level, role }, processed_by_ai: false,
       });
 
       return new Response(JSON.stringify({ success: true, user_id: uid }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
 
     // ─── SYSTEM PROMPT ────────────────────────────────────────────────────────
     const systemPrompt = `You are Ronin AI, the intelligent operations backbone for Ronin Collective — a luxury estate management platform.
@@ -132,16 +111,14 @@ CALLER CONTEXT:
 - Active property context: ${property_id ?? "none"}
 
 YOUR CAPABILITIES:
-- You have read/write access to all estate data: tasks, properties, assets, manuals, messages, user stats, system events.
+- You have read access to all estate data: tasks, properties, assets, manuals, messages, user stats, system events.
 - You enforce permission boundaries: staff only see their assigned properties; admins see all.
 - You respond in the same language the user writes in (English or Spanish).
 - You are concise, professional, and proactive.
 
 CRITICAL RULES:
-- NEVER invent, guess, or fabricate any data. If a person, property, task, or detail is not present in the LIVE PLATFORM DATA injected below, respond with "I don't have that information in the system" — do not make anything up.
-- Only answer from the live data provided. Never use training knowledge to fill gaps about people or properties.
-
-RULES:
+- NEVER invent, guess, or fabricate any data. Every answer must come exclusively from the LIVE PLATFORM DATA injected below.
+- If a person, property, task, or detail is not present in the live data, say "I don't have that information in the system" — never fill gaps with assumptions.
 - Never reveal other users' personal data to non-admins.
 - Always confirm destructive operations before executing.
 - When creating tasks, always set created_by to the calling user's ID unless told otherwise.`;
@@ -150,12 +127,10 @@ RULES:
     if (type === "csv_import") {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions for import" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Ask the AI to parse CSV rows into structured task objects
       const parsePrompt = `You are a data parser. Parse this CSV content into a JSON array of task objects.
 Each row should produce: { title_en, description_en, category (one of: housekeeping, maintenance, general), priority (1=urgent,2=normal,3=low), property_hint (name or id hint from the data) }
 Only return valid JSON array, nothing else.
@@ -165,15 +140,8 @@ ${csv_content}`;
 
       const parseResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [{ role: "user", content: parsePrompt }],
-          temperature: 0.1,
-        }),
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "google/gemini-2.5-pro", messages: [{ role: "user", content: parsePrompt }], temperature: 0.1 }),
       });
 
       if (!parseResponse.ok) {
@@ -183,15 +151,11 @@ ${csv_content}`;
 
       const parseData = await parseResponse.json();
       let rawJson = parseData.choices?.[0]?.message?.content ?? "[]";
-      // Strip markdown code fences if present
       rawJson = rawJson.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
 
       let parsedTasks: Array<{
-        title_en: string;
-        description_en?: string;
-        category?: string;
-        priority?: number;
-        property_hint?: string;
+        title_en: string; description_en?: string; category?: string;
+        priority?: number; property_hint?: string;
       }> = [];
 
       try {
@@ -200,14 +164,12 @@ ${csv_content}`;
         throw new Error("AI returned invalid JSON for CSV parse");
       }
 
-      // Fetch properties so we can match hints
       const { data: allProperties } = await adminClient.from("properties").select("id, name");
       const propertyMap: Record<string, string> = {};
       (allProperties ?? []).forEach((p: { id: string; name: string }) => {
         propertyMap[p.name.toLowerCase()] = p.id;
       });
 
-      // Resolve property_id for each task
       const resolvedPropertyId = property_id ?? null;
 
       const taskRows = parsedTasks.map((t) => {
@@ -215,61 +177,36 @@ ${csv_content}`;
         if (!resolvedPropId && t.property_hint) {
           const hint = t.property_hint.toLowerCase();
           for (const [name, id] of Object.entries(propertyMap)) {
-            if (name.includes(hint) || hint.includes(name)) {
-              resolvedPropId = id;
-              break;
-            }
+            if (name.includes(hint) || hint.includes(name)) { resolvedPropId = id; break; }
           }
         }
         return {
-          title_en: t.title_en,
-          description_en: t.description_en ?? null,
-          category: t.category ?? "general",
-          priority: t.priority ?? 2,
-          property_id: resolvedPropId,
-          status: "pending" as const,
-          created_by: callerUserId!,
+          title_en: t.title_en, description_en: t.description_en ?? null,
+          category: t.category ?? "general", priority: t.priority ?? 2,
+          property_id: resolvedPropId, status: "pending" as const, created_by: callerUserId!,
         };
       });
 
-      const { data: inserted, error: insertError } = await adminClient
-        .from("tasks")
-        .insert(taskRows)
-        .select("id");
-
+      const { data: inserted, error: insertError } = await adminClient.from("tasks").insert(taskRows).select("id");
       if (insertError) throw new Error(`DB insert failed: ${insertError.message}`);
 
       const taskCount = inserted?.length ?? 0;
 
-      // Post a summary message to the property chat thread if thread_id provided
       if (thread_id) {
-        const summaryMsg = `🤖 **Ronin AI** — I have processed the new import. **${taskCount} new tasks** have been added across the relevant properties. All tasks are now visible in the Tasks section.`;
         await adminClient.from("messages").insert({
-          thread_id,
-          content_text: summaryMsg,
-          sender_id: null,
-          is_ai_generated: true,
+          thread_id, sender_id: null, is_ai_generated: true,
+          content_text: `🤖 **Ronin AI** — I have processed the new import. **${taskCount} new tasks** have been added across the relevant properties. All tasks are now visible in the Tasks section.`,
         });
       }
 
-      // Log system event
       await adminClient.from("system_events").insert({
-        event_type: "csv_import",
-        entity_type: "tasks",
-        property_id: resolvedPropertyId,
-        triggered_by: callerUserId,
-        payload: { task_count: taskCount },
-        processed_by_ai: true,
-        ai_response: `Imported ${taskCount} tasks`,
+        event_type: "csv_import", entity_type: "tasks", property_id: resolvedPropertyId,
+        triggered_by: callerUserId, payload: { task_count: taskCount },
+        processed_by_ai: true, ai_response: `Imported ${taskCount} tasks`,
       });
 
       return new Response(
-        JSON.stringify({
-          success: true,
-          task_count: taskCount,
-          summary: `I have processed the new import. ${taskCount} new tasks have been added.`,
-          tasks: taskRows,
-        }),
+        JSON.stringify({ success: true, task_count: taskCount, summary: `I have processed the new import. ${taskCount} new tasks have been added.`, tasks: taskRows }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -278,103 +215,83 @@ ${csv_content}`;
     if (type === "message") {
       const { messages: conversationHistory = [] } = body;
 
-      // ── On-demand context injection based on keywords ──────────────────────
-      const msgLower = (content as string).toLowerCase();
-
-      const wantsProperties = /propert|house|home|ranch|estate|residence|villa|location|where is|which property/i.test(msgLower);
-      const wantsTasks = /task|job|todo|to-do|pending|urgent|maintenance|repair|work|chore/i.test(msgLower);
-      // Staff: broad catch — names, "where is", pronouns, role words, direct questions
-      // Staff: always loaded — people questions are phrased in too many ways to keyword-match reliably
-      const wantsStaff = true;
-      const wantsAssets = /asset|vehicle|car|truck|appliance|inventory|equipment|item/i.test(msgLower);
-      const wantsEvents = /event|recent|last|latest|history|log|happened|update/i.test(msgLower);
-
-      const contextSections: string[] = [];
-
-      // Properties
-      if (wantsProperties) {
-        const { data: props } = await adminClient
+      // ── Always load full platform snapshot in parallel ─────────────────────
+      const [propsRes, tasksRes, staffRes, assetsRes, eventsRes] = await Promise.all([
+        adminClient
           .from("properties")
           .select("id, name, address, city, country, status, is_primary, occupied_by, timezone")
-          .order("sort_order");
-        if (props && props.length > 0) {
-          const propLines = props.map((p: Record<string, unknown>) =>
-            `  - ${p.name} (${p.city ?? p.address}, ${p.country ?? ""}) | Status: ${p.status} | Primary: ${p.is_primary} | Occupied by: ${p.occupied_by ?? "N/A"} | Timezone: ${p.timezone}`
-          );
-          contextSections.push(`PROPERTIES (${props.length} total):\n${propLines.join("\n")}`);
-        } else {
-          contextSections.push("PROPERTIES: None found.");
-        }
-      }
-
-      // Tasks
-      if (wantsTasks) {
-        const { data: tasks } = await adminClient
+          .order("sort_order"),
+        adminClient
           .from("tasks")
           .select("id, title_en, status, priority, category, due_date, assigned_to, property_id")
           .in("status", ["pending", "in_progress", "urgent"])
           .order("priority")
-          .limit(30);
-        if (tasks && tasks.length > 0) {
-          const taskLines = tasks.map((t: Record<string, unknown>) =>
-            `  - [${t.status}] ${t.title_en} | Priority: ${t.priority} | Category: ${t.category ?? "general"} | Due: ${t.due_date ?? "none"}`
-          );
-          contextSections.push(`OPEN TASKS (${tasks.length} shown):\n${taskLines.join("\n")}`);
-        } else {
-          contextSections.push("OPEN TASKS: None found.");
-        }
-      }
-
-      // Staff
-      if (wantsStaff) {
-        const { data: staff } = await adminClient
+          .limit(50),
+        adminClient
           .from("profiles")
-          .select("id, full_name, job_title, department, level, assigned_property_ids");
-        if (staff && staff.length > 0) {
-          const staffLines = staff.map((s: Record<string, unknown>) =>
-            `  - ${s.full_name ?? "Unknown"} | Role: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level}`
-          );
-          contextSections.push(`TEAM MEMBERS (${staff.length} total):\n${staffLines.join("\n")}`);
-        } else {
-          contextSections.push("TEAM MEMBERS: None found.");
-        }
-      }
-
-      // Assets
-      if (wantsAssets) {
-        const { data: assets } = await adminClient
+          .select("id, full_name, job_title, department, level, assigned_property_ids, phone, notes"),
+        adminClient
           .from("assets")
           .select("id, name, category, make, model, serial_number, current_property_id")
-          .limit(40);
-        if (assets && assets.length > 0) {
-          const assetLines = assets.map((a: Record<string, unknown>) =>
-            `  - ${a.name} | Category: ${a.category} | Make: ${a.make ?? "N/A"} ${a.model ?? ""}`
-          );
-          contextSections.push(`ASSETS (${assets.length} shown):\n${assetLines.join("\n")}`);
-        } else {
-          contextSections.push("ASSETS: None found.");
-        }
+          .limit(50),
+        adminClient
+          .from("system_events")
+          .select("event_type, entity_type, created_at, payload")
+          .order("created_at", { ascending: false })
+          .limit(15),
+      ]);
+
+      const contextSections: string[] = [];
+
+      // Properties
+      const props = propsRes.data ?? [];
+      const propLines = props.map((p: Record<string, unknown>) =>
+        `  - [ID:${p.id}] ${p.name} | ${p.city ?? p.address}, ${p.country ?? ""} | Status: ${p.status} | Occupied by: ${p.occupied_by ?? "N/A"} | Timezone: ${p.timezone}`
+      );
+      contextSections.push(props.length > 0
+        ? `PROPERTIES (${props.length} total):\n${propLines.join("\n")}`
+        : "PROPERTIES: None in database.");
+
+      // Staff / profiles
+      const staff = staffRes.data ?? [];
+      const staffLines = staff.map((s: Record<string, unknown>) => {
+        const propIds = Array.isArray(s.assigned_property_ids) && (s.assigned_property_ids as string[]).length
+          ? `Assigned to: ${(s.assigned_property_ids as string[]).join(", ")}`
+          : "No property assignments";
+        return `  - [ID:${s.id}] ${s.full_name ?? "Unknown"} | Title: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level} | ${propIds}`;
+      });
+      contextSections.push(staff.length > 0
+        ? `TEAM MEMBERS (${staff.length} total):\n${staffLines.join("\n")}`
+        : "TEAM MEMBERS: None in database.");
+
+      // Tasks
+      const tasks = tasksRes.data ?? [];
+      const taskLines = tasks.map((t: Record<string, unknown>) =>
+        `  - [${t.status}] ${t.title_en} | Priority: ${t.priority} | Category: ${t.category ?? "general"} | Due: ${t.due_date ?? "none"} | Property ID: ${t.property_id ?? "unassigned"}`
+      );
+      contextSections.push(tasks.length > 0
+        ? `OPEN TASKS (${tasks.length}):\n${taskLines.join("\n")}`
+        : "OPEN TASKS: None.");
+
+      // Assets
+      const assets = assetsRes.data ?? [];
+      if (assets.length > 0) {
+        const assetLines = assets.map((a: Record<string, unknown>) =>
+          `  - ${a.name} | Category: ${a.category} | Make: ${a.make ?? "N/A"} ${a.model ?? ""} | Property ID: ${a.current_property_id ?? "unassigned"}`
+        );
+        contextSections.push(`ASSETS (${assets.length}):\n${assetLines.join("\n")}`);
       }
 
       // Recent events
-      if (wantsEvents) {
-        const { data: events } = await adminClient
-          .from("system_events")
-          .select("event_type, entity_type, created_at, payload, ai_response")
-          .order("created_at", { ascending: false })
-          .limit(10);
-        if (events && events.length > 0) {
-          const eventLines = events.map((e: Record<string, unknown>) =>
-            `  - [${e.event_type}] ${e.entity_type ?? ""} at ${e.created_at}`
-          );
-          contextSections.push(`RECENT SYSTEM EVENTS:\n${eventLines.join("\n")}`);
-        }
+      const events = eventsRes.data ?? [];
+      if (events.length > 0) {
+        const eventLines = events.map((e: Record<string, unknown>) =>
+          `  - [${e.event_type}] ${e.entity_type ?? ""} at ${e.created_at}`
+        );
+        contextSections.push(`RECENT SYSTEM EVENTS:\n${eventLines.join("\n")}`);
       }
 
-      let contextNote = "";
-      if (contextSections.length > 0) {
-        contextNote = "\n\n=== LIVE PLATFORM DATA ===\n" + contextSections.join("\n\n") + "\n=== END LIVE DATA ===";
-      }
+      const contextNote = "\n\n=== LIVE PLATFORM DATA ===\n" + contextSections.join("\n\n") + "\n=== END LIVE DATA ===";
 
       const aiMessages = [
         { role: "system", content: systemPrompt + contextNote },
@@ -384,42 +301,32 @@ ${csv_content}`;
 
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: aiMessages,
-          stream: true,
-        }),
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "google/gemini-2.5-pro", messages: aiMessages, stream: true }),
       });
 
       if (!aiResponse.ok) {
         if (aiResponse.status === 429) {
           return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         if (aiResponse.status === 402) {
           return new Response(JSON.stringify({ error: "AI credits exhausted. Please top up in workspace settings." }), {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         const t = await aiResponse.text();
         throw new Error(`AI error: ${aiResponse.status} ${t}`);
       }
 
-      // Stream the response while accumulating full text, then save to DB
       if (!thread_id) {
         return new Response(aiResponse.body, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
         });
       }
 
-      // Consume the stream, accumulate the full response, then save as AI message
+      // Consume stream, accumulate, then save AI message to DB
       const reader = aiResponse.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -449,14 +356,10 @@ ${csv_content}`;
           }
           controller.close();
 
-          // Save the complete AI response to DB
           if (fullText) {
             await adminClient.from("messages").insert({
-              thread_id,
-              content_text: fullText,
-              sender_id: null,
-              is_ai_generated: true,
-              delivery_status: "sent",
+              thread_id, content_text: fullText, sender_id: null,
+              is_ai_generated: true, delivery_status: "sent",
             });
             await adminClient.from("chat_threads")
               .update({ last_message_at: new Date().toISOString() })
@@ -466,17 +369,12 @@ ${csv_content}`;
       });
 
       return new Response(stream, {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "text/event-stream",
-          "X-Thread-Id": thread_id,
-        },
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream", "X-Thread-Id": thread_id },
       });
     }
 
     return new Response(JSON.stringify({ error: "Unknown request type" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("ronin-ai error:", err);
