@@ -100,6 +100,36 @@ serve(async (req) => {
       });
     }
 
+    // ─── DELETE USER ──────────────────────────────────────────────────────────
+    if (action === "delete_user") {
+      if (callerRole !== "master_admin") {
+        return new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { target_user_id } = body;
+      if (!target_user_id) {
+        return new Response(JSON.stringify({ error: "Missing target_user_id" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Prevent self-deletion
+      if (target_user_id === callerUserId) {
+        return new Response(JSON.stringify({ error: "You cannot delete yourself" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error: deleteErr } = await adminClient.auth.admin.deleteUser(target_user_id);
+      if (deleteErr) {
+        return new Response(JSON.stringify({ error: deleteErr.message }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ─── SYSTEM PROMPT ────────────────────────────────────────────────────────
     const systemPrompt = `You are Ronin AI, the intelligent operations backbone for Ronin Collective — a luxury estate management platform.
 

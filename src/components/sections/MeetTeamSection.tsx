@@ -5,8 +5,13 @@ import { usePermissions } from "@/hooks/usePermissions";
 import {
   UsersRound, Plus, Search, ChevronRight,
   User, Briefcase, Building2, Calendar, X, Check, ChevronDown,
-  Eye, Pencil, Bell, Save, Loader2,
+  Eye, Pencil, Bell, Save, Loader2, Trash2,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -364,12 +369,14 @@ export function MeetTeamSection() {
 
       {/* ── Member Edit Drawer ─────────────────────────────────────────────── */}
       {selectedMember && (
-        <MemberEditDrawer
+      <MemberEditDrawer
           member={selectedMember}
           properties={properties}
           isEN={isEN}
           canEdit={isMasterAdmin || isAdmin}
+          isMasterAdmin={isMasterAdmin}
           onClose={() => setSelectedMember(null)}
+          onDeleted={async () => { await loadMembers(); setSelectedMember(null); }}
           onSaved={async (updated) => {
             await loadMembers();
             setSelectedMember(null);
@@ -513,16 +520,19 @@ function AddUserModal({ isEN, jobTitles, onClose, onSaved }: {
 }
 
 // ─── Member Edit Drawer ────────────────────────────────────────────────────────
-function MemberEditDrawer({ member, properties, isEN, canEdit, onClose, onSaved }: {
+function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted }: {
   member: TeamMember;
   properties: Property[];
   isEN: boolean;
   canEdit: boolean;
+  isMasterAdmin: boolean;
   onClose: () => void;
   onSaved: (updated: TeamMember) => void;
+  onDeleted: () => void;
 }) {
   const [tab, setTab] = useState<"details" | "access">("details");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Edit state
   const [fullName, setFullName] = useState(member.full_name || "");
@@ -559,6 +569,17 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, onClose, onSaved 
 
   function applyLevelDefaults() {
     if (level) setPerms(defaultPermissionsForLevel(level));
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await supabase.functions.invoke("ronin-ai", {
+        body: { action: "delete_user", target_user_id: member.id },
+      });
+      onDeleted();
+    } catch (e) { console.error(e); }
+    setDeleting(false);
   }
 
   async function handleSave() {
@@ -771,11 +792,40 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, onClose, onSaved 
 
         {/* Footer */}
         {canEdit && (
-          <div className="shrink-0 px-5 py-4 border-t border-charcoal-light">
-            <Button onClick={handleSave} disabled={saving} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
+          <div className="shrink-0 px-5 py-4 border-t border-charcoal-light space-y-2">
+            <Button onClick={handleSave} disabled={saving || deleting} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
               {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
               {saving ? (isEN ? "Saving…" : "Guardando…") : (isEN ? "Save Changes" : "Guardar Cambios")}
             </Button>
+            {isMasterAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={deleting} className="w-full border-destructive/40 text-destructive hover:bg-destructive/10">
+                    {deleting ? <Loader2 size={16} className="animate-spin mr-2" /> : <Trash2 size={16} className="mr-2" />}
+                    {isEN ? "Delete User" : "Eliminar Usuario"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{isEN ? "Delete User?" : "¿Eliminar usuario?"}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {isEN
+                        ? `This will permanently delete ${member.full_name || "this user"} and all their data. This cannot be undone.`
+                        : `Esto eliminará permanentemente a ${member.full_name || "este usuario"} y todos sus datos. Esta acción no se puede deshacer.`}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{isEN ? "Cancel" : "Cancelar"}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isEN ? "Delete" : "Eliminar"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         )}
       </div>
