@@ -75,7 +75,19 @@ export function MessagesSection() {
   };
 
   const handleCreateGroup = async (name: string, participantIds: string[]) => {
-    const threadId = await createGroup(name, participantIds);
+    if (!currentUserId) return;
+    // Filter out agent-ronin sentinel — it has no real user ID
+    const realParticipants = participantIds.filter(id => id !== "agent-ronin");
+    const includesRonin = participantIds.includes("agent-ronin");
+
+    const threadId = await createGroup(name, realParticipants);
+    if (threadId && includesRonin) {
+      // Mark thread as containing the AI agent so ChatView knows to route to edge fn
+      await supabase
+        .from("chat_threads")
+        .update({ type: "system_ai" } as never)
+        .eq("id", threadId);
+    }
     if (threadId) {
       setActiveThreadId(threadId);
       setView("chat");
@@ -117,6 +129,7 @@ export function MessagesSection() {
           threadType={activeThread.type}
           participants={activeThread.participants}
           currentUserId={currentUserId}
+          isAdmin={isMasterAdmin}
           onBack={handleBack}
           isAgentThread={isAgentThread}
         />

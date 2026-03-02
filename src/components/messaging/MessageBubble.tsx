@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Check, CheckCheck, Bot, Play, Pause } from "lucide-react";
+import { Check, CheckCheck, Bot, Play, Pause, Trash2 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Message = Tables<"messages"> & { sender_profile?: { full_name: string | null; avatar_url: string | null } };
@@ -9,12 +9,14 @@ interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
   currentUserId: string;
+  isAdmin?: boolean;
   onReact: (emoji: string) => void;
+  onDelete?: (messageId: string) => void;
   quickEmojis: string[];
 }
 
-export function MessageBubble({ message, isOwn, currentUserId, onReact, quickEmojis }: MessageBubbleProps) {
-  const [showReactions, setShowReactions] = useState(false);
+export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact, onDelete, quickEmojis }: MessageBubbleProps) {
+  const [showMenu, setShowMenu] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
 
@@ -22,8 +24,7 @@ export function MessageBubble({ message, isOwn, currentUserId, onReact, quickEmo
   const isAI = message.is_ai_generated;
   const isRead = (message.seen_by ?? []).length > 0;
   const status = message.delivery_status as string;
-
-  const handleLongPress = () => setShowReactions(true);
+  const canDelete = isOwn || isAdmin;
 
   const toggleAudio = () => {
     if (!audioRef) {
@@ -41,10 +42,12 @@ export function MessageBubble({ message, isOwn, currentUserId, onReact, quickEmo
     }
   };
 
+  const EMOJI_QUICK = quickEmojis;
+
   return (
     <div
       className={`flex mb-1 ${isOwn ? "justify-end" : "justify-start"}`}
-      onContextMenu={(e) => { e.preventDefault(); handleLongPress(); }}
+      onContextMenu={(e) => { e.preventDefault(); setShowMenu(true); }}
     >
       {/* AI avatar */}
       {isAI && (
@@ -82,10 +85,7 @@ export function MessageBubble({ message, isOwn, currentUserId, onReact, quickEmo
 
           {/* Audio / voice note */}
           {message.media_type === "audio" && message.content_media_url && (
-            <button
-              onClick={toggleAudio}
-              className="flex items-center gap-2 py-1"
-            >
+            <button onClick={toggleAudio} className="flex items-center gap-2 py-1">
               {audioPlaying ? <Pause size={16} /> : <Play size={16} />}
               <div className="flex gap-0.5">
                 {Array.from({ length: 20 }).map((_, i) => (
@@ -127,22 +127,41 @@ export function MessageBubble({ message, isOwn, currentUserId, onReact, quickEmo
           </div>
         </div>
 
-        {/* Reaction picker */}
-        {showReactions && (
-          <div
-            className={`absolute ${isOwn ? "right-0" : "left-0"} -top-10 bg-card border border-border rounded-full px-2 py-1 flex gap-1 shadow-lg z-10`}
-            onMouseLeave={() => setShowReactions(false)}
-          >
-            {quickEmojis.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => { onReact(emoji); setShowReactions(false); }}
-                className="text-base hover:scale-125 transition-transform px-0.5"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
+        {/* Context menu (long-press / right-click) */}
+        {showMenu && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-20"
+              onClick={() => setShowMenu(false)}
+            />
+            <div
+              className={`absolute ${isOwn ? "right-0" : "left-0"} -top-2 translate-y-[-100%] bg-card border border-border rounded-xl shadow-lg z-30 py-1 min-w-[140px]`}
+            >
+              {/* Emoji reactions row */}
+              <div className="flex gap-1 px-2 py-1.5 border-b border-border">
+                {EMOJI_QUICK.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => { onReact(emoji); setShowMenu(false); }}
+                    className="text-base hover:scale-125 transition-transform px-0.5"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              {/* Delete option */}
+              {canDelete && onDelete && (
+                <button
+                  onClick={() => { onDelete(message.id); setShowMenu(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Delete message
+                </button>
+              )}
+            </div>
+          </>
         )}
 
         {/* Displayed reactions */}

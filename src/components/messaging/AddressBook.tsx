@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ArrowLeft, Search, Bot, Users, UserPlus, MessageCircle } from "lucide-react";
+import { ArrowLeft, Search, Bot, Users, MessageCircle } from "lucide-react";
+
+const AGENT_RONIN_ID = "agent-ronin";
 
 interface Contact {
   id: string;
@@ -33,21 +35,20 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
 
   useEffect(() => {
     async function load() {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, level, job_title, department")
-        .neq("id", currentUserId)
-        .order("full_name");
-      
-      // Load existing DM threads to check privacy rule
-      const { data: threads } = await supabase
-        .from("chat_threads")
-        .select("participant_ids")
-        .eq("type", "private")
-        .contains("participant_ids", [currentUserId]);
-      
-      setContacts(profiles ?? []);
-      setExistingThreads(threads ?? []);
+      const [profilesRes, threadsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, level, job_title, department")
+          .neq("id", currentUserId)
+          .order("full_name"),
+        supabase
+          .from("chat_threads")
+          .select("participant_ids")
+          .eq("type", "private")
+          .contains("participant_ids", [currentUserId]),
+      ]);
+      setContacts(profilesRes.data ?? []);
+      setExistingThreads(threadsRes.data ?? []);
       setLoading(false);
     }
     load();
@@ -55,14 +56,11 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
 
   const isStaff = currentUserLevel === "staff";
 
-  // Privacy: staff can't initiate with family unless family messaged them first
-  // Master admin always has full access
   const canMessageContact = (contact: Contact): boolean => {
     if (isMasterAdmin) return true;
-    if (!isStaff) return true; // family/managers can message anyone
+    if (!isStaff) return true;
     const isFamily = contact.level === "principal" || contact.level === "extended_family";
     if (!isFamily) return true;
-    // Check if a DM thread already exists (meaning family initiated)
     return existingThreads.some(t =>
       t.participant_ids?.includes(contact.id) && t.participant_ids?.includes(currentUserId)
     );
@@ -74,13 +72,24 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
            (c.job_title || "").toLowerCase().includes(search.toLowerCase());
   });
 
+  // Show Agent Ronin in group mode search results too
+  const showAgentRoninInList = mode === "list" && !search;
+  const showAgentRoninInGroup = mode === "group" && (!search || "agent ronin".includes(search.toLowerCase()) || "ronin".includes(search.toLowerCase()));
+  const agentRoninSelectedInGroup = selectedForGroup.includes(AGENT_RONIN_ID);
+
   const handleCreateGroup = () => {
     if (groupName.trim() && selectedForGroup.length > 0) {
       onCreateGroup(groupName.trim(), selectedForGroup);
     }
   };
 
-  const getInitials = (name: string | null) => 
+  const toggleGroupSelect = (id: string) => {
+    setSelectedForGroup(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const getInitials = (name: string | null) =>
     (name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
@@ -100,7 +109,7 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
       {/* Mode toggle */}
       <div className="px-4 py-2 border-b border-border flex gap-2">
         <button
-          onClick={() => setMode("list")}
+          onClick={() => { setMode("list"); setSelectedForGroup([]); }}
           className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
             mode === "list" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
           }`}
@@ -109,7 +118,7 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
           {language === "es" ? "Mensaje Directo" : "Direct Message"}
         </button>
         <button
-          onClick={() => setMode("group")}
+          onClick={() => { setMode("group"); }}
           className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
             mode === "group" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
           }`}
@@ -132,6 +141,9 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
             <div className="flex items-center justify-between mt-2">
               <span className="text-xs text-muted-foreground">
                 {selectedForGroup.length} {language === "es" ? "seleccionados" : "selected"}
+                {agentRoninSelectedInGroup && (
+                  <span className="ml-1 text-accent">· Agent Ronin included</span>
+                )}
               </span>
               <button
                 onClick={handleCreateGroup}
@@ -158,12 +170,27 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
         </div>
       </div>
 
-      {/* Agent Ronin entry (only in DM mode) */}
-      {mode === "list" && !search && (
+      {/* Agent Ronin entry */}
+      {(showAgentRoninInList || showAgentRoninInGroup) && (
         <button
-          onClick={() => onStartDM("agent-ronin")}
-          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-b border-border/50"
+          onClick={() => {
+            if (mode === "group") {
+              toggleGroupSelect(AGENT_RONIN_ID);
+            } else {
+              onStartDM(AGENT_RONIN_ID);
+            }
+          }}
+          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-border/50 ${
+            mode === "group" && agentRoninSelectedInGroup ? "bg-accent/10" : "hover:bg-muted/50"
+          }`}
         >
+          {mode === "group" && (
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+              agentRoninSelectedInGroup ? "bg-accent border-accent" : "border-border"
+            }`}>
+              {agentRoninSelectedInGroup && <div className="w-2 h-2 rounded-full bg-accent-foreground" />}
+            </div>
+          )}
           <div className="w-11 h-11 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
             <Bot size={20} className="text-accent" />
           </div>
@@ -192,11 +219,7 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
                 key={contact.id}
                 onClick={() => {
                   if (mode === "group") {
-                    setSelectedForGroup(prev =>
-                      prev.includes(contact.id)
-                        ? prev.filter(id => id !== contact.id)
-                        : [...prev, contact.id]
-                    );
+                    toggleGroupSelect(contact.id);
                   } else if (canMessage) {
                     onStartDM(contact.id);
                   }
@@ -210,7 +233,6 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
                     : "hover:bg-muted/50"
                 }`}
               >
-                {/* Checkbox for group mode */}
                 {mode === "group" && (
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     isSelected ? "bg-accent border-accent" : "border-border"
@@ -219,7 +241,6 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
                   </div>
                 )}
 
-                {/* Avatar */}
                 {contact.avatar_url ? (
                   <img src={contact.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover flex-shrink-0" />
                 ) : (
