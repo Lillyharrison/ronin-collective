@@ -352,6 +352,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          is_primary: boolean
           name: string
           status: Database["public"]["Enums"]["property_status"]
           timezone: string
@@ -364,6 +365,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_primary?: boolean
           name: string
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
@@ -376,6 +378,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_primary?: boolean
           name?: string
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
