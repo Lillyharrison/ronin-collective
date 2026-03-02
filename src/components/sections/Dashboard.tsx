@@ -14,7 +14,7 @@ interface Property {
   city: string;
   country: string;
   timezone: string;
-  status: "occupied" | "vacant" | "maintenance";
+  status: "occupied" | "vacant" | "maintenance" | "under_construction";
   image_url: string | null;
 }
 
@@ -28,10 +28,11 @@ interface FeedEvent {
   propertyName?: string;
 }
 
-const statusConfig = {
-  occupied:    { label: "Occupied",    labelEs: "Ocupado",       className: "status-done" },
-  vacant:      { label: "Vacant",      labelEs: "Vacante",       className: "status-vacant" },
-  maintenance: { label: "Maintenance", labelEs: "Mantenimiento", className: "status-progress" },
+const statusConfig: Record<string, { label: string; labelEs: string; className: string }> = {
+  occupied:           { label: "Occupied",          labelEs: "Ocupado",           className: "status-done" },
+  vacant:             { label: "Vacant",            labelEs: "Vacante",           className: "status-vacant" },
+  maintenance:        { label: "Maintenance",       labelEs: "Mantenimiento",     className: "status-pending" },
+  under_construction: { label: "Under Construction",labelEs: "En Construcción",   className: "status-pending" },
 };
 
 const quickActions = [
