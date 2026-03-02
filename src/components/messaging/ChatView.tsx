@@ -53,10 +53,13 @@ export function ChatView({
     setSending(true);
 
     if (isAgentThread) {
-      // Send user message to DB
+      // 1. Save user message to DB only once (edge fn does NOT re-save it)
       await sendMessage(text, currentUserId);
-      
-      // Call Ronin AI with typing delay
+
+      // 2. Simulate WhatsApp-style typing delay
+      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
+
+      // 3. Build conversation history for context
       const history = messages
         .filter(m => m.content_text)
         .map(m => ({
@@ -64,59 +67,19 @@ export function ChatView({
           content: m.content_text!,
         }));
 
-      // Insert placeholder AI message
-      const { data: aiMsgData } = await supabase.from("messages").insert({
-        thread_id: threadId,
-        content_text: "",
-        sender_id: null,
-        is_ai_generated: true,
-        delivery_status: "sent",
-      }).select("id").single();
-
-      // Simulate typing delay (1-3s)
-      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
-
       try {
         const { data: session } = await supabase.auth.getSession();
-        const auth = session?.session ? `Bearer ${session.session.access_token}` : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
-        
-        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+        const auth = session?.session
+          ? `Bearer ${session.session.access_token}`
+          : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+
+        // 4. Call edge function — it streams AND saves the AI reply to DB
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: auth },
           body: JSON.stringify({ type: "message", content: text, messages: history, thread_id: threadId }),
         });
-
-        if (resp.ok) {
-          const reader = resp.body!.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          let full = "";
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            let nl: number;
-            while ((nl = buffer.indexOf("\n")) !== -1) {
-              let line = buffer.slice(0, nl);
-              buffer = buffer.slice(nl + 1);
-              if (line.endsWith("\r")) line = line.slice(0, -1);
-              if (!line.startsWith("data: ")) continue;
-              const json = line.slice(6).trim();
-              if (json === "[DONE]") break;
-              try {
-                const parsed = JSON.parse(json);
-                const chunk = parsed.choices?.[0]?.delta?.content;
-                if (chunk) full += chunk;
-              } catch {}
-            }
-          }
-
-          // Update the placeholder message with full content
-          if (aiMsgData?.id && full) {
-            await supabase.from("messages").update({ content_text: full }).eq("id", aiMsgData.id);
-          }
-        }
+        // Realtime subscription in useMessages will pick up the new AI message automatically
       } catch (e) {
         console.error("AI error:", e);
       }

@@ -322,21 +322,64 @@ ${csv_content}`;
         throw new Error(`AI error: ${aiResponse.status} ${t}`);
       }
 
-      // Save the user message and queue the AI message to be stored after streaming
-      if (thread_id && callerUserId) {
-        await adminClient.from("messages").insert({
-          thread_id,
-          content_text: content,
-          sender_id: callerUserId,
-          is_ai_generated: false,
+      // Stream the response while accumulating full text, then save to DB
+      if (!thread_id) {
+        return new Response(aiResponse.body, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
         });
       }
 
-      return new Response(aiResponse.body, {
+      // Consume the stream, accumulate the full response, then save as AI message
+      const reader = aiResponse.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+            buffer += decoder.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buffer.indexOf("\n")) !== -1) {
+              let line = buffer.slice(0, nl);
+              buffer = buffer.slice(nl + 1);
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (!line.startsWith("data: ")) continue;
+              const json = line.slice(6).trim();
+              if (json === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(json);
+                const chunk = parsed.choices?.[0]?.delta?.content;
+                if (chunk) fullText += chunk;
+              } catch { /* partial */ }
+            }
+          }
+          controller.close();
+
+          // Save the complete AI response to DB
+          if (fullText) {
+            await adminClient.from("messages").insert({
+              thread_id,
+              content_text: fullText,
+              sender_id: null,
+              is_ai_generated: true,
+              delivery_status: "sent",
+            });
+            await adminClient.from("chat_threads")
+              .update({ last_message_at: new Date().toISOString() })
+              .eq("id", thread_id);
+          }
+        },
+      });
+
+      return new Response(stream, {
         headers: {
           ...corsHeaders,
           "Content-Type": "text/event-stream",
-          "X-Thread-Id": thread_id ?? "",
+          "X-Thread-Id": thread_id,
         },
       });
     }
