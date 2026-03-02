@@ -327,11 +327,11 @@ export function MeetTeamSection() {
                       {m.avatar_url ? (
                         <img src={m.avatar_url} alt={m.full_name || ""} className="w-full h-full rounded-full object-cover" />
                       ) : (
-                        <span className="font-display text-base">{(m.full_name || "?")[0].toUpperCase()}</span>
+                        <span className="font-display text-base text-foreground">{(m.full_name || "?")[0].toUpperCase()}</span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-cream text-sm font-medium truncate">{m.full_name || "—"}</p>
+                      <p className="text-foreground text-sm font-medium truncate">{m.full_name || "—"}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {m.job_title && <span className="text-muted-foreground text-[11px] truncate">{m.job_title}</span>}
                         {m.department && (
