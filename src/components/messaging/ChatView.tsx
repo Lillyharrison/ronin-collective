@@ -1,0 +1,332 @@
+import { useState, useRef, useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useMessages } from "@/hooks/useMessages";
+import { supabase } from "@/integrations/supabase/client";
+import { MessageBubble } from "./MessageBubble";
+import { format, isToday, isYesterday } from "date-fns";
+import { es } from "date-fns/locale";
+import {
+  ArrowLeft, Send, Loader2, Camera, Mic, MicOff, Smile,
+  MoreVertical, Users, Bot, User,
+} from "lucide-react";
+
+interface ChatViewProps {
+  threadId: string;
+  threadTitle: string;
+  threadType: string;
+  participants: { id: string; full_name: string | null; avatar_url: string | null }[];
+  currentUserId: string;
+  onBack: () => void;
+  isAgentThread?: boolean;
+}
+
+export function ChatView({
+  threadId, threadTitle, threadType, participants, currentUserId, onBack, isAgentThread,
+}: ChatViewProps) {
+  const { language } = useLanguage();
+  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction } = useMessages(threadId);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  // Scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Mark as read when viewing
+  useEffect(() => {
+    if (currentUserId && messages.length > 0) {
+      markAsRead(currentUserId);
+    }
+  }, [messages.length, currentUserId]);
+
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || sending) return;
+    setInput("");
+    setSending(true);
+
+    if (isAgentThread) {
+      // Send user message to DB
+      await sendMessage(text, currentUserId);
+      
+      // Call Ronin AI with typing delay
+      const history = messages
+        .filter(m => m.content_text)
+        .map(m => ({
+          role: m.is_ai_generated ? "assistant" as const : "user" as const,
+          content: m.content_text!,
+        }));
+
+      // Insert placeholder AI message
+      const { data: aiMsgData } = await supabase.from("messages").insert({
+        thread_id: threadId,
+        content_text: "",
+        sender_id: null,
+        is_ai_generated: true,
+        delivery_status: "sent",
+      }).select("id").single();
+
+      // Simulate typing delay (1-3s)
+      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
+
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const auth = session?.session ? `Bearer ${session.session.access_token}` : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+        
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: auth },
+          body: JSON.stringify({ type: "message", content: text, messages: history, thread_id: threadId }),
+        });
+
+        if (resp.ok) {
+          const reader = resp.body!.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let full = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buffer.indexOf("\n")) !== -1) {
+              let line = buffer.slice(0, nl);
+              buffer = buffer.slice(nl + 1);
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (!line.startsWith("data: ")) continue;
+              const json = line.slice(6).trim();
+              if (json === "[DONE]") break;
+              try {
+                const parsed = JSON.parse(json);
+                const chunk = parsed.choices?.[0]?.delta?.content;
+                if (chunk) full += chunk;
+              } catch {}
+            }
+          }
+
+          // Update the placeholder message with full content
+          if (aiMsgData?.id && full) {
+            await supabase.from("messages").update({ content_text: full }).eq("id", aiMsgData.id);
+          }
+        }
+      } catch (e) {
+        console.error("AI error:", e);
+      }
+    } else {
+      await sendMessage(text, currentUserId);
+    }
+    setSending(false);
+  };
+
+  // Image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSending(true);
+    const path = `${currentUserId}/${Date.now()}_${file.name}`;
+    const { data: uploaded } = await supabase.storage.from("chat-media").upload(path, file);
+    if (uploaded) {
+      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
+      await sendMediaMessage(urlData.publicUrl, file.type.startsWith("image") ? "image" : "file", currentUserId);
+    }
+    setSending(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Voice recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setSending(true);
+        const path = `${currentUserId}/${Date.now()}_voice.webm`;
+        const { data: uploaded } = await supabase.storage.from("chat-media").upload(path, blob);
+        if (uploaded) {
+          const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
+          await sendMediaMessage(urlData.publicUrl, "audio", currentUserId);
+        }
+        setSending(false);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      console.error("Mic access denied");
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  };
+
+  // Group messages by date
+  const groupedMessages: { date: string; msgs: typeof messages }[] = [];
+  let lastDateStr = "";
+  for (const msg of messages) {
+    const d = new Date(msg.created_at);
+    const dateStr = format(d, "yyyy-MM-dd");
+    if (dateStr !== lastDateStr) {
+      groupedMessages.push({ date: dateStr, msgs: [] });
+      lastDateStr = dateStr;
+    }
+    groupedMessages[groupedMessages.length - 1].msgs.push(msg);
+  }
+
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (isToday(d)) return language === "es" ? "Hoy" : "Today";
+    if (isYesterday(d)) return language === "es" ? "Ayer" : "Yesterday";
+    return format(d, "d MMM yyyy", { locale: language === "es" ? es : undefined });
+  };
+
+  const EMOJI_QUICK = ["👍", "❤️", "😂", "😮", "🙏", "🔥"];
+
+  const getHeaderAvatar = () => {
+    if (isAgentThread) {
+      return (
+        <div className="w-9 h-9 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center">
+          <Bot size={16} className="text-accent" />
+        </div>
+      );
+    }
+    if (threadType === "group") {
+      return (
+        <div className="w-9 h-9 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center">
+          <Users size={16} className="text-accent" />
+        </div>
+      );
+    }
+    const other = participants.find(p => p.id !== currentUserId);
+    if (other?.avatar_url) {
+      return <img src={other.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />;
+    }
+    return (
+      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+        <User size={16} className="text-muted-foreground" />
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Chat header */}
+      <div className="px-3 py-2.5 border-b border-border bg-card flex items-center gap-3">
+        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors">
+          <ArrowLeft size={20} className="text-foreground" />
+        </button>
+        {getHeaderAvatar()}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">{threadTitle}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {isAgentThread
+              ? (language === "es" ? "Agente IA · En línea" : "AI Agent · Online")
+              : threadType === "group"
+              ? `${participants.length} ${language === "es" ? "miembros" : "members"}`
+              : (language === "es" ? "En línea" : "Online")}
+          </p>
+        </div>
+      </div>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}>
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 size={20} className="animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {groupedMessages.map((group) => (
+          <div key={group.date}>
+            <div className="flex justify-center my-3">
+              <span className="text-[10px] text-muted-foreground bg-card/80 backdrop-blur-sm px-3 py-1 rounded-full border border-border/50">
+                {formatDateLabel(group.date)}
+              </span>
+            </div>
+            {group.msgs.map((msg) => (
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                isOwn={msg.sender_id === currentUserId}
+                currentUserId={currentUserId}
+                onReact={(emoji) => toggleReaction(msg.id, currentUserId, emoji)}
+                quickEmojis={EMOJI_QUICK}
+              />
+            ))}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input bar */}
+      <div className="px-3 py-2.5 border-t border-border bg-card">
+        <div className="flex items-center gap-2">
+          {/* Camera / attach */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Camera size={20} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={handleImageUpload}
+          />
+
+          {/* Text input */}
+          <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-full px-4 py-2">
+            <input
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+              placeholder={language === "es" ? "Escribe un mensaje..." : "Type a message..."}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              disabled={sending || recording}
+            />
+          </div>
+
+          {/* Send or Mic */}
+          {input.trim() ? (
+            <button
+              onClick={handleSend}
+              disabled={sending}
+              className="w-9 h-9 rounded-full bg-accent flex items-center justify-center disabled:opacity-50 transition-opacity"
+            >
+              {sending ? (
+                <Loader2 size={16} className="text-accent-foreground animate-spin" />
+              ) : (
+                <Send size={16} className="text-accent-foreground" />
+              )}
+            </button>
+          ) : (
+            <button
+              onMouseDown={recording ? stopRecording : startRecording}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                recording
+                  ? "bg-destructive text-destructive-foreground animate-pulse"
+                  : "bg-accent text-accent-foreground"
+              }`}
+            >
+              {recording ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
