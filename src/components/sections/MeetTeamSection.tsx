@@ -370,6 +370,7 @@ export function MeetTeamSection() {
         <AddUserModal
           isEN={isEN}
           jobTitles={jobTitles}
+          properties={properties}
           onClose={() => { setShowAdd(false); resetForm(); }}
           onSaved={async () => { await loadMembers(); setShowAdd(false); resetForm(); }}
         />
@@ -396,16 +397,21 @@ export function MeetTeamSection() {
 }
 
 // ─── Add User Modal ────────────────────────────────────────────────────────────
-function AddUserModal({ isEN, jobTitles, onClose, onSaved }: {
+function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   isEN: boolean;
   jobTitles: string[];
+  properties: Property[];
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [tab, setTab] = useState<"details" | "access">("details");
   const [form, setForm] = useState<AddUserForm>({
     full_name: "", email: "", job_title: "", level: "",
     department: "", role: "", start_date: "", birthday: "", notes: "",
   });
+  const [phone, setPhone] = useState("");
+  const [assignedProps, setAssignedProps] = useState<string[]>([]);
+  const [perms, setPerms] = useState<SectionPermissions>({});
   const [saving, setSaving] = useState(false);
   const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
   const [showTitleDropdown, setShowTitleDropdown] = useState(false);
@@ -422,6 +428,18 @@ function AddUserModal({ isEN, jobTitles, onClose, onSaved }: {
       ...f, level,
       role: level ? ROLE_MAP[level] : "",
       department: (level === "staff" || level === "manager") ? f.department : "",
+    }));
+    if (level) setPerms(defaultPermissionsForLevel(level));
+  }
+
+  function togglePerm(sectionKey: string, field: keyof SectionPerm) {
+    setPerms(prev => ({
+      ...prev,
+      [sectionKey]: {
+        ...prev[sectionKey],
+        [field]: !prev[sectionKey]?.[field],
+        ...(field === "view" && prev[sectionKey]?.view ? { edit: false, notifications: false } : {}),
+      },
     }));
   }
 
@@ -441,6 +459,9 @@ function AddUserModal({ isEN, jobTitles, onClose, onSaved }: {
           start_date: form.start_date || null,
           birthday: form.birthday || null,
           notes: form.notes || null,
+          phone: phone || null,
+          assigned_property_ids: assignedProps,
+          section_permissions: Object.keys(perms).length > 0 ? perms : null,
         },
       });
       onSaved();
@@ -449,84 +470,216 @@ function AddUserModal({ isEN, jobTitles, onClose, onSaved }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-charcoal rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl border border-charcoal-light">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-charcoal-light sticky top-0 bg-charcoal z-10">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
+      <div className="bg-charcoal rounded-t-2xl sm:rounded-2xl w-full max-w-lg h-[92vh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl border border-charcoal-light">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-charcoal-light shrink-0">
           <div>
             <h2 className="text-cream font-display text-lg">{isEN ? "Add Team Member" : "Agregar Miembro"}</h2>
-            <p className="text-muted-foreground text-xs mt-0.5">{isEN ? "Mandatory fields marked *" : "Campos obligatorios *"}</p>
+            <p className="text-muted-foreground text-xs mt-0.5">{isEN ? "Fields marked * are required" : "Campos marcados * son obligatorios"}</p>
           </div>
           <button onClick={onClose} className="text-cream/50 hover:text-cream"><X size={20} /></button>
         </div>
 
-        <div className="px-5 py-4 space-y-4">
-          <FieldLabel label={isEN ? "Full Name *" : "Nombre Completo *"} />
-          <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={isEN ? "Jane Smith" : "Ana García"} className="bg-charcoal-light border-charcoal-light text-cream" />
+        {/* Tabs */}
+        <div className="flex border-b border-charcoal-light shrink-0">
+          {(["details", "access"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-3 text-xs font-semibold tracking-widest uppercase transition-colors ${tab === t ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
+              {t === "details" ? (isEN ? "Details" : "Detalles") : (isEN ? "Access & Alerts" : "Acceso y Alertas")}
+            </button>
+          ))}
+        </div>
 
-          <FieldLabel label={isEN ? "Email *" : "Correo *"} />
-          <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" className="bg-charcoal-light border-charcoal-light text-cream" />
-
-          <div className="relative">
-            <FieldLabel label={isEN ? "Job Title" : "Puesto"} />
-            <Input
-              value={form.job_title}
-              onChange={e => { setForm(f => ({ ...f, job_title: e.target.value })); setShowTitleDropdown(true); }}
-              onFocus={() => setShowTitleDropdown(true)}
-              onBlur={() => setTimeout(() => setShowTitleDropdown(false), 150)}
-              placeholder={isEN ? "e.g. Estate Manager" : "ej. Gerente"}
-              className="bg-charcoal-light border-charcoal-light text-cream"
-            />
-            {showTitleDropdown && titleSuggestions.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-charcoal border border-charcoal-light rounded-xl overflow-hidden shadow-xl">
-                {titleSuggestions.map(t => (
-                  <button key={t} onMouseDown={() => setForm(f => ({ ...f, job_title: t }))} className="w-full text-left px-4 py-2.5 text-sm text-cream hover:bg-charcoal-light">
-                    {t}
-                  </button>
-                ))}
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          {tab === "details" && (
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <FieldLabel label={isEN ? "Full Name *" : "Nombre Completo *"} />
+                <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={isEN ? "Jane Smith" : "Ana García"} className="bg-charcoal-light border-charcoal-light text-cream" />
               </div>
-            )}
-          </div>
 
-          <FieldLabel label={isEN ? "Level *" : "Nivel *"} />
-          <div className="grid grid-cols-2 gap-2">
-            {LEVEL_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => handleLevelChange(opt.value)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm transition-all ${form.level === opt.value ? `${LEVEL_COLORS[opt.value]} border-current` : "border-charcoal-light text-cream/50 hover:text-cream bg-charcoal-light"}`}>
-                {form.level === opt.value && <Check size={13} />}
-                {isEN ? opt.label : opt.labelEs}
-              </button>
-            ))}
-          </div>
-
-          {(form.level === "staff" || form.level === "manager") && (
-            <>
-              <FieldLabel label={isEN ? "Department" : "Departamento"} />
-              <div className="flex flex-wrap gap-2">
-                {DEPT_OPTIONS.map(opt => (
-                  <button key={opt.value} onClick={() => setForm(f => ({ ...f, department: f.department === opt.value ? "" : opt.value }))}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${form.department === opt.value ? `${DEPT_COLORS[opt.value]} border-current bg-current/10` : "border-charcoal-light text-cream/50 hover:text-cream bg-charcoal-light"}`}>
-                    {isEN ? opt.label : opt.labelEs}
-                  </button>
-                ))}
+              <div>
+                <FieldLabel label={isEN ? "Email *" : "Correo *"} />
+                <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" className="bg-charcoal-light border-charcoal-light text-cream" />
               </div>
-            </>
+
+              <div className="relative">
+                <FieldLabel label={isEN ? "Job Title" : "Puesto"} />
+                <Input
+                  value={form.job_title}
+                  onChange={e => { setForm(f => ({ ...f, job_title: e.target.value })); setShowTitleDropdown(true); }}
+                  onFocus={() => setShowTitleDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowTitleDropdown(false), 150)}
+                  placeholder={isEN ? "e.g. Estate Manager" : "ej. Gerente"}
+                  className="bg-charcoal-light border-charcoal-light text-cream"
+                />
+                {showTitleDropdown && titleSuggestions.length > 0 && (
+                  <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-charcoal border border-charcoal-light rounded-xl overflow-hidden shadow-xl">
+                    {titleSuggestions.map(t => (
+                      <button key={t} onMouseDown={() => setForm(f => ({ ...f, job_title: t }))} className="w-full text-left px-4 py-2.5 text-sm text-cream hover:bg-charcoal-light">
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <FieldLabel label={isEN ? "Phone" : "Teléfono"} />
+                <Input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="bg-charcoal-light border-charcoal-light text-cream" />
+              </div>
+
+              <div>
+                <FieldLabel label={isEN ? "Level *" : "Nivel *"} />
+                <div className="grid grid-cols-2 gap-2">
+                  {LEVEL_OPTIONS.map(opt => (
+                    <button key={opt.value} onClick={() => handleLevelChange(opt.value)}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm transition-all ${form.level === opt.value ? `${LEVEL_COLORS[opt.value]} border-current` : "border-charcoal-light text-cream/50 hover:text-cream bg-charcoal-light"}`}>
+                      {form.level === opt.value && <Check size={13} />}
+                      {isEN ? opt.label : opt.labelEs}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(form.level === "staff" || form.level === "manager") && (
+                <div>
+                  <FieldLabel label={isEN ? "Department" : "Departamento"} />
+                  <div className="flex flex-wrap gap-2">
+                    {DEPT_OPTIONS.map(opt => (
+                      <button key={opt.value} onClick={() => setForm(f => ({ ...f, department: f.department === opt.value ? "" : opt.value }))}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${form.department === opt.value ? `${DEPT_COLORS[opt.value]} border-current bg-current/10` : "border-charcoal-light text-cream/50 hover:text-cream bg-charcoal-light"}`}>
+                        {isEN ? opt.label : opt.labelEs}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <FieldLabel label={isEN ? "Assigned Properties" : "Propiedades Asignadas"} />
+                <div className="space-y-2">
+                  {properties.map(p => (
+                    <label key={p.id} className="flex items-center gap-3 cursor-pointer">
+                      <Switch
+                        checked={assignedProps.includes(p.id)}
+                        onCheckedChange={v => setAssignedProps(prev => v ? [...prev, p.id] : prev.filter(id => id !== p.id))}
+                      />
+                      <span className="text-cream text-sm">{p.name}</span>
+                    </label>
+                  ))}
+                  {properties.length === 0 && <p className="text-muted-foreground text-xs">{isEN ? "No properties yet" : "Sin propiedades"}</p>}
+                </div>
+              </div>
+
+              <div>
+                <FieldLabel label={isEN ? "Start Date" : "Fecha de Inicio"} />
+                <Input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className="bg-charcoal-light border-charcoal-light text-cream" />
+              </div>
+
+              <div>
+                <FieldLabel label={isEN ? "Birthday" : "Cumpleaños"} />
+                <Input type="date" value={form.birthday} onChange={e => setForm(f => ({ ...f, birthday: e.target.value }))} className="bg-charcoal-light border-charcoal-light text-cream" />
+              </div>
+
+              <div>
+                <FieldLabel label={isEN ? "Notes" : "Notas"} />
+                <textarea
+                  value={form.notes}
+                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                  rows={3}
+                  className="w-full bg-charcoal-light border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm resize-none outline-none focus:border-gold/40 placeholder:text-cream/30 transition-colors"
+                />
+              </div>
+            </div>
           )}
 
-          <div className="flex gap-3 pt-2 pb-2">
-            <Button variant="outline" onClick={onClose} className="flex-1 border-charcoal-light text-cream hover:bg-charcoal-light">
-              {isEN ? "Cancel" : "Cancelar"}
-            </Button>
-            <Button onClick={handleSubmit} disabled={saving || !form.full_name || !form.email || !form.level}
-              className="flex-1 bg-gold hover:bg-gold/90 text-charcoal font-semibold">
-              {saving ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Send Invite" : "Invitar")}
-            </Button>
-          </div>
+          {tab === "access" && (
+            <div className="px-5 py-4">
+              {Object.keys(perms).length === 0 && (
+                <div className="mb-4 p-3 bg-charcoal-light rounded-lg">
+                  <p className="text-muted-foreground text-xs">{isEN ? "Select a level on the Details tab to auto-populate permissions, or toggle manually below." : "Selecciona un nivel en Detalles para cargar permisos, o actívalos manualmente."}</p>
+                </div>
+              )}
+              {Object.keys(perms).length > 0 && (
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-muted-foreground text-xs">{isEN ? "Toggle per-section access and notifications" : "Activa acceso y alertas por sección"}</p>
+                  {form.level && (
+                    <button onClick={() => setPerms(defaultPermissionsForLevel(form.level as Level))} className="text-[10px] text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-1 transition-colors">
+                      {isEN ? "Reset to defaults" : "Valores por defecto"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Column headers */}
+              <div className="flex items-center gap-1 mb-2 pr-1">
+                <div className="flex-1" />
+                <div className="w-10 flex flex-col items-center gap-0.5">
+                  <Eye size={12} className="text-blue-400" />
+                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "View" : "Ver"}</span>
+                </div>
+                <div className="w-10 flex flex-col items-center gap-0.5">
+                  <Pencil size={12} className="text-green-400" />
+                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "Edit" : "Editar"}</span>
+                </div>
+                <div className="w-10 flex flex-col items-center gap-0.5">
+                  <Bell size={12} className="text-gold" />
+                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "Alerts" : "Alertas"}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                {ALL_SECTIONS.map(section => {
+                  const sp = perms[section.key] || { view: false, edit: false, notifications: false };
+                  return (
+                    <div key={section.key} className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
+                      <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
+                      <div className="w-10 flex justify-center">
+                        <button onClick={() => togglePerm(section.key, "view")}
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}>
+                          <Check size={11} />
+                        </button>
+                      </div>
+                      <div className="w-10 flex justify-center">
+                        <button onClick={() => section.hasEdit && sp.view && togglePerm(section.key, "edit")}
+                          disabled={!section.hasEdit || !sp.view}
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
+                          <Check size={11} />
+                        </button>
+                      </div>
+                      <div className="w-10 flex justify-center">
+                        <button onClick={() => sp.view && togglePerm(section.key, "notifications")}
+                          disabled={!sp.view}
+                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
+                          <Check size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 px-5 py-4 border-t border-charcoal-light flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1 border-charcoal-light text-cream hover:bg-charcoal-light">
+            {isEN ? "Cancel" : "Cancelar"}
+          </Button>
+          <Button onClick={handleSubmit} disabled={saving || !form.full_name || !form.email || !form.level}
+            className="flex-1 bg-gold hover:bg-gold/90 text-charcoal font-semibold">
+            {saving ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Send Invite" : "Invitar")}
+          </Button>
         </div>
       </div>
     </div>
   );
 }
-
 // ─── Member Edit Drawer ────────────────────────────────────────────────────────
 function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted }: {
   member: TeamMember;
