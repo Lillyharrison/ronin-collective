@@ -39,6 +39,10 @@ interface NavigationContextType {
   checklistDetailPropId: string | null;
   openChecklistDetail: (templateId: string, propertyId: string | null) => void;
   closeChecklistDetail: () => void;
+  // Care guide detail
+  careGuideDetailId: string | null;
+  openCareGuideDetail: (templateId: string) => void;
+  closeCareGuideDetail: () => void;
   // Deep-link to a specific property (one-shot, cleared after use)
   targetPropertyId: string | null;
   setTargetPropertyId: (id: string | null) => void;
@@ -70,6 +74,9 @@ const NavigationContext = createContext<NavigationContextType>({
   setActivePropertyId: () => {},
   checklistsForPropertyId: null,
   setChecklistsForPropertyId: () => {},
+  careGuideDetailId: null,
+  openCareGuideDetail: () => {},
+  closeCareGuideDetail: () => {},
   canGoBack: false,
   goBack: () => {},
 });
@@ -80,6 +87,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checklistDetailId, setChecklistDetailId] = useState<string | null>(null);
   const [checklistDetailPropId, setChecklistDetailPropId] = useState<string | null>(null);
+  const [careGuideDetailId, setCareGuideDetailId] = useState<string | null>(null);
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
@@ -125,7 +133,22 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const openCareGuideDetail = (templateId: string) => {
+    setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
+    setCareGuideDetailId(templateId);
+  };
+
+  const closeCareGuideDetail = () => {
+    setCareGuideDetailId(null);
+    setHistory(h => h.slice(0, -1));
+  };
+
   const goBack = () => {
+    // If in care guide detail, close it first
+    if (careGuideDetailId) {
+      setCareGuideDetailId(null);
+      return;
+    }
     // If in checklist detail, close it first (back to the list)
     if (checklistDetailId) {
       setChecklistDetailId(null);
@@ -166,7 +189,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     goBack();
   };
 
-  const canGoBack = history.length > 0 || !!checklistDetailId;
+  const canGoBack = history.length > 0 || !!checklistDetailId || !!careGuideDetailId;
 
   return (
     <NavigationContext.Provider
@@ -181,6 +204,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         checklistDetailPropId,
         openChecklistDetail,
         closeChecklistDetail,
+        careGuideDetailId,
+        openCareGuideDetail,
+        closeCareGuideDetail,
         targetPropertyId,
         setTargetPropertyId,
         activePropertyId,
@@ -197,3 +223,4 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 }
 
 export const useNavigation = () => useContext(NavigationContext);
+
