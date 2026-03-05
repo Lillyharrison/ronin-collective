@@ -7,8 +7,9 @@ import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
-  Users, Bot, User, ImagePlus, ScanSearch,
+  Users, Bot, User, ImagePlus, ScanSearch, Smile,
 } from "lucide-react";
+import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
 interface ChatViewProps {
   threadId: string;
@@ -33,6 +34,7 @@ export function ChatView({
   const [showEmoji, setShowEmoji] = useState(false);
   const [agentAnalyzing, setAgentAnalyzing] = useState(false);
   const visionInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -49,6 +51,17 @@ export function ChatView({
       markAsRead(currentUserId);
     }
   }, [messages.length, currentUserId]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmoji(false);
+      }
+    };
+    if (showEmoji) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showEmoji]);
 
   const getAuthHeader = async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -364,7 +377,22 @@ export function ChatView({
       </div>
 
       {/* Input bar */}
-      <div className="px-3 py-2.5 border-t border-border bg-card">
+      <div className="px-3 py-2.5 border-t border-border bg-card relative">
+        {/* Emoji Picker overlay */}
+        {showEmoji && (
+          <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-2 z-50">
+            <EmojiPicker
+              theme={"dark" as Theme}
+              onEmojiClick={(data: EmojiClickData) => {
+                setInput(prev => prev + data.emoji);
+                setShowEmoji(false);
+              }}
+              width={320}
+              height={380}
+            />
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           {/* Attach button — regular for non-agent, vision for agent */}
           {isAgentThread ? (
@@ -389,10 +417,17 @@ export function ChatView({
           <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleImageUpload} />
           <input ref={visionInputRef} type="file" accept="image/*" className="hidden" onChange={handleVisionUpload} />
 
-          {/* Text input */}
-          <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-full px-4 py-2">
+          {/* Text input with emoji button inside */}
+          <div className="flex-1 flex items-center gap-1 bg-background border border-border rounded-full px-3 py-2">
+            <button
+              onClick={() => setShowEmoji(v => !v)}
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+              title={language === "es" ? "Emoji" : "Emoji"}
+            >
+              <Smile size={18} />
+            </button>
             <input
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none px-1"
               placeholder={
                 isAgentThread
                   ? (language === "es" ? "Pregunta a Ronin..." : "Ask Ronin...")

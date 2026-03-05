@@ -149,5 +149,13 @@ export function useThreads(userId: string | null) {
     return null;
   };
 
-  return { threads, loading, createDM, createGroup, refetch: fetchThreads };
+  const deleteThread = async (threadId: string): Promise<boolean> => {
+    // Delete all messages first (FK constraint), then the thread
+    await supabase.from("messages").delete().eq("thread_id", threadId);
+    const { error } = await supabase.from("chat_threads").delete().eq("id", threadId);
+    if (!error) await fetchThreads();
+    return !error;
+  };
+
+  return { threads, loading, createDM, createGroup, refetch: fetchThreads, deleteThread };
 }
