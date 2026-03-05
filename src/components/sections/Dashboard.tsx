@@ -5,7 +5,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MapPin, Clock, CheckSquare, TriangleAlert,
-  UserCheck, ChevronRight, Activity, Trophy, Zap, Shield,
+  UserCheck, ChevronRight, Activity, Trophy, Zap, Shield, ClipboardList,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 
@@ -37,6 +37,7 @@ const statusConfig: Record<string, { label: string; labelEs: string; className: 
 };
 
 const quickActions = [
+  { labelKey: "checklists" as const,   labelEs: "Listas",            icon: <ClipboardList size={26} />, section: "checklists" as const },
   { labelKey: "myTasks" as const,      labelEs: "Mis Tareas",        icon: <CheckSquare size={26} />, section: "tasks" as const },
   { labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />, section: "maintenance" as const },
   { labelKey: "achievements" as const, labelEs: "Logros",            icon: <Trophy size={26} />, section: "achievements" as const },
