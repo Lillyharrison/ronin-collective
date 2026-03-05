@@ -50,7 +50,12 @@ const emptyForm = {
 
 export function PropertySection() {
   const { isMasterAdmin, assignedPropertyIds, loading: permLoading } = usePermissions();
-  const { setActiveSection, targetPropertyId, setTargetPropertyId, setChecklistsForPropertyId } = useNavigation();
+  const {
+    setActiveSection,
+    targetPropertyId, setTargetPropertyId,
+    setChecklistsForPropertyId,
+    activePropertyId, setActivePropertyId,
+  } = useNavigation();
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,16 +76,20 @@ export function PropertySection() {
     if (!permLoading) fetchProperties();
   }, [permLoading, isMasterAdmin, assignedPropertyIds]);
 
-  // Auto-select property when navigated from Dashboard
+  // Auto-select property when navigated from Dashboard OR when back-nav restores activePropertyId
   useEffect(() => {
-    if (targetPropertyId && properties.length > 0) {
-      const found = properties.find(p => p.id === targetPropertyId);
+    if (properties.length === 0) return;
+    // targetPropertyId takes priority (deep-link / back-nav restore)
+    const idToRestore = targetPropertyId ?? activePropertyId;
+    if (idToRestore) {
+      const found = properties.find(p => p.id === idToRestore);
       if (found) {
         setSelectedProperty(found);
         setTargetPropertyId(null);
+        // Don't clear activePropertyId here — keep it so further back-nav knows
       }
     }
-  }, [targetPropertyId, properties]);
+  }, [targetPropertyId, activePropertyId, properties]);
 
   async function fetchProperties() {
     setLoading(true);
@@ -144,7 +153,7 @@ export function PropertySection() {
     if (!deleteTarget) return;
     await supabase.from("properties").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
-    if (selectedProperty?.id === deleteTarget.id) setSelectedProperty(null);
+    if (selectedProperty?.id === deleteTarget.id) { setSelectedProperty(null); setActivePropertyId(null); }
     fetchProperties();
   }
 
@@ -185,15 +194,37 @@ export function PropertySection() {
         <PropertyDetail
           property={selectedProperty}
           isMasterAdmin={isMasterAdmin}
-          onBack={() => setSelectedProperty(null)}
+          onBack={() => { setSelectedProperty(null); setActivePropertyId(null); }}
           onEdit={() => openEdit(selectedProperty)}
           onDelete={() => setDeleteTarget(selectedProperty)}
           onNavigate={(key) => {
             if (key === "checklists") {
               setChecklistsForPropertyId(selectedProperty.id);
+              setActivePropertyId(selectedProperty.id);
+              setSelectedProperty(null);
+              setActiveSection("checklists");
+            } else if (key === "manuals") {
+              setActivePropertyId(selectedProperty.id);
+              setSelectedProperty(null);
+              setActiveSection("manuals");
+            } else if (key === "tasks") {
+              setActivePropertyId(selectedProperty.id);
+              setSelectedProperty(null);
+              setActiveSection("tasks");
+            } else if (key === "maintenance") {
+              setActivePropertyId(selectedProperty.id);
+              setSelectedProperty(null);
+              setActiveSection("maintenance");
+            } else if (key === "calendar") {
+              setActivePropertyId(selectedProperty.id);
+              setSelectedProperty(null);
+              setActiveSection("calendar");
+            } else if (key === "staff") {
+              // Staff is shown inline — handled inside PropertyDetail via prop
+            } else {
+              setSelectedProperty(null);
+              setActiveSection(key as any);
             }
-            setSelectedProperty(null);
-            setActiveSection(key as any);
           }}
         />
 
@@ -265,7 +296,7 @@ export function PropertySection() {
               <PropertyTile
                 property={p}
                 isMasterAdmin={isMasterAdmin}
-                onClick={() => setSelectedProperty(p)}
+                onClick={() => { setSelectedProperty(p); setActivePropertyId(p.id); }}
                 onEdit={(e) => { e.stopPropagation(); openEdit(p); }}
                 onDelete={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
               />
@@ -367,13 +398,79 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
   );
 }
 
+// ─── Property Staff List ──────────────────────────────────────────────────────
+interface StaffProfile {
+  id: string;
+  full_name: string | null;
+  job_title: string | null;
+  department: string | null;
+  avatar_url: string | null;
+}
+
+function PropertyStaffList({ propertyId, onBack }: { propertyId: string; onBack: () => void }) {
+  const [staff, setStaff] = useState<StaffProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, job_title, department, avatar_url")
+      .contains("assigned_property_ids", [propertyId])
+      .order("full_name")
+      .then(({ data }) => { setStaff((data as StaffProfile[]) ?? []); setLoading(false); });
+  }, [propertyId]);
+
+  return (
+    <div className="p-4 animate-fade-in">
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
+        <ArrowLeft size={15} /> Back to property
+      </button>
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Assigned Staff</p>
+      {loading ? (
+        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)}</div>
+      ) : staff.length === 0 ? (
+        <div className="rounded-xl bg-card border border-dashed border-border p-8 text-center">
+          <Users size={28} className="mx-auto text-muted-foreground mb-2" />
+          <p className="text-sm font-medium text-foreground">No staff assigned</p>
+          <p className="text-xs text-muted-foreground mt-1">Assign staff to this property via the team management section.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {staff.map(s => (
+            <div key={s.id} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {s.avatar_url
+                  ? <img src={s.avatar_url} alt={s.full_name ?? ""} className="w-full h-full object-cover" />
+                  : <span className="text-sm font-semibold text-primary">{(s.full_name ?? "?")[0]}</span>
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{s.full_name ?? "Unknown"}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {[s.job_title, s.department].filter(Boolean).join(" · ") || "No role assigned"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Property Detail ──────────────────────────────────────────────────────────
 function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, onNavigate }: {
   property: Property; isMasterAdmin: boolean;
   onBack: () => void; onEdit: () => void; onDelete: () => void;
   onNavigate: (key: string) => void;
 }) {
+  const [showStaff, setShowStaff] = useState(false);
   const cfg = STATUS_CONFIG[p.status];
+
+  if (showStaff) {
+    return <PropertyStaffList propertyId={p.id} onBack={() => setShowStaff(false)} />;
+  }
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-7rem)]">
       <div className="relative h-64 shrink-0">
@@ -433,7 +530,7 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
           {PROPERTY_SUB_SECTIONS.map(s => (
             <button
               key={s.key}
-              onClick={() => onNavigate(s.key)}
+              onClick={() => s.key === "staff" ? setShowStaff(true) : onNavigate(s.key)}
               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-card border border-border hover:border-primary/40 hover:bg-accent transition-all text-left group"
             >
               <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
