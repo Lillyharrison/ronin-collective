@@ -223,20 +223,21 @@ export function Dashboard() {
       });
   }, []);
 
-  // Load unread notifications for the dashboard widget
-  // Master admin sees ALL unread notifications across all users
+  // Load notifications for the dashboard widget — filtered per user via acknowledged_by
+  // Each user sees notifications they haven't personally acknowledged yet
   useEffect(() => {
     if (!userId || permLoading) return;
-    const query = supabase
+
+    let query = supabase
       .from("notifications")
       .select("id, title, body, type, created_at, action_url, user_id")
-      .eq("is_read", false)
+      .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
       .limit(isMasterAdmin ? 20 : 5);
 
-    // Non-admins only see their own
+    // Non-admins only see their own notifications
     if (!isMasterAdmin) {
-      query.eq("user_id", userId);
+      query = query.eq("user_id", userId);
     }
 
     query.then(({ data }) => setDashNotifs((data as DashNotification[]) ?? []));
@@ -246,8 +247,13 @@ export function Dashboard() {
   const dateStr = formatDate(language);
   const smartTagline = taglineOverride ? taglineOverride.text : getSmartTagline(language);
 
-  const dismissNotif = async (id: string) => {
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+  const dismissNotif = async (id: string, notifUserId?: string) => {
+    // Call the security-definer function — appends current user to acknowledged_by only
+    await supabase.rpc("acknowledge_notification", { _notif_id: id });
+    // If owner is dismissing, also mark is_read for bell panel unread count
+    if (notifUserId === userId) {
+      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    }
     setDashNotifs(prev => prev.filter(n => n.id !== id));
   };
 
@@ -433,7 +439,7 @@ export function Dashboard() {
               </span>
             </div>
             <button
-              onClick={() => dashNotifs.forEach(n => dismissNotif(n.id))}
+              onClick={() => dashNotifs.forEach(n => dismissNotif(n.id, n.user_id))}
               className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
             >
               {language === "es" ? "Limpiar todas" : "Clear all"}
@@ -453,7 +459,7 @@ export function Dashboard() {
                     {n.body && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{n.body}</p>}
                   </div>
                   <button
-                    onClick={() => dismissNotif(n.id)}
+                    onClick={() => dismissNotif(n.id, n.user_id)}
                     className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 p-1"
                     aria-label="Dismiss"
                   >

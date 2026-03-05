@@ -613,6 +613,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          acknowledged_by: string[]
           action_url: string | null
           body: string | null
           created_at: string
@@ -626,6 +627,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          acknowledged_by?: string[]
           action_url?: string | null
           body?: string | null
           created_at?: string
@@ -639,6 +641,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          acknowledged_by?: string[]
           action_url?: string | null
           body?: string | null
           created_at?: string
@@ -1097,6 +1100,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acknowledge_notification: {
+        Args: { _notif_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
