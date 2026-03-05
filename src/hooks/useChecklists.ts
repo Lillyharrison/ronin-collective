@@ -17,6 +17,7 @@ export interface ChecklistTemplate {
   assigned_role: string | null;
   assigned_department: string | null;
   notify_on_day: boolean | null;
+  only_when_occupied: boolean;
 }
 
 export interface ChecklistItem {

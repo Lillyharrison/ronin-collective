@@ -26,10 +26,10 @@ const ACTIVITY_GROUPS = [
 export function ChecklistsSection() {
   const { language } = useLanguage();
   const { isAdmin, assignedPropertyIds } = usePermissions();
-  const { openChecklistDetail } = useNavigation();
+  const { openChecklistDetail, checklistsForPropertyId, setChecklistsForPropertyId } = useNavigation();
   const [tab, setTab] = useState<Tab>("cleaning");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
+  const [selectedPropId, setSelectedPropId] = useState<string | null>(checklistsForPropertyId ?? null);
   const [showPropPicker, setShowPropPicker] = useState(false);
 
   useEffect(() => {
@@ -38,7 +38,13 @@ export function ChecklistsSection() {
     q.then(({ data }) => {
       const props = (data as Property[]) ?? [];
       setProperties(props);
-      if (props.length > 0) setSelectedPropId(props[0].id);
+      // If we have a deep-link property, use it; else default to first
+      if (checklistsForPropertyId) {
+        setSelectedPropId(checklistsForPropertyId);
+        setChecklistsForPropertyId(null); // clear after use
+      } else if (!selectedPropId && props.length > 0) {
+        setSelectedPropId(props[0].id);
+      }
     });
   }, [isAdmin, assignedPropertyIds]);
 

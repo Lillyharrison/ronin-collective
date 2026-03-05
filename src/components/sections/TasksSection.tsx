@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { useChecklistTemplates, useChecklistSessions } from "@/hooks/useChecklists";
 import {
   CheckSquare, Clock, AlertTriangle, Circle,
   ChevronDown, Filter, Plus, MapPin, User, ClipboardList, ChevronRight,
@@ -317,46 +316,105 @@ export function TasksSection() {
   );
 }
 
-// Widget showing any in-progress checklists from today
+// Widget showing assigned + in-progress checklists for the current staff user
 function PartialChecklistsWidget() {
   const { openChecklistDetail, setActiveSection } = useNavigation();
-  const { assignedPropertyIds, isAdmin } = usePermissions();
-  const [propId] = useState<string | null>(assignedPropertyIds[0] ?? null);
-  const { templates } = useChecklistTemplates("cleaning", propId || undefined);
+  const { assignedPropertyIds, isAdmin, userId, loading: permLoading } = usePermissions();
+  const [assignedChecklists, setAssignedChecklists] = useState<Array<{
+    id: string; title: string; icon: string; propertyId: string | null; propertyName?: string;
+  }>>([]);
 
-  if (templates.length === 0) return null;
-  return <PartialChecklistsInner templates={templates} propId={propId} onOpen={openChecklistDetail} onNav={() => setActiveSection("checklists")} />;
-}
+  useEffect(() => {
+    if (permLoading || !userId) return;
 
-function PartialChecklistsInner({ templates, propId, onOpen, onNav }: {
-  templates: ReturnType<typeof useChecklistTemplates>["templates"];
-  propId: string | null;
-  onOpen: (id: string, propId: string | null) => void;
-  onNav: () => void;
-}) {
-  // We check sessions for the first template only as a sample — full list lives in checklists
-  const { completedIds } = useChecklistSessions(templates[0]?.id ?? null, propId);
-  if (completedIds.size === 0) return null;
+    async function load() {
+      // Load user profile for role + department
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("department, level, assigned_property_ids")
+        .eq("id", userId!)
+        .single();
+
+      if (!profile) return;
+
+      // Load user role
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId!)
+        .single();
+
+      const userRole = roleRow?.role ?? profile.level ?? "staff";
+      const userDept = profile.department ?? "";
+      const propIds: string[] = profile.assigned_property_ids ?? assignedPropertyIds;
+
+      // Query checklist templates assigned to this user
+      let q = supabase
+        .from("checklist_templates")
+        .select("id, title, icon, property_id")
+        .neq("recurrence", "none");
+
+      if (propIds.length > 0) {
+        q = q.or(`property_id.in.(${propIds.join(",")}),is_universal.eq.true`);
+      } else {
+        q = q.eq("is_universal", true);
+      }
+
+      const { data: templates } = await q;
+      if (!templates) return;
+
+      // Filter by role and department match
+      const relevant = templates.filter((t: any) => {
+        const roleMatch = !t.assigned_role || t.assigned_role === userRole || (t.assigned_role === "staff" && ["staff", "manager", "admin", "master_admin"].includes(userRole));
+        const deptMatch = !t.assigned_department || !userDept || t.assigned_department === userDept;
+        return roleMatch && deptMatch;
+      });
+
+      // Enrich with property names
+      const uniquePropIds = [...new Set(relevant.map((t: any) => t.property_id).filter(Boolean))] as string[];
+      let propNames: Record<string, string> = {};
+      if (uniquePropIds.length) {
+        const { data: props } = await supabase.from("properties").select("id, name").in("id", uniquePropIds);
+        (props ?? []).forEach((p: any) => { propNames[p.id] = p.name; });
+      }
+
+      setAssignedChecklists(relevant.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        icon: t.icon,
+        propertyId: t.property_id,
+        propertyName: t.property_id ? propNames[t.property_id] : undefined,
+      })));
+    }
+
+    load();
+  }, [permLoading, userId, assignedPropertyIds]);
+
+  if (assignedChecklists.length === 0) return null;
+
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           <ClipboardList size={12} className="text-[hsl(var(--gold))]" />
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Open Checklists</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">My Checklists</span>
         </div>
-        <button onClick={onNav} className="text-[10px] text-[hsl(var(--gold))] hover:underline">View all</button>
+        <button onClick={() => setActiveSection("checklists")} className="text-[10px] text-[hsl(var(--gold))] hover:underline">View all</button>
       </div>
       <div className="space-y-1.5">
-        {templates.slice(0, 3).map(t => (
+        {assignedChecklists.map(t => (
           <button
             key={t.id}
-            onClick={() => onOpen(t.id, propId)}
+            onClick={() => openChecklistDetail(t.id, t.propertyId)}
             className="w-full flex items-center gap-2.5 bg-card border border-border rounded-xl px-3 py-2.5 hover:bg-muted/40 transition-colors"
           >
             <span className="text-sm">{t.icon}</span>
-            <span className="flex-1 text-xs font-medium text-foreground text-left truncate">{t.title}</span>
-            <span className="text-[10px] text-[hsl(var(--gold))] font-medium">Resume</span>
-            <ChevronRight size={12} className="text-muted-foreground" />
+            <div className="flex-1 text-left min-w-0">
+              <span className="text-xs font-medium text-foreground truncate block">{t.title}</span>
+              {t.propertyName && <span className="text-[10px] text-muted-foreground">{t.propertyName}</span>}
+            </div>
+            <span className="text-[10px] text-[hsl(var(--gold))] font-medium flex-shrink-0">Open</span>
+            <ChevronRight size={12} className="text-muted-foreground flex-shrink-0" />
           </button>
         ))}
       </div>

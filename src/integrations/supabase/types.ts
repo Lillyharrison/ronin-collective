@@ -386,6 +386,7 @@ export type Database = {
           id: string
           is_universal: boolean
           notify_on_day: boolean | null
+          only_when_occupied: boolean
           property_id: string | null
           recurrence: string | null
           recurrence_day: number | null
@@ -405,6 +406,7 @@ export type Database = {
           id?: string
           is_universal?: boolean
           notify_on_day?: boolean | null
+          only_when_occupied?: boolean
           property_id?: string | null
           recurrence?: string | null
           recurrence_day?: number | null
@@ -424,6 +426,7 @@ export type Database = {
           id?: string
           is_universal?: boolean
           notify_on_day?: boolean | null
+          only_when_occupied?: boolean
           property_id?: string | null
           recurrence?: string | null
           recurrence_day?: number | null

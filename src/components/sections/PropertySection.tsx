@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical } from "lucide-react";
+import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 
 type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
@@ -37,7 +37,8 @@ const PROPERTY_SUB_SECTIONS = [
   { key: "tasks",       label: "Tasks",       icon: <CheckCircle size={20} />,  description: "Open & assigned tasks" },
   { key: "maintenance", label: "Maintenance", icon: <Wrench size={20} />,       description: "Issues & requests" },
   { key: "staff",       label: "Staff",       icon: <Users size={20} />,        description: "Assigned team members" },
-  { key: "manuals",     label: "Manuals",     icon: <BookOpen size={20} />,     description: "SOPs & guides" },
+  { key: "checklists",  label: "Checklists",  icon: <BookOpen size={20} />,     description: "SOPs & procedures" },
+  { key: "manuals",     label: "Manuals",     icon: <BookOpen size={20} />,     description: "Care guides & rules" },
   { key: "calendar",    label: "Schedule",    icon: <Calendar size={20} />,     description: "Events & bookings" },
 ];
 
@@ -49,7 +50,7 @@ const emptyForm = {
 
 export function PropertySection() {
   const { isMasterAdmin, assignedPropertyIds, loading: permLoading } = usePermissions();
-  const { setActiveSection } = useNavigation();
+  const { setActiveSection, targetPropertyId, setTargetPropertyId, setChecklistsForPropertyId } = useNavigation();
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,17 @@ export function PropertySection() {
   useEffect(() => {
     if (!permLoading) fetchProperties();
   }, [permLoading, isMasterAdmin, assignedPropertyIds]);
+
+  // Auto-select property when navigated from Dashboard
+  useEffect(() => {
+    if (targetPropertyId && properties.length > 0) {
+      const found = properties.find(p => p.id === targetPropertyId);
+      if (found) {
+        setSelectedProperty(found);
+        setTargetPropertyId(null);
+      }
+    }
+  }, [targetPropertyId, properties]);
 
   async function fetchProperties() {
     setLoading(true);
@@ -177,6 +189,9 @@ export function PropertySection() {
           onEdit={() => openEdit(selectedProperty)}
           onDelete={() => setDeleteTarget(selectedProperty)}
           onNavigate={(key) => {
+            if (key === "checklists") {
+              setChecklistsForPropertyId(selectedProperty.id);
+            }
             setSelectedProperty(null);
             setActiveSection(key as any);
           }}
