@@ -1119,6 +1119,13 @@ export type Database = {
         Args: { _notif_id: string }
         Returns: undefined
       }
+      can_user_see_checklist: {
+        Args: {
+          _template_assigned_dept: string
+          _template_assigned_role: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
