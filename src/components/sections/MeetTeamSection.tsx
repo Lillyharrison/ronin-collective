@@ -110,7 +110,7 @@ const LEVEL_COLORS: Record<string, string> = {
   principal:       "text-gold border-gold/40 bg-gold/10",
   extended_family: "text-amber-400 border-amber-400/40 bg-amber-400/10",
   manager:         "text-blue-400 border-blue-400/40 bg-blue-400/10",
-  staff:           "text-cream/60 border-cream/20 bg-cream/5",
+  staff:           "text-slate-300 border-slate-400/40 bg-slate-400/10",
 };
 
 const DEPT_COLORS: Record<string, string> = {
