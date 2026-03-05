@@ -77,6 +77,16 @@ export function ChatView({
     setSending(true);
 
     if (isAgentThread) {
+      // In a group chat (other humans present), only respond when @Ronin is explicitly mentioned
+      const isGroupChat = participants.filter(p => p.id !== currentUserId).length > 0;
+      const mentionsRonin = /@ronin/i.test(text);
+
+      if (isGroupChat && !mentionsRonin) {
+        // Just save the message for the humans — Ronin stays silent
+        await sendMessage(text, currentUserId);
+        setSending(false);
+        return;
+      }
       // Check if the last AI message has a pending tool call and this is a confirmation
       const lastAiMsg = [...messages].reverse().find(m => m.is_ai_generated);
       const pendingTool = (lastAiMsg?.reactions as Record<string, unknown> | null)?.__pending_tool as
