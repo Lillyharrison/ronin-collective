@@ -349,6 +349,36 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
         <div className="bg-card border-b border-border px-4 py-4 space-y-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Admin Settings</p>
 
+          {/* ── Publish / Draft toggle ── */}
+          {isMasterAdmin && (
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/30">
+              <div>
+                <p className="text-xs font-semibold text-foreground">
+                  {template.is_published ? "Published" : "Draft"}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {template.is_published ? "Visible to assigned staff" : "Only visible to you"}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  const next = !template.is_published;
+                  await supabase.from("checklist_templates").update({ is_published: next }).eq("id", template.id);
+                  setTemplate(t => ({ ...t, is_published: next }));
+                }}
+                className={cn(
+                  "w-12 h-6 rounded-full transition-colors relative flex-shrink-0",
+                  template.is_published ? "bg-[hsl(var(--status-done))]" : "bg-muted"
+                )}
+              >
+                <div className={cn(
+                  "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
+                  template.is_published ? "translate-x-6" : "translate-x-0.5"
+                )} />
+              </button>
+            </div>
+          )}
+
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><RefreshCw size={11} /> Recurrence</label>
             <div className="flex flex-wrap gap-2">
