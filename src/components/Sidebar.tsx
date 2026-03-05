@@ -6,13 +6,13 @@ import {
   X, Home, Wrench, MessageCircle, User,
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
-  Building2, Trophy, FileSpreadsheet, Calendar,
+  Building2, Trophy, FileSpreadsheet, Calendar, Brain,
 } from "lucide-react";
 
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
@@ -34,6 +34,7 @@ const ALL_ITEMS: SidebarItem[] = [
   { section: "travel",       labelKey: "travel",       icon: <Plane size={20} /> },
   { section: "calendar",     labelKey: "calendar",     icon: <Calendar size={20} /> },
   { section: "master-import",labelKey: "masterImport", icon: <FileSpreadsheet size={20} />, dividerBefore: true },
+  { section: "memory",       labelKey: "memory",       icon: <Brain size={20} /> },
 ];
 
 export function Sidebar() {

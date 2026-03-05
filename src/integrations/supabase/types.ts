@@ -495,6 +495,62 @@ export type Database = {
         }
         Relationships: []
       }
+      ronin_memories: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          importance: number
+          last_referenced_at: string | null
+          property_id: string | null
+          reference_count: number
+          source: string
+          subject_user_id: string | null
+          summary: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          importance?: number
+          last_referenced_at?: string | null
+          property_id?: string | null
+          reference_count?: number
+          source?: string
+          subject_user_id?: string | null
+          summary: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          importance?: number
+          last_referenced_at?: string | null
+          property_id?: string | null
+          reference_count?: number
+          source?: string
+          subject_user_id?: string | null
+          summary?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ronin_memories_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_events: {
         Row: {
           ai_response: string | null

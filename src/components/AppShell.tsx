@@ -19,6 +19,7 @@ import { TravelSection } from "@/components/sections/TravelSection";
 import { AchievementsSection } from "@/components/sections/AchievementsSection";
 import { CalendarSection } from "@/components/sections/CalendarSection";
 import { MasterImportSection } from "@/components/sections/MasterImportSection";
+import MemorySection from "@/components/sections/MemorySection";
 
 const sectionTitles: Record<string, string> = {
   dashboard:   "",              // uses logo
@@ -37,6 +38,7 @@ const sectionTitles: Record<string, string> = {
   calendar:       "Calendar",
   achievements:   "Achievements",
   "master-import":"Master Import",
+  memory:          "Ronin's Memory",
 };
 
 function ActiveSection() {
@@ -58,6 +60,7 @@ function ActiveSection() {
     case "calendar":    return <CalendarSection />;
     case "achievements":  return <AchievementsSection />;
     case "master-import": return <MasterImportSection />;
+    case "memory":        return <MemorySection />;
     default:              return <Dashboard />;
   }
 }

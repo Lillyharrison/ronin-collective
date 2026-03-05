@@ -57,6 +57,7 @@ export const translations = {
     achievements: "Achievements",
     masterImport: "Master Import",
     calendar: "Calendar",
+    memory: "Ronin's Memory",
   },
   es: {
     home: "Inicio",
@@ -109,6 +110,7 @@ export const translations = {
     save: "Guardar",
     masterImport: "Importación Maestra",
     calendar: "Calendario",
+    memory: "Memoria de Ronin",
   },
 } as const;
 
