@@ -1,1 +1,7 @@
 project_id = "apaoexixichuqeuhinss"
+
+[functions.ronin-event-listener]
+verify_jwt = false
+
+[functions.ronin-ai]
+verify_jwt = false

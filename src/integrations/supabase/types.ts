@@ -118,6 +118,71 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          assigned_staff_ids: string[] | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          event_type: string
+          id: string
+          is_private: boolean
+          keywords: string[] | null
+          location: string | null
+          notes: string | null
+          property_id: string | null
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_staff_ids?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          is_private?: boolean
+          keywords?: string[] | null
+          location?: string | null
+          notes?: string | null
+          property_id?: string | null
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_staff_ids?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          is_private?: boolean
+          keywords?: string[] | null
+          location?: string | null
+          notes?: string | null
+          property_id?: string | null
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_threads: {
         Row: {
           created_at: string
