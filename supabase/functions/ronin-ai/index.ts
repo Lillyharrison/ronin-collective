@@ -7,6 +7,81 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
+const RONIN_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "create_task",
+      description: "Create a new task or work order in the estate management system. Use this when the user asks to create, add, or log a task, work order, or job for any staff member or property.",
+      parameters: {
+        type: "object",
+        properties: {
+          title_en: { type: "string", description: "Clear, concise task title in English" },
+          description_en: { type: "string", description: "Full task description with relevant details" },
+          category: { type: "string", enum: ["housekeeping", "maintenance", "general", "laundry", "kitchen", "grounds", "security", "errand"], description: "Task category" },
+          priority: { type: "number", enum: [1, 2, 3], description: "1=urgent, 2=normal, 3=low" },
+          assigned_to_name: { type: "string", description: "Full name of the staff member to assign to (Ronin will resolve to ID)" },
+          property_name: { type: "string", description: "Property name where task applies (Ronin will resolve to ID)" },
+          due_date: { type: "string", description: "ISO 8601 date string for due date, or null" },
+        },
+        required: ["title_en", "category", "priority"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_task_status",
+      description: "Update the status of an existing task. Use when a user says a task is done, complete, started, urgent, or needs to be changed.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_title_hint: { type: "string", description: "Part of the task title to identify which task to update" },
+          new_status: { type: "string", enum: ["pending", "in_progress", "completed", "urgent"], description: "New status for the task" },
+        },
+        required: ["task_title_hint", "new_status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "log_asset",
+      description: "Add a new asset or inventory item to the estate management system. Use when a user wants to log, add, or register an item to inventory or assets.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Name of the asset or item" },
+          category: { type: "string", enum: ["vehicle", "appliance", "art", "tech", "furniture", "other"], description: "Asset category" },
+          make: { type: "string", description: "Make/brand of the item, if applicable" },
+          model: { type: "string", description: "Model of the item, if applicable" },
+          serial_number: { type: "string", description: "Serial number, if applicable" },
+          description: { type: "string", description: "Additional description or notes" },
+          property_name: { type: "string", description: "Property where the asset is located" },
+          purchase_value: { type: "number", description: "Purchase value in USD, if known" },
+        },
+        required: ["name", "category"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_staff_message",
+      description: "Send a message to a staff member's chat thread on behalf of the estate manager. Use when the user wants to notify, inform, or instruct a specific staff member.",
+      parameters: {
+        type: "object",
+        properties: {
+          recipient_name: { type: "string", description: "Full name of the staff member to message" },
+          message_text: { type: "string", description: "The message content to send to the staff member" },
+        },
+        required: ["recipient_name", "message_text"],
+      },
+    },
+  },
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -69,8 +144,6 @@ serve(async (req) => {
         });
       }
 
-      // Use inviteUserByEmail — this creates the user AND sends the magic link in one step.
-      // Do NOT call createUser first or the invite token will be invalidated.
       const redirectTo = body.redirect_url || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app/reset-password";
       const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
         data: { full_name },
@@ -83,14 +156,12 @@ serve(async (req) => {
       }
 
       const uid = inviteData.user.id;
-
       await adminClient.from("profiles").upsert({
         id: uid, full_name, job_title: job_title || null, level,
         department: department || null, start_date: start_date || null,
         birthday: birthday || null, notes: notes || null,
       });
 
-      // Only insert role if not already created by the trigger
       const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
       if (!existingRole) {
         await adminClient.from("user_roles").insert({ user_id: uid, role });
@@ -122,7 +193,6 @@ serve(async (req) => {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Prevent self-deletion
       if (target_user_id === callerUserId) {
         return new Response(JSON.stringify({ error: "You cannot delete yourself" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -135,6 +205,204 @@ serve(async (req) => {
         });
       }
       return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── TOOL EXECUTION (confirmed by user) ───────────────────────────────────
+    if (action === "execute_tool") {
+      if (!callerUserId) {
+        return new Response(JSON.stringify({ error: "Authentication required" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { tool_name, tool_args } = body;
+
+      // Permission gate — only master_admin, admin, manager can write
+      if (!["master_admin", "admin", "manager"].includes(callerRole)) {
+        return new Response(JSON.stringify({ error: "Insufficient permissions to execute estate actions." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Load platform data for resolving names → IDs
+      const [propsRes, staffRes] = await Promise.all([
+        adminClient.from("properties").select("id, name"),
+        adminClient.from("profiles").select("id, full_name"),
+      ]);
+      const props = propsRes.data ?? [];
+      const staff = staffRes.data ?? [];
+
+      const resolvePropertyId = (name?: string): string | null => {
+        if (!name) return null;
+        const lower = name.toLowerCase();
+        const match = props.find((p: { id: string; name: string }) =>
+          p.name.toLowerCase().includes(lower) || lower.includes(p.name.toLowerCase())
+        );
+        return match?.id ?? null;
+      };
+
+      const resolveStaffId = (name?: string): string | null => {
+        if (!name) return null;
+        const lower = name.toLowerCase();
+        const match = staff.find((s: { id: string; full_name: string | null }) =>
+          (s.full_name ?? "").toLowerCase().includes(lower)
+        );
+        return match?.id ?? null;
+      };
+
+      let resultMessage = "";
+
+      // ── CREATE TASK ──────────────────────────────────────────────────────────
+      if (tool_name === "create_task") {
+        const assignedTo = resolveStaffId(tool_args.assigned_to_name);
+        const propId = resolvePropertyId(tool_args.property_name);
+
+        const { data: task, error: taskErr } = await adminClient.from("tasks").insert({
+          title_en: tool_args.title_en,
+          description_en: tool_args.description_en ?? null,
+          category: tool_args.category,
+          priority: tool_args.priority,
+          status: tool_args.priority === 1 ? "urgent" : "pending",
+          assigned_to: assignedTo,
+          property_id: propId,
+          due_date: tool_args.due_date ?? null,
+          created_by: callerUserId,
+        }).select("id").single();
+
+        if (taskErr) throw new Error(`Failed to create task: ${taskErr.message}`);
+
+        await adminClient.from("system_events").insert({
+          event_type: "task_created_by_ai", entity_type: "task", entity_id: task.id,
+          triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
+        });
+
+        const assignedName = tool_args.assigned_to_name ? ` — assigned to **${tool_args.assigned_to_name}**` : "";
+        const propName = tool_args.property_name ? ` at **${tool_args.property_name}**` : "";
+        const priorityLabel = tool_args.priority === 1 ? "🔴 Urgent" : tool_args.priority === 2 ? "🟡 Normal" : "🟢 Low";
+        resultMessage = `✅ **Task created successfully.**\n\n**${tool_args.title_en}**${assignedName}${propName}\nPriority: ${priorityLabel} | Category: ${tool_args.category}\n\nThe task is now visible in the Tasks section.`;
+      }
+
+      // ── UPDATE TASK STATUS ────────────────────────────────────────────────────
+      else if (tool_name === "update_task_status") {
+        const { data: tasks } = await adminClient
+          .from("tasks")
+          .select("id, title_en, status")
+          .ilike("title_en", `%${tool_args.task_title_hint}%`)
+          .limit(1);
+
+        if (!tasks || tasks.length === 0) {
+          resultMessage = `⚠️ I could not find a task matching **"${tool_args.task_title_hint}"**. Please check the Tasks section and try again with a more specific title.`;
+        } else {
+          const task = tasks[0];
+          await adminClient.from("tasks").update({
+            status: tool_args.new_status,
+            completed_at: tool_args.new_status === "completed" ? new Date().toISOString() : null,
+          }).eq("id", task.id);
+
+          await adminClient.from("system_events").insert({
+            event_type: "task_status_updated_by_ai", entity_type: "task", entity_id: task.id,
+            triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
+          });
+
+          const statusEmoji = { pending: "⏳", in_progress: "🔄", completed: "✅", urgent: "🔴" }[tool_args.new_status] ?? "📋";
+          resultMessage = `${statusEmoji} **Task updated.**\n\n**${task.title_en}** → Status changed to **${tool_args.new_status.replace("_", " ")}**.`;
+        }
+      }
+
+      // ── LOG ASSET ─────────────────────────────────────────────────────────────
+      else if (tool_name === "log_asset") {
+        const propId = resolvePropertyId(tool_args.property_name);
+
+        const { data: asset, error: assetErr } = await adminClient.from("assets").insert({
+          name: tool_args.name,
+          category: tool_args.category,
+          make: tool_args.make ?? null,
+          model: tool_args.model ?? null,
+          serial_number: tool_args.serial_number ?? null,
+          description: tool_args.description ?? null,
+          current_property_id: propId,
+          purchase_value: tool_args.purchase_value ?? null,
+        }).select("id").single();
+
+        if (assetErr) throw new Error(`Failed to log asset: ${assetErr.message}`);
+
+        await adminClient.from("system_events").insert({
+          event_type: "asset_logged_by_ai", entity_type: "asset", entity_id: asset.id,
+          triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
+        });
+
+        const propLabel = tool_args.property_name ? ` at **${tool_args.property_name}**` : "";
+        const makeModel = [tool_args.make, tool_args.model].filter(Boolean).join(" ");
+        resultMessage = `✅ **Asset logged successfully.**\n\n**${tool_args.name}**${makeModel ? ` (${makeModel})` : ""}${propLabel}\nCategory: ${tool_args.category}\n\nThe item is now visible in the Inventory section.`;
+      }
+
+      // ── SEND STAFF MESSAGE ────────────────────────────────────────────────────
+      else if (tool_name === "send_staff_message") {
+        const recipientId = resolveStaffId(tool_args.recipient_name);
+
+        if (!recipientId) {
+          resultMessage = `⚠️ I could not find a staff member named **"${tool_args.recipient_name}"** in the system. Please check the Team section.`;
+        } else {
+          // Find or create DM thread between caller and recipient
+          const { data: existingThreads } = await adminClient
+            .from("chat_threads")
+            .select("id, participant_ids")
+            .eq("type", "private");
+
+          let threadId: string | null = null;
+          if (existingThreads) {
+            for (const t of existingThreads) {
+              const participants = t.participant_ids as string[];
+              if (participants.includes(callerUserId) && participants.includes(recipientId)) {
+                threadId = t.id;
+                break;
+              }
+            }
+          }
+
+          if (!threadId) {
+            const { data: newThread } = await adminClient.from("chat_threads").insert({
+              type: "private",
+              participant_ids: [callerUserId, recipientId],
+              created_by: callerUserId,
+            }).select("id").single();
+            threadId = newThread?.id ?? null;
+          }
+
+          if (threadId) {
+            await adminClient.from("messages").insert({
+              thread_id: threadId,
+              sender_id: callerUserId,
+              content_text: tool_args.message_text,
+              is_ai_generated: false,
+              delivery_status: "sent",
+            });
+            await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
+          }
+
+          await adminClient.from("system_events").insert({
+            event_type: "message_sent_by_ai", entity_type: "message",
+            triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
+          });
+
+          resultMessage = `✅ **Message sent to ${tool_args.recipient_name}.**\n\n> "${tool_args.message_text}"\n\nThe message is now visible in the Messages section.`;
+        }
+      } else {
+        resultMessage = `⚠️ Unknown tool: ${tool_name}`;
+      }
+
+      // Post result to thread if provided
+      if (thread_id && resultMessage) {
+        await adminClient.from("messages").insert({
+          thread_id, sender_id: null, is_ai_generated: true,
+          content_text: resultMessage, delivery_status: "sent",
+        });
+        await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread_id);
+      }
+
+      return new Response(JSON.stringify({ success: true, result: resultMessage }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -180,14 +448,30 @@ When a user asks a question or raises an issue, follow this internal logic befor
 4. **Recommend** the next action clearly. Propose it — do not wait to be asked.
 5. **Flag** any SOP, Par Level, or compliance concern relevant to the situation.
 
-## CAPABILITIES (CURRENT — READ-ONLY)
+## TOOL USE — WRITE ACTIONS (ACTIVE)
+You have access to 4 estate management tools. When a user's request maps to one of these actions, you MUST use the tool — do not just describe what you would do.
+
+### CONFIRMATION-FIRST PROTOCOL (MANDATORY)
+Before executing ANY tool, you must:
+1. State what you are about to do in a short, clear summary
+2. List the exact parameters you will use (property, assignee, priority, etc.)
+3. End with: **"Shall I proceed?"**
+4. Wait — do NOT call the tool yet. The user's next message will confirm or cancel.
+5. Only when the user confirms (e.g. "yes", "proceed", "do it", "confirm") should you call the tool.
+
+### AVAILABLE TOOLS:
+- **create_task**: Create a task or work order. Always ask for: title, category, priority, assignee (if applicable), property (if applicable), due date (if applicable).
+- **update_task_status**: Change task status to pending / in_progress / completed / urgent. Identify the task from context first.
+- **log_asset**: Add an item to inventory or assets. Required: name, category. Optional: make, model, serial number, property, value.
+- **send_staff_message**: Send a direct message to a staff member's chat thread.
+
+## CAPABILITIES (CURRENT)
 - Full read access to: Properties, Tasks, Team, Assets, System Events.
 - Language detection and bilingual responses (EN/ES).
+- Write actions: create tasks, update task status, log assets, send staff messages.
 - Operational analysis, status summaries, and prioritization recommendations.
-- Staff availability and assignment awareness.
 
 ## WHAT IS COMING (DO NOT FABRICATE — INFORM IF ASKED)
-- Write actions (creating tasks, work orders, calendar entries) — not yet active.
 - Vision / image recognition for inventory logging — not yet active.
 - Proactive event-driven messaging (e.g., calendar triggers → staff briefings) — not yet active.
 - Long-term memory and learned preferences — not yet active.`;
@@ -376,10 +660,17 @@ ${csv_content}`;
         { role: "user", content },
       ];
 
+      // ── Tool-aware AI call ─────────────────────────────────────────────────
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-2.5-pro", messages: aiMessages, stream: true }),
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: aiMessages,
+          tools: RONIN_TOOLS,
+          tool_choice: "auto",
+          stream: true,
+        }),
       });
 
       if (!aiResponse.ok) {
@@ -403,11 +694,15 @@ ${csv_content}`;
         });
       }
 
-      // Consume stream, accumulate, then save AI message to DB
+      // Consume stream, detect tool calls, accumulate text, then save AI message to DB
       const reader = aiResponse.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let fullText = "";
+      let toolCallName = "";
+      let toolCallArgsRaw = "";
+      let toolCallId = "";
+      let isToolCall = false;
 
       const stream = new ReadableStream({
         async start(controller) {
@@ -426,22 +721,53 @@ ${csv_content}`;
               if (json === "[DONE]") continue;
               try {
                 const parsed = JSON.parse(json);
-                const chunk = parsed.choices?.[0]?.delta?.content;
+                const delta = parsed.choices?.[0]?.delta;
+                if (!delta) continue;
+
+                // Detect tool call in stream
+                if (delta.tool_calls && delta.tool_calls.length > 0) {
+                  isToolCall = true;
+                  const tc = delta.tool_calls[0];
+                  if (tc.id) toolCallId = tc.id;
+                  if (tc.function?.name) toolCallName = tc.function.name;
+                  if (tc.function?.arguments) toolCallArgsRaw += tc.function.arguments;
+                }
+
+                const chunk = delta.content as string | undefined;
                 if (chunk) fullText += chunk;
               } catch { /* partial */ }
             }
           }
           controller.close();
 
-          if (fullText) {
+          // If it's a tool call — parse args and inject a pending confirmation message
+          if (isToolCall && toolCallName) {
+            let toolArgs: Record<string, unknown> = {};
+            try { toolArgs = JSON.parse(toolCallArgsRaw); } catch { /* use empty */ }
+
+            // Build a human-readable confirmation request to show the user
+            const confirmText = buildConfirmationMessage(toolCallName, toolArgs);
+
+            await adminClient.from("messages").insert({
+              thread_id,
+              sender_id: null,
+              is_ai_generated: true,
+              content_text: confirmText,
+              delivery_status: "sent",
+              // Store pending tool call in reactions field temporarily as metadata
+              reactions: { __pending_tool: { name: toolCallName, args: toolArgs } } as unknown as never,
+            });
+          } else if (fullText) {
+            // Regular text response — save to DB
             await adminClient.from("messages").insert({
               thread_id, content_text: fullText, sender_id: null,
               is_ai_generated: true, delivery_status: "sent",
             });
-            await adminClient.from("chat_threads")
-              .update({ last_message_at: new Date().toISOString() })
-              .eq("id", thread_id);
           }
+
+          await adminClient.from("chat_threads")
+            .update({ last_message_at: new Date().toISOString() })
+            .eq("id", thread_id);
         },
       });
 
@@ -461,3 +787,52 @@ ${csv_content}`;
     );
   }
 });
+
+// ─── CONFIRMATION MESSAGE BUILDER ─────────────────────────────────────────────
+function buildConfirmationMessage(toolName: string, args: Record<string, unknown>): string {
+  switch (toolName) {
+    case "create_task": {
+      const priorityLabel = args.priority === 1 ? "🔴 Urgent" : args.priority === 2 ? "🟡 Normal" : "🟢 Low";
+      const lines = [
+        `📋 **I'm ready to create the following task:**`,
+        ``,
+        `**Title:** ${args.title_en}`,
+        args.description_en ? `**Description:** ${args.description_en}` : null,
+        `**Category:** ${args.category}`,
+        `**Priority:** ${priorityLabel}`,
+        args.assigned_to_name ? `**Assigned to:** ${args.assigned_to_name}` : null,
+        args.property_name ? `**Property:** ${args.property_name}` : null,
+        args.due_date ? `**Due:** ${args.due_date}` : null,
+        ``,
+        `**Shall I proceed?**`,
+      ].filter(l => l !== null).join("\n");
+      return lines;
+    }
+    case "update_task_status": {
+      const statusEmoji = { pending: "⏳", in_progress: "🔄", completed: "✅", urgent: "🔴" }[args.new_status as string] ?? "📋";
+      return `${statusEmoji} **I'm ready to update the task:**\n\n**Task:** "${args.task_title_hint}"\n**New Status:** ${(args.new_status as string).replace("_", " ")}\n\n**Shall I proceed?**`;
+    }
+    case "log_asset": {
+      const makeModel = [args.make, args.model].filter(Boolean).join(" ");
+      const lines = [
+        `📦 **I'm ready to log the following asset:**`,
+        ``,
+        `**Name:** ${args.name}`,
+        makeModel ? `**Make / Model:** ${makeModel}` : null,
+        `**Category:** ${args.category}`,
+        args.serial_number ? `**Serial Number:** ${args.serial_number}` : null,
+        args.property_name ? `**Property:** ${args.property_name}` : null,
+        args.purchase_value ? `**Value:** $${args.purchase_value}` : null,
+        args.description ? `**Notes:** ${args.description}` : null,
+        ``,
+        `**Shall I proceed?**`,
+      ].filter(l => l !== null).join("\n");
+      return lines;
+    }
+    case "send_staff_message": {
+      return `💬 **I'm ready to send the following message to ${args.recipient_name}:**\n\n> "${args.message_text}"\n\n**Shall I proceed?**`;
+    }
+    default:
+      return `I'm ready to execute **${toolName}**. **Shall I proceed?**`;
+  }
+}

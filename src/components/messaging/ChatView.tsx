@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMessages } from "@/hooks/useMessages";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // kept for media upload
 import { MessageBubble } from "./MessageBubble";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -48,6 +48,13 @@ export function ChatView({
     }
   }, [messages.length, currentUserId]);
 
+  const getAuthHeader = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    return session?.session
+      ? `Bearer ${session.session.access_token}`
+      : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+  };
+
   const handleSend = async () => {
     const text = input.trim();
     if (!text || sending) return;
@@ -55,33 +62,64 @@ export function ChatView({
     setSending(true);
 
     if (isAgentThread) {
-      // 1. Save user message to DB only once (edge fn does NOT re-save it)
-      await sendMessage(text, currentUserId);
+      // Check if the last AI message has a pending tool call and this is a confirmation
+      const lastAiMsg = [...messages].reverse().find(m => m.is_ai_generated);
+      const pendingTool = (lastAiMsg?.reactions as Record<string, unknown> | null)?.__pending_tool as
+        { name: string; args: Record<string, unknown> } | undefined;
 
-      // 2. Show typing indicator
+      const isConfirmation = pendingTool && /^(yes|si|sí|proceed|confirm|do it|go ahead|adelante|hazlo|confirmar)/i.test(text);
+      const isCancellation = pendingTool && /^(no|cancel|cancelar|stop|nevermind|don't)/i.test(text);
+
+      // Save user message to DB
+      await sendMessage(text, currentUserId);
       setAgentTyping(true);
 
-      // 3. Build conversation history for context
-      const history = messages
-        .filter(m => m.content_text)
-        .map(m => ({
-          role: m.is_ai_generated ? "assistant" as const : "user" as const,
-          content: m.content_text!,
-        }));
-
       try {
-        const { data: session } = await supabase.auth.getSession();
-        const auth = session?.session
-          ? `Bearer ${session.session.access_token}`
-          : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`;
+        const auth = await getAuthHeader();
 
-        // 4. Call edge function — it streams AND saves the AI reply to DB
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: auth },
-          body: JSON.stringify({ type: "message", content: text, messages: history, thread_id: threadId }),
-        });
-        // Realtime subscription in useMessages will pick up the new AI message automatically
+        if (isConfirmation && pendingTool) {
+          // Execute the confirmed tool action
+          const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: auth },
+            body: JSON.stringify({
+              action: "execute_tool",
+              tool_name: pendingTool.name,
+              tool_args: pendingTool.args,
+              thread_id: threadId,
+            }),
+          });
+          if (!resp.ok) console.error("Tool execution failed:", await resp.text());
+        } else if (isCancellation && pendingTool) {
+          // Post a cancellation message from AI
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: auth },
+            body: JSON.stringify({
+              type: "message",
+              content: text,
+              messages: messages.filter(m => m.content_text).map(m => ({
+                role: m.is_ai_generated ? "assistant" as const : "user" as const,
+                content: m.content_text!,
+              })),
+              thread_id: threadId,
+            }),
+          });
+        } else {
+          // Standard AI message
+          const history = messages
+            .filter(m => m.content_text)
+            .map(m => ({
+              role: m.is_ai_generated ? "assistant" as const : "user" as const,
+              content: m.content_text!,
+            }));
+
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: auth },
+            body: JSON.stringify({ type: "message", content: text, messages: history, thread_id: threadId }),
+          });
+        }
       } catch (e) {
         console.error("AI error:", e);
       } finally {
