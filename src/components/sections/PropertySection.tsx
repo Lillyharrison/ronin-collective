@@ -36,7 +36,7 @@ const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon
 const PROPERTY_SUB_SECTIONS = [
   { key: "tasks",       label: "Tasks",       icon: <CheckCircle size={20} />,  description: "Open & assigned tasks" },
   { key: "maintenance", label: "Maintenance", icon: <Wrench size={20} />,       description: "Issues & requests" },
-  { key: "staff",       label: "Staff",       icon: <Users size={20} />,        description: "Assigned team members" },
+  { key: "staff",       label: "Users",       icon: <Users size={20} />,        description: "Assigned people" },
   { key: "checklists",  label: "Checklists",  icon: <BookOpen size={20} />,     description: "SOPs & procedures" },
   { key: "manuals",     label: "Manuals",     icon: <BookOpen size={20} />,     description: "Care guides & rules" },
   { key: "calendar",    label: "Schedule",    icon: <Calendar size={20} />,     description: "Events & bookings" },
@@ -425,7 +425,7 @@ function PropertyStaffList({ propertyId, onBack }: { propertyId: string; onBack:
       <button onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
         <ArrowLeft size={15} /> Back to property
       </button>
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Assigned Staff</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Assigned Users</p>
       {loading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)}</div>
       ) : staff.length === 0 ? (
