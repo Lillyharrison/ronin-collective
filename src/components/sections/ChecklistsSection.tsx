@@ -38,13 +38,12 @@ export function ChecklistsSection() {
     q.then(({ data }) => {
       const props = (data as Property[]) ?? [];
       setProperties(props);
-      // If we have a deep-link property, use it; else default to first
+      // If we have a deep-link property, use it; else NO default — force user to select
       if (checklistsForPropertyId) {
         setSelectedPropId(checklistsForPropertyId);
         setChecklistsForPropertyId(null); // clear after use
-      } else if (!selectedPropId && props.length > 0) {
-        setSelectedPropId(props[0].id);
       }
+      // Do NOT auto-select first property
     });
   }, [isAdmin, assignedPropertyIds]);
 
@@ -98,7 +97,7 @@ export function ChecklistsSection() {
       </div>
 
       {/* Property picker for cleaning tab */}
-      {tab === "cleaning" && properties.length > 1 && (
+      {tab === "cleaning" && properties.length > 0 && (
         <div className="px-4 mt-3">
           <div className="relative">
             <button
@@ -106,7 +105,7 @@ export function ChecklistsSection() {
               className="w-full flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-3 text-left"
             >
               <MapPin size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
-              <span className="flex-1 text-sm font-medium text-foreground truncate">{selectedProp?.name ?? "Select property"}</span>
+              <span className="flex-1 text-sm font-medium text-foreground truncate">{selectedProp?.name ?? "Select a property…"}</span>
               <ChevronDown size={14} className={cn("text-muted-foreground transition-transform", showPropPicker && "rotate-180")} />
             </button>
             {showPropPicker && (
@@ -134,7 +133,13 @@ export function ChecklistsSection() {
         {/* CLEANING CHECKLISTS */}
         {tab === "cleaning" && (
           <>
-            {cleaningLoading ? (
+            {!selectedPropId ? (
+              <div className="bg-card border border-dashed border-border rounded-xl p-8 text-center">
+                <MapPin size={28} className="mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-foreground">Select a property</p>
+                <p className="text-xs text-muted-foreground mt-1">Choose a property above to view its checklists.</p>
+              </div>
+            ) : cleaningLoading ? (
               <div className="space-y-3">
                 {[1,2,3,4].map(i => <div key={i} className="h-14 bg-card border border-border rounded-xl animate-pulse" />)}
               </div>

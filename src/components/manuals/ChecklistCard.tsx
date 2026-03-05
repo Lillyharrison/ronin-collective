@@ -1,7 +1,9 @@
 import { cn } from "@/lib/utils";
 import { useChecklistSessions, useChecklistItems } from "@/hooks/useChecklists";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
-import { ChevronRight, RefreshCw, CheckCircle2 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { supabase } from "@/integrations/supabase/client";
+import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 interface Props {
   template: ChecklistTemplate;
@@ -26,7 +28,19 @@ const RECURRENCE_LABELS: Record<string, string> = {
 export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
   const { completedIds } = useChecklistSessions(template.id, propertyId);
   const { items } = useChecklistItems(template.id);
+  const { isMasterAdmin } = usePermissions();
   const colorCls = COLOR_BG[template.color] ?? COLOR_BG.green;
+  const isDraft = !template.is_published;
+
+  const togglePublish = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase
+      .from("checklist_templates")
+      .update({ is_published: !template.is_published })
+      .eq("id", template.id);
+    // Trigger parent reload via page reload for simplicity
+    window.location.reload();
+  };
 
   const totalItems = items.length;
   const completedCount = completedIds.size;
@@ -39,35 +53,42 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
     : null;
 
   return (
-    <button
-      onClick={onOpenDetail}
-      className={cn(
-        "w-full bg-card border rounded-xl px-4 py-3 flex items-center gap-3 hover:bg-muted/30 active:scale-[0.99] transition-all text-left",
-        isAllComplete ? "border-[hsl(var(--status-done)/0.4)]" : "border-border"
-      )}
-    >
+    <div className={cn(
+      "w-full bg-card border rounded-xl px-4 py-3 flex items-center gap-3 transition-all text-left",
+      isDraft ? "border-border opacity-60 grayscale-[40%]" : isAllComplete ? "border-[hsl(var(--status-done)/0.4)]" : "border-border"
+    )}>
+      <button onClick={onOpenDetail} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 active:scale-[0.99] transition-all text-left">
       <span className={cn(
         "w-9 h-9 rounded-xl border flex items-center justify-center text-base flex-shrink-0",
-        isAllComplete
+        isDraft
+          ? "bg-muted border-muted-foreground/20 text-muted-foreground"
+          : isAllComplete
           ? "bg-[hsl(var(--status-done)/0.15)] border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))]"
           : colorCls
       )}>
-        {isAllComplete ? <CheckCircle2 size={18} /> : template.icon}
+        {isAllComplete && !isDraft ? <CheckCircle2 size={18} /> : template.icon}
       </span>
 
       <div className="flex-1 min-w-0">
-        <p className={cn(
-          "text-sm font-medium leading-tight truncate",
-          isAllComplete ? "text-[hsl(var(--status-done))]" : "text-foreground"
-        )}>
-          {template.title}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className={cn(
+            "text-sm font-medium leading-tight truncate",
+            isDraft ? "text-muted-foreground" : isAllComplete ? "text-[hsl(var(--status-done))]" : "text-foreground"
+          )}>
+            {template.title}
+          </p>
+          {isDraft && isMasterAdmin && (
+            <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
+              DRAFT
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2 mt-0.5">
-          {isAllComplete ? (
+          {!isDraft && isAllComplete ? (
             <span className="text-[10px] font-semibold text-[hsl(var(--status-done))]">
               ✓ Complete today
             </span>
-          ) : hasProgress ? (
+          ) : !isDraft && hasProgress ? (
             <span className={cn("text-[10px] font-semibold", colorCls.split(" ").find(c => c.startsWith("text-")))}>
               {completedCount}/{totalItems} done
             </span>
@@ -88,7 +109,7 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
           )}
         </div>
         {/* Progress bar — only shown when in progress */}
-        {hasProgress && !isAllComplete && (
+        {hasProgress && !isAllComplete && !isDraft && (
           <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden w-full">
             <div
               className="h-full bg-[hsl(var(--gold))] rounded-full transition-all duration-500"
@@ -97,14 +118,32 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
           </div>
         )}
         {/* Complete bar */}
-        {isAllComplete && (
+        {isAllComplete && !isDraft && (
           <div className="mt-1.5 h-1 bg-[hsl(var(--status-done)/0.2)] rounded-full overflow-hidden w-full">
             <div className="h-full bg-[hsl(var(--status-done))] rounded-full w-full" />
           </div>
         )}
       </div>
+      </button>
 
-      <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
-    </button>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {isMasterAdmin && (
+          <button
+            onClick={togglePublish}
+            title={isDraft ? "Publish" : "Unpublish"}
+            className={cn(
+              "p-1.5 rounded-lg border transition-all",
+              isDraft
+                ? "border-muted-foreground/20 text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-[hsl(var(--gold))]"
+                : "border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))] hover:border-[hsl(var(--status-done)/0.6)]"
+            )}
+          >
+            {isDraft ? <Eye size={13} /> : <EyeOff size={13} />}
+          </button>
+        )}
+        {!isMasterAdmin && <ChevronRight size={16} className="text-muted-foreground" />}
+        {isMasterAdmin && <ChevronRight size={16} className="text-muted-foreground" onClick={onOpenDetail} />}
+      </div>
+    </div>
   );
 }

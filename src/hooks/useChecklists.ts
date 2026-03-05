@@ -11,6 +11,7 @@ export interface ChecklistTemplate {
   color: string;
   property_id: string | null;
   is_universal: boolean;
+  is_published: boolean;
   sort_order: number;
   recurrence: string | null;
   recurrence_day: number | null;
