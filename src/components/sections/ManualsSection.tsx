@@ -1,25 +1,24 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useChecklistTemplates } from "@/hooks/useChecklists";
 import { usePropertyRules } from "@/hooks/usePropertyRules";
 import { CareGuideCard } from "@/components/manuals/CareGuideCard";
+import { CareGuideDetailPage } from "@/components/sections/CareGuideDetailPage";
 import { RulesManager } from "@/components/manuals/RulesManager";
 import { cn } from "@/lib/utils";
-import {
-  BookOpen, Shield,
-  ChevronDown, Plus, MapPin
-} from "lucide-react";
+import { BookOpen, Shield, ChevronDown, Plus, MapPin } from "lucide-react";
 
 interface Property {
   id: string;
   name: string;
 }
 
-type Tab = "care_guides" | "rules";
+type ManualTab = "care_guides" | "rules";
 
-const TABS: { id: Tab; icon: React.ReactNode; label: string; labelEs: string }[] = [
+const TABS: { id: ManualTab; icon: React.ReactNode; label: string; labelEs: string }[] = [
   { id: "care_guides", icon: <BookOpen size={14} />, label: "Care Guides", labelEs: "Cuidados" },
   { id: "rules",       icon: <Shield size={14} />,   label: "Rules",       labelEs: "Reglas" },
 ];
@@ -27,7 +26,8 @@ const TABS: { id: Tab; icon: React.ReactNode; label: string; labelEs: string }[]
 export function ManualsSection() {
   const { language } = useLanguage();
   const { isAdmin, assignedPropertyIds } = usePermissions();
-  const [tab, setTab] = useState<Tab>("care_guides");
+  const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail } = useNavigation();
+  const [tab, setTab] = useState<ManualTab>("care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
   const [showPropPicker, setShowPropPicker] = useState(false);
@@ -46,14 +46,28 @@ export function ManualsSection() {
 
   const selectedProp = properties.find(p => p.id === selectedPropId);
 
-  const { templates: careTemplates, loading: careLoading } = useChecklistTemplates(
-    tab === "care_guides" ? "care_guide" : undefined,
-    tab === "care_guides" ? null : undefined
+  const { templates: careTemplates, loading: careLoading, reload: reloadCare } = useChecklistTemplates(
+    "care_guide",
+    null
   );
 
   const { rules, loading: rulesLoading, reload: reloadRules } = usePropertyRules(
     tab === "rules" ? selectedPropId : undefined
   );
+
+  // Full-page detail view
+  if (careGuideDetailId) {
+    const tpl = careTemplates.find(t => t.id === careGuideDetailId);
+    if (tpl) {
+      return (
+        <CareGuideDetailPage
+          template={tpl as any}
+          onBack={closeCareGuideDetail}
+          onTemplateUpdate={() => reloadCare()}
+        />
+      );
+    }
+  }
 
   return (
     <div className="animate-fade-in pb-4">
@@ -129,17 +143,23 @@ export function ManualsSection() {
             <p className="text-xs text-muted-foreground px-1">
               {language === "es"
                 ? "Guías universales de cuidado de superficies para todas las propiedades."
-                : "Universal surface care guides — applicable to all properties."}
+                : "Universal surface care guides — tap any card to view full instructions."}
             </p>
             {careLoading ? (
-              <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-14 bg-card border border-border rounded-xl animate-pulse" />)}</div>
+              <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-14 bg-card border border-border rounded-2xl animate-pulse" />)}</div>
             ) : careTemplates.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <BookOpen size={28} className="mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">No care guides yet.</p>
               </div>
             ) : (
-              careTemplates.map(tpl => <CareGuideCard key={tpl.id} template={tpl} />)
+              careTemplates.map(tpl => (
+                <CareGuideCard
+                  key={tpl.id}
+                  template={tpl}
+                  onOpen={() => openCareGuideDetail(tpl.id)}
+                />
+              ))
             )}
             {isAdmin && (
               <button
@@ -149,7 +169,7 @@ export function ManualsSection() {
                   await supabase.from("checklist_templates").insert({
                     title: title.trim(), category: "care_guide", icon: "📖", color: "gold", is_universal: true,
                   });
-                  window.location.reload();
+                  reloadCare();
                 }}
                 className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
               >
