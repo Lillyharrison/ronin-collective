@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 
+export interface ChecklistProduct {
+  id: string;
+  name: string;
+  notes: string | null;
+  image_url: string | null;
+}
+
 export interface ChecklistTemplate {
   id: string;
   title: string;
@@ -19,6 +26,10 @@ export interface ChecklistTemplate {
   assigned_department: string | null;
   notify_on_day: boolean | null;
   only_when_occupied: boolean;
+  cover_image_url: string | null;
+  manual_link_url: string | null;
+  manual_link_label: string | null;
+  products: ChecklistProduct[] | null;
 }
 
 export interface ChecklistItem {
@@ -68,7 +79,7 @@ export function useChecklistTemplates(category?: string, propertyId?: string | n
       }
     }
     const { data } = await q;
-    setTemplates((data as ChecklistTemplate[]) ?? []);
+    setTemplates((data as unknown as ChecklistTemplate[]) ?? []);
     setLoading(false);
   }, [category, propertyId]);
 
