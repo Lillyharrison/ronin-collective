@@ -996,7 +996,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
               variant="outline"
               disabled={resending || saving || deleting}
               onClick={handleResendInvitation}
-              className="w-full border-charcoal-light text-cream hover:bg-charcoal-light gap-2"
+              className="w-full bg-charcoal-light border border-gold/40 text-gold hover:bg-gold/10 hover:border-gold gap-2 font-semibold"
             >
               {resending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
               {resending
