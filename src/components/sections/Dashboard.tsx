@@ -19,6 +19,7 @@ interface Property {
   timezone: string;
   status: "occupied" | "vacant" | "maintenance" | "under_construction";
   image_url: string | null;
+  is_primary: boolean;
 }
 
 interface FeedEvent {
@@ -152,7 +153,7 @@ export function Dashboard() {
   // Load properties
   useEffect(() => {
     if (permLoading) return;
-    let query = supabase.from("properties").select("id, name, city, country, timezone, status, image_url");
+    let query = supabase.from("properties").select("id, name, city, country, timezone, status, image_url, is_primary");
     if (!isAdmin && assignedPropertyIds.length > 0) {
       query = query.in("id", assignedPropertyIds);
     } else if (!isAdmin && assignedPropertyIds.length === 0) {
@@ -161,7 +162,16 @@ export function Dashboard() {
       return;
     }
     query.then(({ data }) => {
-      if (data) setProperties(data as Property[]);
+      if (data) {
+        // Sort: primary first → occupied → then alphabetically by city
+        const sorted = (data as Property[]).sort((a, b) => {
+          if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+          if (a.status === "occupied" && b.status !== "occupied") return -1;
+          if (b.status === "occupied" && a.status !== "occupied") return 1;
+          return (a.city ?? "").localeCompare(b.city ?? "");
+        });
+        setProperties(sorted);
+      }
       setPropLoading(false);
     });
   }, [isAdmin, assignedPropertyIds, permLoading]);
