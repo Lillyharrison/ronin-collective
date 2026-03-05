@@ -4,9 +4,23 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChecklistItems, useChecklistSessions, useChecklistComments, ChecklistTemplate, ChecklistProduct } from "@/hooks/useChecklists";
-import { ChecklistItemRow } from "@/components/manuals/ChecklistItemRow";
+import { SortableChecklistItem } from "@/components/manuals/SortableChecklistItem";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import {
   ArrowLeft, Printer, CheckCircle2, Plus, Send,
   MessageSquare, Settings, Calendar, User,
@@ -171,6 +185,24 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
   const [notifyOnDay, setNotifyOnDay] = useState(template.notify_on_day ?? false);
   const [onlyWhenOccupied, setOnlyWhenOccupied] = useState(template.only_when_occupied ?? false);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex(i => i.id === active.id);
+    const newIndex = items.findIndex(i => i.id === over.id);
+    const reordered = arrayMove(items, oldIndex, newIndex).map((item, idx) => ({ ...item, sort_order: idx }));
+    setItems(reordered);
+    // Persist all sort_order changes
+    await Promise.all(
+      reordered.map(item => supabase.from("checklist_items").update({ sort_order: item.sort_order }).eq("id", item.id))
+    );
+  };
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
 
   const today = new Date().toISOString().slice(0, 10);
   const progress = items.length > 0 ? Math.round((completedIds.size / items.length) * 100) : 0;
@@ -573,24 +605,32 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
         ) : items.length === 0 ? (
           <p className="px-4 py-8 text-xs text-muted-foreground italic text-center">No items yet — add some below.</p>
         ) : (
-          <div className="bg-card border border-border rounded-xl mx-4 overflow-hidden">
-            {items.map((item, idx) => {
-              const session = sessionMap.get(item.id);
-              const completedAt = session?.completed_at
-                ? new Date(session.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-                : null;
-              return (
-                <div key={item.id} className={idx > 0 ? "border-t border-border" : ""}>
-                  <ChecklistItemRow
-                    item={item} isCompleted={completedIds.has(item.id)}
-                    isAdmin={!!isAdmin} onToggle={() => toggle(item.id, completedIds.has(item.id))}
-                    onUpdate={handleUpdate} onDelete={handleDelete} onPhotoUpload={handlePhotoUpload}
-                  />
-                  {completedAt && <p className="px-12 pb-1.5 text-[10px] text-[hsl(var(--status-done))] opacity-70">✓ {completedAt}</p>}
-                </div>
-              );
-            })}
-          </div>
+          <DndContext
+            sensors={dndSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+              <div className="bg-card border border-border rounded-xl mx-4 overflow-hidden">
+                {items.map((item, idx) => {
+                  const session = sessionMap.get(item.id);
+                  const completedAt = session?.completed_at
+                    ? new Date(session.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                    : null;
+                  return (
+                    <div key={item.id} className={idx > 0 ? "border-t border-border" : ""}>
+                      <SortableChecklistItem
+                        item={item} isCompleted={completedIds.has(item.id)}
+                        isAdmin={!!isAdmin} onToggle={() => toggle(item.id, completedIds.has(item.id))}
+                        onUpdate={handleUpdate} onDelete={handleDelete} onPhotoUpload={handlePhotoUpload}
+                      />
+                      {completedAt && <p className="px-12 pb-1.5 text-[10px] text-[hsl(var(--status-done))] opacity-70">✓ {completedAt}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         {isAdmin && (
