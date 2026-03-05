@@ -398,7 +398,7 @@ export function Dashboard() {
           </div>
           {/* Alerts tile — replaces Properties, navigates to Manuals > Rules */}
           <button
-            onClick={() => setActiveSection("manuals")}
+    onClick={() => setActiveSection("alerts")}
             className="rounded-lg bg-[hsl(var(--status-urgent)/0.08)] border border-[hsl(var(--status-urgent)/0.25)] px-3 py-2.5 text-left hover:bg-[hsl(var(--status-urgent)/0.14)] transition-colors active:scale-95"
           >
             <div className="flex items-center gap-2 mb-1">
@@ -432,7 +432,7 @@ export function Dashboard() {
             {activeRules.slice(0, 2).map(rule => (
               <button
                 key={rule.id}
-                onClick={() => setActiveSection("manuals")}
+                onClick={() => setActiveSection("alerts")}
                 className="w-full flex items-start gap-2 rounded-lg bg-[hsl(var(--status-urgent)/0.06)] border border-[hsl(var(--status-urgent)/0.2)] px-3 py-2.5 text-left hover:bg-[hsl(var(--status-urgent)/0.12)] transition-colors"
               >
                 <Shield size={13} className="text-[hsl(var(--status-urgent))] mt-0.5 flex-shrink-0" />
@@ -446,7 +446,7 @@ export function Dashboard() {
             ))}
             {activeRules.length > 2 && (
               <button
-                onClick={() => setActiveSection("manuals")}
+                onClick={() => setActiveSection("alerts")}
                 className="w-full text-center text-[11px] text-[hsl(var(--status-urgent))] py-1 hover:underline"
               >
                 {language === "es" ? `Ver ${activeRules.length - 2} más…` : `View ${activeRules.length - 2} more…`}

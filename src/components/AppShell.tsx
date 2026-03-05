@@ -22,6 +22,7 @@ import { AchievementsSection } from "@/components/sections/AchievementsSection";
 import { CalendarSection } from "@/components/sections/CalendarSection";
 import { MasterImportSection } from "@/components/sections/MasterImportSection";
 import MemorySection from "@/components/sections/MemorySection";
+import { AlertsSection } from "@/components/sections/AlertsSection";
 import { ChecklistDetailPage } from "@/components/sections/ChecklistDetailPage";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +46,7 @@ const sectionTitles: Record<string, string> = {
   calendar:     "Calendar",
   achievements: "Achievements",
   "master-import": "Master Import",
-  memory:       "Ronin's Memory",
+  alerts:       "Alerts",
 };
 
 function ActiveSection() {
@@ -81,6 +82,7 @@ function ActiveSection() {
     case "achievements": return gated("achievements", <AchievementsSection />);
     case "master-import":return gated("master-import",<MasterImportSection />);
     case "memory":       return gated("memory",       <MemorySection />);
+    case "alerts":       return <AlertsSection />;
     default:             return <Dashboard />;
   }
 }
