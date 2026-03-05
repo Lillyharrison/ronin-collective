@@ -426,34 +426,6 @@ export function Dashboard() {
           </button>
         </div>
 
-        {/* Active rules preview — show top rule details inline */}
-        {activeRules.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {activeRules.slice(0, 2).map(rule => (
-              <button
-                key={rule.id}
-                onClick={() => setActiveSection("alerts")}
-                className="w-full flex items-start gap-2 rounded-lg bg-[hsl(var(--status-urgent)/0.06)] border border-[hsl(var(--status-urgent)/0.2)] px-3 py-2.5 text-left hover:bg-[hsl(var(--status-urgent)/0.12)] transition-colors"
-              >
-                <Shield size={13} className="text-[hsl(var(--status-urgent))] mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[hsl(var(--status-urgent))] truncate">{rule.icon} {rule.title}</p>
-                  {rule.propertyName && <p className="text-[10px] text-muted-foreground mt-0.5">{rule.propertyName}</p>}
-                  {rule.description && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{rule.description}</p>}
-                </div>
-                <ChevronRight size={12} className="text-muted-foreground mt-0.5 flex-shrink-0" />
-              </button>
-            ))}
-            {activeRules.length > 2 && (
-              <button
-                onClick={() => setActiveSection("alerts")}
-                className="w-full text-center text-[11px] text-[hsl(var(--status-urgent))] py-1 hover:underline"
-              >
-                {language === "es" ? `Ver ${activeRules.length - 2} más…` : `View ${activeRules.length - 2} more…`}
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Notifications widget — shows unread alerts, dismissable */}
