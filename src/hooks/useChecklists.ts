@@ -12,6 +12,10 @@ export interface ChecklistTemplate {
   property_id: string | null;
   is_universal: boolean;
   sort_order: number;
+  recurrence: string | null;
+  recurrence_day: number | null;
+  assigned_role: string | null;
+  notify_on_day: boolean | null;
 }
 
 export interface ChecklistItem {
@@ -27,9 +31,22 @@ export interface ChecklistItem {
 }
 
 export interface ChecklistSession {
+  id?: string;
   item_id: string;
   completed_by: string;
   session_date: string;
+  completed_at: string;
+}
+
+export interface ChecklistComment {
+  id: string;
+  template_id: string;
+  property_id: string | null;
+  session_date: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profile?: { full_name: string | null; avatar_url: string | null } | null;
 }
 
 export function useChecklistTemplates(category?: string, propertyId?: string | null) {
@@ -86,13 +103,28 @@ export function useChecklistSessions(templateId: string | null, propertyId?: str
     if (!templateId) { setSessions([]); return; }
     const { data } = await supabase
       .from("checklist_sessions")
-      .select("item_id, completed_by, session_date")
+      .select("id, item_id, completed_by, session_date, completed_at")
       .eq("template_id", templateId)
       .eq("session_date", today);
     setSessions((data as ChecklistSession[]) ?? []);
   }, [templateId, today]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Realtime subscription for collaboration
+  useEffect(() => {
+    if (!templateId) return;
+    const channel = supabase
+      .channel(`checklist-sessions-${templateId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'checklist_sessions',
+        filter: `template_id=eq.${templateId}`,
+      }, () => { load(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [templateId, load]);
 
   const toggle = useCallback(async (itemId: string, isCompleted: boolean) => {
     if (!userId) return;
@@ -116,5 +148,63 @@ export function useChecklistSessions(templateId: string | null, propertyId?: str
   }, [templateId, propertyId, userId, today]);
 
   const completedIds = new Set(sessions.map(s => s.item_id));
-  return { completedIds, toggle, reload: load };
+  // Map itemId → session for timestamp display
+  const sessionMap = new Map(sessions.map(s => [s.item_id, s]));
+  return { completedIds, sessionMap, toggle, reload: load, sessions };
+}
+
+export function useChecklistComments(templateId: string | null, propertyId?: string | null) {
+  const [comments, setComments] = useState<ChecklistComment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { userId } = usePermissions();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const load = useCallback(async () => {
+    if (!templateId) { setComments([]); return; }
+    setLoading(true);
+    const { data } = await supabase
+      .from("checklist_comments")
+      .select("*, profile:profiles(full_name, avatar_url)")
+      .eq("template_id", templateId)
+      .eq("session_date", today)
+      .order("created_at", { ascending: true });
+    setComments((data as any[]) ?? []);
+    setLoading(false);
+  }, [templateId, today]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Realtime
+  useEffect(() => {
+    if (!templateId) return;
+    const channel = supabase
+      .channel(`checklist-comments-${templateId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'checklist_comments',
+        filter: `template_id=eq.${templateId}`,
+      }, () => { load(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [templateId, load]);
+
+  const addComment = useCallback(async (content: string) => {
+    if (!userId || !templateId || !content.trim()) return;
+    await supabase.from("checklist_comments").insert({
+      template_id: templateId,
+      property_id: propertyId ?? null,
+      session_date: today,
+      user_id: userId,
+      content: content.trim(),
+    });
+    load();
+  }, [templateId, propertyId, userId, today, load]);
+
+  const deleteComment = useCallback(async (commentId: string) => {
+    await supabase.from("checklist_comments").delete().eq("id", commentId);
+    setComments(prev => prev.filter(c => c.id !== commentId));
+  }, []);
+
+  return { comments, loading, addComment, deleteComment, reload: load };
 }

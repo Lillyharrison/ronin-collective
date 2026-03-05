@@ -7,12 +7,13 @@ import {
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
   Building2, Trophy, FileSpreadsheet, Calendar, Brain,
+  ClipboardList,
 } from "lucide-react";
 
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
@@ -25,6 +26,7 @@ const ALL_ITEMS: SidebarItem[] = [
   { section: "profile",      labelKey: "profile",      icon: <User size={20} /> },
   { section: "achievements", labelKey: "achievements", icon: <Trophy size={20} />, dividerBefore: true },
   { section: "manuals",      labelKey: "manuals",      icon: <BookOpen size={20} /> },
+  { section: "checklists",   labelKey: "checklists",   icon: <ClipboardList size={20} /> },
   { section: "tasks",        labelKey: "tasks",        icon: <CheckSquare size={20} /> },
   { section: "contacts",     labelKey: "contacts",     icon: <Users size={20} /> },
   { section: "inventory",    labelKey: "inventory",    icon: <Package size={20} /> },
@@ -44,7 +46,6 @@ export function Sidebar() {
 
   if (!sidebarOpen) return null;
 
-  // While loading show all items; once loaded, filter by canSee
   const items = permLoading ? ALL_ITEMS : ALL_ITEMS.filter(item => canSee(item.section));
 
   const displayName = fullName || "User";
@@ -53,15 +54,11 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
         onClick={() => setSidebarOpen(false)}
       />
-
-      {/* Drawer */}
       <aside className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-charcoal flex flex-col animate-slide-in-left shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 h-14 border-b border-charcoal-light">
           <RoninWordmark height={16} />
           <button
@@ -72,7 +69,6 @@ export function Sidebar() {
           </button>
         </div>
 
-        {/* Role badge */}
         <div className="px-5 py-3 border-b border-charcoal-light">
           <div className="flex items-center gap-3">
             {avatarUrl ? (
@@ -89,7 +85,6 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Nav items */}
         <nav className="flex-1 overflow-y-auto py-2">
           {items.map((item) => (
             <div key={item.section}>
@@ -113,7 +108,6 @@ export function Sidebar() {
           ))}
         </nav>
 
-        {/* Footer */}
         <div className="px-5 py-4 border-t border-charcoal-light">
           <p className="text-cream/30 text-[10px] tracking-widest uppercase">
             Ronin Collective © 2025

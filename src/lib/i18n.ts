@@ -35,7 +35,8 @@ export const translations = {
     urgent: "Urgent",
 
     // Sidebar sections
-    manuals: "Manuals & SOPs",
+    manuals: "Manuals",
+    checklists: "Checklists",
     tasks: "Tasks",
     contacts: "Contacts & Vendors",
     inventory: "Inventory & Assets",
@@ -90,7 +91,8 @@ export const translations = {
     completed: "Completado",
     urgent: "Urgente",
 
-    manuals: "Manuales y SOPs",
+    manuals: "Manuales",
+    checklists: "Listas de Control",
     tasks: "Tareas",
     contacts: "Contactos y Proveedores",
     inventory: "Inventario y Activos",
