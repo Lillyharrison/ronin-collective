@@ -406,11 +406,21 @@ serve(async (req) => {
       if (!emailToInvite) return new Response(JSON.stringify({ error: "Could not resolve email for this user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app";
       const redirectTo = body.redirect_url || `${origin}/reset-password`;
-      const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(emailToInvite, { redirectTo });
-      if (inviteErr) {
-        return new Response(JSON.stringify({ error: inviteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Use generateLink with type 'recovery' — works for existing users unlike inviteUserByEmail
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: "recovery",
+        email: emailToInvite,
+        options: { redirectTo },
+      });
+      if (linkErr) {
+        return new Response(JSON.stringify({ error: linkErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      return new Response(JSON.stringify({ success: true, user_id: inviteData?.user?.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Send the email via Supabase's built-in mailer by hitting the action link
+      const actionLink = linkData?.properties?.action_link;
+      if (actionLink) {
+        await fetch(actionLink, { method: "GET" });
+      }
+      return new Response(JSON.stringify({ success: true, user_id: linkData?.user?.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ─── DELETE USER ──────────────────────────────────────────────────────────
