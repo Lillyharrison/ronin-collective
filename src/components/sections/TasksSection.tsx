@@ -348,11 +348,10 @@ function PartialChecklistsWidget() {
       const userDept = profile.department ?? "";
       const propIds: string[] = profile.assigned_property_ids ?? assignedPropertyIds;
 
-      // Query checklist templates assigned to this user
+      // Query checklist templates assigned to this user (any recurrence including 'none' for assigned ones)
       let q = supabase
         .from("checklist_templates")
-        .select("id, title, icon, property_id")
-        .neq("recurrence", "none");
+        .select("id, title, icon, property_id, recurrence");
 
       if (propIds.length > 0) {
         q = q.or(`property_id.in.(${propIds.join(",")}),is_universal.eq.true`);
@@ -370,15 +369,51 @@ function PartialChecklistsWidget() {
         return roleMatch && deptMatch;
       });
 
+      // Check which checklists are already fully completed today
+      const today = new Date().toISOString().slice(0, 10);
+      const relevantIds = relevant.map((t: any) => t.id);
+      if (relevantIds.length === 0) return;
+
+      // Get today's session counts per template
+      const { data: sessions } = await supabase
+        .from("checklist_sessions")
+        .select("template_id, item_id")
+        .in("template_id", relevantIds)
+        .eq("session_date", today);
+
+      // Get item counts per template
+      const { data: itemCounts } = await supabase
+        .from("checklist_items")
+        .select("template_id, id")
+        .in("template_id", relevantIds);
+
+      // Build completion map
+      const sessionCountMap: Record<string, Set<string>> = {};
+      for (const s of (sessions ?? [])) {
+        if (!sessionCountMap[s.template_id]) sessionCountMap[s.template_id] = new Set();
+        sessionCountMap[s.template_id].add(s.item_id);
+      }
+      const itemCountMap: Record<string, number> = {};
+      for (const item of (itemCounts ?? [])) {
+        itemCountMap[item.template_id] = (itemCountMap[item.template_id] ?? 0) + 1;
+      }
+
+      // Only show checklists that are NOT fully complete today
+      const incomplete = relevant.filter((t: any) => {
+        const total = itemCountMap[t.id] ?? 0;
+        const done = sessionCountMap[t.id]?.size ?? 0;
+        return total === 0 || done < total;
+      });
+
       // Enrich with property names
-      const uniquePropIds = [...new Set(relevant.map((t: any) => t.property_id).filter(Boolean))] as string[];
+      const uniquePropIds = [...new Set(incomplete.map((t: any) => t.property_id).filter(Boolean))] as string[];
       let propNames: Record<string, string> = {};
       if (uniquePropIds.length) {
         const { data: props } = await supabase.from("properties").select("id, name").in("id", uniquePropIds);
         (props ?? []).forEach((p: any) => { propNames[p.id] = p.name; });
       }
 
-      setAssignedChecklists(relevant.map((t: any) => ({
+      setAssignedChecklists(incomplete.map((t: any) => ({
         id: t.id,
         title: t.title,
         icon: t.icon,

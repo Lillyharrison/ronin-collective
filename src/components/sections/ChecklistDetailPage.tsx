@@ -97,17 +97,61 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
   const handleMarkComplete = async () => {
     if (!userId || !isAllComplete) return;
     setIsMarkingComplete(true);
-    // Add a completion comment automatically
-    await addComment(`✅ List marked complete by ${userId}`);
+
+    // Get completer's name for the notification message
+    const { data: completerProfile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", userId)
+      .single();
+    const completerName = completerProfile?.full_name ?? "Staff";
+
+    await addComment(`✅ List marked complete by ${completerName}`);
     fireConfetti();
-    // Notify admin via notification
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      title: `${template.icon} ${template.title} Completed`,
-      body: `All ${items.length} items checked off${propertyName ? ` at ${propertyName}` : ""} on ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`,
+
+    const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const notifBody = `${completerName} completed all ${items.length} items${propertyName ? ` at ${propertyName}` : ""} on ${dateStr}.`;
+    const notifTitle = `${template.icon} ${template.title} — Completed`;
+
+    // Collect all users who should receive the notification:
+    // 1. The completer themselves
+    // 2. All admins and master_admins
+    // 3. Managers assigned to this property
+    const { data: adminRoles } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .in("role", ["master_admin", "admin", "manager"]);
+
+    const recipientIds = new Set<string>([userId]);
+
+    for (const row of (adminRoles ?? [])) {
+      if (row.role === "master_admin" || row.role === "admin") {
+        recipientIds.add(row.user_id);
+      } else if (row.role === "manager" && propertyId) {
+        // Check if manager is assigned to this property
+        const { data: mgr } = await supabase
+          .from("profiles")
+          .select("assigned_property_ids")
+          .eq("id", row.user_id)
+          .single();
+        if (mgr?.assigned_property_ids?.includes(propertyId)) {
+          recipientIds.add(row.user_id);
+        }
+      }
+    }
+
+    // Insert a notification for each recipient
+    const notifRows = Array.from(recipientIds).map(uid => ({
+      user_id: uid,
+      title: notifTitle,
+      body: notifBody,
       type: "success",
       action_url: "checklists",
-    });
+      property_id: propertyId ?? null,
+    }));
+
+    await supabase.from("notifications").insert(notifRows);
+
     setIsMarkingComplete(false);
   };
 

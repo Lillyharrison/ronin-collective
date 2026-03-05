@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
-import { useChecklistSessions } from "@/hooks/useChecklists";
+import { useChecklistSessions, useChecklistItems } from "@/hooks/useChecklists";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
-import { ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronRight, RefreshCw, CheckCircle2 } from "lucide-react";
 
 interface Props {
   template: ChecklistTemplate;
@@ -24,12 +24,16 @@ const RECURRENCE_LABELS: Record<string, string> = {
 };
 
 export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
-  // Always load today's sessions for live progress indicator
-  const { completedIds, sessions } = useChecklistSessions(template.id, propertyId);
+  const { completedIds } = useChecklistSessions(template.id, propertyId);
+  const { items } = useChecklistItems(template.id);
   const colorCls = COLOR_BG[template.color] ?? COLOR_BG.green;
-  // We don't know item count without loading items — show session count as proxy
+
+  const totalItems = items.length;
   const completedCount = completedIds.size;
+  const isAllComplete = totalItems > 0 && completedCount >= totalItems;
   const hasProgress = completedCount > 0;
+  const progressPct = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
+
   const recurrenceLabel = template.recurrence && template.recurrence !== "none"
     ? RECURRENCE_LABELS[template.recurrence]
     : null;
@@ -37,21 +41,40 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
   return (
     <button
       onClick={onOpenDetail}
-      className="w-full bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-3 hover:bg-muted/30 active:scale-[0.99] transition-all text-left"
+      className={cn(
+        "w-full bg-card border rounded-xl px-4 py-3 flex items-center gap-3 hover:bg-muted/30 active:scale-[0.99] transition-all text-left",
+        isAllComplete ? "border-[hsl(var(--status-done)/0.4)]" : "border-border"
+      )}
     >
-      <span className={cn("w-9 h-9 rounded-xl border flex items-center justify-center text-base flex-shrink-0", colorCls)}>
-        {template.icon}
+      <span className={cn(
+        "w-9 h-9 rounded-xl border flex items-center justify-center text-base flex-shrink-0",
+        isAllComplete
+          ? "bg-[hsl(var(--status-done)/0.15)] border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))]"
+          : colorCls
+      )}>
+        {isAllComplete ? <CheckCircle2 size={18} /> : template.icon}
       </span>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground leading-tight truncate">{template.title}</p>
+        <p className={cn(
+          "text-sm font-medium leading-tight truncate",
+          isAllComplete ? "text-[hsl(var(--status-done))]" : "text-foreground"
+        )}>
+          {template.title}
+        </p>
         <div className="flex items-center gap-2 mt-0.5">
-          {hasProgress ? (
+          {isAllComplete ? (
+            <span className="text-[10px] font-semibold text-[hsl(var(--status-done))]">
+              ✓ Complete today
+            </span>
+          ) : hasProgress ? (
             <span className={cn("text-[10px] font-semibold", colorCls.split(" ").find(c => c.startsWith("text-")))}>
-              {completedCount} done today
+              {completedCount}/{totalItems} done
             </span>
           ) : (
-            <span className="text-[10px] text-muted-foreground">Tap to open</span>
+            <span className="text-[10px] text-muted-foreground">
+              {totalItems > 0 ? `${totalItems} items` : "Tap to open"}
+            </span>
           )}
           {recurrenceLabel && (
             <span className="inline-flex items-center gap-0.5 text-[9px] text-muted-foreground">
@@ -64,13 +87,19 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
             </span>
           )}
         </div>
-        {/* Live progress bar (shown when there's any progress) */}
-        {hasProgress && (
+        {/* Progress bar — only shown when in progress */}
+        {hasProgress && !isAllComplete && (
           <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden w-full">
             <div
               className="h-full bg-[hsl(var(--gold))] rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, completedCount * 10)}%` }}
+              style={{ width: `${progressPct}%` }}
             />
+          </div>
+        )}
+        {/* Complete bar */}
+        {isAllComplete && (
+          <div className="mt-1.5 h-1 bg-[hsl(var(--status-done)/0.2)] rounded-full overflow-hidden w-full">
+            <div className="h-full bg-[hsl(var(--status-done))] rounded-full w-full" />
           </div>
         )}
       </div>
