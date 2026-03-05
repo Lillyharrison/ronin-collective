@@ -81,7 +81,7 @@ function eventDotColor(eventType: string): string {
 export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection } = useNavigation();
-  const { isMasterAdmin, isAdmin, userId, loading: permLoading } = usePermissions();
+  const { isMasterAdmin, isAdmin, userId, fullName, loading: permLoading } = usePermissions();
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(true);
@@ -155,7 +155,7 @@ export function Dashboard() {
       <div className="bg-charcoal px-5 pt-6 pb-5 border-b border-charcoal-light">
         <p className="text-cream/50 text-xs tracking-widest uppercase mb-1">{dateStr}</p>
         <h1 className="font-display text-3xl text-cream leading-tight">
-          {greeting}, <span className="text-gold">Lilly</span>
+          {greeting}, <span className="text-gold">{fullName?.split(" ")[0] ?? "there"}</span>
         </h1>
         <p className="text-cream/40 text-xs mt-1 tracking-wide">
           {language === "es" ? "Centro de Mando — Vista Global" : "Command Center — Global View"}
