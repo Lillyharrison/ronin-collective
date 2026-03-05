@@ -1,6 +1,8 @@
 import { useNavigation, ActiveTab } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { RoninR } from "@/components/RoninLogo";
 import { Home, Wrench, MessageCircle, User } from "lucide-react";
 
@@ -17,6 +19,8 @@ const ALL_TABS: { id: ActiveTab; label: string; icon: React.ReactNode; section?:
 export function BottomNav() {
   const { activeTab, setActiveTab } = useNavigation();
   const { canSee, isMasterAdmin, loading: permLoading } = usePermissions();
+  const { user } = useAuth();
+  const unreadCount = useUnreadCount(user?.id ?? null);
 
   // Show home, messages, profile always; gate property & maintenance
   const tabs = ALL_TABS.filter(tab => {
@@ -52,10 +56,16 @@ export function BottomNav() {
                 className="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-2 -mt-3"
                 aria-label={tab.label}
               >
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                <div className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
                   isActive ? "bg-[#25D366] text-white scale-105" : "bg-[#128C7E] text-white"
                 }`}>
                   <MessageCircle size={26} fill="white" strokeWidth={0} />
+                  {/* Unread badge */}
+                  {unreadCount > 0 && !isActive && (
+                    <span className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1 shadow-md border-2 border-charcoal animate-bounce">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
                 </div>
               </button>
             );
