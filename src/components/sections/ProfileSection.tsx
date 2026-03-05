@@ -2,6 +2,7 @@ import { PlaceholderSection } from "@/components/PlaceholderSection";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { User, Trophy, Star, Flame, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,17 +20,20 @@ export function ProfileSection() {
   const { setActiveSection } = useNavigation();
   const { language } = useLanguage();
   const { user, signOut } = useAuth();
+  const { fullName, role } = usePermissions();
 
   return (
     <div className="animate-fade-in pb-4">
       {/* Profile hero */}
       <div className="bg-charcoal px-5 pt-6 pb-6 border-b border-charcoal-light flex flex-col items-center text-center">
         <div className="w-20 h-20 rounded-full bg-gold/20 border-2 border-gold/60 flex items-center justify-center mb-3">
-          <span className="font-display text-gold text-3xl">L</span>
+          <span className="font-display text-gold text-3xl">
+            {(fullName ?? user?.user_metadata?.full_name ?? user?.email ?? "?").charAt(0).toUpperCase()}
+          </span>
         </div>
-        <h1 className="font-display text-2xl text-cream">{user?.user_metadata?.full_name || user?.email || "Profile"}</h1>
+        <h1 className="font-display text-2xl text-cream">{fullName || user?.user_metadata?.full_name || user?.email || "Profile"}</h1>
         <span className="mt-1 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[10px] tracking-widest uppercase font-semibold">
-          Master Admin
+          {role ? role.replace("_", " ") : "Staff"}
         </span>
 
         {/* Mini stats */}
