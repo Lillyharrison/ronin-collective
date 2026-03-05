@@ -2,36 +2,48 @@ import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { RoninWordmark } from "@/components/RoninLogo";
-import { Bell, Menu } from "lucide-react";
+import { Bell, Menu, ArrowLeft } from "lucide-react";
 import { NotificationsPanel, useNotificationCount } from "@/components/NotificationsPanel";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
   title?: string;
-  showBack?: boolean;
 }
 
 export function Header({ title }: HeaderProps) {
   const { language, setLanguage } = useLanguage();
-  const { setSidebarOpen } = useNavigation();
+  const { setSidebarOpen, canGoBack, goBack, activeSection } = useNavigation();
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = useNotificationCount();
+
+  // Show back button instead of hamburger when we can go back AND we're not on dashboard
+  const showBack = canGoBack && activeSection !== "dashboard";
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-charcoal border-b border-charcoal-light">
-        <div className="flex items-center justify-between px-4 h-14">
-          {/* Left — hamburger */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="w-11 h-11 flex items-center justify-center rounded-lg text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors"
-            aria-label="Open menu"
-          >
-            <Menu size={22} />
-          </button>
+        <div className="relative flex items-center justify-between px-4 h-14">
+          {/* Left — back or hamburger */}
+          {showBack ? (
+            <button
+              onClick={goBack}
+              className="w-11 h-11 flex items-center justify-center rounded-lg text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={22} />
+            </button>
+          ) : (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="w-11 h-11 flex items-center justify-center rounded-lg text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu size={22} />
+            </button>
+          )}
 
-          {/* Center — logo or title */}
-          <div className="flex items-center justify-center">
+          {/* Center — absolutely positioned so it's always truly centred */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
             {title ? (
               <h1 className="font-display text-xl text-cream tracking-wide">{title}</h1>
             ) : (
@@ -72,4 +84,3 @@ export function Header({ title }: HeaderProps) {
     </>
   );
 }
-
