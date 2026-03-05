@@ -384,6 +384,7 @@ export type Database = {
           created_by: string | null
           icon: string
           id: string
+          is_published: boolean
           is_universal: boolean
           notify_on_day: boolean | null
           only_when_occupied: boolean
@@ -404,6 +405,7 @@ export type Database = {
           created_by?: string | null
           icon?: string
           id?: string
+          is_published?: boolean
           is_universal?: boolean
           notify_on_day?: boolean | null
           only_when_occupied?: boolean
@@ -424,6 +426,7 @@ export type Database = {
           created_by?: string | null
           icon?: string
           id?: string
+          is_published?: boolean
           is_universal?: boolean
           notify_on_day?: boolean | null
           only_when_occupied?: boolean

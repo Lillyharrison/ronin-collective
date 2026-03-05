@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useChecklistItems } from "@/hooks/useChecklists";
 import { cn } from "@/lib/utils";
-import { Pencil, Plus, Trash2, Camera, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
+import { Pencil, Plus, Trash2, ChevronDown, ChevronUp, BookOpen, Eye, EyeOff } from "lucide-react";
 
 interface CareGuideTemplate {
   id: string;
   title: string;
   icon: string;
   color: string;
+  is_published: boolean;
 }
 
 interface Props {
@@ -27,7 +28,7 @@ const COLOR_MAP: Record<string, string> = {
 const ICON_BANK = ["🪨","🪵","✨","⬜","🧴","🧽","💧","⛔","🔄","📅","💎","🌿","☀️","🔒","⚡","☕","🛡️","🎨","✅","⚠️","🔧","📸","🌡️","🧊","🫧"];
 
 export function CareGuideCard({ template }: Props) {
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isMasterAdmin } = usePermissions();
   const [open, setOpen] = useState(false);
   const { items, loading, setItems } = useChecklistItems(open ? template.id : null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,10 +38,19 @@ export function CareGuideCard({ template }: Props) {
   const [addingItem, setAddingItem] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newIcon, setNewIcon] = useState("▸");
-  const [coverUploading, setCoverUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const colorCls = COLOR_MAP[template.color] ?? COLOR_MAP.gold;
+  const isDraft = !template.is_published;
+
+  const togglePublish = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase
+      .from("checklist_templates")
+      .update({ is_published: !template.is_published })
+      .eq("id", template.id);
+    window.location.reload();
+};
 
   const saveEdit = async (id: string) => {
     const item = items.find(i => i.id === id);
@@ -90,22 +100,53 @@ export function CareGuideCard({ template }: Props) {
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <button
-        className="w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors"
-        onClick={() => setOpen(v => !v)}
-      >
-        <span className={cn("w-10 h-10 rounded-xl border flex items-center justify-center text-xl flex-shrink-0", colorCls)}>
-          {template.icon}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="font-display text-base font-medium text-foreground">{template.title}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-            <BookOpen size={10} /> {open ? "Tap to collapse" : "View care guide"}
-          </p>
-        </div>
-        {open ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
-      </button>
+    <div className={cn(
+      "bg-card border rounded-xl overflow-hidden transition-all",
+      isDraft ? "border-border opacity-60 grayscale-[30%]" : "border-border"
+    )}>
+      <div className="flex items-center">
+        <button
+          className="flex-1 flex items-center gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setOpen(v => !v)}
+        >
+          <span className={cn(
+            "w-10 h-10 rounded-xl border flex items-center justify-center text-xl flex-shrink-0",
+            isDraft ? "bg-muted border-muted-foreground/20 text-muted-foreground" : colorCls
+          )}>
+            {template.icon}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className={cn("font-display text-base font-medium", isDraft ? "text-muted-foreground" : "text-foreground")}>
+                {template.title}
+              </p>
+              {isDraft && isMasterAdmin && (
+                <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
+                  DRAFT
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+              <BookOpen size={10} /> {open ? "Tap to collapse" : "View care guide"}
+            </p>
+          </div>
+          {open ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
+        </button>
+        {isMasterAdmin && (
+          <button
+            onClick={togglePublish}
+            title={isDraft ? "Publish" : "Unpublish"}
+            className={cn(
+              "mx-3 p-1.5 rounded-lg border transition-all flex-shrink-0",
+              isDraft
+                ? "border-muted-foreground/20 text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-[hsl(var(--gold))]"
+                : "border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))] hover:border-[hsl(var(--status-done)/0.6)]"
+            )}
+          >
+            {isDraft ? <Eye size={14} /> : <EyeOff size={14} />}
+          </button>
+        )}
+      </div>
 
       {open && (
         <div className="border-t border-border divide-y divide-border">
