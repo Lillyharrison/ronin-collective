@@ -6,8 +6,8 @@ import { MessageBubble } from "./MessageBubble";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  ArrowLeft, Send, Loader2, Camera, Mic, MicOff, Smile,
-  MoreVertical, Users, Bot, User,
+  ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
+  Users, Bot, User, ImagePlus, ScanSearch,
 } from "lucide-react";
 
 interface ChatViewProps {
@@ -31,6 +31,8 @@ export function ChatView({
   const [agentTyping, setAgentTyping] = useState(false);
   const [recording, setRecording] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [agentAnalyzing, setAgentAnalyzing] = useState(false);
+  const visionInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -131,7 +133,7 @@ export function ChatView({
     setSending(false);
   };
 
-  // Image upload
+  // Standard image/file upload (non-agent threads)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -144,6 +146,61 @@ export function ChatView({
     }
     setSending(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Vision upload — agent thread only: upload + trigger Gemini vision analysis
+  const handleVisionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image")) return;
+
+    setSending(true);
+    const path = `${currentUserId}/${Date.now()}_vision_${file.name}`;
+    const { data: uploaded, error: uploadErr } = await supabase.storage
+      .from("chat-media")
+      .upload(path, file);
+
+    if (uploadErr || !uploaded) {
+      setSending(false);
+      if (visionInputRef.current) visionInputRef.current.value = "";
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
+    const publicUrl = urlData.publicUrl;
+
+    // 1. Save the image as a visible chat message
+    await sendMediaMessage(publicUrl, "image", currentUserId);
+    setSending(false);
+
+    // 2. Trigger Gemini Vision analysis
+    setAgentAnalyzing(true);
+    try {
+      const auth = await getAuthHeader();
+      const history = messages
+        .filter(m => m.content_text)
+        .map(m => ({
+          role: m.is_ai_generated ? "assistant" as const : "user" as const,
+          content: m.content_text!,
+        }));
+
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: auth },
+        body: JSON.stringify({
+          type: "message",
+          content: "Please analyse this image and help me log it to the estate inventory.",
+          image_url: publicUrl,
+          messages: history,
+          thread_id: threadId,
+        }),
+      });
+    } catch (err) {
+      console.error("Vision analysis error:", err);
+    } finally {
+      setAgentAnalyzing(false);
+    }
+
+    if (visionInputRef.current) visionInputRef.current.value = "";
   };
 
   // Voice recording
@@ -275,17 +332,26 @@ export function ChatView({
           </div>
         ))}
         {/* Agent typing indicator */}
-        {agentTyping && (
+        {(agentTyping || agentAnalyzing) && (
           <div className="flex items-end gap-2 mb-1">
             <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px]">🤖</span>
+              <span className="text-[10px]">{agentAnalyzing ? "🔍" : "🤖"}</span>
             </div>
             <div className="bg-card border border-accent/30 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-              <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
+              {agentAnalyzing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 size={12} className="animate-spin text-accent" />
+                  <span className="text-xs text-muted-foreground">
+                    {language === "es" ? "Analizando imagen..." : "Analysing image..."}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -295,30 +361,42 @@ export function ChatView({
       {/* Input bar */}
       <div className="px-3 py-2.5 border-t border-border bg-card">
         <div className="flex items-center gap-2">
-          {/* Camera / attach */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <Camera size={20} />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={handleImageUpload}
-          />
+          {/* Attach button — regular for non-agent, vision for agent */}
+          {isAgentThread ? (
+            <button
+              onClick={() => visionInputRef.current?.click()}
+              disabled={agentAnalyzing || sending}
+              title={language === "es" ? "Enviar foto al inventario" : "Send photo to inventory"}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-accent hover:bg-accent/10 transition-colors disabled:opacity-40"
+            >
+              <ScanSearch size={20} />
+            </button>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <Camera size={20} />
+            </button>
+          )}
+
+          {/* Hidden file inputs */}
+          <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleImageUpload} />
+          <input ref={visionInputRef} type="file" accept="image/*" className="hidden" onChange={handleVisionUpload} />
 
           {/* Text input */}
           <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-full px-4 py-2">
             <input
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-              placeholder={language === "es" ? "Escribe un mensaje..." : "Type a message..."}
+              placeholder={
+                isAgentThread
+                  ? (language === "es" ? "Pregunta a Ronin..." : "Ask Ronin...")
+                  : (language === "es" ? "Escribe un mensaje..." : "Type a message...")
+              }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-              disabled={sending || recording}
+              disabled={sending || recording || agentAnalyzing}
             />
           </div>
 
@@ -326,7 +404,7 @@ export function ChatView({
           {input.trim() ? (
             <button
               onClick={handleSend}
-              disabled={sending}
+              disabled={sending || agentAnalyzing}
               className="w-9 h-9 rounded-full bg-accent flex items-center justify-center disabled:opacity-50 transition-opacity"
             >
               {sending ? (
@@ -338,7 +416,8 @@ export function ChatView({
           ) : (
             <button
               onMouseDown={recording ? stopRecording : startRecording}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+              disabled={agentAnalyzing}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${
                 recording
                   ? "bg-destructive text-destructive-foreground animate-pulse"
                   : "bg-accent text-accent-foreground"
@@ -348,6 +427,15 @@ export function ChatView({
             </button>
           )}
         </div>
+
+        {/* Vision hint for agent thread */}
+        {isAgentThread && (
+          <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+            {language === "es"
+              ? "Toca 🔍 para enviar una foto y registrar un artículo en el inventario"
+              : "Tap 🔍 to send a photo and log an item to inventory"}
+          </p>
+        )}
       </div>
     </div>
   );

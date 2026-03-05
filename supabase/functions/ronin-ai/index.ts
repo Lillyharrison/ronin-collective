@@ -566,7 +566,8 @@ ${csv_content}`;
 
     // ─── CHAT MESSAGE MODE ─────────────────────────────────────────────────────
     if (type === "message") {
-      const { messages: conversationHistory = [] } = body;
+      const { messages: conversationHistory = [], image_url } = body;
+      const isVisionRequest = !!image_url;
 
       // ── Always load full platform snapshot in parallel ─────────────────────
       const [propsRes, tasksRes, staffRes, rolesRes, assetsRes, eventsRes] = await Promise.all([
@@ -654,10 +655,36 @@ ${csv_content}`;
 
       const contextNote = "\n\n=== LIVE PLATFORM DATA ===\n" + contextSections.join("\n\n") + "\n=== END LIVE DATA ===";
 
+      const visionAddition = isVisionRequest ? `
+
+## VISION MODE — INVENTORY CAPTURE ACTIVE
+An image has been submitted for estate inventory analysis. You are now in **Inventory Capture Mode**.
+
+YOUR TASK:
+1. **Analyse the photo carefully.** Identify: item name, make/brand (if visible on labels/tags), model, category (vehicle / appliance / art / tech / furniture / other), apparent condition, and any visible serial numbers or identifying marks.
+2. **Structure your analysis** clearly — what you can identify with confidence vs what you cannot determine from the image.
+3. **Ask ONLY for the critical missing information** you cannot see: primarily (a) which property/location this item is at, and (b) approximate purchase value if not obvious.
+4. Keep your response **concise, professional, and structured** — use bullet points for identified details.
+5. **Once the user provides the missing information**, immediately use the \`log_asset\` tool to create a pending confirmation entry. Do NOT just describe what you would do — actually invoke the tool.
+
+IMPORTANT: You are looking at a real photo of a real estate asset. Treat it with the precision of a formal inventory audit.` : "";
+
+      // Build current user message — multimodal if image provided
+      type MessageContent = string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+      const currentUserMessage: { role: string; content: MessageContent } = isVisionRequest
+        ? {
+            role: "user",
+            content: [
+              { type: "text", text: content || "Please analyse this image and help me log it to the estate inventory." },
+              { type: "image_url", image_url: { url: image_url } },
+            ],
+          }
+        : { role: "user", content };
+
       const aiMessages = [
-        { role: "system", content: systemPrompt + contextNote },
+        { role: "system", content: systemPrompt + visionAddition + contextNote },
         ...conversationHistory,
-        { role: "user", content },
+        currentUserMessage,
       ];
 
       // ── Tool-aware AI call ─────────────────────────────────────────────────
