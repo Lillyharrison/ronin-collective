@@ -761,11 +761,82 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // ── No thread_id: stream directly (for UI typing animation) ───────────
+      // ── No thread_id: use ReAct loop then stream final answer ─────────────
+      // Previously this just piped raw streaming output, which meant tool calls
+      // (including save_memory) were NEVER executed. Now we run a sync ReAct loop
+      // first to handle all tool calls, then stream the final clean response.
+      const ctx: ContextData = { props, staff };
+      const MAX_ITER = 5;
+      let loopMessages: unknown[] = [...initialMessages];
+      let precomputedFinal: string | null = null;
+
+      for (let i = 0; i < MAX_ITER; i++) {
+        const iterResp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, "google/gemini-2.5-flash");
+        const choice = iterResp.choices?.[0];
+        if (!choice) break;
+
+        const toolCalls = choice.message?.tool_calls ?? [];
+        if (!toolCalls.length) {
+          // No tool calls — use this text as-is only if we're still in early loop
+          // For the final stream we'll re-run with pro model below
+          break;
+        }
+
+        loopMessages = [...loopMessages, {
+          role: "assistant",
+          content: choice.message.content ?? null,
+          tool_calls: toolCalls,
+        }];
+
+        const toolResults: unknown[] = [];
+        for (const tc of toolCalls) {
+          const toolName = tc.function.name;
+          let toolArgs: Record<string, unknown> = {};
+          try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
+
+          if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
+            const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
+            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+          } else if (SILENT_TOOL_NAMES.includes(toolName)) {
+            // Execute silently — this is the critical fix for save_memory
+            await saveMemorySilently(toolArgs, adminClient);
+            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
+          } else if (WRITE_TOOL_NAMES.includes(toolName)) {
+            // Write tools need confirmation — surface the confirmation as the response
+            const confirmResp = await callLLMSync(
+              [...loopMessages, { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) }],
+              [], LOVABLE_API_KEY, "google/gemini-2.5-flash"
+            );
+            precomputedFinal = confirmResp.choices?.[0]?.message?.content ?? buildConfirmationMessage(toolName, toolArgs);
+            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) });
+          }
+        }
+        loopMessages = [...loopMessages, ...toolResults];
+        if (precomputedFinal) break;
+      }
+
+      // If we have a pre-built confirmation message, stream it as a fake SSE response
+      if (precomputedFinal) {
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            const words = precomputedFinal!.split(/(?<=\s)/);
+            for (const word of words) {
+              const chunk = `data: ${JSON.stringify({ choices: [{ delta: { content: word } }] })}\n\n`;
+              controller.enqueue(encoder.encode(chunk));
+            }
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          }
+        });
+        return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+      }
+
+      // Final answer — stream with pro model using enriched context (all observations done)
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-2.5-pro", messages: initialMessages, tools: RONIN_TOOLS, tool_choice: "auto", stream: true }),
+        body: JSON.stringify({ model: "google/gemini-2.5-pro", messages: loopMessages, stream: true }),
       });
       if (!aiResponse.ok) {
         if (aiResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
