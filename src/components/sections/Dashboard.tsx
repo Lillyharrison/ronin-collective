@@ -5,7 +5,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MapPin, Clock, CheckSquare, TriangleAlert,
-  UserCheck, ChevronRight, Activity, Zap, Shield, ClipboardList, X, Bell,
+  ChevronRight, Activity, Zap, Shield, ClipboardList, X, Bell,
   Pencil, Check,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
@@ -130,7 +130,7 @@ export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection, setTargetPropertyId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
-  const activeRules = useActiveRulesForDashboard(assignedPropertyIds);
+  const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(true);
@@ -396,31 +396,62 @@ export function Dashboard() {
                 : `${pendingCount} ${language === "es" ? "activas" : "active"}`}
             </p>
           </div>
-          <div className="rounded-lg bg-gold/5 border border-gold/20 px-3 py-2.5">
+          {/* Alerts tile — replaces Properties, navigates to Manuals > Rules */}
+          <button
+            onClick={() => setActiveSection("manuals")}
+            className="rounded-lg bg-[hsl(var(--status-urgent)/0.08)] border border-[hsl(var(--status-urgent)/0.25)] px-3 py-2.5 text-left hover:bg-[hsl(var(--status-urgent)/0.14)] transition-colors active:scale-95"
+          >
             <div className="flex items-center gap-2 mb-1">
-              <UserCheck size={14} className="text-gold" />
-              <span className="text-[10px] uppercase tracking-wider text-gold font-semibold">
-                {language === "es" ? "Propiedades" : "Properties"}
+              <Shield size={14} className="text-[hsl(var(--status-urgent))]" />
+              <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--status-urgent))] font-semibold">
+                {language === "es" ? "Alertas" : "Alerts"}
               </span>
+              {activeRules.length > 0 && (
+                <span className="ml-auto text-[9px] font-bold bg-[hsl(var(--status-urgent))] text-white px-1.5 py-0.5 rounded-full">
+                  {activeRules.length}
+                </span>
+              )}
             </div>
             <p className="text-sm font-medium text-foreground">
-              {propLoading ? "—" : `${properties.length} total`}
+              {activeRules.length === 0
+                ? (language === "es" ? "Sin alertas" : "No alerts")
+                : `${activeRules.length} ${language === "es" ? "activa(s)" : "active"}`}
             </p>
-          </div>
+            {activeRules.length > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                {activeRules[0].icon} {activeRules[0].title}
+                {activeRules.length > 1 ? ` +${activeRules.length - 1}` : ""}
+              </p>
+            )}
+          </button>
         </div>
 
-        {/* Active Rules alert */}
+        {/* Active rules preview — show top rule details inline */}
         {activeRules.length > 0 && (
           <div className="mt-3 space-y-2">
-            {activeRules.map(rule => (
-              <div key={rule.id} className="flex items-start gap-2 rounded-lg bg-[hsl(var(--status-progress)/0.08)] border border-[hsl(var(--status-progress)/0.25)] px-3 py-2.5">
-                <Shield size={13} className="text-[hsl(var(--status-progress))] mt-0.5 flex-shrink-0" />
+            {activeRules.slice(0, 2).map(rule => (
+              <button
+                key={rule.id}
+                onClick={() => setActiveSection("manuals")}
+                className="w-full flex items-start gap-2 rounded-lg bg-[hsl(var(--status-urgent)/0.06)] border border-[hsl(var(--status-urgent)/0.2)] px-3 py-2.5 text-left hover:bg-[hsl(var(--status-urgent)/0.12)] transition-colors"
+              >
+                <Shield size={13} className="text-[hsl(var(--status-urgent))] mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[hsl(var(--status-progress))] truncate">{rule.icon} {rule.title}</p>
+                  <p className="text-xs font-semibold text-[hsl(var(--status-urgent))] truncate">{rule.icon} {rule.title}</p>
                   {rule.propertyName && <p className="text-[10px] text-muted-foreground mt-0.5">{rule.propertyName}</p>}
+                  {rule.description && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{rule.description}</p>}
                 </div>
-              </div>
+                <ChevronRight size={12} className="text-muted-foreground mt-0.5 flex-shrink-0" />
+              </button>
             ))}
+            {activeRules.length > 2 && (
+              <button
+                onClick={() => setActiveSection("manuals")}
+                className="w-full text-center text-[11px] text-[hsl(var(--status-urgent))] py-1 hover:underline"
+              >
+                {language === "es" ? `Ver ${activeRules.length - 2} más…` : `View ${activeRules.length - 2} more…`}
+              </button>
+            )}
           </div>
         )}
       </div>
