@@ -20,7 +20,9 @@ export function ProfileSection() {
   const { setActiveSection } = useNavigation();
   const { language } = useLanguage();
   const { user, signOut } = useAuth();
-  const { fullName, role } = usePermissions();
+  const { fullName, role, canSee } = usePermissions();
+
+  const showAchievements = canSee("achievements");
 
   return (
     <div className="animate-fade-in pb-4">
@@ -36,38 +38,40 @@ export function ProfileSection() {
           {role ? role.replace("_", " ") : "Staff"}
         </span>
 
-        {/* Mini stats */}
-        <div className="flex items-center gap-6 mt-4">
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1 text-gold">
-              <Star size={12} />
-              <span className="text-cream font-semibold text-base">475</span>
+        {/* Mini stats — only shown if achievements are visible */}
+        {showAchievements && (
+          <div className="flex items-center gap-6 mt-4">
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-1 text-gold">
+                <Star size={12} />
+                <span className="text-cream font-semibold text-base">475</span>
+              </div>
+              <span className="text-cream/40 text-[9px] uppercase tracking-wider">
+                {language === "es" ? "Puntos" : "Points"}
+              </span>
             </div>
-            <span className="text-cream/40 text-[9px] uppercase tracking-wider">
-              {language === "es" ? "Puntos" : "Points"}
-            </span>
-          </div>
-          <div className="w-px h-8 bg-charcoal-light" />
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1 text-status-urgent">
-              <Flame size={12} />
-              <span className="text-cream font-semibold text-base">7</span>
+            <div className="w-px h-8 bg-charcoal-light" />
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-1 text-status-urgent">
+                <Flame size={12} />
+                <span className="text-cream font-semibold text-base">7</span>
+              </div>
+              <span className="text-cream/40 text-[9px] uppercase tracking-wider">
+                {language === "es" ? "Racha" : "Streak"}
+              </span>
             </div>
-            <span className="text-cream/40 text-[9px] uppercase tracking-wider">
-              {language === "es" ? "Racha" : "Streak"}
-            </span>
-          </div>
-          <div className="w-px h-8 bg-charcoal-light" />
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1 text-gold">
-              <Trophy size={12} />
-              <span className="text-cream font-semibold text-base">6</span>
+            <div className="w-px h-8 bg-charcoal-light" />
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-1 text-gold">
+                <Trophy size={12} />
+                <span className="text-cream font-semibold text-base">6</span>
+              </div>
+              <span className="text-cream/40 text-[9px] uppercase tracking-wider">
+                {language === "es" ? "Logros" : "Badges"}
+              </span>
             </div>
-            <span className="text-cream/40 text-[9px] uppercase tracking-wider">
-              {language === "es" ? "Logros" : "Badges"}
-            </span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Sign out */}
@@ -82,33 +86,35 @@ export function ProfileSection() {
         </Button>
       </div>
 
-      {/* Badges section */}
-      <div className="px-4 mt-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-            {language === "es" ? "Mis Logros" : "My Badges"}
-          </p>
-          <button
-            onClick={() => setActiveSection("achievements")}
-            className="text-gold text-xs flex items-center gap-1"
-          >
-            {language === "es" ? "Ver todos" : "View all"} →
-          </button>
-        </div>
-
-        <div className="grid grid-cols-6 gap-2">
-          {DEMO_BADGES.map((badge, i) => (
+      {/* Badges section — only if achievements visible */}
+      {showAchievements && (
+        <div className="px-4 mt-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
+              {language === "es" ? "Mis Logros" : "My Badges"}
+            </p>
             <button
-              key={i}
               onClick={() => setActiveSection("achievements")}
-              className="flex flex-col items-center gap-1 rounded-xl bg-card border border-border p-2 hover:border-gold/40 transition-all active:scale-95"
+              className="text-gold text-xs flex items-center gap-1"
             >
-              <span className="text-2xl leading-none">{badge.icon}</span>
-              <span className="text-[8px] text-muted-foreground text-center leading-tight truncate w-full">{badge.label}</span>
+              {language === "es" ? "Ver todos" : "View all"} →
             </button>
-          ))}
+          </div>
+
+          <div className="grid grid-cols-6 gap-2">
+            {DEMO_BADGES.map((badge, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveSection("achievements")}
+                className="flex flex-col items-center gap-1 rounded-xl bg-card border border-border p-2 hover:border-gold/40 transition-all active:scale-95"
+              >
+                <span className="text-2xl leading-none">{badge.icon}</span>
+                <span className="text-[8px] text-muted-foreground text-center leading-tight truncate w-full">{badge.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Info placeholder */}
       <div className="mx-4 mt-5">

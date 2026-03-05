@@ -81,7 +81,7 @@ function eventDotColor(eventType: string): string {
 export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection } = useNavigation();
-  const { isMasterAdmin, isAdmin, userId, fullName, canSee, loading: permLoading } = usePermissions();
+  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(true);
@@ -89,16 +89,27 @@ export function Dashboard() {
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
 
-  // Load properties
+  // Load properties — admins see all, others see only their assigned properties
   useEffect(() => {
-    supabase
+    if (permLoading) return;
+    let query = supabase
       .from("properties")
-      .select("id, name, city, country, timezone, status, image_url")
-      .then(({ data }) => {
-        if (data) setProperties(data as Property[]);
-        setPropLoading(false);
-      });
-  }, []);
+      .select("id, name, city, country, timezone, status, image_url");
+
+    if (!isAdmin && assignedPropertyIds.length > 0) {
+      query = query.in("id", assignedPropertyIds);
+    } else if (!isAdmin && assignedPropertyIds.length === 0) {
+      // No assigned properties → show nothing
+      setProperties([]);
+      setPropLoading(false);
+      return;
+    }
+
+    query.then(({ data }) => {
+      if (data) setProperties(data as Property[]);
+      setPropLoading(false);
+    });
+  }, [isAdmin, assignedPropertyIds, permLoading]);
 
   // Load pending task count for current user
   useEffect(() => {
