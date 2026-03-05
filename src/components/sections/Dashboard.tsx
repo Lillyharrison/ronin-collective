@@ -129,7 +129,7 @@ function eventDotColor(eventType: string): string {
 
 export function Dashboard() {
   const { language, t } = useLanguage();
-  const { setActiveSection, setTargetPropertyId } = useNavigation();
+  const { setActiveSection, setTargetPropertyId, setActivePropertyId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
 
@@ -532,7 +532,7 @@ export function Dashboard() {
               return (
                 <button
                   key={prop.id}
-                  onClick={() => { setTargetPropertyId(prop.id); setActiveSection("property"); }}
+                  onClick={() => { setTargetPropertyId(prop.id); setActivePropertyId(prop.id); setActiveSection("property"); }}
                   className="w-full flex items-center gap-4 bg-card border border-border rounded-xl p-4 hover:border-gold/30 transition-all active:scale-[0.99] text-left"
                 >
                   <div className="w-14 h-14 rounded-lg bg-charcoal flex items-center justify-center flex-shrink-0 overflow-hidden">
