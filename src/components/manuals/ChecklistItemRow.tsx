@@ -13,6 +13,7 @@ interface Props {
   onUpdate: (id: string, changes: Partial<ChecklistItem>) => void;
   onDelete: (id: string) => void;
   onPhotoUpload: (id: string, url: string) => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -37,7 +38,7 @@ const DOT_MAP: Record<string, string> = {
 
 const ICON_BANK = ["🧹","🛏️","🚿","🍳","🗑️","💧","🧴","🧽","💡","🔒","🌿","📸","❄️","🔧","⚠️","✅","☀️","🪣","🧊","🔑","📅","🛒","🕯️","🥂","🍷","🌸","🎵","📺","🔊","📶","🚨","📹","🏊","🪑","🌬️","🔌","💎","🎨","🪵","⬜","✨","🛋️","🌀","🔋","⛔","📄","💼","💻","💃","⚽","⚾","🏀","⛷️","⛵","🔥","🥩","🥗"];
 
-export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdate, onDelete, onPhotoUpload }: Props) {
+export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdate, onDelete, onPhotoUpload, dragHandleProps }: Props) {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [editIcon, setEditIcon] = useState(item.icon);
@@ -94,7 +95,10 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
     >
       {/* Drag handle (admin only) */}
       {isAdmin && (
-        <div className="mt-0.5 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0">
+        <div
+          {...(dragHandleProps ?? {})}
+          className="mt-0.5 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+        >
           <GripVertical size={14} />
         </div>
       )}
