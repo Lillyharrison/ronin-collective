@@ -331,11 +331,11 @@ export function ChatView({
             ))}
           </div>
         ))}
-        {/* Agent typing indicator */}
+        {/* Agent typing / reasoning indicator */}
         {(agentTyping || agentAnalyzing) && (
           <div className="flex items-end gap-2 mb-1">
             <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px]">{agentAnalyzing ? "🔍" : "🤖"}</span>
+              <span className="text-[10px]">{agentAnalyzing ? "🔍" : "🧠"}</span>
             </div>
             <div className="bg-card border border-accent/30 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
               {agentAnalyzing ? (
@@ -346,10 +346,15 @@ export function ChatView({
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {language === "es" ? "Razonando..." : "Reasoning..."}
+                  </span>
                 </div>
               )}
             </div>
