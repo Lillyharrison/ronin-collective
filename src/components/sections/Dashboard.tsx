@@ -97,27 +97,9 @@ function getSmartTagline(language: string): string {
   return language === "es" ? "Que tengas un gran día" : "Have a great day";
 }
 
-// localStorage key for admin tagline override
-const TAGLINE_STORAGE_KEY = "ronin_dashboard_tagline";
-
 interface TaglineOverride {
   text: string;
   expiresAt: string | null; // ISO date string or null (permanent until cleared)
-}
-
-function loadTaglineOverride(): TaglineOverride | null {
-  try {
-    const raw = localStorage.getItem(TAGLINE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed: TaglineOverride = JSON.parse(raw);
-    if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
-      localStorage.removeItem(TAGLINE_STORAGE_KEY);
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
 }
 
 function friendlyEventLabel(event: FeedEvent, language: string): string {
@@ -158,8 +140,8 @@ export function Dashboard() {
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
 
-  // Smart tagline
-  const [taglineOverride, setTaglineOverride] = useState<TaglineOverride | null>(loadTaglineOverride);
+  // Smart tagline — loaded from DB (shared across all users)
+  const [taglineOverride, setTaglineOverride] = useState<TaglineOverride | null>(null);
   const [editingTagline, setEditingTagline] = useState(false);
   const [taglineDraft, setTaglineDraft] = useState("");
   const [taglineDuration, setTaglineDuration] = useState<"today" | "date" | "permanent">("today");
@@ -220,6 +202,26 @@ export function Dashboard() {
       });
   }, [isAdmin, permLoading]);
 
+  // Load tagline override from DB (shared across all users)
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).from("system_settings")
+      .select("value")
+      .eq("key", "dashboard_tagline")
+      .maybeSingle()
+      .then(({ data }: { data: { value: TaglineOverride } | null }) => {
+        if (!data?.value) return;
+        const v = data.value as TaglineOverride;
+        if (v.expiresAt && new Date(v.expiresAt) < new Date()) {
+          // Expired — delete it
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any).from("system_settings").delete().eq("key", "dashboard_tagline");
+          return;
+        }
+        setTaglineOverride(v);
+      });
+  }, []);
+
   // Load unread notifications for the dashboard widget
   useEffect(() => {
     if (!userId) return;
@@ -242,10 +244,11 @@ export function Dashboard() {
     setDashNotifs(prev => prev.filter(n => n.id !== id));
   };
 
-  const saveTaglineOverride = () => {
+  const saveTaglineOverride = async () => {
     if (!taglineDraft.trim()) {
       // Clear override
-      localStorage.removeItem(TAGLINE_STORAGE_KEY);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from("system_settings").delete().eq("key", "dashboard_tagline");
       setTaglineOverride(null);
       setEditingTagline(false);
       return;
@@ -260,7 +263,8 @@ export function Dashboard() {
       expiresAt = new Date(taglineEndDate + "T23:59:59").toISOString();
     }
     const override: TaglineOverride = { text: taglineDraft, expiresAt };
-    localStorage.setItem(TAGLINE_STORAGE_KEY, JSON.stringify(override));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("system_settings").upsert({ key: "dashboard_tagline", value: override, updated_at: new Date().toISOString() });
     setTaglineOverride(override);
     setEditingTagline(false);
   };
@@ -273,8 +277,9 @@ export function Dashboard() {
     setTimeout(() => taglineInputRef.current?.focus(), 50);
   };
 
-  const clearTaglineOverride = () => {
-    localStorage.removeItem(TAGLINE_STORAGE_KEY);
+  const clearTaglineOverride = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("system_settings").delete().eq("key", "dashboard_tagline");
     setTaglineOverride(null);
   };
 
