@@ -5,8 +5,9 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MapPin, Clock, CheckSquare, TriangleAlert,
-  UserCheck, ChevronRight, Activity, Trophy, Zap,
+  UserCheck, ChevronRight, Activity, Trophy, Zap, Shield,
 } from "lucide-react";
+import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 
 interface Property {
   id: string;
@@ -82,6 +83,7 @@ export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
+  const activeRules = useActiveRulesForDashboard(assignedPropertyIds);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(true);
@@ -211,6 +213,23 @@ export function Dashboard() {
             </p>
           </div>
         </div>
+
+        {/* Active Rules alert */}
+        {activeRules.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {activeRules.map(rule => (
+              <div key={rule.id} className="flex items-start gap-2 rounded-lg bg-[hsl(var(--status-progress)/0.08)] border border-[hsl(var(--status-progress)/0.25)] px-3 py-2.5">
+                <Shield size={13} className="text-[hsl(var(--status-progress))] mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-[hsl(var(--status-progress))] truncate">{rule.icon} {rule.title}</p>
+                  {rule.propertyName && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{rule.propertyName}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
