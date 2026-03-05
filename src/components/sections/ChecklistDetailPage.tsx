@@ -115,26 +115,30 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
 
     // Collect all users who should receive the notification:
     // 1. The completer themselves
-    // 2. All admins and master_admins
-    // 3. Managers assigned to this property
+    // 2. All master_admins (always)
+    // 3. Managers who are assigned to this property AND whose department matches
+    //    the checklist's assigned_department (if set). Family roles do NOT receive these.
     const { data: adminRoles } = await supabase
       .from("user_roles")
       .select("user_id, role")
-      .in("role", ["master_admin", "admin", "manager"]);
+      .in("role", ["master_admin", "manager"]);
 
     const recipientIds = new Set<string>([userId]);
+    const checklistDept = template.assigned_department; // e.g. "interior", "exterior", null
 
     for (const row of (adminRoles ?? [])) {
-      if (row.role === "master_admin" || row.role === "admin") {
+      if (row.role === "master_admin") {
         recipientIds.add(row.user_id);
       } else if (row.role === "manager" && propertyId) {
-        // Check if manager is assigned to this property
+        // Check manager's property assignment AND department match
         const { data: mgr } = await supabase
           .from("profiles")
-          .select("assigned_property_ids")
+          .select("assigned_property_ids, department")
           .eq("id", row.user_id)
           .single();
-        if (mgr?.assigned_property_ids?.includes(propertyId)) {
+        const assignedToProperty = mgr?.assigned_property_ids?.includes(propertyId);
+        const deptMatch = !checklistDept || mgr?.department === checklistDept;
+        if (assignedToProperty && deptMatch) {
           recipientIds.add(row.user_id);
         }
       }

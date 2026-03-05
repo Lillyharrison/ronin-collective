@@ -70,6 +70,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "maintenance",  label: "Maintenance",  labelEs: "Mantenimiento",hasEdit: true  },
   { key: "messages",     label: "Messages",     labelEs: "Mensajes",     hasEdit: true  },
   { key: "tasks",        label: "Tasks",        labelEs: "Tareas",       hasEdit: true  },
+  { key: "checklists",   label: "Checklists",   labelEs: "Listas",       hasEdit: true  },
   { key: "manuals",      label: "Manuals",      labelEs: "Manuales",     hasEdit: true  },
   { key: "contacts",     label: "Contacts",     labelEs: "Contactos",    hasEdit: true  },
   { key: "inventory",    label: "Inventory",    labelEs: "Inventario",   hasEdit: true  },
@@ -125,8 +126,8 @@ function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
     principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements"],
     extended_family: ["dashboard","messages","calendar","profile","achievements"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements"],
-    staff:           ["dashboard","maintenance","messages","tasks","manuals","laundry","calendar","profile","achievements"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements"],
+    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements"],
   };
   const allowed = base[level] || base["staff"];
   const perms: SectionPermissions = {};
