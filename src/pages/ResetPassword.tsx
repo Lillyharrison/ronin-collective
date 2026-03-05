@@ -12,23 +12,45 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [validSession, setValidSession] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Handle both password reset and new user invite flows
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setValidSession(true);
+    // Supabase appends the token as a URL hash fragment.
+    // We need to let onAuthStateChange handle the token exchange BEFORE
+    // checking getSession(), so listen first.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+        setValidSession(true);
+        setSessionChecked(true);
+      } else if (event === "SIGNED_OUT") {
+        setValidSession(false);
+        setSessionChecked(true);
+      }
     });
-    // Also check if we already have a session (invite token already exchanged)
+
+    // Also handle already-active sessions (e.g. user refreshes page)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setValidSession(true);
+      if (session) {
+        setValidSession(true);
+        setSessionChecked(true);
+      } else {
+        // Give onAuthStateChange a moment to process the hash token
+        setTimeout(() => setSessionChecked(true), 2000);
+      }
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirm) {
       toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    if (password.length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -50,25 +72,56 @@ export default function ResetPassword() {
         {done ? (
           <div className="text-center space-y-3">
             <div className="text-3xl">✅</div>
-            <h2 className="font-semibold text-foreground">Password updated!</h2>
-            <p className="text-sm text-muted-foreground">You can now sign in with your new password.</p>
-            <Button className="w-full mt-2" onClick={() => window.location.href = "/"}>Go to app</Button>
+            <h2 className="font-semibold text-foreground">Password set!</h2>
+            <p className="text-sm text-muted-foreground">Your account is ready. You can now sign in.</p>
+            <Button className="w-full mt-2" onClick={() => window.location.href = "/"}>Open Ronin</Button>
+          </div>
+        ) : !sessionChecked ? (
+          <div className="text-center py-8 space-y-3">
+            <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-sm text-muted-foreground">Verifying your invite link…</p>
+          </div>
+        ) : !validSession ? (
+          <div className="text-center space-y-3">
+            <div className="text-3xl">⚠️</div>
+            <h2 className="font-semibold text-foreground">Link expired or invalid</h2>
+            <p className="text-sm text-muted-foreground">
+              This invite link has expired or already been used. Ask your admin to resend the invitation.
+            </p>
+            <Button variant="outline" className="w-full mt-2" onClick={() => window.location.href = "/auth"}>
+              Go to Sign In
+            </Button>
           </div>
         ) : (
           <>
-            <h2 className="text-xl font-semibold text-foreground mb-1">Set new password</h2>
-            <p className="text-sm text-muted-foreground mb-6">Choose a strong password for your account.</p>
+            <h2 className="text-xl font-semibold text-foreground mb-1">Set your password</h2>
+            <p className="text-sm text-muted-foreground mb-6">Choose a strong password to complete your account setup.</p>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label>New password</Label>
-                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} placeholder="••••••••" />
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  placeholder="Min. 8 characters"
+                  autoFocus
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Confirm password</Label>
-                <Input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required minLength={6} placeholder="••••••••" />
+                <Input
+                  type="password"
+                  value={confirm}
+                  onChange={e => setConfirm(e.target.value)}
+                  required
+                  minLength={8}
+                  placeholder="••••••••"
+                />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Updating…" : "Update password"}
+                {loading ? "Setting password…" : "Set Password & Continue"}
               </Button>
             </form>
           </>

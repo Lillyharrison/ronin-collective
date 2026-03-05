@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { toast } from "sonner";
 import {
   UsersRound, Plus, Search, ChevronRight,
   User, Briefcase, Building2, Calendar, X, Check, ChevronDown,
-  Eye, Pencil, Bell, Save, Loader2, Trash2,
+  Eye, Pencil, Bell, Save, Loader2, Trash2, Mail,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -694,6 +695,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   const [tab, setTab] = useState<"details" | "access">("details");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // Edit state
   const [fullName, setFullName] = useState(member.full_name || "");
@@ -792,6 +794,23 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   }
 
   const lvlInfo = LEVEL_OPTIONS.find(l => l.value === (member.level as Level));
+
+  async function handleResendInvitation() {
+    setResending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ronin-ai", {
+        body: { action: "resend_invitation", target_user_id: member.id },
+      });
+      if (error) throw error;
+      toast.success(isEN ? "Invitation resent!" : "¡Invitación reenviada!", {
+        description: isEN ? "A fresh invite link has been sent to their email." : "Se envió un nuevo enlace de invitación.",
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to resend invitation.";
+      toast.error(msg);
+    }
+    setResending(false);
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
@@ -972,6 +991,19 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         {/* Footer */}
         {canEdit && (
           <div className="shrink-0 px-5 py-4 border-t border-charcoal-light space-y-2">
+            {/* Resend invitation */}
+            <Button
+              variant="outline"
+              disabled={resending || saving || deleting}
+              onClick={handleResendInvitation}
+              className="w-full border-charcoal-light text-cream hover:bg-charcoal-light gap-2"
+            >
+              {resending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+              {resending
+                ? (isEN ? "Sending…" : "Enviando…")
+                : (isEN ? "Resend Invitation" : "Reenviar Invitación")}
+            </Button>
+
             <Button onClick={handleSave} disabled={saving || deleting} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
               {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
               {saving ? (isEN ? "Saving…" : "Guardando…") : (isEN ? "Save Changes" : "Guardar Cambios")}

@@ -364,23 +364,53 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { email, full_name, job_title, level, department, role, start_date, birthday, notes } = body;
+      const { email, full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions } = body;
       if (!email || !full_name || !level || !role) {
         return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const redirectTo = body.redirect_url || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app/reset-password";
+      // Derive redirect URL from request origin so it works on any domain (preview, production, custom)
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app";
+      const redirectTo = body.redirect_url || `${origin}/reset-password`;
       const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo });
       if (inviteErr || !inviteData?.user) {
         return new Response(JSON.stringify({ error: inviteErr?.message ?? "Failed to invite user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const uid = inviteData.user.id;
-      await adminClient.from("profiles").upsert({ id: uid, full_name, job_title: job_title || null, level, department: department || null, start_date: start_date || null, birthday: birthday || null, notes: notes || null });
+      await adminClient.from("profiles").upsert({
+        id: uid, full_name, job_title: job_title || null, level,
+        department: department || null, start_date: start_date || null,
+        birthday: birthday || null, notes: notes || null,
+        phone: phone || null,
+        assigned_property_ids: assigned_property_ids || [],
+        section_permissions: section_permissions || null,
+      });
       const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
       if (!existingRole) await adminClient.from("user_roles").insert({ user_id: uid, role });
       else await adminClient.from("user_roles").update({ role }).eq("user_id", uid);
       await adminClient.from("user_stats").insert({ user_id: uid }).select().maybeSingle();
       await adminClient.from("system_events").insert({ event_type: "user_invited", entity_type: "profile", entity_id: uid, triggered_by: callerUserId, payload: { email, full_name, level, role }, processed_by_ai: false });
       return new Response(JSON.stringify({ success: true, user_id: uid }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ─── RESEND INVITATION ────────────────────────────────────────────────────
+    if (action === "resend_invitation") {
+      if (!["master_admin", "admin"].includes(callerRole)) {
+        return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Accept either a direct email OR a target_user_id (look up their email)
+      let emailToInvite: string | null = body.email || null;
+      if (!emailToInvite && body.target_user_id) {
+        const { data: userData } = await adminClient.auth.admin.getUserById(body.target_user_id);
+        emailToInvite = userData?.user?.email ?? null;
+      }
+      if (!emailToInvite) return new Response(JSON.stringify({ error: "Could not resolve email for this user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app";
+      const redirectTo = body.redirect_url || `${origin}/reset-password`;
+      const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(emailToInvite, { redirectTo });
+      if (inviteErr) {
+        return new Response(JSON.stringify({ error: inviteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ success: true, user_id: inviteData?.user?.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ─── DELETE USER ──────────────────────────────────────────────────────────
