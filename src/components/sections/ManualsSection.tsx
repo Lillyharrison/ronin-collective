@@ -4,12 +4,11 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useChecklistTemplates } from "@/hooks/useChecklists";
 import { usePropertyRules } from "@/hooks/usePropertyRules";
-import { ChecklistCard } from "@/components/manuals/ChecklistCard";
 import { CareGuideCard } from "@/components/manuals/CareGuideCard";
 import { RulesManager } from "@/components/manuals/RulesManager";
 import { cn } from "@/lib/utils";
 import {
-  ClipboardList, BookOpen, Backpack, Shield,
+  BookOpen, Shield,
   ChevronDown, Plus, MapPin
 } from "lucide-react";
 
@@ -18,30 +17,21 @@ interface Property {
   name: string;
 }
 
-type Tab = "checklists" | "care_guides" | "activity" | "rules";
+type Tab = "care_guides" | "rules";
 
 const TABS: { id: Tab; icon: React.ReactNode; label: string; labelEs: string }[] = [
-  { id: "checklists",  icon: <ClipboardList size={14} />, label: "Checklists",  labelEs: "Listas" },
-  { id: "care_guides", icon: <BookOpen size={14} />,      label: "Care Guides", labelEs: "Cuidados" },
-  { id: "activity",    icon: <Backpack size={14} />,       label: "Activities",  labelEs: "Actividades" },
-  { id: "rules",       icon: <Shield size={14} />,         label: "Rules",       labelEs: "Reglas" },
-];
-
-const ACTIVITY_GROUPS = [
-  { label: "Packing Lists",   labelEs: "Listas de Equipaje", keys: ["skiing", "yacht", "business_trip"] },
-  { label: "Events & Parties",labelEs: "Eventos & Fiestas",  keys: ["dinner_party", "staff_function", "bbq"] },
-  { label: "Kids Activities", labelEs: "Actividades Infantiles", keys: ["football", "baseball", "basketball", "dance"] },
+  { id: "care_guides", icon: <BookOpen size={14} />, label: "Care Guides", labelEs: "Cuidados" },
+  { id: "rules",       icon: <Shield size={14} />,   label: "Rules",       labelEs: "Reglas" },
 ];
 
 export function ManualsSection() {
   const { language } = useLanguage();
-  const { isAdmin, isManager, assignedPropertyIds, isMasterAdmin } = usePermissions();
-  const [tab, setTab] = useState<Tab>("checklists");
+  const { isAdmin, assignedPropertyIds } = usePermissions();
+  const [tab, setTab] = useState<Tab>("care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
   const [showPropPicker, setShowPropPicker] = useState(false);
 
-  // Load properties the user can see
   useEffect(() => {
     let q = supabase.from("properties").select("id, name").order("sort_order");
     if (!isAdmin && assignedPropertyIds.length > 0) {
@@ -56,25 +46,11 @@ export function ManualsSection() {
 
   const selectedProp = properties.find(p => p.id === selectedPropId);
 
-  // --- Checklists tab ---
-  const { templates: cleaningTemplates, loading: cleaningLoading } = useChecklistTemplates(
-    tab === "checklists" ? "cleaning" : undefined,
-    tab === "checklists" ? selectedPropId : undefined
-  );
-
-  // --- Care guides tab ---
   const { templates: careTemplates, loading: careLoading } = useChecklistTemplates(
     tab === "care_guides" ? "care_guide" : undefined,
     tab === "care_guides" ? null : undefined
   );
 
-  // --- Activity tab ---
-  const { templates: activityTemplates, loading: activityLoading } = useChecklistTemplates(
-    tab === "activity" ? "activity" : undefined,
-    tab === "activity" ? null : undefined
-  );
-
-  // --- Rules tab ---
   const { rules, loading: rulesLoading, reload: reloadRules } = usePropertyRules(
     tab === "rules" ? selectedPropId : undefined
   );
@@ -88,7 +64,7 @@ export function ManualsSection() {
           {language === "es" ? "Guías" : "Guides"}
         </h1>
         <p className="text-cream/40 text-xs mt-1 tracking-wide">
-          {language === "es" ? "Listas, cuidados, actividades y reglas" : "Checklists, care guides, activities & rules"}
+          {language === "es" ? "Guías de cuidado y reglas de propiedad" : "Surface care guides & property rules"}
         </p>
       </div>
 
@@ -111,8 +87,8 @@ export function ManualsSection() {
         ))}
       </div>
 
-      {/* Property picker (for checklists + rules tabs) */}
-      {(tab === "checklists" || tab === "rules") && properties.length > 1 && (
+      {/* Property picker for rules */}
+      {tab === "rules" && properties.length > 1 && (
         <div className="px-4 mt-3">
           <div className="relative">
             <button
@@ -147,31 +123,7 @@ export function ManualsSection() {
       {/* CONTENT */}
       <div className="px-4 mt-4 space-y-3">
 
-        {/* ── CHECKLISTS ── */}
-        {tab === "checklists" && (
-          <>
-            {cleaningLoading ? (
-              <div className="space-y-3">
-                {[1,2,3,4].map(i => <div key={i} className="h-14 bg-card border border-border rounded-xl animate-pulse" />)}
-              </div>
-            ) : cleaningTemplates.length === 0 ? (
-              <div className="bg-card border border-border rounded-xl p-8 text-center">
-                <ClipboardList size={28} className="mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No checklists for this property.</p>
-              </div>
-            ) : (
-              cleaningTemplates.map(tpl => (
-                <ChecklistCard
-                  key={tpl.id}
-                  template={tpl}
-                  propertyId={selectedPropId}
-                />
-              ))
-            )}
-          </>
-        )}
-
-        {/* ── CARE GUIDES ── */}
+        {/* CARE GUIDES */}
         {tab === "care_guides" && (
           <>
             <p className="text-xs text-muted-foreground px-1">
@@ -207,49 +159,7 @@ export function ManualsSection() {
           </>
         )}
 
-        {/* ── ACTIVITY LISTS ── */}
-        {tab === "activity" && (
-          <>
-            {activityLoading ? (
-              <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-14 bg-card border border-border rounded-xl animate-pulse" />)}</div>
-            ) : (
-              ACTIVITY_GROUPS.map(group => {
-                const groupTemplates = activityTemplates.filter(t => group.keys.includes(t.subcategory ?? ""));
-                if (groupTemplates.length === 0) return null;
-                return (
-                  <div key={group.label}>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                      {language === "es" ? group.labelEs : group.label}
-                    </p>
-                    <div className="space-y-2">
-                      {groupTemplates.map(tpl => (
-                        <ChecklistCard key={tpl.id} template={tpl} propertyId={null} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            {isAdmin && (
-              <button
-                onClick={async () => {
-                  const title = window.prompt("Activity list title:");
-                  if (!title?.trim()) return;
-                  await supabase.from("checklist_templates").insert({
-                    title: title.trim(), category: "activity", subcategory: title.trim().toLowerCase().replace(/\s+/g, "_"),
-                    icon: "🎯", color: "blue", is_universal: true,
-                  });
-                  window.location.reload();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
-              >
-                <Plus size={14} /> Add activity list
-              </button>
-            )}
-          </>
-        )}
-
-        {/* ── RULES ── */}
+        {/* RULES */}
         {tab === "rules" && (
           <>
             <p className="text-xs text-muted-foreground px-1">

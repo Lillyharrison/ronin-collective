@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useNavigation } from "@/contexts/NavigationContext";
+import { useChecklistTemplates, useChecklistSessions } from "@/hooks/useChecklists";
 import {
   CheckSquare, Clock, AlertTriangle, Circle,
-  ChevronDown, Filter, Plus, MapPin, User,
+  ChevronDown, Filter, Plus, MapPin, User, ClipboardList, ChevronRight,
 } from "lucide-react";
 
 type TaskStatus = "pending" | "in_progress" | "completed" | "urgent";
@@ -52,6 +54,7 @@ const FILTERS: { key: FilterStatus; label: string; labelEs: string }[] = [
 export function TasksSection() {
   const { language } = useLanguage();
   const { userId, isAdmin, isManager, assignedPropertyIds, loading: permLoading } = usePermissions();
+  const { openChecklistDetail, setActiveSection } = useNavigation();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,6 +163,9 @@ export function TasksSection() {
 
       {/* Task list */}
       <div className="px-4 space-y-2">
+
+        {/* Partial checklists prompt */}
+        <PartialChecklistsWidget />
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse" />
@@ -306,6 +312,53 @@ export function TasksSection() {
             );
           })
         )}
+      </div>
+    </div>
+  );
+}
+
+// Widget showing any in-progress checklists from today
+function PartialChecklistsWidget() {
+  const { openChecklistDetail, setActiveSection } = useNavigation();
+  const { assignedPropertyIds, isAdmin } = usePermissions();
+  const [propId] = useState<string | null>(assignedPropertyIds[0] ?? null);
+  const { templates } = useChecklistTemplates("cleaning", propId || undefined);
+
+  if (templates.length === 0) return null;
+  return <PartialChecklistsInner templates={templates} propId={propId} onOpen={openChecklistDetail} onNav={() => setActiveSection("checklists")} />;
+}
+
+function PartialChecklistsInner({ templates, propId, onOpen, onNav }: {
+  templates: ReturnType<typeof useChecklistTemplates>["templates"];
+  propId: string | null;
+  onOpen: (id: string, propId: string | null) => void;
+  onNav: () => void;
+}) {
+  // We check sessions for the first template only as a sample — full list lives in checklists
+  const { completedIds } = useChecklistSessions(templates[0]?.id ?? null, propId);
+  if (completedIds.size === 0) return null;
+  return (
+    <div className="mb-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <ClipboardList size={12} className="text-[hsl(var(--gold))]" />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Open Checklists</span>
+        </div>
+        <button onClick={onNav} className="text-[10px] text-[hsl(var(--gold))] hover:underline">View all</button>
+      </div>
+      <div className="space-y-1.5">
+        {templates.slice(0, 3).map(t => (
+          <button
+            key={t.id}
+            onClick={() => onOpen(t.id, propId)}
+            className="w-full flex items-center gap-2.5 bg-card border border-border rounded-xl px-3 py-2.5 hover:bg-muted/40 transition-colors"
+          >
+            <span className="text-sm">{t.icon}</span>
+            <span className="flex-1 text-xs font-medium text-foreground text-left truncate">{t.title}</span>
+            <span className="text-[10px] text-[hsl(var(--gold))] font-medium">Resume</span>
+            <ChevronRight size={12} className="text-muted-foreground" />
+          </button>
+        ))}
       </div>
     </div>
   );

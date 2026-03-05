@@ -8,6 +8,7 @@ export type ActiveSection =
   | "messages"
   | "profile"
   | "manuals"
+  | "checklists"
   | "tasks"
   | "contacts"
   | "inventory"
@@ -27,6 +28,10 @@ interface NavigationContextType {
   setActiveSection: (section: ActiveSection) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  checklistDetailId: string | null;
+  checklistDetailPropId: string | null;
+  openChecklistDetail: (templateId: string, propertyId: string | null) => void;
+  closeChecklistDetail: () => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({
@@ -36,12 +41,18 @@ const NavigationContext = createContext<NavigationContextType>({
   setActiveSection: () => {},
   sidebarOpen: false,
   setSidebarOpen: () => {},
+  checklistDetailId: null,
+  checklistDetailPropId: null,
+  openChecklistDetail: () => {},
+  closeChecklistDetail: () => {},
 });
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [checklistDetailId, setChecklistDetailId] = useState<string | null>(null);
+  const [checklistDetailPropId, setChecklistDetailPropId] = useState<string | null>(null);
 
   const handleSetActiveTab = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -59,6 +70,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const handleSetActiveSection = (section: ActiveSection) => {
     setActiveSection(section);
     setSidebarOpen(false);
+    // Close checklist detail when navigating away
+    setChecklistDetailId(null);
     const tabMap: Partial<Record<ActiveSection, ActiveTab>> = {
       dashboard: "home",
       property: "property",
@@ -67,6 +80,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       profile: "profile",
     };
     if (tabMap[section]) setActiveTab(tabMap[section]!);
+  };
+
+  const openChecklistDetail = (templateId: string, propertyId: string | null) => {
+    setChecklistDetailId(templateId);
+    setChecklistDetailPropId(propertyId);
+  };
+
+  const closeChecklistDetail = () => {
+    setChecklistDetailId(null);
+    setChecklistDetailPropId(null);
   };
 
   return (
@@ -78,6 +101,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setActiveSection: handleSetActiveSection,
         sidebarOpen,
         setSidebarOpen,
+        checklistDetailId,
+        checklistDetailPropId,
+        openChecklistDetail,
+        closeChecklistDetail,
       }}
     >
       {children}

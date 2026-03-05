@@ -227,6 +227,51 @@ export type Database = {
           },
         ]
       }
+      checklist_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          property_id: string | null
+          session_date: string
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          session_date?: string
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          session_date?: string
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_comments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_comments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_items: {
         Row: {
           color: string
@@ -331,6 +376,7 @@ export type Database = {
       }
       checklist_templates: {
         Row: {
+          assigned_role: string | null
           category: string
           color: string
           created_at: string
@@ -338,13 +384,17 @@ export type Database = {
           icon: string
           id: string
           is_universal: boolean
+          notify_on_day: boolean | null
           property_id: string | null
+          recurrence: string | null
+          recurrence_day: number | null
           sort_order: number
           subcategory: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          assigned_role?: string | null
           category?: string
           color?: string
           created_at?: string
@@ -352,13 +402,17 @@ export type Database = {
           icon?: string
           id?: string
           is_universal?: boolean
+          notify_on_day?: boolean | null
           property_id?: string | null
+          recurrence?: string | null
+          recurrence_day?: number | null
           sort_order?: number
           subcategory?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          assigned_role?: string | null
           category?: string
           color?: string
           created_at?: string
@@ -366,7 +420,10 @@ export type Database = {
           icon?: string
           id?: string
           is_universal?: boolean
+          notify_on_day?: boolean | null
           property_id?: string | null
+          recurrence?: string | null
+          recurrence_day?: number | null
           sort_order?: number
           subcategory?: string | null
           title?: string
