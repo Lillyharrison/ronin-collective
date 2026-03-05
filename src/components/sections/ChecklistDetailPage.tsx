@@ -58,6 +58,7 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
   const [recurrence, setRecurrence] = useState(template.recurrence ?? "none");
   const [recurrenceDay, setRecurrenceDay] = useState<number>(template.recurrence_day ?? 4);
   const [assignedRole, setAssignedRole] = useState(template.assigned_role ?? "");
+  const [assignedDepartment, setAssignedDepartment] = useState(template.assigned_department ?? "");
   const [notifyOnDay, setNotifyOnDay] = useState(template.notify_on_day ?? false);
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -115,6 +116,7 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
       recurrence,
       recurrence_day: recurrence === "weekly" || recurrence === "biweekly" ? recurrenceDay : null,
       assigned_role: assignedRole || null,
+      assigned_department: assignedDepartment || null,
       notify_on_day: notifyOnDay,
     }).eq("id", template.id);
     setSavingSettings(false);
@@ -271,11 +273,35 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
                     assignedRole === r ? "bg-gold text-charcoal border-gold" : "border-border text-muted-foreground"
                   )}
                 >
-                  {r === "" ? "All Staff" : r.charAt(0).toUpperCase() + r.slice(1)}
+                  {r === "" ? "All Roles" : r.charAt(0).toUpperCase() + r.slice(1)}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Assigned department */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><User size={11} /> Assign to Department</label>
+            <div className="flex flex-wrap gap-2">
+              {["", "interior", "exterior", "kitchen", "security", "office"].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setAssignedDepartment(d)}
+                  className={cn("px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors capitalize",
+                    assignedDepartment === d ? "bg-gold text-charcoal border-gold" : "border-border text-muted-foreground"
+                  )}
+                >
+                  {d === "" ? "All Departments" : d.charAt(0).toUpperCase() + d.slice(1)}
+                </button>
+              ))}
+            </div>
+            {assignedRole && assignedDepartment && (
+              <p className="text-[10px] text-muted-foreground mt-2 bg-muted rounded-lg px-2 py-1.5">
+                ↳ Will appear in the task list of <strong>{assignedRole}</strong> staff in the <strong>{assignedDepartment}</strong> department assigned to this property.
+              </p>
+            )}
+          </div>
+
 
           {/* Notify toggle */}
           <div className="flex items-center justify-between">
@@ -303,11 +329,13 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
       )}
 
       {/* Checklist metadata badges */}
-      {(template.recurrence && template.recurrence !== "none") && (
+      {((template.recurrence && template.recurrence !== "none") || template.assigned_role || template.assigned_department) && (
         <div className="px-4 pt-3 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
-            <RefreshCw size={9} /> {RECURRENCE_LABELS[template.recurrence] ?? template.recurrence}
-          </span>
+          {template.recurrence && template.recurrence !== "none" && (
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
+              <RefreshCw size={9} /> {RECURRENCE_LABELS[template.recurrence] ?? template.recurrence}
+            </span>
+          )}
           {template.recurrence_day !== null && (
             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
               <Calendar size={9} /> Every {DAY_NAMES[template.recurrence_day]}
@@ -316,6 +344,11 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
           {template.assigned_role && (
             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
               <User size={9} /> {template.assigned_role}
+            </span>
+          )}
+          {template.assigned_department && (
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-accent/10 text-accent border border-accent/20 capitalize">
+              <User size={9} /> {template.assigned_department}
             </span>
           )}
         </div>

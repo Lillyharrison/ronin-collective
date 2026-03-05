@@ -58,6 +58,11 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
               <RefreshCw size={8} /> {recurrenceLabel}
             </span>
           )}
+          {template.assigned_department && (
+            <span className="text-[9px] text-accent/70 capitalize font-medium">
+              {template.assigned_department}
+            </span>
+          )}
         </div>
         {/* Live progress bar (shown when there's any progress) */}
         {hasProgress && (

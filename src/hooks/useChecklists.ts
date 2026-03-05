@@ -15,6 +15,7 @@ export interface ChecklistTemplate {
   recurrence: string | null;
   recurrence_day: number | null;
   assigned_role: string | null;
+  assigned_department: string | null;
   notify_on_day: boolean | null;
 }
 
