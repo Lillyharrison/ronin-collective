@@ -227,6 +227,161 @@ export type Database = {
           },
         ]
       }
+      checklist_items: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          is_required: boolean
+          notes: string | null
+          photo_url: string | null
+          sort_order: number
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          photo_url?: string | null
+          sort_order?: number
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          photo_url?: string | null
+          sort_order?: number
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_sessions: {
+        Row: {
+          completed_at: string
+          completed_by: string
+          id: string
+          item_id: string
+          property_id: string | null
+          session_date: string
+          template_id: string
+        }
+        Insert: {
+          completed_at?: string
+          completed_by: string
+          id?: string
+          item_id: string
+          property_id?: string | null
+          session_date?: string
+          template_id: string
+        }
+        Update: {
+          completed_at?: string
+          completed_by?: string
+          id?: string
+          item_id?: string
+          property_id?: string | null
+          session_date?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_sessions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_sessions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_sessions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          category: string
+          color: string
+          created_at: string
+          created_by: string | null
+          icon: string
+          id: string
+          is_universal: boolean
+          property_id: string | null
+          sort_order: number
+          subcategory: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          icon?: string
+          id?: string
+          is_universal?: boolean
+          property_id?: string | null
+          sort_order?: number
+          subcategory?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          icon?: string
+          id?: string
+          is_universal?: boolean
+          property_id?: string | null
+          sort_order?: number
+          subcategory?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_templates_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_title_suggestions: {
         Row: {
           created_at: string
@@ -544,6 +699,68 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      property_rules: {
+        Row: {
+          applies_to_roles: string[]
+          color: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          enacted_event_types: string[]
+          enacted_keywords: string[]
+          icon: string
+          id: string
+          is_active: boolean
+          is_universal: boolean
+          property_id: string | null
+          title: string
+          updated_at: string
+          visible_to_user_ids: string[]
+        }
+        Insert: {
+          applies_to_roles?: string[]
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enacted_event_types?: string[]
+          enacted_keywords?: string[]
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_universal?: boolean
+          property_id?: string | null
+          title: string
+          updated_at?: string
+          visible_to_user_ids?: string[]
+        }
+        Update: {
+          applies_to_roles?: string[]
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          enacted_event_types?: string[]
+          enacted_keywords?: string[]
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_universal?: boolean
+          property_id?: string | null
+          title?: string
+          updated_at?: string
+          visible_to_user_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_rules_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ronin_memories: {
         Row: {
