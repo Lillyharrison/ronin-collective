@@ -17,7 +17,8 @@ export type ActiveSection =
   | "travel"
   | "calendar"
   | "achievements"
-  | "master-import";
+  | "master-import"
+  | "memory";
 
 interface NavigationContextType {
   activeTab: ActiveTab;

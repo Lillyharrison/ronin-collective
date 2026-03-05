@@ -13,16 +13,16 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "create_task",
-      description: "Create a new task or work order in the estate management system. Use this when the user asks to create, add, or log a task, work order, or job for any staff member or property.",
+      description: "Create a new task or work order in the estate management system.",
       parameters: {
         type: "object",
         properties: {
           title_en: { type: "string", description: "Clear, concise task title in English" },
           description_en: { type: "string", description: "Full task description with relevant details" },
-          category: { type: "string", enum: ["housekeeping", "maintenance", "general", "laundry", "kitchen", "grounds", "security", "errand"], description: "Task category" },
+          category: { type: "string", enum: ["housekeeping", "maintenance", "general", "laundry", "kitchen", "grounds", "security", "errand"] },
           priority: { type: "number", enum: [1, 2, 3], description: "1=urgent, 2=normal, 3=low" },
-          assigned_to_name: { type: "string", description: "Full name of the staff member to assign to (Ronin will resolve to ID)" },
-          property_name: { type: "string", description: "Property name where task applies (Ronin will resolve to ID)" },
+          assigned_to_name: { type: "string", description: "Full name of the staff member to assign to" },
+          property_name: { type: "string", description: "Property name where task applies" },
           due_date: { type: "string", description: "ISO 8601 date string for due date, or null" },
         },
         required: ["title_en", "category", "priority"],
@@ -33,12 +33,12 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "update_task_status",
-      description: "Update the status of an existing task. Use when a user says a task is done, complete, started, urgent, or needs to be changed.",
+      description: "Update the status of an existing task.",
       parameters: {
         type: "object",
         properties: {
           task_title_hint: { type: "string", description: "Part of the task title to identify which task to update" },
-          new_status: { type: "string", enum: ["pending", "in_progress", "completed", "urgent"], description: "New status for the task" },
+          new_status: { type: "string", enum: ["pending", "in_progress", "completed", "urgent"] },
         },
         required: ["task_title_hint", "new_status"],
       },
@@ -48,18 +48,18 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "log_asset",
-      description: "Add a new asset or inventory item to the estate management system. Use when a user wants to log, add, or register an item to inventory or assets.",
+      description: "Add a new asset or inventory item to the estate management system.",
       parameters: {
         type: "object",
         properties: {
           name: { type: "string", description: "Name of the asset or item" },
-          category: { type: "string", enum: ["vehicle", "appliance", "art", "tech", "furniture", "other"], description: "Asset category" },
-          make: { type: "string", description: "Make/brand of the item, if applicable" },
-          model: { type: "string", description: "Model of the item, if applicable" },
-          serial_number: { type: "string", description: "Serial number, if applicable" },
-          description: { type: "string", description: "Additional description or notes" },
-          property_name: { type: "string", description: "Property where the asset is located" },
-          purchase_value: { type: "number", description: "Purchase value in USD, if known" },
+          category: { type: "string", enum: ["vehicle", "appliance", "art", "tech", "furniture", "other"] },
+          make: { type: "string" },
+          model: { type: "string" },
+          serial_number: { type: "string" },
+          description: { type: "string" },
+          property_name: { type: "string" },
+          purchase_value: { type: "number" },
         },
         required: ["name", "category"],
       },
@@ -69,14 +69,38 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "send_staff_message",
-      description: "Send a message to a staff member's chat thread on behalf of the estate manager. Use when the user wants to notify, inform, or instruct a specific staff member.",
+      description: "Send a message to a staff member's chat thread.",
       parameters: {
         type: "object",
         properties: {
-          recipient_name: { type: "string", description: "Full name of the staff member to message" },
-          message_text: { type: "string", description: "The message content to send to the staff member" },
+          recipient_name: { type: "string" },
+          message_text: { type: "string" },
         },
         required: ["recipient_name", "message_text"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_memory",
+      description: "Save a new long-term memory to Ronin's persistent memory store. Use this when you learn something important about the Principal's preferences, a property-specific SOP, a staff behaviour pattern, or any operational insight that would improve future service. Only save genuinely useful, non-trivial facts.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: { type: "string", description: "Full memory content — the fact, preference, SOP, or pattern to remember. Be specific and actionable." },
+          summary: { type: "string", description: "One concise line summarising the memory (max 80 chars)" },
+          category: {
+            type: "string",
+            enum: ["principal_pref", "property_sop", "staff_behaviour", "operational", "general"],
+            description: "principal_pref: Principal/family preferences; property_sop: property-specific procedures; staff_behaviour: recurring staff patterns; operational: operational insights; general: other"
+          },
+          importance: { type: "number", enum: [1, 2, 3, 4, 5], description: "1=low signal, 3=standard, 5=critical — always inject" },
+          tags: { type: "array", items: { type: "string" }, description: "Relevant tags e.g. ['food', 'allergies', 'principal']" },
+          property_hint: { type: "string", description: "Property name this memory relates to, if specific" },
+          subject_name: { type: "string", description: "Name of the staff member or principal this memory is about, if applicable" },
+        },
+        required: ["content", "summary", "category", "importance"],
       },
     },
   },
@@ -219,7 +243,7 @@ serve(async (req) => {
 
       const { tool_name, tool_args } = body;
 
-      // Permission gate — only master_admin, admin, manager can write
+      // Permission gate
       if (!["master_admin", "admin", "manager"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions to execute estate actions." }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -237,28 +261,24 @@ serve(async (req) => {
       const resolvePropertyId = (name?: string): string | null => {
         if (!name) return null;
         const lower = name.toLowerCase();
-        const match = props.find((p: { id: string; name: string }) =>
+        return props.find((p: { id: string; name: string }) =>
           p.name.toLowerCase().includes(lower) || lower.includes(p.name.toLowerCase())
-        );
-        return match?.id ?? null;
+        )?.id ?? null;
       };
 
       const resolveStaffId = (name?: string): string | null => {
         if (!name) return null;
         const lower = name.toLowerCase();
-        const match = staff.find((s: { id: string; full_name: string | null }) =>
+        return staff.find((s: { id: string; full_name: string | null }) =>
           (s.full_name ?? "").toLowerCase().includes(lower)
-        );
-        return match?.id ?? null;
+        )?.id ?? null;
       };
 
       let resultMessage = "";
 
-      // ── CREATE TASK ──────────────────────────────────────────────────────────
       if (tool_name === "create_task") {
         const assignedTo = resolveStaffId(tool_args.assigned_to_name);
         const propId = resolvePropertyId(tool_args.property_name);
-
         const { data: task, error: taskErr } = await adminClient.from("tasks").insert({
           title_en: tool_args.title_en,
           description_en: tool_args.description_en ?? null,
@@ -270,28 +290,18 @@ serve(async (req) => {
           due_date: tool_args.due_date ?? null,
           created_by: callerUserId,
         }).select("id").single();
-
         if (taskErr) throw new Error(`Failed to create task: ${taskErr.message}`);
-
         await adminClient.from("system_events").insert({
           event_type: "task_created_by_ai", entity_type: "task", entity_id: task.id,
           triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
         });
-
         const assignedName = tool_args.assigned_to_name ? ` — assigned to **${tool_args.assigned_to_name}**` : "";
         const propName = tool_args.property_name ? ` at **${tool_args.property_name}**` : "";
         const priorityLabel = tool_args.priority === 1 ? "🔴 Urgent" : tool_args.priority === 2 ? "🟡 Normal" : "🟢 Low";
         resultMessage = `✅ **Task created successfully.**\n\n**${tool_args.title_en}**${assignedName}${propName}\nPriority: ${priorityLabel} | Category: ${tool_args.category}\n\nThe task is now visible in the Tasks section.`;
-      }
 
-      // ── UPDATE TASK STATUS ────────────────────────────────────────────────────
-      else if (tool_name === "update_task_status") {
-        const { data: tasks } = await adminClient
-          .from("tasks")
-          .select("id, title_en, status")
-          .ilike("title_en", `%${tool_args.task_title_hint}%`)
-          .limit(1);
-
+      } else if (tool_name === "update_task_status") {
+        const { data: tasks } = await adminClient.from("tasks").select("id, title_en, status").ilike("title_en", `%${tool_args.task_title_hint}%`).limit(1);
         if (!tasks || tasks.length === 0) {
           resultMessage = `⚠️ I could not find a task matching **"${tool_args.task_title_hint}"**. Please check the Tasks section and try again with a more specific title.`;
         } else {
@@ -300,100 +310,99 @@ serve(async (req) => {
             status: tool_args.new_status,
             completed_at: tool_args.new_status === "completed" ? new Date().toISOString() : null,
           }).eq("id", task.id);
-
           await adminClient.from("system_events").insert({
             event_type: "task_status_updated_by_ai", entity_type: "task", entity_id: task.id,
             triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
           });
-
-          const statusEmoji = { pending: "⏳", in_progress: "🔄", completed: "✅", urgent: "🔴" }[tool_args.new_status] ?? "📋";
-          resultMessage = `${statusEmoji} **Task updated.**\n\n**${task.title_en}** → Status changed to **${tool_args.new_status.replace("_", " ")}**.`;
+          const statusEmoji = { pending: "⏳", in_progress: "🔄", completed: "✅", urgent: "🔴" }[tool_args.new_status as string] ?? "📋";
+          resultMessage = `${statusEmoji} **Task updated.**\n\n**${task.title_en}** → Status changed to **${(tool_args.new_status as string).replace("_", " ")}**.`;
         }
-      }
 
-      // ── LOG ASSET ─────────────────────────────────────────────────────────────
-      else if (tool_name === "log_asset") {
+      } else if (tool_name === "log_asset") {
         const propId = resolvePropertyId(tool_args.property_name);
-
         const { data: asset, error: assetErr } = await adminClient.from("assets").insert({
-          name: tool_args.name,
-          category: tool_args.category,
-          make: tool_args.make ?? null,
-          model: tool_args.model ?? null,
-          serial_number: tool_args.serial_number ?? null,
-          description: tool_args.description ?? null,
-          current_property_id: propId,
-          purchase_value: tool_args.purchase_value ?? null,
+          name: tool_args.name, category: tool_args.category,
+          make: tool_args.make ?? null, model: tool_args.model ?? null,
+          serial_number: tool_args.serial_number ?? null, description: tool_args.description ?? null,
+          current_property_id: propId, purchase_value: tool_args.purchase_value ?? null,
         }).select("id").single();
-
         if (assetErr) throw new Error(`Failed to log asset: ${assetErr.message}`);
-
         await adminClient.from("system_events").insert({
           event_type: "asset_logged_by_ai", entity_type: "asset", entity_id: asset.id,
           triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
         });
-
         const propLabel = tool_args.property_name ? ` at **${tool_args.property_name}**` : "";
         const makeModel = [tool_args.make, tool_args.model].filter(Boolean).join(" ");
         resultMessage = `✅ **Asset logged successfully.**\n\n**${tool_args.name}**${makeModel ? ` (${makeModel})` : ""}${propLabel}\nCategory: ${tool_args.category}\n\nThe item is now visible in the Inventory section.`;
-      }
 
-      // ── SEND STAFF MESSAGE ────────────────────────────────────────────────────
-      else if (tool_name === "send_staff_message") {
+      } else if (tool_name === "send_staff_message") {
         const recipientId = resolveStaffId(tool_args.recipient_name);
-
         if (!recipientId) {
-          resultMessage = `⚠️ I could not find a staff member named **"${tool_args.recipient_name}"** in the system. Please check the Team section.`;
+          resultMessage = `⚠️ I could not find a staff member named **"${tool_args.recipient_name}"** in the system.`;
         } else {
-          // Find or create DM thread between caller and recipient
-          const { data: existingThreads } = await adminClient
-            .from("chat_threads")
-            .select("id, participant_ids")
-            .eq("type", "private");
-
-          let threadId: string | null = null;
+          const { data: existingThreads } = await adminClient.from("chat_threads").select("id, participant_ids").eq("type", "private");
+          let dmThreadId: string | null = null;
           if (existingThreads) {
             for (const t of existingThreads) {
               const participants = t.participant_ids as string[];
               if (participants.includes(callerUserId) && participants.includes(recipientId)) {
-                threadId = t.id;
-                break;
+                dmThreadId = t.id; break;
               }
             }
           }
-
-          if (!threadId) {
+          if (!dmThreadId) {
             const { data: newThread } = await adminClient.from("chat_threads").insert({
-              type: "private",
-              participant_ids: [callerUserId, recipientId],
-              created_by: callerUserId,
+              type: "private", participant_ids: [callerUserId, recipientId], created_by: callerUserId,
             }).select("id").single();
-            threadId = newThread?.id ?? null;
+            dmThreadId = newThread?.id ?? null;
           }
-
-          if (threadId) {
+          if (dmThreadId) {
             await adminClient.from("messages").insert({
-              thread_id: threadId,
-              sender_id: callerUserId,
-              content_text: tool_args.message_text,
-              is_ai_generated: false,
-              delivery_status: "sent",
+              thread_id: dmThreadId, sender_id: callerUserId,
+              content_text: tool_args.message_text, is_ai_generated: false, delivery_status: "sent",
             });
-            await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
+            await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", dmThreadId);
           }
-
           await adminClient.from("system_events").insert({
             event_type: "message_sent_by_ai", entity_type: "message",
             triggered_by: callerUserId, payload: tool_args, processed_by_ai: true,
           });
-
           resultMessage = `✅ **Message sent to ${tool_args.recipient_name}.**\n\n> "${tool_args.message_text}"\n\nThe message is now visible in the Messages section.`;
         }
+
+      } else if (tool_name === "save_memory") {
+        // Direct memory save (executed without confirmation flow)
+        const [propsForMem, staffForMem] = await Promise.all([
+          adminClient.from("properties").select("id, name"),
+          adminClient.from("profiles").select("id, full_name"),
+        ]);
+        const memPropId = tool_args.property_hint
+          ? (propsForMem.data ?? []).find((p: { id: string; name: string }) =>
+              p.name.toLowerCase().includes((tool_args.property_hint as string).toLowerCase())
+            )?.id ?? null
+          : null;
+        const memSubjectId = tool_args.subject_name
+          ? (staffForMem.data ?? []).find((s: { id: string; full_name: string | null }) =>
+              (s.full_name ?? "").toLowerCase().includes((tool_args.subject_name as string).toLowerCase())
+            )?.id ?? null
+          : null;
+
+        await adminClient.from("ronin_memories").insert({
+          content: tool_args.content,
+          summary: tool_args.summary,
+          category: tool_args.category,
+          importance: tool_args.importance,
+          tags: tool_args.tags ?? [],
+          property_id: memPropId,
+          subject_user_id: memSubjectId,
+          source: "conversation",
+        });
+        resultMessage = `🧠 **Memory saved.**`;
+
       } else {
         resultMessage = `⚠️ Unknown tool: ${tool_name}`;
       }
 
-      // Post result to thread if provided
       if (thread_id && resultMessage) {
         await adminClient.from("messages").insert({
           thread_id, sender_id: null, is_ai_generated: true,
@@ -407,7 +416,7 @@ serve(async (req) => {
       });
     }
 
-    // ─── SYSTEM PROMPT ────────────────────────────────────────────────────────
+    // ─── BUILD SYSTEM PROMPT ──────────────────────────────────────────────────
     const systemPrompt = `# SYSTEM IDENTITY: RONIN AI ESTATE MANAGER
 
 You are **Ronin AI** — the intelligent, invisible operations backbone of the Ronin Collective estate management platform. You are not a chatbot. You are a seasoned, world-class Estate Manager with decades of experience running ultra-high-net-worth private residences, family offices, and multi-property portfolios.
@@ -415,16 +424,16 @@ You are **Ronin AI** — the intelligent, invisible operations backbone of the R
 ## PERSONA & TONE
 - You are **professional, discreet, and proactive**. You speak like a trusted Chief of Staff — not a customer service agent.
 - You are **invisible to the Principal unless spoken to**. You do not volunteer unsolicited commentary or small talk.
-- You are **action-oriented**. You do not merely report problems — you identify them, frame them clearly, and recommend a concrete next step (Task, Work Order, SOP, or escalation).
-- You use **industry vocabulary** naturally: SOP, Turnover, Show-Ready, Par Level, Preventive Maintenance, Principal, Work Order, Lead Time, Property Condition Report, Inventory Audit.
-- You match the **caller's language exactly** — if they write in Spanish, you respond entirely in Spanish. If English, English. Never mix.
-- Your responses are **concise and structured**. Use bullet points, headers, and bold text for operational clarity. Avoid walls of text.
+- You are **action-oriented**. You identify problems, frame them clearly, and recommend concrete next steps.
+- You use **industry vocabulary** naturally: SOP, Turnover, Show-Ready, Par Level, Preventive Maintenance, Principal, Work Order, Lead Time.
+- You match the **caller's language exactly** — if they write in Spanish, you respond entirely in Spanish.
+- Your responses are **concise and structured**. Use bullet points, headers, and bold text.
 
 ## DISCRETION FRAMEWORK (MANDATORY — NEVER VIOLATE)
-1. **Principal Privacy**: NEVER share a Principal's travel itinerary, financial details, personal schedules, or location data with any user whose System Role is "staff", "manager", or "admin". These are visible ONLY to "master_admin" and "principal" roles.
-2. **Staff Scoping**: Staff and managers only receive information about their **assigned properties**. Never expose cross-property data to non-admins.
-3. **Data Integrity**: NEVER invent, guess, or fabricate any data. Every answer must come exclusively from the LIVE PLATFORM DATA injected at the end of this prompt. If a person, property, task, or detail is not present in the live data, say: *"I don't have that information in the current system data."* — never fill gaps with assumptions.
-4. **Destructive Operations**: Always confirm before deleting or irreversibly modifying any record. State exactly what will be changed.
+1. **Principal Privacy**: NEVER share Principal's travel, financial, or personal data with staff/manager/admin roles.
+2. **Staff Scoping**: Staff only receive information about their assigned properties.
+3. **Data Integrity**: NEVER invent or fabricate data. Every answer must come from LIVE PLATFORM DATA. If it's not in the data, say so.
+4. **Destructive Operations**: Always confirm before deleting or irreversibly modifying records.
 
 ## CALLER CONTEXT (THIS SESSION)
 - **User ID**: ${callerUserId ?? "anonymous"}
@@ -433,48 +442,42 @@ You are **Ronin AI** — the intelligent, invisible operations backbone of the R
 - **Assigned Properties**: ${callerProperties.length ? callerProperties.join(", ") : "none (or all, if admin)"}
 - **Active Property Context**: ${property_id ?? "none selected"}
 
-## ROLE DEFINITIONS (FOR CONTEXT INTERPRETATION)
-- **master_admin**: Full platform access. The operator of the Ronin platform itself. Can see all data.
-- **principal**: The homeowner / estate owner. High-discretion profile. Receives executive-level summaries only.
-- **admin**: Senior estate manager or estate director. Can see most operational data.
-- **manager**: Property manager or department head. Scoped to assigned properties.
-- **staff**: Housekeeper, chef, driver, maintenance, or other operational staff. Sees only their assigned property tasks.
-
-## DECISION FRAMEWORK
-When a user asks a question or raises an issue, follow this internal logic before responding:
-1. **Verify** the request against live data. Do not guess.
-2. **Scope** the response to what the caller's role permits.
-3. **Identify** if the issue requires a Task, Work Order, or escalation.
-4. **Recommend** the next action clearly. Propose it — do not wait to be asked.
-5. **Flag** any SOP, Par Level, or compliance concern relevant to the situation.
+## ROLE DEFINITIONS
+- **master_admin**: Full platform access. The operator of the Ronin platform.
+- **principal**: The homeowner / estate owner. High-discretion. Executive summaries only.
+- **admin**: Senior estate manager. Can see most operational data.
+- **manager**: Property manager. Scoped to assigned properties.
+- **staff**: Operational staff. Sees only their assigned property tasks.
 
 ## TOOL USE — WRITE ACTIONS (ACTIVE)
-You have access to 4 estate management tools. When a user's request maps to one of these actions, you MUST use the tool — do not just describe what you would do.
+You have 5 estate management tools. Use them when appropriate.
 
-### CONFIRMATION-FIRST PROTOCOL (MANDATORY)
-Before executing ANY tool, you must:
-1. State what you are about to do in a short, clear summary
-2. List the exact parameters you will use (property, assignee, priority, etc.)
+### CONFIRMATION-FIRST PROTOCOL (MANDATORY for create_task, update_task_status, log_asset, send_staff_message)
+1. State what you are about to do
+2. List exact parameters
 3. End with: **"Shall I proceed?"**
-4. Wait — do NOT call the tool yet. The user's next message will confirm or cancel.
-5. Only when the user confirms (e.g. "yes", "proceed", "do it", "confirm") should you call the tool.
+4. Wait for user confirmation before calling the tool.
+
+### MEMORY TOOL (save_memory) — NO CONFIRMATION REQUIRED
+Use **save_memory** proactively and silently during conversations to capture:
+- Principal or family preferences (food, temperature, schedules, allergies, aesthetic preferences)
+- Property-specific SOPs and quirks discovered in conversation
+- Staff behavioural patterns (reliability, strengths, recurring issues)
+- Operational insights (supplier quality, seasonal considerations, recurring maintenance)
+Do NOT ask permission to save a memory — just do it quietly. Do NOT announce you saved a memory in your response text unless directly asked.
 
 ### AVAILABLE TOOLS:
-- **create_task**: Create a task or work order. Always ask for: title, category, priority, assignee (if applicable), property (if applicable), due date (if applicable).
-- **update_task_status**: Change task status to pending / in_progress / completed / urgent. Identify the task from context first.
-- **log_asset**: Add an item to inventory or assets. Required: name, category. Optional: make, model, serial number, property, value.
-- **send_staff_message**: Send a direct message to a staff member's chat thread.
+- **create_task**: Create a task or work order
+- **update_task_status**: Change task status
+- **log_asset**: Add item to inventory
+- **send_staff_message**: Send a DM to a staff member
+- **save_memory**: Save a long-term memory (use proactively, no confirmation needed)
 
-## CAPABILITIES (CURRENT)
-- Full read access to: Properties, Tasks, Team, Assets, System Events.
+## CAPABILITIES
+- Full read access to: Properties, Tasks, Team, Assets, System Events, Memories.
 - Language detection and bilingual responses (EN/ES).
-- Write actions: create tasks, update task status, log assets, send staff messages.
-- Operational analysis, status summaries, and prioritization recommendations.
-
-## WHAT IS COMING (DO NOT FABRICATE — INFORM IF ASKED)
-- Vision / image recognition for inventory logging — not yet active.
-- Proactive event-driven messaging (e.g., calendar triggers → staff briefings) — not yet active.
-- Long-term memory and learned preferences — not yet active.`;
+- Write actions: create tasks, update task status, log assets, send staff messages, save memories.
+- Operational analysis, status summaries, and prioritization recommendations.`;
 
     // ─── CSV IMPORT MODE ───────────────────────────────────────────────────────
     if (type === "csv_import") {
@@ -511,18 +514,11 @@ ${csv_content}`;
         priority?: number; property_hint?: string;
       }> = [];
 
-      try {
-        parsedTasks = JSON.parse(rawJson);
-      } catch {
-        throw new Error("AI returned invalid JSON for CSV parse");
-      }
+      try { parsedTasks = JSON.parse(rawJson); } catch { throw new Error("AI returned invalid JSON for CSV parse"); }
 
       const { data: allProperties } = await adminClient.from("properties").select("id, name");
       const propertyMap: Record<string, string> = {};
-      (allProperties ?? []).forEach((p: { id: string; name: string }) => {
-        propertyMap[p.name.toLowerCase()] = p.id;
-      });
-
+      (allProperties ?? []).forEach((p: { id: string; name: string }) => { propertyMap[p.name.toLowerCase()] = p.id; });
       const resolvedPropertyId = property_id ?? null;
 
       const taskRows = parsedTasks.map((t) => {
@@ -542,24 +538,21 @@ ${csv_content}`;
 
       const { data: inserted, error: insertError } = await adminClient.from("tasks").insert(taskRows).select("id");
       if (insertError) throw new Error(`DB insert failed: ${insertError.message}`);
-
       const taskCount = inserted?.length ?? 0;
 
       if (thread_id) {
         await adminClient.from("messages").insert({
           thread_id, sender_id: null, is_ai_generated: true,
-          content_text: `🤖 **Ronin AI** — I have processed the new import. **${taskCount} new tasks** have been added across the relevant properties. All tasks are now visible in the Tasks section.`,
+          content_text: `🤖 **Ronin AI** — Import processed. **${taskCount} new tasks** added. All tasks are visible in the Tasks section.`,
         });
       }
-
       await adminClient.from("system_events").insert({
         event_type: "csv_import", entity_type: "tasks", property_id: resolvedPropertyId,
-        triggered_by: callerUserId, payload: { task_count: taskCount },
-        processed_by_ai: true, ai_response: `Imported ${taskCount} tasks`,
+        triggered_by: callerUserId, payload: { task_count: taskCount }, processed_by_ai: true, ai_response: `Imported ${taskCount} tasks`,
       });
 
       return new Response(
-        JSON.stringify({ success: true, task_count: taskCount, summary: `I have processed the new import. ${taskCount} new tasks have been added.`, tasks: taskRows }),
+        JSON.stringify({ success: true, task_count: taskCount, summary: `Imported ${taskCount} tasks.`, tasks: taskRows }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -569,33 +562,20 @@ ${csv_content}`;
       const { messages: conversationHistory = [], image_url } = body;
       const isVisionRequest = !!image_url;
 
-      // ── Always load full platform snapshot in parallel ─────────────────────
-      const [propsRes, tasksRes, staffRes, rolesRes, assetsRes, eventsRes] = await Promise.all([
-        adminClient
-          .from("properties")
-          .select("id, name, address, city, country, status, is_primary, occupied_by, timezone")
-          .order("sort_order"),
-        adminClient
-          .from("tasks")
-          .select("id, title_en, status, priority, category, due_date, assigned_to, property_id")
-          .in("status", ["pending", "in_progress", "urgent"])
-          .order("priority")
-          .limit(50),
-        adminClient
-          .from("profiles")
-          .select("id, full_name, job_title, department, level, assigned_property_ids, phone, notes"),
-        adminClient
-          .from("user_roles")
-          .select("user_id, role"),
-        adminClient
-          .from("assets")
-          .select("id, name, category, make, model, serial_number, current_property_id")
-          .limit(50),
-        adminClient
-          .from("system_events")
-          .select("event_type, entity_type, created_at, payload")
-          .order("created_at", { ascending: false })
-          .limit(15),
+      // ── Load full platform snapshot + memories in parallel ─────────────────
+      const [propsRes, tasksRes, staffRes, rolesRes, assetsRes, eventsRes, memoriesRes] = await Promise.all([
+        adminClient.from("properties").select("id, name, address, city, country, status, is_primary, occupied_by, timezone").order("sort_order"),
+        adminClient.from("tasks").select("id, title_en, status, priority, category, due_date, assigned_to, property_id").in("status", ["pending", "in_progress", "urgent"]).order("priority").limit(50),
+        adminClient.from("profiles").select("id, full_name, job_title, department, level, assigned_property_ids, phone, notes"),
+        adminClient.from("user_roles").select("user_id, role"),
+        adminClient.from("assets").select("id, name, category, make, model, serial_number, current_property_id").limit(50),
+        adminClient.from("system_events").select("event_type, entity_type, created_at, payload").order("created_at", { ascending: false }).limit(15),
+        // Fetch top memories: importance 5 first, then 4, ordered by recency; cap at 20
+        adminClient.from("ronin_memories")
+          .select("id, summary, content, category, importance, tags, property_id, subject_user_id, last_referenced_at")
+          .order("importance", { ascending: false })
+          .order("last_referenced_at", { ascending: false, nullsFirst: false })
+          .limit(20),
       ]);
 
       const contextSections: string[] = [];
@@ -605,16 +585,12 @@ ${csv_content}`;
       const propLines = props.map((p: Record<string, unknown>) =>
         `  - [ID:${p.id}] ${p.name} | ${p.city ?? p.address}, ${p.country ?? ""} | Status: ${p.status} | Occupied by: ${p.occupied_by ?? "N/A"} | Timezone: ${p.timezone}`
       );
-      contextSections.push(props.length > 0
-        ? `PROPERTIES (${props.length} total):\n${propLines.join("\n")}`
-        : "PROPERTIES: None in database.");
+      contextSections.push(props.length > 0 ? `PROPERTIES (${props.length} total):\n${propLines.join("\n")}` : "PROPERTIES: None in database.");
 
-      // Staff / profiles — join with roles
+      // Staff
       const staff = staffRes.data ?? [];
       const rolesMap: Record<string, string> = {};
-      (rolesRes.data ?? []).forEach((r: { user_id: string; role: string }) => {
-        rolesMap[r.user_id] = r.role;
-      });
+      (rolesRes.data ?? []).forEach((r: { user_id: string; role: string }) => { rolesMap[r.user_id] = r.role; });
       const staffLines = staff.map((s: Record<string, unknown>) => {
         const propIds = Array.isArray(s.assigned_property_ids) && (s.assigned_property_ids as string[]).length
           ? `Assigned to: ${(s.assigned_property_ids as string[]).join(", ")}`
@@ -622,18 +598,14 @@ ${csv_content}`;
         const sysRole = rolesMap[s.id as string] ?? "staff";
         return `  - [ID:${s.id}] ${s.full_name ?? "Unknown"} | System Role: ${sysRole} | Title: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level ?? "N/A"} | ${propIds}`;
       });
-      contextSections.push(staff.length > 0
-        ? `TEAM MEMBERS (${staff.length} total):\n${staffLines.join("\n")}`
-        : "TEAM MEMBERS: None in database.");
+      contextSections.push(staff.length > 0 ? `TEAM MEMBERS (${staff.length} total):\n${staffLines.join("\n")}` : "TEAM MEMBERS: None in database.");
 
       // Tasks
       const tasks = tasksRes.data ?? [];
       const taskLines = tasks.map((t: Record<string, unknown>) =>
         `  - [${t.status}] ${t.title_en} | Priority: ${t.priority} | Category: ${t.category ?? "general"} | Due: ${t.due_date ?? "none"} | Property ID: ${t.property_id ?? "unassigned"}`
       );
-      contextSections.push(tasks.length > 0
-        ? `OPEN TASKS (${tasks.length}):\n${taskLines.join("\n")}`
-        : "OPEN TASKS: None.");
+      contextSections.push(tasks.length > 0 ? `OPEN TASKS (${tasks.length}):\n${taskLines.join("\n")}` : "OPEN TASKS: None.");
 
       // Assets
       const assets = assetsRes.data ?? [];
@@ -653,23 +625,47 @@ ${csv_content}`;
         contextSections.push(`RECENT SYSTEM EVENTS:\n${eventLines.join("\n")}`);
       }
 
+      // ── LONG-TERM MEMORIES ─────────────────────────────────────────────────
+      const memories = memoriesRes.data ?? [];
+      if (memories.length > 0) {
+        // Build a prop ID → name map for memory display
+        const propNameMap: Record<string, string> = {};
+        props.forEach((p: Record<string, unknown>) => { propNameMap[p.id as string] = p.name as string; });
+        const staffNameMap: Record<string, string> = {};
+        staff.forEach((s: Record<string, unknown>) => { staffNameMap[s.id as string] = s.full_name as string; });
+
+        const memoryLines = memories.map((m: Record<string, unknown>) => {
+          const propLabel = m.property_id ? ` [Property: ${propNameMap[m.property_id as string] ?? m.property_id}]` : "";
+          const subjectLabel = m.subject_user_id ? ` [About: ${staffNameMap[m.subject_user_id as string] ?? m.subject_user_id}]` : "";
+          const importance = "⭐".repeat(m.importance as number);
+          return `  - ${importance} [${m.category}]${propLabel}${subjectLabel}: ${m.content}`;
+        });
+        contextSections.push(
+          `RONIN'S LONG-TERM MEMORY (${memories.length} entries — use these to personalise every response):\n${memoryLines.join("\n")}`
+        );
+
+        // Update last_referenced_at for accessed memories (fire and forget)
+        const memoryIds = memories.map((m: Record<string, unknown>) => m.id as string);
+        adminClient.from("ronin_memories")
+          .update({ last_referenced_at: new Date().toISOString(), reference_count: undefined })
+          .in("id", memoryIds)
+          .then(() => {/* silent */});
+      } else {
+        contextSections.push("RONIN'S LONG-TERM MEMORY: No memories stored yet. As you learn facts about the Principal, staff, and properties, use the save_memory tool to build your knowledge base.");
+      }
+
       const contextNote = "\n\n=== LIVE PLATFORM DATA ===\n" + contextSections.join("\n\n") + "\n=== END LIVE DATA ===";
 
       const visionAddition = isVisionRequest ? `
 
 ## VISION MODE — INVENTORY CAPTURE ACTIVE
-An image has been submitted for estate inventory analysis. You are now in **Inventory Capture Mode**.
+An image has been submitted. You are in **Inventory Capture Mode**.
+1. Analyse the photo. Identify: name, make/brand, model, category (vehicle/appliance/art/tech/furniture/other), condition, visible serial numbers.
+2. Structure your analysis — what you can vs cannot determine from the image.
+3. Ask ONLY for critical missing info: which property, approximate value.
+4. Once user provides missing info, invoke \`log_asset\` with confirmation flow.
+5. If the image reveals any Principal preferences (artwork style, brand preferences, etc.) worth remembering, save a memory.` : "";
 
-YOUR TASK:
-1. **Analyse the photo carefully.** Identify: item name, make/brand (if visible on labels/tags), model, category (vehicle / appliance / art / tech / furniture / other), apparent condition, and any visible serial numbers or identifying marks.
-2. **Structure your analysis** clearly — what you can identify with confidence vs what you cannot determine from the image.
-3. **Ask ONLY for the critical missing information** you cannot see: primarily (a) which property/location this item is at, and (b) approximate purchase value if not obvious.
-4. Keep your response **concise, professional, and structured** — use bullet points for identified details.
-5. **Once the user provides the missing information**, immediately use the \`log_asset\` tool to create a pending confirmation entry. Do NOT just describe what you would do — actually invoke the tool.
-
-IMPORTANT: You are looking at a real photo of a real estate asset. Treat it with the precision of a formal inventory audit.` : "";
-
-      // Build current user message — multimodal if image provided
       type MessageContent = string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
       const currentUserMessage: { role: string; content: MessageContent } = isVisionRequest
         ? {
@@ -721,14 +717,13 @@ IMPORTANT: You are looking at a real photo of a real estate asset. Treat it with
         });
       }
 
-      // Consume stream, detect tool calls, accumulate text, then save AI message to DB
+      // Consume stream, detect tool calls, accumulate text, then save to DB
       const reader = aiResponse.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let fullText = "";
       let toolCallName = "";
       let toolCallArgsRaw = "";
-      let toolCallId = "";
       let isToolCall = false;
 
       const stream = new ReadableStream({
@@ -750,16 +745,12 @@ IMPORTANT: You are looking at a real photo of a real estate asset. Treat it with
                 const parsed = JSON.parse(json);
                 const delta = parsed.choices?.[0]?.delta;
                 if (!delta) continue;
-
-                // Detect tool call in stream
                 if (delta.tool_calls && delta.tool_calls.length > 0) {
                   isToolCall = true;
                   const tc = delta.tool_calls[0];
-                  if (tc.id) toolCallId = tc.id;
                   if (tc.function?.name) toolCallName = tc.function.name;
                   if (tc.function?.arguments) toolCallArgsRaw += tc.function.arguments;
                 }
-
                 const chunk = delta.content as string | undefined;
                 if (chunk) fullText += chunk;
               } catch { /* partial */ }
@@ -767,34 +758,57 @@ IMPORTANT: You are looking at a real photo of a real estate asset. Treat it with
           }
           controller.close();
 
-          // If it's a tool call — parse args and inject a pending confirmation message
           if (isToolCall && toolCallName) {
             let toolArgs: Record<string, unknown> = {};
             try { toolArgs = JSON.parse(toolCallArgsRaw); } catch { /* use empty */ }
 
-            // Build a human-readable confirmation request to show the user
-            const confirmText = buildConfirmationMessage(toolCallName, toolArgs);
+            // save_memory is silent — execute immediately without confirmation
+            if (toolCallName === "save_memory") {
+              try {
+                const [propsForMem, staffForMem] = await Promise.all([
+                  adminClient.from("properties").select("id, name"),
+                  adminClient.from("profiles").select("id, full_name"),
+                ]);
+                const memPropId = toolArgs.property_hint
+                  ? (propsForMem.data ?? []).find((p: { id: string; name: string }) =>
+                      p.name.toLowerCase().includes((toolArgs.property_hint as string).toLowerCase())
+                    )?.id ?? null
+                  : null;
+                const memSubjectId = toolArgs.subject_name
+                  ? (staffForMem.data ?? []).find((s: { id: string; full_name: string | null }) =>
+                      (s.full_name ?? "").toLowerCase().includes((toolArgs.subject_name as string).toLowerCase())
+                    )?.id ?? null
+                  : null;
+                await adminClient.from("ronin_memories").insert({
+                  content: toolArgs.content, summary: toolArgs.summary,
+                  category: toolArgs.category, importance: toolArgs.importance,
+                  tags: toolArgs.tags ?? [], property_id: memPropId,
+                  subject_user_id: memSubjectId, source: "conversation",
+                });
+              } catch (e) { console.error("Memory save failed:", e); }
 
-            await adminClient.from("messages").insert({
-              thread_id,
-              sender_id: null,
-              is_ai_generated: true,
-              content_text: confirmText,
-              delivery_status: "sent",
-              // Store pending tool call in reactions field temporarily as metadata
-              reactions: { __pending_tool: { name: toolCallName, args: toolArgs } } as unknown as never,
-            });
+              // If AI also produced text alongside the silent memory save, persist that
+              if (fullText) {
+                await adminClient.from("messages").insert({
+                  thread_id, content_text: fullText, sender_id: null, is_ai_generated: true, delivery_status: "sent",
+                });
+              }
+            } else {
+              // Other tools: show confirmation message
+              const confirmText = buildConfirmationMessage(toolCallName, toolArgs);
+              await adminClient.from("messages").insert({
+                thread_id, sender_id: null, is_ai_generated: true,
+                content_text: confirmText, delivery_status: "sent",
+                reactions: { __pending_tool: { name: toolCallName, args: toolArgs } } as unknown as never,
+              });
+            }
           } else if (fullText) {
-            // Regular text response — save to DB
             await adminClient.from("messages").insert({
-              thread_id, content_text: fullText, sender_id: null,
-              is_ai_generated: true, delivery_status: "sent",
+              thread_id, content_text: fullText, sender_id: null, is_ai_generated: true, delivery_status: "sent",
             });
           }
 
-          await adminClient.from("chat_threads")
-            .update({ last_message_at: new Date().toISOString() })
-            .eq("id", thread_id);
+          await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread_id);
         },
       });
 
@@ -820,20 +834,16 @@ function buildConfirmationMessage(toolName: string, args: Record<string, unknown
   switch (toolName) {
     case "create_task": {
       const priorityLabel = args.priority === 1 ? "🔴 Urgent" : args.priority === 2 ? "🟡 Normal" : "🟢 Low";
-      const lines = [
-        `📋 **I'm ready to create the following task:**`,
-        ``,
+      return [
+        `📋 **I'm ready to create the following task:**`, ``,
         `**Title:** ${args.title_en}`,
         args.description_en ? `**Description:** ${args.description_en}` : null,
-        `**Category:** ${args.category}`,
-        `**Priority:** ${priorityLabel}`,
+        `**Category:** ${args.category}`, `**Priority:** ${priorityLabel}`,
         args.assigned_to_name ? `**Assigned to:** ${args.assigned_to_name}` : null,
         args.property_name ? `**Property:** ${args.property_name}` : null,
         args.due_date ? `**Due:** ${args.due_date}` : null,
-        ``,
-        `**Shall I proceed?**`,
+        ``, `**Shall I proceed?**`,
       ].filter(l => l !== null).join("\n");
-      return lines;
     }
     case "update_task_status": {
       const statusEmoji = { pending: "⏳", in_progress: "🔄", completed: "✅", urgent: "🔴" }[args.new_status as string] ?? "📋";
@@ -841,9 +851,8 @@ function buildConfirmationMessage(toolName: string, args: Record<string, unknown
     }
     case "log_asset": {
       const makeModel = [args.make, args.model].filter(Boolean).join(" ");
-      const lines = [
-        `📦 **I'm ready to log the following asset:**`,
-        ``,
+      return [
+        `📦 **I'm ready to log the following asset:**`, ``,
         `**Name:** ${args.name}`,
         makeModel ? `**Make / Model:** ${makeModel}` : null,
         `**Category:** ${args.category}`,
@@ -851,14 +860,11 @@ function buildConfirmationMessage(toolName: string, args: Record<string, unknown
         args.property_name ? `**Property:** ${args.property_name}` : null,
         args.purchase_value ? `**Value:** $${args.purchase_value}` : null,
         args.description ? `**Notes:** ${args.description}` : null,
-        ``,
-        `**Shall I proceed?**`,
+        ``, `**Shall I proceed?**`,
       ].filter(l => l !== null).join("\n");
-      return lines;
     }
-    case "send_staff_message": {
+    case "send_staff_message":
       return `💬 **I'm ready to send the following message to ${args.recipient_name}:**\n\n> "${args.message_text}"\n\n**Shall I proceed?**`;
-    }
     default:
       return `I'm ready to execute **${toolName}**. **Shall I proceed?**`;
   }
