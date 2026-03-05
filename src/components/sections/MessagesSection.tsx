@@ -24,7 +24,7 @@ export function MessagesSection() {
   const currentUserId = user?.id ?? null;
   usePresence(currentUserId);
 
-  const { threads, loading, createDM, createGroup } = useThreads(currentUserId);
+  const { threads, loading, createDM, createGroup, deleteThread } = useThreads(currentUserId);
 
   const activeThread = threads.find(t => t.id === activeThreadId);
 
@@ -114,9 +114,11 @@ export function MessagesSection() {
         <ThreadList
           threads={threads}
           currentUserId={currentUserId}
+          isAdmin={isMasterAdmin}
           activeThreadId={activeThreadId}
           onSelectThread={handleSelectThread}
           onNewChat={() => setView("address-book")}
+          onDeleteThread={isMasterAdmin ? deleteThread : undefined}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
