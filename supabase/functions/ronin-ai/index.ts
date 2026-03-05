@@ -255,7 +255,7 @@ ${csv_content}`;
       const { messages: conversationHistory = [] } = body;
 
       // ── Always load full platform snapshot in parallel ─────────────────────
-      const [propsRes, tasksRes, staffRes, assetsRes, eventsRes] = await Promise.all([
+      const [propsRes, tasksRes, staffRes, rolesRes, assetsRes, eventsRes] = await Promise.all([
         adminClient
           .from("properties")
           .select("id, name, address, city, country, status, is_primary, occupied_by, timezone")
@@ -269,6 +269,9 @@ ${csv_content}`;
         adminClient
           .from("profiles")
           .select("id, full_name, job_title, department, level, assigned_property_ids, phone, notes"),
+        adminClient
+          .from("user_roles")
+          .select("user_id, role"),
         adminClient
           .from("assets")
           .select("id, name, category, make, model, serial_number, current_property_id")
@@ -291,13 +294,18 @@ ${csv_content}`;
         ? `PROPERTIES (${props.length} total):\n${propLines.join("\n")}`
         : "PROPERTIES: None in database.");
 
-      // Staff / profiles
+      // Staff / profiles — join with roles
       const staff = staffRes.data ?? [];
+      const rolesMap: Record<string, string> = {};
+      (rolesRes.data ?? []).forEach((r: { user_id: string; role: string }) => {
+        rolesMap[r.user_id] = r.role;
+      });
       const staffLines = staff.map((s: Record<string, unknown>) => {
         const propIds = Array.isArray(s.assigned_property_ids) && (s.assigned_property_ids as string[]).length
           ? `Assigned to: ${(s.assigned_property_ids as string[]).join(", ")}`
           : "No property assignments";
-        return `  - [ID:${s.id}] ${s.full_name ?? "Unknown"} | Title: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level} | ${propIds}`;
+        const sysRole = rolesMap[s.id as string] ?? "staff";
+        return `  - [ID:${s.id}] ${s.full_name ?? "Unknown"} | System Role: ${sysRole} | Title: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level ?? "N/A"} | ${propIds}`;
       });
       contextSections.push(staff.length > 0
         ? `TEAM MEMBERS (${staff.length} total):\n${staffLines.join("\n")}`
