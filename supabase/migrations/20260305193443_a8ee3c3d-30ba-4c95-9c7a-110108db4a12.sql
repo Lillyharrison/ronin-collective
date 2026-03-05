@@ -1,0 +1,1 @@
+ALTER TABLE public.checklist_templates ADD COLUMN IF NOT EXISTS only_when_occupied boolean NOT NULL DEFAULT false;

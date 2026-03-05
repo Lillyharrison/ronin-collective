@@ -32,6 +32,12 @@ interface NavigationContextType {
   checklistDetailPropId: string | null;
   openChecklistDetail: (templateId: string, propertyId: string | null) => void;
   closeChecklistDetail: () => void;
+  // Deep-link to a specific property
+  targetPropertyId: string | null;
+  setTargetPropertyId: (id: string | null) => void;
+  // Deep-link to checklists filtered for a specific property
+  checklistsForPropertyId: string | null;
+  setChecklistsForPropertyId: (id: string | null) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({
@@ -45,6 +51,10 @@ const NavigationContext = createContext<NavigationContextType>({
   checklistDetailPropId: null,
   openChecklistDetail: () => {},
   closeChecklistDetail: () => {},
+  targetPropertyId: null,
+  setTargetPropertyId: () => {},
+  checklistsForPropertyId: null,
+  setChecklistsForPropertyId: () => {},
 });
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
@@ -53,6 +63,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checklistDetailId, setChecklistDetailId] = useState<string | null>(null);
   const [checklistDetailPropId, setChecklistDetailPropId] = useState<string | null>(null);
+  const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
+  const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
 
   const handleSetActiveTab = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -105,6 +117,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         checklistDetailPropId,
         openChecklistDetail,
         closeChecklistDetail,
+        targetPropertyId,
+        setTargetPropertyId,
+        checklistsForPropertyId,
+        setChecklistsForPropertyId,
       }}
     >
       {children}

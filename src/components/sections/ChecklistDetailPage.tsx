@@ -49,7 +49,7 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
   const { comments, addComment } = useChecklistComments(template.id, propertyId);
 
   const [commentText, setCommentText] = useState("");
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(!!isAdmin);
   const [addingItem, setAddingItem] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
@@ -60,6 +60,7 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
   const [assignedRole, setAssignedRole] = useState(template.assigned_role ?? "");
   const [assignedDepartment, setAssignedDepartment] = useState(template.assigned_department ?? "");
   const [notifyOnDay, setNotifyOnDay] = useState(template.notify_on_day ?? false);
+  const [onlyWhenOccupied, setOnlyWhenOccupied] = useState(template.only_when_occupied ?? false);
   const [savingSettings, setSavingSettings] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -118,6 +119,7 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
       assigned_role: assignedRole || null,
       assigned_department: assignedDepartment || null,
       notify_on_day: notifyOnDay,
+      only_when_occupied: onlyWhenOccupied,
     }).eq("id", template.id);
     setSavingSettings(false);
     setShowAdminPanel(false);
@@ -182,8 +184,9 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
             {isAdmin && (
               <button
                 onClick={() => setShowAdminPanel(v => !v)}
-                className={cn("p-2 rounded-xl transition-colors", showAdminPanel ? "bg-gold/20 text-gold" : "text-cream/50 hover:text-cream hover:bg-charcoal-light")}
-                title="Admin settings"
+                className={cn("p-2 rounded-xl transition-colors text-xs font-medium",
+                  showAdminPanel ? "bg-gold/20 text-gold border border-gold/30" : "text-cream/50 hover:text-cream hover:bg-charcoal-light border border-transparent")}
+                title="Toggle settings"
               >
                 <Settings size={16} />
               </button>
@@ -314,6 +317,26 @@ export function ChecklistDetailPage({ template, propertyId, propertyName }: Prop
             >
               <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
                 notifyOnDay ? "translate-x-5" : "translate-x-0.5"
+              )} />
+            </button>
+          </div>
+
+          {/* Only when occupied toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                🏠 Only when occupied
+              </label>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5 ml-5">Disables this checklist when the property is vacant</p>
+            </div>
+            <button
+              onClick={() => setOnlyWhenOccupied(v => !v)}
+              className={cn("w-10 h-5 rounded-full transition-colors relative flex-shrink-0",
+                onlyWhenOccupied ? "bg-gold" : "bg-muted"
+              )}
+            >
+              <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
+                onlyWhenOccupied ? "translate-x-5" : "translate-x-0.5"
               )} />
             </button>
           </div>
