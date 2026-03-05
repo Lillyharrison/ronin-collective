@@ -8,7 +8,7 @@ const PROPERTY_ICON = <svg width="22" height="22" viewBox="0 0 24 24" fill="none
 
 const ALL_TABS: { id: ActiveTab; label: string; icon: React.ReactNode; section?: string; isChat?: boolean }[] = [
   { id: "home",        label: "Home",        icon: <Home size={22} /> },
-  { id: "property",   label: "Property",    icon: PROPERTY_ICON,              section: "property" },
+  { id: "property",   label: "Properties",  icon: PROPERTY_ICON,              section: "property" },
   { id: "messages",   label: "Messages",    icon: <MessageCircle size={24} />, isChat: true,        section: "messages" },
   { id: "maintenance",label: "Maintenance", icon: <Wrench size={22} />,        section: "maintenance" },
   { id: "profile",    label: "Profile",     icon: <User size={22} /> },

@@ -38,6 +38,9 @@ interface NavigationContextType {
   // Deep-link to checklists filtered for a specific property
   checklistsForPropertyId: string | null;
   setChecklistsForPropertyId: (id: string | null) => void;
+  // Back navigation
+  canGoBack: boolean;
+  goBack: () => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({
@@ -55,6 +58,8 @@ const NavigationContext = createContext<NavigationContextType>({
   setTargetPropertyId: () => {},
   checklistsForPropertyId: null,
   setChecklistsForPropertyId: () => {},
+  canGoBack: false,
+  goBack: () => {},
 });
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
@@ -65,6 +70,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [checklistDetailPropId, setChecklistDetailPropId] = useState<string | null>(null);
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
+  // History stack for back navigation: each entry is a section
+  const [history, setHistory] = useState<ActiveSection[]>([]);
 
   const handleSetActiveTab = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -75,11 +82,15 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       messages: "messages",
       profile: "profile",
     };
-    setActiveSection(sectionMap[tab]);
+    const newSection = sectionMap[tab];
+    setHistory(prev => [...prev, activeSection].slice(-20));
+    setActiveSection(newSection);
     setSidebarOpen(false);
   };
 
   const handleSetActiveSection = (section: ActiveSection) => {
+    // Push current section to history before switching (skip if same)
+    setHistory(prev => section !== activeSection ? [...prev, activeSection].slice(-20) : prev);
     setActiveSection(section);
     setSidebarOpen(false);
     // Close checklist detail when navigating away
@@ -94,15 +105,38 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (tabMap[section]) setActiveTab(tabMap[section]!);
   };
 
+  const goBack = () => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setHistory(h => h.slice(0, -1));
+    // If in checklist detail, close it first
+    if (checklistDetailId) {
+      setChecklistDetailId(null);
+      setChecklistDetailPropId(null);
+      return;
+    }
+    setActiveSection(prev);
+    const tabMap: Partial<Record<ActiveSection, ActiveTab>> = {
+      dashboard: "home",
+      property: "property",
+      maintenance: "maintenance",
+      messages: "messages",
+      profile: "profile",
+    };
+    if (tabMap[prev]) setActiveTab(tabMap[prev]!);
+  };
+
   const openChecklistDetail = (templateId: string, propertyId: string | null) => {
+    setHistory(prev => [...prev, activeSection].slice(-20));
     setChecklistDetailId(templateId);
     setChecklistDetailPropId(propertyId);
   };
 
   const closeChecklistDetail = () => {
-    setChecklistDetailId(null);
-    setChecklistDetailPropId(null);
+    goBack();
   };
+
+  const canGoBack = history.length > 0 || !!checklistDetailId;
 
   return (
     <NavigationContext.Provider
@@ -121,6 +155,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setTargetPropertyId,
         checklistsForPropertyId,
         setChecklistsForPropertyId,
+        canGoBack,
+        goBack,
       }}
     >
       {children}
@@ -129,3 +165,4 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 }
 
 export const useNavigation = () => useContext(NavigationContext);
+
