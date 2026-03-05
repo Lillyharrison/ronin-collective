@@ -36,23 +36,32 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const { isMasterAdmin } = usePermissions();
+
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     // Rolling 7-day history — show all (read + unread), clean up anything older
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    // Cleanup old notifications silently
+    // Cleanup old notifications silently (own notifications only)
     supabase.from("notifications").delete().eq("user_id", userId).lt("created_at", sevenDaysAgo);
-    const { data } = await supabase
+
+    let query = supabase
       .from("notifications")
       .select("id, title, body, type, is_read, created_at, action_url")
-      .eq("user_id", userId)
       .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
-      .limit(40);
+      .limit(isMasterAdmin ? 100 : 40);
+
+    // Non-admins only see their own
+    if (!isMasterAdmin) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data } = await query;
     setNotifications((data as Notification[]) ?? []);
     setLoading(false);
-  }, [userId]);
+  }, [userId, isMasterAdmin]);
 
   useEffect(() => {
     if (open) load();

@@ -38,6 +38,7 @@ interface DashNotification {
   type: string;
   created_at: string;
   action_url: string | null;
+  user_id?: string;
 }
 
 const statusConfig: Record<string, { label: string; labelEs: string; className: string }> = {
@@ -223,17 +224,23 @@ export function Dashboard() {
   }, []);
 
   // Load unread notifications for the dashboard widget
+  // Master admin sees ALL unread notifications across all users
   useEffect(() => {
-    if (!userId) return;
-    supabase
+    if (!userId || permLoading) return;
+    const query = supabase
       .from("notifications")
-      .select("id, title, body, type, created_at, action_url")
-      .eq("user_id", userId)
+      .select("id, title, body, type, created_at, action_url, user_id")
       .eq("is_read", false)
       .order("created_at", { ascending: false })
-      .limit(5)
-      .then(({ data }) => setDashNotifs((data as DashNotification[]) ?? []));
-  }, [userId]);
+      .limit(isMasterAdmin ? 20 : 5);
+
+    // Non-admins only see their own
+    if (!isMasterAdmin) {
+      query.eq("user_id", userId);
+    }
+
+    query.then(({ data }) => setDashNotifs((data as DashNotification[]) ?? []));
+  }, [userId, isMasterAdmin, permLoading]);
 
   const greeting = getGreeting(language);
   const dateStr = formatDate(language);
