@@ -98,7 +98,7 @@ export function AppShell() {
   useEffect(() => {
     if (!checklistDetailId) { setDetailTemplate(null); return; }
     supabase.from("checklist_templates").select("*").eq("id", checklistDetailId).single()
-      .then(({ data }) => setDetailTemplate(data as ChecklistTemplate ?? null));
+      .then(({ data }) => setDetailTemplate(data as unknown as ChecklistTemplate ?? null));
   }, [checklistDetailId]);
 
   useEffect(() => {

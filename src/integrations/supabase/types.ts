@@ -380,14 +380,18 @@ export type Database = {
           assigned_role: string | null
           category: string
           color: string
+          cover_image_url: string | null
           created_at: string
           created_by: string | null
           icon: string
           id: string
           is_published: boolean
           is_universal: boolean
+          manual_link_label: string | null
+          manual_link_url: string | null
           notify_on_day: boolean | null
           only_when_occupied: boolean
+          products: Json | null
           property_id: string | null
           recurrence: string | null
           recurrence_day: number | null
@@ -401,14 +405,18 @@ export type Database = {
           assigned_role?: string | null
           category?: string
           color?: string
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           icon?: string
           id?: string
           is_published?: boolean
           is_universal?: boolean
+          manual_link_label?: string | null
+          manual_link_url?: string | null
           notify_on_day?: boolean | null
           only_when_occupied?: boolean
+          products?: Json | null
           property_id?: string | null
           recurrence?: string | null
           recurrence_day?: number | null
@@ -422,14 +430,18 @@ export type Database = {
           assigned_role?: string | null
           category?: string
           color?: string
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           icon?: string
           id?: string
           is_published?: boolean
           is_universal?: boolean
+          manual_link_label?: string | null
+          manual_link_url?: string | null
           notify_on_day?: boolean | null
           only_when_occupied?: boolean
+          products?: Json | null
           property_id?: string | null
           recurrence?: string | null
           recurrence_day?: number | null
