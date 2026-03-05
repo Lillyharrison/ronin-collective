@@ -100,14 +100,14 @@ export function usePermissions(): UserPermissions {
     // master_admin always sees everything
     if (isMasterAdmin) return true;
 
-    // If the user has custom section_permissions JSONB, use that as source of truth
+    // If the user has custom section_permissions JSONB, use those if the section is explicitly listed
     if (sectionPermissions) {
       const perm = sectionPermissions[section];
       if (perm !== undefined) {
         return (perm as { view: boolean }).view === true;
       }
-      // Section not in their permissions map → deny
-      return false;
+      // Section not in their custom permissions map → fall through to role-based matrix
+      // (handles newly added sections like "checklists" for existing users)
     }
 
     // Fallback: use the role-based matrix

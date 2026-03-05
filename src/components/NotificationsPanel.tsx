@@ -39,10 +39,15 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
+    // Rolling 7-day history — show all (read + unread), clean up anything older
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    // Cleanup old notifications silently
+    supabase.from("notifications").delete().eq("user_id", userId).lt("created_at", sevenDaysAgo);
     const { data } = await supabase
       .from("notifications")
       .select("id, title, body, type, is_read, created_at, action_url")
       .eq("user_id", userId)
+      .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
       .limit(40);
     setNotifications((data as Notification[]) ?? []);
