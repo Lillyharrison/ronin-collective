@@ -80,7 +80,14 @@ export function usePermissions(): UserPermissions {
       }
       setLoading(false);
     }
+
+    // Load on mount and whenever auth state changes (e.g. different user logs in)
     load();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      setLoading(true);
+      load();
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const isMasterAdmin = role === "master_admin";

@@ -1,5 +1,6 @@
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
@@ -42,25 +43,40 @@ const sectionTitles: Record<string, string> = {
 };
 
 function ActiveSection() {
-  const { activeSection } = useNavigation();
+  const { activeSection, setActiveSection } = useNavigation();
+  const { canSee, loading: permLoading, isMasterAdmin } = usePermissions();
+
+  // While permissions load, render nothing to avoid flashing forbidden content
+  if (permLoading) return null;
+
+  // Permission gate: if the user lacks access, redirect them to dashboard silently
+  const gated = (section: string, element: React.ReactElement) => {
+    if (isMasterAdmin || canSee(section)) return element;
+    // Redirect to dashboard if they somehow navigate to a forbidden section
+    if (activeSection === section) {
+      setTimeout(() => setActiveSection("dashboard"), 0);
+    }
+    return null;
+  };
+
   switch (activeSection) {
     case "dashboard":   return <Dashboard />;
-    case "property":    return <PropertySection />;
-    case "maintenance": return <MaintenanceSection />;
-    case "messages":    return <MessagesSection />;
+    case "property":    return gated("property",    <PropertySection />);
+    case "maintenance": return gated("maintenance", <MaintenanceSection />);
+    case "messages":    return gated("messages",    <MessagesSection />);
     case "profile":     return <ProfileSection />;
-    case "manuals":     return <ManualsSection />;
-    case "tasks":       return <TasksSection />;
-    case "contacts":    return <ContactsSection />;
-    case "inventory":   return <InventorySection />;
-    case "laundry":     return <LaundrySection />;
-    case "orders":      return <OrdersSection />;
-    case "meet-team":   return <MeetTeamSection />;
-    case "travel":      return <TravelSection />;
-    case "calendar":    return <CalendarSection />;
-    case "achievements":  return <AchievementsSection />;
-    case "master-import": return <MasterImportSection />;
-    case "memory":        return <MemorySection />;
+    case "manuals":     return gated("manuals",     <ManualsSection />);
+    case "tasks":       return gated("tasks",       <TasksSection />);
+    case "contacts":    return gated("contacts",    <ContactsSection />);
+    case "inventory":   return gated("inventory",   <InventorySection />);
+    case "laundry":     return gated("laundry",     <LaundrySection />);
+    case "orders":      return gated("orders",      <OrdersSection />);
+    case "meet-team":   return gated("meet-team",   <MeetTeamSection />);
+    case "travel":      return gated("travel",      <TravelSection />);
+    case "calendar":    return gated("calendar",    <CalendarSection />);
+    case "achievements":  return gated("achievements",  <AchievementsSection />);
+    case "master-import": return gated("master-import", <MasterImportSection />);
+    case "memory":        return gated("memory",        <MemorySection />);
     default:              return <Dashboard />;
   }
 }

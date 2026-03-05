@@ -81,7 +81,7 @@ function eventDotColor(eventType: string): string {
 export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection } = useNavigation();
-  const { isMasterAdmin, isAdmin, userId, fullName, loading: permLoading } = usePermissions();
+  const { isMasterAdmin, isAdmin, userId, fullName, canSee, loading: permLoading } = usePermissions();
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(true);
@@ -208,7 +208,7 @@ export function Dashboard() {
           {language === "es" ? "Acciones Rápidas" : "Quick Actions"}
         </p>
         <div className="grid grid-cols-2 gap-3">
-          {quickActions.map((action) => (
+          {quickActions.filter(a => isMasterAdmin || canSee(a.section)).map((action) => (
             <button
               key={action.labelKey}
               onClick={() => setActiveSection(action.section)}
