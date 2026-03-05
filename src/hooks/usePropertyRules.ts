@@ -38,67 +38,42 @@ export function usePropertyRules(propertyId?: string | null) {
   return { rules, loading, reload: load, setRules };
 }
 
-// Hook for checking active rules for the dashboard alerts tile
-// isMasterAdmin: if true, returns ALL active rules regardless of event triggers
+// Hook for the dashboard Alerts tile and the dedicated AlertsSection.
+// Master admin: ALL active rules across every property.
+// Staff/non-admin: all active rules for their assigned properties + universal rules.
+// (No event-trigger filter — rules are visible as long as they're marked active.)
 export function useActiveRulesForDashboard(assignedPropertyIds: string[], isMasterAdmin = false) {
   const [activeRules, setActiveRules] = useState<Array<PropertyRule & { propertyName?: string }>>([]);
 
   useEffect(() => {
     async function load() {
-      // Get property names for all properties
-      const { data: props } = await supabase
-        .from("properties")
-        .select("id, name");
+      // Fetch all property names upfront
+      const { data: props } = await supabase.from("properties").select("id, name");
       const propMap: Record<string, string> = {};
       (props ?? []).forEach((p: { id: string; name: string }) => { propMap[p.id] = p.name; });
 
-      // Master admin sees ALL active rules
+      let rules: PropertyRule[] = [];
+
       if (isMasterAdmin) {
-        const { data: rules } = await supabase
+        // Master admin sees every active rule
+        const { data } = await supabase
           .from("property_rules")
           .select("*")
           .eq("is_active", true)
           .order("created_at");
-        setActiveRules((rules as PropertyRule[] ?? []).map(r => ({
-          ...r,
-          propertyName: r.property_id ? propMap[r.property_id] : undefined,
-        })));
-        return;
+        rules = (data as PropertyRule[]) ?? [];
+      } else if (assignedPropertyIds.length > 0) {
+        // Staff: active rules for their assigned properties + universal rules
+        const { data } = await supabase
+          .from("property_rules")
+          .select("*")
+          .eq("is_active", true)
+          .or(`is_universal.eq.true,property_id.in.(${assignedPropertyIds.join(",")})`)
+          .order("created_at");
+        rules = (data as PropertyRule[]) ?? [];
       }
 
-      // Non-admin: only event-triggered rules for assigned properties
-      if (!assignedPropertyIds.length) return;
-      const { data: events } = await supabase
-        .from("calendar_events")
-        .select("event_type, title, property_id")
-        .in("property_id", assignedPropertyIds)
-        .lte("start_date", new Date().toISOString())
-        .gte("end_date", new Date().toISOString());
-
-      if (!events?.length) return;
-
-      const eventTypes = events.map(e => e.event_type);
-      const eventTitles = events.map(e => (e.title ?? "").toLowerCase());
-
-      const { data: rules } = await supabase
-        .from("property_rules")
-        .select("*")
-        .eq("is_active", true)
-        .or(`is_universal.eq.true,property_id.in.(${assignedPropertyIds.join(",")})`);
-
-      if (!rules) return;
-
-      const triggered = (rules as PropertyRule[]).filter(rule => {
-        const eventTypeMatch = rule.enacted_event_types.length === 0 ||
-          rule.enacted_event_types.some(t => eventTypes.includes(t));
-        const keywordMatch = rule.enacted_keywords.length === 0 ||
-          rule.enacted_keywords.some(k =>
-            eventTitles.some(t => t.includes(k.toLowerCase()))
-          );
-        return eventTypeMatch && keywordMatch;
-      });
-
-      setActiveRules(triggered.map(r => ({
+      setActiveRules(rules.map(r => ({
         ...r,
         propertyName: r.property_id ? propMap[r.property_id] : undefined,
       })));

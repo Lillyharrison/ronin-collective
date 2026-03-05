@@ -19,7 +19,8 @@ export type ActiveSection =
   | "calendar"
   | "achievements"
   | "master-import"
-  | "memory";
+  | "memory"
+  | "alerts";
 
 interface NavigationContextType {
   activeTab: ActiveTab;
