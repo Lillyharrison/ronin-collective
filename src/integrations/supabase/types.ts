@@ -376,6 +376,7 @@ export type Database = {
       }
       checklist_templates: {
         Row: {
+          assigned_department: string | null
           assigned_role: string | null
           category: string
           color: string
@@ -394,6 +395,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_department?: string | null
           assigned_role?: string | null
           category?: string
           color?: string
@@ -412,6 +414,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_department?: string | null
           assigned_role?: string | null
           category?: string
           color?: string
