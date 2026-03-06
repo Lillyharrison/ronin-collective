@@ -42,6 +42,7 @@ export interface ChecklistItem {
   notes: string | null;
   sort_order: number;
   is_required: boolean;
+  container: string | null;
 }
 
 export interface ChecklistSession {
