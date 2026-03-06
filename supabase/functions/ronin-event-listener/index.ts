@@ -562,18 +562,6 @@ Write a SHORT, professional message (max 80 words) to assigned staff listing the
     );
   }
 });
-      event.event_type ?? "",
-      event.location ?? "",
-    );
-
-    // ── Load context: property + staff ───────────────────────────────────────
-    const [propRes, staffRes, masterRes] = await Promise.all([
-      event.property_id
-        ? adminClient.from("properties").select("id, name, city, country").eq("id", event.property_id).single()
-        : Promise.resolve({ data: null }),
-      adminClient.from("profiles").select("id, full_name, job_title, level"),
-      adminClient.from("user_roles").select("user_id, role").eq("role", "master_admin"),
-    ]);
 
     const propertyName = propRes.data?.name ?? "Estate";
     const allStaff = staffRes.data ?? [];
