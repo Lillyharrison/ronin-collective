@@ -25,7 +25,7 @@ export function usePropertyRules(propertyId?: string | null) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from("property_rules").select("*").eq("is_active", true).order("created_at");
+    let q = supabase.from("property_rules").select("*").eq("is_active", true).eq("status", "active").order("created_at");
     if (propertyId !== undefined && propertyId !== null) {
       q = q.or(`property_id.eq.${propertyId},is_universal.eq.true`);
     }
@@ -55,11 +55,12 @@ export function useActiveRulesForDashboard(assignedPropertyIds: string[], isMast
       let rules: PropertyRule[] = [];
 
       if (isMasterAdmin) {
-        // Master admin sees every active rule
+        // Master admin sees every active+approved rule
         const { data } = await supabase
           .from("property_rules")
           .select("*")
           .eq("is_active", true)
+          .eq("status", "active")
           .order("created_at");
         rules = (data as PropertyRule[]) ?? [];
       } else if (assignedPropertyIds.length > 0) {
@@ -68,6 +69,7 @@ export function useActiveRulesForDashboard(assignedPropertyIds: string[], isMast
           .from("property_rules")
           .select("*")
           .eq("is_active", true)
+          .eq("status", "active")
           .or(`is_universal.eq.true,property_id.in.(${assignedPropertyIds.join(",")})`)
           .order("created_at");
         rules = (data as PropertyRule[]) ?? [];

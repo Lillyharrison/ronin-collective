@@ -23,6 +23,8 @@ import { CalendarSection } from "@/components/sections/CalendarSection";
 import { MasterImportSection } from "@/components/sections/MasterImportSection";
 import MemorySection from "@/components/sections/MemorySection";
 import { AlertsSection } from "@/components/sections/AlertsSection";
+import { RulesSection } from "@/components/sections/RulesSection";
+import { PendingRulesWidget } from "@/components/PendingRulesWidget";
 import { ChecklistDetailPage } from "@/components/sections/ChecklistDetailPage";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +49,7 @@ const sectionTitles: Record<string, string> = {
   achievements: "Achievements",
   "master-import": "Master Import",
   alerts:       "Alerts",
+  rules:        "Property Rules",
 };
 
 function ActiveSection() {
@@ -83,6 +86,7 @@ function ActiveSection() {
     case "master-import":return gated("master-import",<MasterImportSection />);
     case "memory":       return gated("memory",       <MemorySection />);
     case "alerts":       return <AlertsSection />;
+    case "rules":        return gated("rules",        <RulesSection />);
     default:             return <Dashboard />;
   }
 }
@@ -127,6 +131,7 @@ export function AppShell() {
       </main>
 
       <BottomNav />
+      <PendingRulesWidget />
     </div>
   );
 }
