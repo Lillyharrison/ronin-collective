@@ -32,6 +32,8 @@ export function ProfileSection() {
   const { user } = useAuth();
   const { fullName, role, avatarUrl, canSee, loading: permLoading } = usePermissions();
   const { toast } = useToast();
+  const { supported: pushSupported, permission: pushPermission, subscribed: pushSubscribed, requestAndSubscribe } = usePushNotifications(user?.id ?? null);
+  const [enablingPush, setEnablingPush] = useState(false);
 
   const [editField, setEditField] = useState<EditField>(null);
   const [saving, setSaving] = useState(false);
