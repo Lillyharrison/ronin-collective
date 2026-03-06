@@ -35,7 +35,8 @@ const ALL_ITEMS: SidebarItem[] = [
   { section: "meet-team",    labelKey: "meetTeam",     icon: <UsersRound size={20} /> },
   { section: "travel",       labelKey: "travel",       icon: <Plane size={20} /> },
   { section: "calendar",     labelKey: "calendar",     icon: <Calendar size={20} /> },
-  { section: "master-import",labelKey: "masterImport", icon: <FileSpreadsheet size={20} />, dividerBefore: true },
+  { section: "rules",        labelKey: "rules",        icon: <Shield size={20} />, dividerBefore: true },
+  { section: "master-import",labelKey: "masterImport", icon: <FileSpreadsheet size={20} /> },
   { section: "memory",       labelKey: "memory",       icon: <Brain size={20} /> },
 ];
 
