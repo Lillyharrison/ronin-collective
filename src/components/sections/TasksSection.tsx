@@ -148,7 +148,7 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
 // ─── Main TasksSection ────────────────────────────────────────────────────────
 export function TasksSection() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isManager, isMasterAdmin, assignedPropertyIds, loading: permLoading } = usePermissions();
+  const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading } = usePermissions();
   const isL = language === "es";
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
@@ -176,10 +176,17 @@ export function TasksSection() {
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false });
 
-    if (!isAdmin && !isManager) {
+    if (isMasterAdmin || isAdmin) {
+      // Master admin & admin: see everything (drafts included)
+    } else if (isManager) {
+      // Managers: see tasks assigned to them, their department, or their properties
+      const filters: string[] = [`assigned_to.eq.${userId}`];
+      if (department) filters.push(`assigned_department.ilike.${department}`);
+      if (assignedPropertyIds.length > 0) filters.push(`property_id.in.(${assignedPropertyIds.join(",")})`);
+      query = query.or(filters.join(",")).eq("is_draft", false);
+    } else {
+      // Staff: only their own assigned tasks (no drafts)
       query = query.eq("assigned_to", userId).eq("is_draft", false);
-    } else if (!isAdmin && assignedPropertyIds.length > 0) {
-      query = query.in("property_id", assignedPropertyIds);
     }
 
     const { data } = await query;
@@ -191,7 +198,7 @@ export function TasksSection() {
 
   useEffect(() => {
     if (!permLoading) fetchTasks();
-  }, [permLoading, userId, isAdmin, isManager]);
+  }, [permLoading, userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds]);
 
   const liveTasks = tasks.filter(t => !t.is_draft);
   const draftTasks = tasks.filter(t => t.is_draft);
