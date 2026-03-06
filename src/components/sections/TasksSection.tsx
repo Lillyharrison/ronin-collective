@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Circle, Clock, CheckSquare, AlertTriangle, Filter, Bot,
+  Plus, Circle, Clock, CheckSquare, AlertTriangle, Bot,
 } from "lucide-react";
 import { TaskCard, KanbanTask, STATUS_CONFIG, TaskStatus } from "@/components/tasks/TaskCard";
 import { TaskModal, FullTask } from "@/components/tasks/TaskModal";
@@ -153,8 +153,6 @@ export function TasksSection() {
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterProp, setFilterProp] = useState<string>("all");
-  const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
   const [showDrafts, setShowDrafts] = useState(false);
   const [draftCount, setDraftCount] = useState(0);
 
@@ -192,23 +190,14 @@ export function TasksSection() {
   }
 
   useEffect(() => {
-    if (!permLoading) {
-      fetchTasks();
-      supabase.from("properties").select("id, name").order("sort_order").then(({ data }) => {
-        setProperties((data ?? []) as { id: string; name: string }[]);
-      });
-    }
+    if (!permLoading) fetchTasks();
   }, [permLoading, userId, isAdmin, isManager]);
 
   const liveTasks = tasks.filter(t => !t.is_draft);
   const draftTasks = tasks.filter(t => t.is_draft);
 
-  const filteredLive = filterProp === "all"
-    ? liveTasks
-    : liveTasks.filter(t => t.property_id === filterProp);
-
   const columns: TaskStatus[] = ["urgent", "pending", "in_progress", "completed"];
-  const byStatus = (s: TaskStatus) => filteredLive.filter(t => t.status === s);
+  const byStatus = (s: TaskStatus) => liveTasks.filter(t => t.status === s);
 
   const openNew = (status: TaskStatus) => {
     setNewStatus(status);
@@ -248,39 +237,17 @@ export function TasksSection() {
         </p>
       </div>
 
-      {/* Top bar: filter + new task */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <Filter size={13} className="text-muted-foreground flex-shrink-0" />
-        <div className="flex-1 overflow-x-auto scrollbar-hide">
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => setFilterProp("all")}
-              className={cn("flex-shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all",
-                filterProp === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40")}
-            >
-              {isL ? "Todas" : "All"}
-            </button>
-            {properties.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setFilterProp(p.id)}
-                className={cn("flex-shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all whitespace-nowrap",
-                  filterProp === p.id ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40")}
-              >
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
-        {(isAdmin || isManager || isMasterAdmin) && (
+      {/* Top bar: new task button */}
+      {(isAdmin || isManager || isMasterAdmin) && (
+        <div className="flex justify-end px-4 py-3 border-b border-border">
           <button
             onClick={() => openNew("pending")}
-            className="flex-shrink-0 flex items-center gap-1.5 bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+            className="flex items-center gap-1.5 bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
           >
             <Plus size={13} /> {isL ? "Nueva" : "New"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Draft tasks banner */}
       {draftCount > 0 && (isAdmin || isMasterAdmin) && (
