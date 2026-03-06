@@ -64,8 +64,8 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Edit permission logic ────────────────────────────────────────────────────
-  // Master admin / admin: always edit
-  // Manager: edit if task belongs to their department (or no dept set)
+  // Master admin / admin: always can edit
+  // Manager: can edit if task belongs to their department (or no dept set)
   // Staff / assignee: read-only view
   const canEdit = (() => {
     if (!task?.id) return true; // new task — always edit mode
@@ -76,6 +76,9 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     }
     return false;
   })();
+
+  // editMode: new tasks start in edit mode; existing tasks start in view mode
+  const [editMode, setEditMode] = useState(!task?.id);
 
   // ── Edit state ───────────────────────────────────────────────────────────────
   const [title, setTitle]               = useState(task?.title_en ?? "");
@@ -187,9 +190,10 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const isOverdue = task?.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // READ-ONLY VIEW (staff assignee)
+  // READ-ONLY VIEW (all existing tasks — staff see only this; admins/managers
+  // get an "Edit" button to switch into the full edit form)
   // ─────────────────────────────────────────────────────────────────────────────
-  if (isEditing && !canEdit) {
+  if (isEditing && !editMode) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -308,10 +312,18 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           <div className="border-t border-border px-5 py-4 flex gap-2 flex-shrink-0">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+              className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
             >
               {isL ? "Cerrar" : "Close"}
             </button>
+            {canEdit && (
+              <button
+                onClick={() => setEditMode(true)}
+                className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-colors flex items-center gap-1.5"
+              >
+                ✏️ {isL ? "Editar" : "Edit"}
+              </button>
+            )}
             {task.status !== "completed" && !completed && (
               <button
                 onClick={handleComplete}
@@ -332,14 +344,23 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   // EDIT VIEW (admin / manager / new task)
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full sm:max-w-lg bg-card rounded-t-3xl sm:rounded-2xl border border-border shadow-2xl z-10 flex flex-col max-h-[90dvh]">
+      <div className="relative w-full sm:max-w-lg bg-card rounded-2xl border border-border shadow-2xl z-10 flex flex-col" style={{maxHeight: "min(90dvh, 700px)"}}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
+            {isEditing && (
+              <button
+                onClick={() => setEditMode(false)}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground text-xs flex items-center gap-1"
+                title="Back to view"
+              >
+                ← {isL ? "Ver" : "View"}
+              </button>
+            )}
             {task?.ai_suggested && (
               <span className="text-[10px] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-2 py-0.5 rounded-full">
                 ✦ RONIN
