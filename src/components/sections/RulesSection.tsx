@@ -410,6 +410,7 @@ export function RulesSection() {
         : [],
       property_id: form.is_universal ? null : (form.property_id || null),
       is_universal: form.is_universal,
+      only_when_occupied: !form.is_universal && !!form.property_id ? form.only_when_occupied : false,
       is_active: true,
       status: "active",
       submitted_source: "manual",
