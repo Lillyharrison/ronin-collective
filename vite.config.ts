@@ -12,6 +12,12 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
+  define: {
+    // VAPID public key is intentionally public — required by browser push API
+    "import.meta.env.VITE_VAPID_PUBLIC_KEY": JSON.stringify(
+      "BI9YhdpluMTR1nlU-sQUE8CK1ibnhd1QMI6nSWwofcU2SxqxVEMXu2Fctf5g1HrdkhvI7D_S940BA3qHUYcmD-w"
+    ),
+  },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
