@@ -27,7 +27,7 @@ function PartialChecklistsWidget() {
       const { data: roleRow } = await supabase.from("user_roles").select("role").eq("user_id", userId!).single();
       const userRole = roleRow?.role ?? profile.level ?? "staff";
       const propIds: string[] = profile.assigned_property_ids ?? assignedPropertyIds;
-      let q = supabase.from("checklist_templates").select("id, title, icon, property_id, recurrence, assigned_role, assigned_department").in("category", ["cleaning", "audit", "checklist", "activity"]);
+      let q = supabase.from("checklist_templates").select("id, title, icon, property_id, recurrence, assigned_role, assigned_department").in("category", ["cleaning", "audit", "checklist", "activity"]).eq("is_published", true);
       if (propIds.length > 0) {
         q = q.or(`property_id.in.(${propIds.join(",")}),is_universal.eq.true`);
       } else {
