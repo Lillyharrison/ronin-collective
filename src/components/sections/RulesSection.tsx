@@ -298,6 +298,11 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
             {!rule.is_active && (
               <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">Inactive</span>
             )}
+            {(rule as any).only_when_occupied && (
+              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                🏠 Occupancy-linked
+              </span>
+            )}
           </div>
           {rule.description && (
             <p className="text-xs text-foreground/70 mt-1 leading-relaxed">{rule.description}</p>
