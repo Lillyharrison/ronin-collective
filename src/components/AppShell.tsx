@@ -93,7 +93,10 @@ function ActiveSection() {
 
 export function AppShell() {
   const { activeSection, checklistDetailId, checklistDetailPropId } = useNavigation();
+  const { user } = useAuth();
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
+  // Auto-register push subscription when user is logged in
+  usePushNotifications(user?.id ?? null);
 
   // Load template for checklist detail
   const [detailTemplate, setDetailTemplate] = useState<ChecklistTemplate | null>(null);
