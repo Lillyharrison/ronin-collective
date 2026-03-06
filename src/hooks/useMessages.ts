@@ -85,27 +85,71 @@ export function useMessages(threadId: string | null) {
 
   const sendMessage = async (content: string, senderId: string) => {
     if (!threadId) return;
-    await supabase.from("messages").insert({
+    const { data: msg } = await supabase.from("messages").insert({
       thread_id: threadId,
       content_text: content,
       sender_id: senderId,
       delivery_status: "sent",
-    });
+    }).select("id").single();
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
+    // Trigger push notifications for other thread participants
+    if (msg) triggerPushForThread(threadId, senderId, content);
   };
 
   const sendMediaMessage = async (mediaUrl: string, mediaType: string, senderId: string, caption?: string) => {
     if (!threadId) return;
-    await supabase.from("messages").insert({
+    const { data: msg } = await supabase.from("messages").insert({
       thread_id: threadId,
       content_media_url: mediaUrl,
       media_type: mediaType,
       content_text: caption || null,
       sender_id: senderId,
       delivery_status: "sent",
-    });
+    }).select("id").single();
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
+    if (msg) triggerPushForThread(threadId, senderId, caption ?? "📎 Media");
   };
+
+  /** Fire-and-forget: fetch thread participants and call the push edge function */
+  async function triggerPushForThread(tId: string, senderId: string, text: string) {
+    try {
+      const { data: thread } = await supabase
+        .from("chat_threads")
+        .select("participant_ids, title")
+        .eq("id", tId)
+        .single();
+      if (!thread?.participant_ids) return;
+
+      const recipientIds = (thread.participant_ids as string[]).filter(id => id !== senderId);
+      if (!recipientIds.length) return;
+
+      const { data: senderProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", senderId)
+        .single();
+
+      const senderName = senderProfile?.full_name ?? "Someone";
+      const chatTitle = thread.title ?? "New message";
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          recipientUserIds: recipientIds,
+          title: `💬 ${senderName}`,
+          body: text.length > 80 ? text.slice(0, 80) + "…" : text,
+          url: "/?section=messages",
+        }),
+      }).catch(() => {/* non-critical */});
+    } catch {/* non-critical */}
+  }
 
   const markAsRead = async (userId: string) => {
     if (!threadId) return;
