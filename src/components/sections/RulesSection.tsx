@@ -66,12 +66,14 @@ interface FormState {
   enacted_keywords: string;
   is_universal: boolean;
   property_id: string;
+  only_when_occupied: boolean;
 }
 
 const BLANK_FORM: FormState = {
   title: "", description: "", icon: "⚠️", color: "amber",
   applies_to_roles: [], enacted_event_types: [],
   enacted_keywords: "", is_universal: false, property_id: "",
+  only_when_occupied: false,
 };
 
 interface RuleFormProps {
