@@ -177,18 +177,17 @@ export function Dashboard() {
     });
   }, [isAdmin, assignedPropertyIds, permLoading]);
 
-  // Load pending task count
+  // Load pending task count — always scoped to current user only
   useEffect(() => {
     if (!userId || permLoading) return;
-    let q = supabase
+    supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
       .in("status", ["pending", "in_progress", "urgent"])
-      .eq("is_draft", false);
-    // Admins/master admins see all; staff see only their own
-    if (!isAdmin) q = q.eq("assigned_to", userId);
-    q.then(({ count }) => setPendingCount(count ?? 0));
-  }, [userId, isAdmin, permLoading]);
+      .eq("is_draft", false)
+      .eq("assigned_to", userId)
+      .then(({ count }) => setPendingCount(count ?? 0));
+  }, [userId, permLoading]);
 
   // Load global feed (admin only)
   useEffect(() => {

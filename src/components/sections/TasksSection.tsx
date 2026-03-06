@@ -170,7 +170,6 @@ export function TasksSection() {
         assigned_to, property_id, assigned_department, assigned_role,
         linked_checklist_id, is_draft, ai_suggested, attachments, created_at,
         property:properties(name),
-        assignee:profiles!tasks_assigned_to_fkey(full_name),
         linked_checklist:checklist_templates(title, icon)
       `)
       .order("priority", { ascending: true })
@@ -189,10 +188,25 @@ export function TasksSection() {
       query = query.eq("assigned_to", userId).eq("is_draft", false);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) console.error("fetchTasks error", error);
     const all = (data as unknown as KanbanTask[]) ?? [];
-    setTasks(all);
-    setDraftCount(all.filter(t => t.is_draft).length);
+
+    // Enrich with assignee names (no FK exists, so we do a separate lookup)
+    const assigneeIds = [...new Set(all.map(t => t.assigned_to).filter(Boolean))] as string[];
+    let nameMap: Record<string, string> = {};
+    if (assigneeIds.length) {
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", assigneeIds);
+      (profiles ?? []).forEach((p: { id: string; full_name: string | null }) => {
+        if (p.full_name) nameMap[p.id] = p.full_name;
+      });
+    }
+    const enriched = all.map(t => ({
+      ...t,
+      assignee: t.assigned_to ? { full_name: nameMap[t.assigned_to] ?? null } : null,
+    }));
+    setTasks(enriched);
+    setDraftCount(enriched.filter(t => t.is_draft).length);
     setLoading(false);
   }
 
