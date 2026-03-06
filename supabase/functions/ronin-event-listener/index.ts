@@ -238,7 +238,7 @@ serve(async (req) => {
       await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", tid);
     }
 
-    // Helper: generate a quick AI message (Gemini Flash)
+    // Helper: generate a quick AI message
     async function quickAI(prompt: string, maxTokens = 300): Promise<string> {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -264,16 +264,17 @@ serve(async (req) => {
       const { property_name, old_occupant, new_occupant, old_status, new_status } = payload;
       const cleared = !new_occupant && old_occupant;
       const arrived  = new_occupant && !old_occupant;
+      const propLabel = property_name || propertyName;
 
       const aiPrompt = `You are Ronin AI, an elite estate manager.
-The occupancy status of **${property_name || propertyName}** has changed.
+The occupancy status of **${propLabel}** has changed.
 ${cleared ? `The occupant **${old_occupant}** has departed. The property is now ${new_status || "vacant"}.` : ""}
 ${arrived ? `**${new_occupant}** has just been registered as the occupant. Status is now ${new_status}.` : ""}
 ${!cleared && !arrived ? `Status changed from ${old_status} to ${new_status}. Occupant: ${new_occupant || "none"}.` : ""}
 
 Write a concise estate briefing (max 120 words) for the Master Admin noting:
 1. What changed and what it means operationally
-2. ${cleared ? "Key tasks to action now (securing, adjusting climate, notifying relevant staff, any occupancy-linked rules that were auto-deactivated)" : "Key tasks to prepare for the arrival and any rules that should be reviewed"}
+2. ${cleared ? "Key tasks to action now (securing property, adjusting climate, notifying relevant staff, any occupancy-linked rules that were auto-deactivated)" : "Key tasks to prepare for the arrival and any rules that should be reviewed"}
 3. Any follow-up Ronin recommends
 
 Be direct and professional. Use bullet points for tasks.`;
@@ -282,13 +283,15 @@ Be direct and professional. Use bullet points for tasks.`;
       if (aiText) {
         const icon = cleared ? "🏠" : "👤";
         const heading = cleared
-          ? `${icon} **Occupancy Alert — ${property_name || propertyName} is now vacant**`
-          : `${icon} **Occupancy Update — ${new_occupant} registered at ${property_name || propertyName}**`;
+          ? `${icon} **Occupancy Alert — ${propLabel} is now vacant**`
+          : `${icon} **Occupancy Update — ${new_occupant} registered at ${propLabel}**`;
         await alertMasterAdmin(`${heading}\n\n${aiText}`);
       }
 
-      await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: aiText?.slice(0, 300) ?? "" })
-        .eq("id", event.event_id);
+      if (event.event_id) {
+        await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: aiText?.slice(0, 300) ?? "" })
+          .eq("id", event.event_id);
+      }
 
       return new Response(JSON.stringify({ success: true, type: "occupancy_changed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -325,8 +328,10 @@ Be direct, no filler. Use estate management language.`;
         await alertMasterAdmin(`🚨 **URGENT Task Alert — ${task_title}**\n\n${aiText}`);
       }
 
-      await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: aiText?.slice(0, 300) ?? "" })
-        .eq("id", event.event_id);
+      if (event.event_id) {
+        await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: aiText?.slice(0, 300) ?? "" })
+          .eq("id", event.event_id);
+      }
 
       return new Response(JSON.stringify({ success: true, type: "urgent_task" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -337,7 +342,6 @@ Be direct, no filler. Use estate management language.`;
     if (eventType === "rule_submitted") {
       const { rule_title, description: ruleDesc, submitted_source, is_universal } = payload;
 
-      // Find the submitter's name
       let submitterName = "Unknown";
       if (event.created_by) {
         const match = allStaff.find((s: { id: string }) => s.id === event.created_by);
@@ -371,8 +375,10 @@ Be concise and professional.`;
         await alertMasterAdmin(`📋 **Pending Rule Submitted — "${rule_title}"**\n\n*Submitted by ${submitterName} via ${sourceLabel[submitted_source] ?? submitted_source}*\n\n${aiText}\n\n---\n👆 Review in **Rules → Pending Approvals**`);
       }
 
-      await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: aiText?.slice(0, 300) ?? "" })
-        .eq("id", event.event_id);
+      if (event.event_id) {
+        await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: aiText?.slice(0, 300) ?? "" })
+          .eq("id", event.event_id);
+      }
 
       return new Response(JSON.stringify({ success: true, type: "rule_submitted" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -383,7 +389,6 @@ Be concise and professional.`;
     if (eventType === "overdue_tasks_digest") {
       const { overdue_count } = payload;
 
-      // Fetch the actual overdue tasks for context
       const { data: overdueTasks } = await adminClient
         .from("tasks")
         .select("title_en, category, due_date, assigned_to, property_id")
@@ -423,7 +428,9 @@ Be direct and professional.`;
         await alertMasterAdmin(`⏰ **Overdue Tasks Digest — ${overdue_count} task${overdue_count !== 1 ? "s" : ""} overdue**\n\n${aiText}`);
       }
 
-      await adminClient.from("system_events").update({ processed_by_ai: true }).eq("id", event.event_id);
+      if (event.event_id) {
+        await adminClient.from("system_events").update({ processed_by_ai: true }).eq("id", event.event_id);
+      }
 
       return new Response(JSON.stringify({ success: true, type: "overdue_tasks_digest" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -434,7 +441,6 @@ Be direct and professional.`;
     if (["calendar_entry", "travel_event", "guest_arrival", "guest_departure"].includes(eventType) ||
         event.title || event.start_date) {
 
-      // Classify the event
       const classification = classifyEvent(
         event.title ?? payload?.title ?? "",
         event.description ?? payload?.description ?? "",
@@ -513,8 +519,23 @@ Be direct and professional.`;
 A calendar event has been added: "${event.title}" on ${event.start_date ? new Date(event.start_date as string).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "TBD"} at ${propertyName}.
 Write a SHORT, professional message (max 80 words) to assigned staff listing their 2-3 key preparation tasks. Do NOT include private family details. Use bullet points.`;
 
-        const staffText = await quickAI(staffBriefingPrompt, 200);
-        if (staffText) {
+        const staffAiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [{ role: "user", content: staffBriefingPrompt }],
+            temperature: 0.3, max_tokens: 200,
+          }),
+        });
+
+        let staffBriefingText = "";
+        if (staffAiRes.ok) {
+          const staffAiData = await staffAiRes.json();
+          staffBriefingText = staffAiData.choices?.[0]?.message?.content ?? "";
+        }
+
+        if (staffBriefingText) {
           for (const staffId of assignedIds) {
             const { data: dmThreads } = await adminClient.from("chat_threads").select("id, participant_ids").eq("type", "private");
             let dmThreadId: string | null = dmThreads?.find((t: { participant_ids: string[] | null }) =>
@@ -528,7 +549,7 @@ Write a SHORT, professional message (max 80 words) to assigned staff listing the
             if (dmThreadId) {
               await adminClient.from("messages").insert({
                 thread_id: dmThreadId, sender_id: null, is_ai_generated: true,
-                content_text: `📋 **Estate Briefing — ${event.title}**\n\n${staffText}`, delivery_status: "sent",
+                content_text: `📋 **Estate Briefing — ${event.title}**\n\n${staffBriefingText}`, delivery_status: "sent",
               });
               await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", dmThreadId);
             }
@@ -554,206 +575,6 @@ Write a SHORT, professional message (max 80 words) to assigned staff listing the
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (err) {
-    console.error("ronin-event-listener error:", err);
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-});
-    const assignedIds: string[] = event.assigned_staff_ids ?? [];
-    const assignedStaff = allStaff.filter((s: { id: string }) => assignedIds.includes(s.id));
-    const assignedNames = assignedStaff.map((s: { full_name: string | null }) => s.full_name ?? "Unknown");
-
-    // Build briefing prompt
-    const briefingPrompt = buildBriefingPrompt(classification, event, propertyName, assignedNames);
-
-    // ── Generate AI briefing ─────────────────────────────────────────────────
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [{ role: "user", content: briefingPrompt }],
-        temperature: 0.4,
-        max_tokens: 1200,
-      }),
-    });
-
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      console.error("ronin-event-listener: AI error", aiRes.status, errText);
-      return new Response(JSON.stringify({ error: "AI briefing failed" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiData = await aiRes.json();
-    const briefingText = aiData.choices?.[0]?.message?.content ?? "Briefing unavailable.";
-
-    // ── Post to Master Admin's Agent Ronin thread ────────────────────────────
-    let masterThreadId: string | null = null;
-    if (masterAdminId) {
-      // Find the system_ai thread for master admin
-      const { data: threads } = await adminClient
-        .from("chat_threads")
-        .select("id, participant_ids, type, title")
-        .eq("type", "system_ai");
-
-      if (threads) {
-        const masterThread = threads.find((t: { participant_ids: string[] | null }) =>
-          t.participant_ids?.includes(masterAdminId)
-        );
-        masterThreadId = masterThread?.id ?? null;
-      }
-
-      if (masterThreadId) {
-        const draftTaskLink = `\n\n---\n💡 **I've created a draft task for your review.** Tap the **Ronin draft tasks** widget on your Dashboard to assign and publish it.`;
-        const intro = `📅 **Proactive Briefing — New Calendar Event Detected**\n\nI've reviewed the new entry on your estate calendar and prepared the following briefing:\n\n`;
-        await adminClient.from("messages").insert({
-          thread_id: masterThreadId,
-          sender_id: null,
-          is_ai_generated: true,
-          content_text: intro + briefingText + draftTaskLink,
-          delivery_status: "sent",
-        });
-        await adminClient.from("chat_threads")
-          .update({ last_message_at: new Date().toISOString() })
-          .eq("id", masterThreadId);
-      }
-    }
-
-    // ── Create a draft task for Master Admin to review & publish ────────────
-    if (masterAdminId && classification !== "general") {
-      const taskTitleMap: Record<string, string> = {
-        travel:     `Prepare for trip: ${event.title}`,
-        guest_stay: `Guest arrival prep: ${event.title}`,
-        maintenance:`Coordinate maintenance: ${event.title}`,
-        family:     `Family event prep: ${event.title}`,
-      };
-      const taskTitle = taskTitleMap[classification] ?? `Prepare for: ${event.title}`;
-
-      // Find matching checklist template for this event type
-      const { data: matchedChecklist } = await adminClient
-        .from("checklist_templates")
-        .select("id")
-        .ilike("title", `%${classification === "travel" ? "pack" : classification === "guest_stay" ? "guest" : classification}%`)
-        .eq("is_published", true)
-        .limit(1)
-        .single();
-
-      const dueDate = event.start_date
-        ? new Date(new Date(event.start_date as string).getTime() - 24 * 60 * 60 * 1000).toISOString()
-        : null;
-
-      await adminClient.from("tasks").insert({
-        title_en: taskTitle,
-        description_en: `Auto-generated by Ronin from calendar event: "${event.title}". Review, assign staff, and publish when ready.`,
-        status: "pending",
-        priority: classification === "travel" || classification === "guest_stay" ? 1 : 2,
-        due_date: dueDate,
-        property_id: event.property_id ?? null,
-        created_by: masterAdminId,
-        is_draft: true,
-        ai_suggested: true,
-        linked_checklist_id: matchedChecklist?.id ?? null,
-        attachments: [],
-        linked_inventory_ids: [],
-      });
-    }
-
-    // ── Post shorter action-item briefing to each assigned staff member ──────
-    if (assignedIds.length > 0 && masterAdminId) {
-      // Build a concise staff-facing version (no private details)
-      const staffBriefingPrompt = `You are Ronin AI, an estate management assistant.
-A calendar event has been added: "${event.title}" on ${event.start_date ? new Date(event.start_date as string).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "TBD"} at ${propertyName}.
-
-Write a SHORT, professional message (max 80 words) to assigned staff notifying them of this event and listing their 2-3 key preparation tasks. Do NOT include any private family details. Start directly with the task — no preamble. Use bullet points for tasks.`;
-
-      const staffAiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [{ role: "user", content: staffBriefingPrompt }],
-          temperature: 0.3,
-          max_tokens: 200,
-        }),
-      });
-
-      let staffBriefingText = "";
-      if (staffAiRes.ok) {
-        const staffAiData = await staffAiRes.json();
-        staffBriefingText = staffAiData.choices?.[0]?.message?.content ?? "";
-      }
-
-      if (staffBriefingText) {
-        for (const staffId of assignedIds) {
-          // Find existing DM thread between master admin and this staff member
-          const { data: dmThreads } = await adminClient
-            .from("chat_threads")
-            .select("id, participant_ids")
-            .eq("type", "private");
-
-          let dmThreadId: string | null = null;
-          if (dmThreads) {
-            const existing = dmThreads.find((t: { participant_ids: string[] | null }) =>
-              t.participant_ids?.includes(masterAdminId) && t.participant_ids?.includes(staffId)
-            );
-            dmThreadId = existing?.id ?? null;
-          }
-
-          // Create DM thread if it doesn't exist
-          if (!dmThreadId) {
-            const { data: newThread } = await adminClient.from("chat_threads").insert({
-              type: "private",
-              participant_ids: [masterAdminId, staffId],
-              created_by: masterAdminId,
-            }).select("id").single();
-            dmThreadId = newThread?.id ?? null;
-          }
-
-          if (dmThreadId) {
-            await adminClient.from("messages").insert({
-              thread_id: dmThreadId,
-              sender_id: null,
-              is_ai_generated: true,
-              content_text: `📋 **Estate Briefing — ${event.title}**\n\n${staffBriefingText}`,
-              delivery_status: "sent",
-            });
-            await adminClient.from("chat_threads")
-              .update({ last_message_at: new Date().toISOString() })
-              .eq("id", dmThreadId);
-          }
-        }
-      }
-    }
-
-    // ── Log to system_events ─────────────────────────────────────────────────
-    await adminClient.from("system_events").insert({
-      event_type: "ronin_proactive_briefing",
-      entity_type: "calendar_event",
-      entity_id: event.event_id ?? null,
-      property_id: event.property_id ?? null,
-      processed_by_ai: true,
-      ai_response: briefingText.slice(0, 500),
-      payload: {
-        classification,
-        calendar_title: event.title,
-        thread_id: masterThreadId,
-        staff_notified: assignedIds.length,
-      },
-    });
-
-    console.log("ronin-event-listener: briefing posted, classification:", classification, "staff notified:", assignedIds.length);
-
-    return new Response(JSON.stringify({ success: true, classification, staff_notified: assignedIds.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (err) {
     console.error("ronin-event-listener error:", err);
     return new Response(
