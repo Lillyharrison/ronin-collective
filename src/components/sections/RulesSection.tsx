@@ -66,12 +66,14 @@ interface FormState {
   enacted_keywords: string;
   is_universal: boolean;
   property_id: string;
+  only_when_occupied: boolean;
 }
 
 const BLANK_FORM: FormState = {
   title: "", description: "", icon: "⚠️", color: "amber",
   applies_to_roles: [], enacted_event_types: [],
   enacted_keywords: "", is_universal: false, property_id: "",
+  only_when_occupied: false,
 };
 
 interface RuleFormProps {
@@ -174,6 +176,21 @@ function RuleForm({ form, setForm, properties, editingId, onSave, onCancel }: Ru
           </select>
         )}
       </div>
+
+      {/* Only when occupied */}
+      {!form.is_universal && !!form.property_id && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <div
+            onClick={() => setForm(f => ({ ...f, only_when_occupied: !f.only_when_occupied }))}
+            className={cn("w-9 h-5 rounded-full border-2 transition-all relative flex-shrink-0", form.only_when_occupied ? "bg-[hsl(var(--status-pending))] border-[hsl(var(--status-pending))]" : "border-border")}
+          >
+            <div className={cn("w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all", form.only_when_occupied ? "left-4" : "left-0.5")} />
+          </div>
+          <span className="text-xs text-muted-foreground">
+            Auto-deactivate when property is unoccupied
+          </span>
+        </label>
+      )}
 
       {/* Triggered by event type */}
       <div>
@@ -281,6 +298,11 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
             {!rule.is_active && (
               <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">Inactive</span>
             )}
+            {(rule as any).only_when_occupied && (
+              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                🏠 Occupancy-linked
+              </span>
+            )}
           </div>
           {rule.description && (
             <p className="text-xs text-foreground/70 mt-1 leading-relaxed">{rule.description}</p>
@@ -387,6 +409,7 @@ export function RulesSection() {
       enacted_keywords: rule.enacted_keywords.join(", "),
       is_universal: rule.is_universal,
       property_id: rule.property_id ?? "",
+      only_when_occupied: (rule as any).only_when_occupied ?? false,
     });
     setEditingId(rule.id);
     setShowForm(true);
@@ -407,6 +430,7 @@ export function RulesSection() {
         : [],
       property_id: form.is_universal ? null : (form.property_id || null),
       is_universal: form.is_universal,
+      only_when_occupied: !form.is_universal && !!form.property_id ? form.only_when_occupied : false,
       is_active: true,
       status: "active",
       submitted_source: "manual",

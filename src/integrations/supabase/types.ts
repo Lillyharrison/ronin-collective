@@ -800,6 +800,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_universal: boolean
+          only_when_occupied: boolean
           property_id: string | null
           rejection_reason: string | null
           status: string
@@ -821,6 +822,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_universal?: boolean
+          only_when_occupied?: boolean
           property_id?: string | null
           rejection_reason?: string | null
           status?: string
@@ -842,6 +844,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_universal?: boolean
+          only_when_occupied?: boolean
           property_id?: string | null
           rejection_reason?: string | null
           status?: string
