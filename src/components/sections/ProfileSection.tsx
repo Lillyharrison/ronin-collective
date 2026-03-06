@@ -3,11 +3,12 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   User, Trophy, Star, Flame, LogOut, Camera, Pencil, X, Check,
-  Lock, Mail, Phone, Cake, BadgeCheck
+  Lock, Mail, Phone, Cake, BadgeCheck, Bell, BellOff, BellRing
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
