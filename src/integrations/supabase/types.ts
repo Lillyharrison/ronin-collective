@@ -390,6 +390,7 @@ export type Database = {
           id: string
           is_published: boolean
           is_universal: boolean
+          location: string | null
           manual_link_label: string | null
           manual_link_url: string | null
           notify_on_day: boolean | null
@@ -415,6 +416,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           is_universal?: boolean
+          location?: string | null
           manual_link_label?: string | null
           manual_link_url?: string | null
           notify_on_day?: boolean | null
@@ -440,6 +442,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           is_universal?: boolean
+          location?: string | null
           manual_link_label?: string | null
           manual_link_url?: string | null
           notify_on_day?: boolean | null

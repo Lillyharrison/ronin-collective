@@ -9,6 +9,7 @@ interface CareGuideTemplate {
   icon: string;
   color: string;
   is_published: boolean;
+  location?: string | null;
 }
 
 interface Props {
@@ -66,7 +67,9 @@ export function CareGuideCard({ template, onOpen }: Props) {
             )}
           </div>
           <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-            <BookOpen size={9} /> Tap to view care guide
+            {template.location
+              ? <><span>📍</span> {template.location}</>
+              : <><BookOpen size={9} /> Tap to view care guide</>}
           </p>
         </div>
 
