@@ -179,14 +179,16 @@ export function Dashboard() {
 
   // Load pending task count
   useEffect(() => {
-    if (!userId) return;
-    supabase
+    if (!userId || permLoading) return;
+    let q = supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
-      .in("status", ["pending", "in_progress"])
-      .eq("assigned_to", userId)
-      .then(({ count }) => setPendingCount(count ?? 0));
-  }, [userId]);
+      .in("status", ["pending", "in_progress", "urgent"])
+      .eq("is_draft", false);
+    // Admins/master admins see all; staff see only their own
+    if (!isAdmin) q = q.eq("assigned_to", userId);
+    q.then(({ count }) => setPendingCount(count ?? 0));
+  }, [userId, isAdmin, permLoading]);
 
   // Load global feed (admin only)
   useEffect(() => {
@@ -394,7 +396,10 @@ export function Dashboard() {
           <Activity size={14} className="text-gold" />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg bg-[hsl(var(--status-done)/0.08)] border border-[hsl(var(--status-done)/0.2)] px-3 py-2.5">
+          <button
+            onClick={() => setActiveSection("tasks")}
+            className="rounded-lg bg-[hsl(var(--status-done)/0.08)] border border-[hsl(var(--status-done)/0.2)] px-3 py-2.5 text-left hover:bg-[hsl(var(--status-done)/0.14)] transition-colors active:scale-95"
+          >
             <div className="flex items-center gap-2 mb-1">
               <CheckSquare size={14} className="text-status-done" />
               <span className="text-[10px] uppercase tracking-wider text-status-done font-semibold">
@@ -406,7 +411,7 @@ export function Dashboard() {
                 ? (language === "es" ? "Al día" : "All clear")
                 : `${pendingCount} ${language === "es" ? "activas" : "active"}`}
             </p>
-          </div>
+          </button>
           {/* Alerts tile — replaces Properties, navigates to Manuals > Rules */}
           <button
     onClick={() => setActiveSection("alerts")}
