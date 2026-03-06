@@ -7,7 +7,7 @@ import { fireConfetti } from "@/lib/confetti";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
   ChevronDown, Check, Send, Trash2, Clock, AlertTriangle, Package,
-  CheckSquare, MessageSquare,
+  CheckSquare, MessageSquare, ShoppingCart,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -91,6 +91,10 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const [role, setRole]                 = useState(task?.assigned_role ?? "");
   const [linkedChecklist, setLinkedChecklist] = useState(task?.linked_checklist_id ?? "");
   const [isDraft, setIsDraft]           = useState(task?.is_draft ?? defaultDraft);
+  const [isOrder, setIsOrder]           = useState(task?.category === "order");
+  const [deliveryDate, setDeliveryDate] = useState(
+    task?.category === "order" && task?.due_date ? task.due_date.slice(0, 10) : ""
+  );
   const [attachments, setAttachments]   = useState<TaskAttachment[]>(task?.attachments ?? []);
   const [uploading, setUploading]       = useState(false);
   const [saving, setSaving]             = useState(false);
@@ -138,7 +142,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       description_en: description.trim() || null,
       priority,
       status: task?.status ?? "pending",
-      due_date: dueDate || null,
+      due_date: isOrder ? (deliveryDate || null) : (dueDate || null),
       assigned_to: assignedTo || null,
       property_id: propertyId || null,
       assigned_department: dept || null,
@@ -147,7 +151,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       is_draft: publishNow ? false : isDraft,
       attachments,
       linked_inventory_ids: task?.linked_inventory_ids ?? [],
-      category: task?.category ?? null,
+      category: isOrder ? "order" : (task?.category ?? null),
     };
 
     if (task?.id) {
@@ -228,6 +232,12 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {/* Title */}
             <h2 className="font-display text-lg font-semibold text-foreground leading-snug">{task.title_en}</h2>
+            {/* Order badge */}
+            {task.category === "order" && (
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(var(--gold))]">
+                <ShoppingCart size={11} /> {isL ? "PEDIDO / ENTREGA" : "ORDER / DELIVERY"}
+              </div>
+            )}
 
             {/* Description */}
             {task.description_en && (
@@ -446,6 +456,41 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
               </div>
             </div>
           </div>
+
+          {/* Order toggle */}
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-muted/50 rounded-xl border border-border">
+            <ShoppingCart size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-foreground">{isL ? "Es un pedido / compra" : "This is an order / purchase"}</p>
+              <p className="text-[10px] text-muted-foreground">{isL ? "Aparecerá en la sección Pedidos" : "Will appear in the Orders section"}</p>
+            </div>
+            <button
+              onClick={() => setIsOrder(v => !v)}
+              className={cn("w-10 h-6 rounded-full transition-colors flex-shrink-0 relative",
+                isOrder ? "bg-[hsl(var(--gold))]" : "bg-muted border border-border")}
+            >
+              <span className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
+                isOrder ? "translate-x-4" : "translate-x-0.5")} />
+            </button>
+          </div>
+
+          {/* Delivery date (only when isOrder) */}
+          {isOrder && (
+            <div>
+              <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Calendar size={10} /> {isL ? "Fecha de entrega esperada" : "Expected delivery date"}
+              </label>
+              <div className="relative">
+                <Calendar size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={e => setDeliveryDate(e.target.value)}
+                  className="w-full text-xs bg-muted border border-border rounded-xl pl-8 pr-3 py-2.5 outline-none focus:border-primary text-foreground"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Assign to property */}
           <div>
