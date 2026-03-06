@@ -33,6 +33,7 @@ interface TrackingEntry {
   carrier?: string;
   packing_list?: string;
   notes?: string;
+  delivered_at?: string;
 }
 
 function getTracking(attachments: TaskAttachment[]): TrackingEntry | null {
@@ -55,7 +56,7 @@ function TrackingPanel({ order, onSaved }: { order: OrderTask; onSaved: () => vo
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const handleSave = async () => {
+  const handleSave = async (deliveredNow = false) => {
     setSaving(true);
     const trackingEntry: TrackingEntry = {
       type: "tracking",
@@ -64,8 +65,8 @@ function TrackingPanel({ order, onSaved }: { order: OrderTask; onSaved: () => vo
       carrier: carrier || undefined,
       packing_list: packingList || undefined,
       notes: notes || undefined,
+      ...(deliveredNow ? { delivered_at: new Date().toISOString() } : existing?.delivered_at ? { delivered_at: existing.delivered_at } : {}),
     };
-    // Remove existing tracking entry, add updated one
     const otherAttachments = order.attachments.filter((a: any) => a.type !== "tracking");
     const updatedAttachments = [...otherAttachments, trackingEntry];
     await supabase.from("tasks").update({ attachments: updatedAttachments as any }).eq("id", order.id);
@@ -167,11 +168,19 @@ function TrackingPanel({ order, onSaved }: { order: OrderTask; onSaved: () => vo
                 />
               </div>
               <button
-                onClick={handleSave}
+                onClick={() => handleSave(false)}
                 disabled={saving}
                 className="w-full py-2 rounded-xl bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60"
               >
                 {saving ? "…" : (isL ? "Guardar detalles" : "Save details")}
+              </button>
+              <button
+                onClick={() => handleSave(true)}
+                disabled={saving}
+                className="w-full py-2 rounded-xl bg-[hsl(var(--status-done))] text-white text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                <Check size={12} />
+                {isL ? "Marcar como entregado" : "Mark as Delivered"}
               </button>
             </>
           ) : (
@@ -312,9 +321,16 @@ export function OrdersSection() {
     });
   };
 
-  const pending = orders.filter(o => o.status !== "completed");
-  const completed = orders.filter(o => o.status === "completed");
-  const displayed = activeTab === "pending" ? pending : completed;
+  // "Active" = order task not yet placed (status != completed)
+  // "Pending delivery" = order placed (status = completed) but not yet delivered
+  // "Delivered" = has delivered_at in attachments
+  const isDelivered = (o: OrderTask) => (o.attachments as any[]).some((a: any) => a.type === "tracking" && a.delivered_at);
+  const active = orders.filter(o => o.status !== "completed");
+  const pendingDelivery = orders.filter(o => o.status === "completed" && !isDelivered(o));
+  const delivered = orders.filter(o => o.status === "completed" && isDelivered(o));
+
+  const tabData = activeTab === "pending" ? pendingDelivery : delivered;
+  const displayed = tabData;
 
   return (
     <div className="animate-fade-in pb-6">
@@ -338,7 +354,7 @@ export function OrdersSection() {
           )}
         >
           <Package size={12} />
-          {isL ? "Pendientes" : "Pending"} {pending.length > 0 && `(${pending.length})`}
+          {isL ? "Entrega pendiente" : "Pending Delivery"} {pendingDelivery.length > 0 && `(${pendingDelivery.length})`}
         </button>
         <button
           onClick={() => setActiveTab("completed")}
@@ -347,7 +363,7 @@ export function OrdersSection() {
           )}
         >
           <Check size={12} />
-          {isL ? "Entregados" : "Delivered"} {completed.length > 0 && `(${completed.length})`}
+          {isL ? "Entregados" : "Delivered"} {delivered.length > 0 && `(${delivered.length})`}
         </button>
       </div>
 
