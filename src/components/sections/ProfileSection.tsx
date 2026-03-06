@@ -1,10 +1,17 @@
-import { PlaceholderSection } from "@/components/PlaceholderSection";
+import { useState, useRef } from "react";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { User, Trophy, Star, Flame, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  User, Trophy, Star, Flame, LogOut, Camera, Pencil, X, Check,
+  Lock, Mail, Phone, Cake, BadgeCheck
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Mock earned badges for demo
 const DEMO_BADGES = [
@@ -16,30 +23,197 @@ const DEMO_BADGES = [
   { icon: "⭐", label: "Perfect Day" },
 ];
 
+type EditField = "name" | "email" | "phone" | "birthday" | "password" | null;
+
 export function ProfileSection() {
   const { setActiveSection } = useNavigation();
   const { language } = useLanguage();
-  const { user, signOut } = useAuth();
-  const { fullName, role, canSee } = usePermissions();
+  const { user } = useAuth();
+  const { fullName, role, avatarUrl, canSee, loading: permLoading } = usePermissions();
+  const { toast } = useToast();
+
+  const [editField, setEditField] = useState<EditField>(null);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Local state for editable fields (pre-populated from profile)
+  const [localName, setLocalName] = useState("");
+  const [localEmail, setLocalEmail] = useState(user?.email ?? "");
+  const [localPhone, setLocalPhone] = useState("");
+  const [localBirthday, setLocalBirthday] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localAvatar, setLocalAvatar] = useState<string | null>(avatarUrl);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const showAchievements = canSee("achievements");
+  const displayName = fullName || user?.user_metadata?.full_name || user?.email || "Profile";
+  const initials = displayName.charAt(0).toUpperCase();
+
+  // ─── load profile on mount ────────────────────────────────────────────
+  useState(() => {
+    if (!user) return;
+    supabase.from("profiles")
+      .select("full_name, phone, birthday, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        setLocalName(data.full_name ?? "");
+        setLocalPhone(data.phone ?? "");
+        setLocalBirthday(data.birthday ?? "");
+        setLocalAvatar(data.avatar_url ?? null);
+      });
+  });
+
+  // ─── open edit ────────────────────────────────────────────────────────
+  const startEdit = (field: EditField) => {
+    setEditField(field);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+  const cancelEdit = () => setEditField(null);
+
+  // ─── save profile field ───────────────────────────────────────────────
+  const saveProfile = async (updates: Record<string, string | null>) => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase.from("profiles")
+      .update(updates)
+      .eq("id", user.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: language === "es" ? "Error" : "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: language === "es" ? "Guardado" : "Saved", description: language === "es" ? "Perfil actualizado." : "Profile updated." });
+      setEditField(null);
+    }
+  };
+
+  // ─── save email (auth + profile) ─────────────────────────────────────
+  const saveEmail = async () => {
+    if (!localEmail.trim()) return;
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({ email: localEmail.trim() });
+    setSaving(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: language === "es" ? "Verificación enviada" : "Verification sent",
+        description: language === "es"
+          ? "Revisa tu bandeja para confirmar el nuevo correo."
+          : "Check your inbox to confirm the new email address.",
+      });
+      setEditField(null);
+    }
+  };
+
+  // ─── save password ────────────────────────────────────────────────────
+  const savePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({ title: language === "es" ? "Error" : "Error", description: language === "es" ? "Las contraseñas no coinciden." : "Passwords don't match.", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ title: language === "es" ? "Error" : "Error", description: language === "es" ? "Mínimo 6 caracteres." : "Minimum 6 characters.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSaving(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: language === "es" ? "¡Listo!" : "Done!", description: language === "es" ? "Contraseña actualizada." : "Password updated successfully." });
+      setEditField(null);
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+  };
+
+  // ─── avatar upload ────────────────────────────────────────────────────
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Error", description: language === "es" ? "El archivo debe ser menor a 5MB." : "File must be under 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      toast({ title: "Error", description: uploadError.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+    const publicUrl = urlData.publicUrl + `?t=${Date.now()}`;
+
+    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+    setLocalAvatar(publicUrl);
+    setUploading(false);
+    toast({ title: language === "es" ? "¡Foto actualizada!" : "Photo updated!", description: "" });
+  };
+
+  const t = (en: string, es: string) => language === "es" ? es : en;
 
   return (
-    <div className="animate-fade-in pb-4">
-      {/* Profile hero */}
-      <div className="bg-charcoal px-5 pt-6 pb-6 border-b border-charcoal-light flex flex-col items-center text-center">
-        <div className="w-20 h-20 rounded-full bg-gold/20 border-2 border-gold/60 flex items-center justify-center mb-3">
-          <span className="font-display text-gold text-3xl">
-            {(fullName ?? user?.user_metadata?.full_name ?? user?.email ?? "?").charAt(0).toUpperCase()}
-          </span>
+    <div className="animate-fade-in pb-8">
+
+      {/* ── Profile Hero ────────────────────────────────────────────── */}
+      <div className="bg-charcoal px-5 pt-8 pb-6 border-b border-charcoal-light flex flex-col items-center text-center">
+        {/* Avatar with camera overlay */}
+        <div className="relative mb-4 group">
+          <div className="w-24 h-24 rounded-full bg-gold/20 border-2 border-gold/60 flex items-center justify-center overflow-hidden">
+            {localAvatar ? (
+              <img
+                src={localAvatar}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={() => setLocalAvatar(null)}
+              />
+            ) : (
+              <span className="font-display text-gold text-4xl">{initials}</span>
+            )}
+          </div>
+          {/* Upload overlay */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          >
+            {uploading ? (
+              <span className="text-[10px] text-white font-medium">
+                {t("Uploading…", "Subiendo…")}
+              </span>
+            ) : (
+              <Camera size={20} className="text-white" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
         </div>
-        <h1 className="font-display text-2xl text-cream">{fullName || user?.user_metadata?.full_name || user?.email || "Profile"}</h1>
+
+        <h1 className="font-display text-2xl text-cream">{displayName}</h1>
         <span className="mt-1 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[10px] tracking-widest uppercase font-semibold">
           {role ? role.replace("_", " ") : "Staff"}
         </span>
 
-        {/* Mini stats — only shown if achievements are visible */}
-        {showAchievements && (
+        {/* Mini stats */}
+        {showAchievements && !permLoading && (
           <div className="flex items-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1 text-gold">
@@ -47,7 +221,7 @@ export function ProfileSection() {
                 <span className="text-cream font-semibold text-base">475</span>
               </div>
               <span className="text-cream/40 text-[9px] uppercase tracking-wider">
-                {language === "es" ? "Puntos" : "Points"}
+                {t("Points", "Puntos")}
               </span>
             </div>
             <div className="w-px h-8 bg-charcoal-light" />
@@ -57,7 +231,7 @@ export function ProfileSection() {
                 <span className="text-cream font-semibold text-base">7</span>
               </div>
               <span className="text-cream/40 text-[9px] uppercase tracking-wider">
-                {language === "es" ? "Racha" : "Streak"}
+                {t("Streak", "Racha")}
               </span>
             </div>
             <div className="w-px h-8 bg-charcoal-light" />
@@ -67,40 +241,210 @@ export function ProfileSection() {
                 <span className="text-cream font-semibold text-base">6</span>
               </div>
               <span className="text-cream/40 text-[9px] uppercase tracking-wider">
-                {language === "es" ? "Logros" : "Badges"}
+                {t("Badges", "Logros")}
               </span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Sign out */}
-      <div className="px-4 mt-2 mb-2">
-        <Button
-          variant="outline"
-          className="w-full gap-2 text-muted-foreground border-border hover:border-destructive hover:text-destructive"
-          onClick={signOut}
-        >
-          <LogOut size={15} />
-          {language === "es" ? "Cerrar sesión" : "Sign out"}
-        </Button>
+      {/* ── Personal Information ─────────────────────────────────────── */}
+      <div className="px-4 mt-5">
+        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
+          {t("Personal Information", "Información Personal")}
+        </p>
+
+        <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
+
+          {/* Preferred Name */}
+          <ProfileRow
+            icon={<User size={15} />}
+            label={t("Preferred Name", "Nombre Preferido")}
+            value={localName || displayName}
+            editing={editField === "name"}
+            onEdit={() => startEdit("name")}
+            onCancel={cancelEdit}
+            onSave={() => saveProfile({ full_name: localName.trim() || null })}
+            saving={saving}
+          >
+            <Input
+              value={localName}
+              onChange={e => setLocalName(e.target.value)}
+              placeholder={t("Your preferred name", "Tu nombre preferido")}
+              className="h-9 text-sm"
+              autoFocus
+            />
+          </ProfileRow>
+
+          {/* Email */}
+          <ProfileRow
+            icon={<Mail size={15} />}
+            label={t("Email Address", "Correo Electrónico")}
+            value={user?.email ?? ""}
+            editing={editField === "email"}
+            onEdit={() => { setLocalEmail(user?.email ?? ""); startEdit("email"); }}
+            onCancel={cancelEdit}
+            onSave={saveEmail}
+            saving={saving}
+            saveLabel={t("Send verification", "Enviar verificación")}
+          >
+            <Input
+              type="email"
+              value={localEmail}
+              onChange={e => setLocalEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="h-9 text-sm"
+              autoFocus
+            />
+          </ProfileRow>
+
+          {/* Phone */}
+          <ProfileRow
+            icon={<Phone size={15} />}
+            label={t("Phone", "Teléfono")}
+            value={localPhone || t("Not set", "Sin registrar")}
+            editing={editField === "phone"}
+            onEdit={() => startEdit("phone")}
+            onCancel={cancelEdit}
+            onSave={() => saveProfile({ phone: localPhone.trim() || null })}
+            saving={saving}
+          >
+            <Input
+              type="tel"
+              value={localPhone}
+              onChange={e => setLocalPhone(e.target.value)}
+              placeholder="+1 (555) 000-0000"
+              className="h-9 text-sm"
+              autoFocus
+            />
+          </ProfileRow>
+
+          {/* Birthday */}
+          <ProfileRow
+            icon={<Cake size={15} />}
+            label={t("Birthday", "Cumpleaños")}
+            value={localBirthday
+              ? new Date(localBirthday + "T12:00:00").toLocaleDateString(language === "es" ? "es-MX" : "en-US", { month: "long", day: "numeric" })
+              : t("Not set", "Sin registrar")}
+            editing={editField === "birthday"}
+            onEdit={() => startEdit("birthday")}
+            onCancel={cancelEdit}
+            onSave={() => saveProfile({ birthday: localBirthday || null })}
+            saving={saving}
+          >
+            <Input
+              type="date"
+              value={localBirthday}
+              onChange={e => setLocalBirthday(e.target.value)}
+              className="h-9 text-sm"
+              autoFocus
+            />
+          </ProfileRow>
+
+        </div>
       </div>
 
-      {/* Badges section — only if achievements visible */}
+      {/* ── Security ─────────────────────────────────────────────────── */}
+      <div className="px-4 mt-5">
+        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
+          {t("Security", "Seguridad")}
+        </p>
+
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          {editField === "password" ? (
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 text-foreground">
+                  <Lock size={15} className="text-muted-foreground" />
+                  <span className="text-sm font-medium">{t("Change Password", "Cambiar Contraseña")}</span>
+                </div>
+                <button onClick={cancelEdit} className="text-muted-foreground hover:text-foreground">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">{t("New password", "Nueva contraseña")}</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="h-9 text-sm"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">{t("Confirm password", "Confirmar contraseña")}</Label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="h-9 text-sm"
+                  onKeyDown={e => e.key === "Enter" && savePassword()}
+                />
+              </div>
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={savePassword}
+                disabled={saving || !newPassword || !confirmPassword}
+              >
+                {saving ? t("Saving…", "Guardando…") : t("Update Password", "Actualizar Contraseña")}
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => startEdit("password")}
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Lock size={15} className="text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t("Change Password", "Cambiar Contraseña")}</p>
+                  <p className="text-xs text-muted-foreground">••••••••</p>
+                </div>
+              </div>
+              <Pencil size={14} className="text-muted-foreground" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Read-only info ────────────────────────────────────────────── */}
+      <div className="px-4 mt-5">
+        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
+          {t("Your Role & Access", "Tu Rol y Acceso")}
+        </p>
+        <div className="rounded-xl border border-border bg-card px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <BadgeCheck size={15} className="text-gold" />
+            <div>
+              <p className="text-sm font-medium text-foreground capitalize">
+                {role ? role.replace("_", " ") : "Staff"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("Managed by your administrator", "Gestionado por tu administrador")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Badges ───────────────────────────────────────────────────── */}
       {showAchievements && (
         <div className="px-4 mt-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-              {language === "es" ? "Mis Logros" : "My Badges"}
+              {t("My Badges", "Mis Logros")}
             </p>
             <button
               onClick={() => setActiveSection("achievements")}
               className="text-gold text-xs flex items-center gap-1"
             >
-              {language === "es" ? "Ver todos" : "View all"} →
+              {t("View all", "Ver todos")} →
             </button>
           </div>
-
           <div className="grid grid-cols-6 gap-2">
             {DEMO_BADGES.map((badge, i) => (
               <button
@@ -116,14 +460,77 @@ export function ProfileSection() {
         </div>
       )}
 
-      {/* Info placeholder */}
-      <div className="mx-4 mt-5">
-        <PlaceholderSection
-          titleKey="profile"
-          icon={<User size={32} />}
-          description={language === "es" ? "Configuración de perfil, propiedades asignadas y preferencias de idioma." : "Profile settings, assigned properties, and language preferences — coming soon."}
-        />
+      {/* ── Sign out ─────────────────────────────────────────────────── */}
+      <div className="px-4 mt-6">
+        <Button
+          variant="outline"
+          className="w-full gap-2 text-muted-foreground border-border hover:border-destructive hover:text-destructive"
+          onClick={async () => { await supabase.auth.signOut(); }}
+        >
+          <LogOut size={15} />
+          {t("Sign out", "Cerrar sesión")}
+        </Button>
       </div>
     </div>
+  );
+}
+
+// ─── Reusable editable row ─────────────────────────────────────────────────
+interface ProfileRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  editing: boolean;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  saving: boolean;
+  saveLabel?: string;
+  children: React.ReactNode;
+}
+
+function ProfileRow({ icon, label, value, editing, onEdit, onCancel, onSave, saving, saveLabel, children }: ProfileRowProps) {
+  if (editing) {
+    return (
+      <div className="px-4 py-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">{icon}</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
+          </div>
+          <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
+            <X size={15} />
+          </button>
+        </div>
+        {children}
+        <Button
+          size="sm"
+          className="w-full h-8 text-xs"
+          onClick={onSave}
+          disabled={saving}
+        >
+          {saving
+            ? "Saving…"
+            : saveLabel ?? <><Check size={13} className="mr-1" />Save</>
+          }
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={onEdit}
+      className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-muted/30 transition-colors text-left"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-muted-foreground flex-shrink-0">{icon}</span>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="text-sm text-foreground truncate">{value}</p>
+        </div>
+      </div>
+      <Pencil size={14} className="text-muted-foreground flex-shrink-0 ml-2" />
+    </button>
   );
 }
