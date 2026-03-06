@@ -86,6 +86,7 @@ function ActiveSection() {
     case "master-import":return gated("master-import",<MasterImportSection />);
     case "memory":       return gated("memory",       <MemorySection />);
     case "alerts":       return <AlertsSection />;
+    case "rules":        return gated("rules",        <RulesSection />);
     default:             return <Dashboard />;
   }
 }
