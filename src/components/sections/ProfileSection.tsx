@@ -434,6 +434,65 @@ export function ProfileSection() {
         </div>
       </div>
 
+      {/* ── Push Notifications ───────────────────────────────────────── */}
+      {pushSupported && (
+        <div className="px-4 mt-5">
+          <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
+            {t("Notifications", "Notificaciones")}
+          </p>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <div className="flex items-center gap-3">
+                {pushPermission === "granted" && pushSubscribed ? (
+                  <BellRing size={15} className="text-[hsl(var(--status-done))]" />
+                ) : pushPermission === "denied" ? (
+                  <BellOff size={15} className="text-destructive" />
+                ) : (
+                  <Bell size={15} className="text-muted-foreground" />
+                )}
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t("Push Notifications", "Notificaciones Push")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {pushPermission === "denied"
+                      ? t("Blocked in browser settings", "Bloqueado en configuración del navegador")
+                      : pushSubscribed
+                        ? t("Active on this device", "Activo en este dispositivo")
+                        : t("Get alerts for new messages", "Recibe alertas de nuevos mensajes")}
+                  </p>
+                </div>
+              </div>
+              {pushPermission !== "denied" && !pushSubscribed && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={enablingPush}
+                  onClick={async () => {
+                    setEnablingPush(true);
+                    const ok = await requestAndSubscribe();
+                    setEnablingPush(false);
+                    if (ok) {
+                      toast({ title: t("Notifications enabled!", "¡Notificaciones activadas!"), description: t("You'll receive alerts on this device.", "Recibirás alertas en este dispositivo.") });
+                    } else {
+                      toast({ title: t("Couldn't enable", "No se pudo activar"), description: t("Check your browser settings.", "Revisa la configuración del navegador."), variant: "destructive" });
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  {enablingPush ? t("Enabling…", "Activando…") : t("Enable", "Activar")}
+                </Button>
+              )}
+              {pushSubscribed && (
+                <span className="text-[10px] text-[hsl(var(--status-done))] font-semibold uppercase tracking-wider">
+                  {t("On", "Activo")}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Badges ───────────────────────────────────────────────────── */}
       {showAchievements && (
         <div className="px-4 mt-5">
