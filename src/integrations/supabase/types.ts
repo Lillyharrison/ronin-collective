@@ -801,6 +801,10 @@ export type Database = {
           is_active: boolean
           is_universal: boolean
           property_id: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_by: string | null
+          submitted_source: string
           title: string
           updated_at: string
           visible_to_user_ids: string[]
@@ -818,6 +822,10 @@ export type Database = {
           is_active?: boolean
           is_universal?: boolean
           property_id?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_by?: string | null
+          submitted_source?: string
           title: string
           updated_at?: string
           visible_to_user_ids?: string[]
@@ -835,6 +843,10 @@ export type Database = {
           is_active?: boolean
           is_universal?: boolean
           property_id?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_by?: string | null
+          submitted_source?: string
           title?: string
           updated_at?: string
           visible_to_user_ids?: string[]
