@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
+import { DraftTasksWidget } from "@/components/tasks/DraftTasksWidget";
 
 interface Property {
   id: string;
@@ -437,6 +438,9 @@ export function Dashboard() {
         </div>
 
       </div>
+
+      {/* Draft Tasks widget — Ronin AI suggested tasks awaiting approval */}
+      <DraftTasksWidget />
 
       {/* Notifications widget — shows unread alerts, dismissable */}
       {dashNotifs.length > 0 && (

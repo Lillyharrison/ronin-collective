@@ -975,7 +975,11 @@ export type Database = {
       }
       tasks: {
         Row: {
+          ai_suggested: boolean
+          assigned_department: string | null
+          assigned_role: string | null
           assigned_to: string | null
+          attachments: Json
           category: string | null
           completed_at: string | null
           created_at: string
@@ -984,6 +988,9 @@ export type Database = {
           description_es: string | null
           due_date: string | null
           id: string
+          is_draft: boolean
+          linked_checklist_id: string | null
+          linked_inventory_ids: string[]
           photo_url: string | null
           priority: number
           property_id: string | null
@@ -994,7 +1001,11 @@ export type Database = {
           voice_note_url: string | null
         }
         Insert: {
+          ai_suggested?: boolean
+          assigned_department?: string | null
+          assigned_role?: string | null
           assigned_to?: string | null
+          attachments?: Json
           category?: string | null
           completed_at?: string | null
           created_at?: string
@@ -1003,6 +1014,9 @@ export type Database = {
           description_es?: string | null
           due_date?: string | null
           id?: string
+          is_draft?: boolean
+          linked_checklist_id?: string | null
+          linked_inventory_ids?: string[]
           photo_url?: string | null
           priority?: number
           property_id?: string | null
@@ -1013,7 +1027,11 @@ export type Database = {
           voice_note_url?: string | null
         }
         Update: {
+          ai_suggested?: boolean
+          assigned_department?: string | null
+          assigned_role?: string | null
           assigned_to?: string | null
+          attachments?: Json
           category?: string | null
           completed_at?: string | null
           created_at?: string
@@ -1022,6 +1040,9 @@ export type Database = {
           description_es?: string | null
           due_date?: string | null
           id?: string
+          is_draft?: boolean
+          linked_checklist_id?: string | null
+          linked_inventory_ids?: string[]
           photo_url?: string | null
           priority?: number
           property_id?: string | null
@@ -1032,6 +1053,13 @@ export type Database = {
           voice_note_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_linked_checklist_id_fkey"
+            columns: ["linked_checklist_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_property_id_fkey"
             columns: ["property_id"]
