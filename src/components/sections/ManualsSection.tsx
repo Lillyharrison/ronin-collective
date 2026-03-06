@@ -9,7 +9,7 @@ import { CareGuideCard } from "@/components/manuals/CareGuideCard";
 import { CareGuideDetailPage } from "@/components/sections/CareGuideDetailPage";
 import { RulesManager } from "@/components/manuals/RulesManager";
 import { cn } from "@/lib/utils";
-import { BookOpen, Shield, ChevronDown, Plus, MapPin } from "lucide-react";
+import { BookOpen, Shield, ChevronDown, Plus, MapPin, CheckCheck } from "lucide-react";
 
 interface Property {
   id: string;
@@ -162,19 +162,35 @@ export function ManualsSection() {
               ))
             )}
             {isAdmin && (
-              <button
-                onClick={async () => {
-                  const title = window.prompt("Care guide title:");
-                  if (!title?.trim()) return;
-                  await supabase.from("checklist_templates").insert({
-                    title: title.trim(), category: "care_guide", icon: "📖", color: "gold", is_universal: true,
-                  });
-                  reloadCare();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
-              >
-                <Plus size={14} /> Add care guide
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    const title = window.prompt("Care guide title:");
+                    if (!title?.trim()) return;
+                    await supabase.from("checklist_templates").insert({
+                      title: title.trim(), category: "care_guide", icon: "📖", color: "gold", is_universal: true,
+                    });
+                    reloadCare();
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-foreground transition-all"
+                >
+                  <Plus size={14} /> Add care guide
+                </button>
+                {careTemplates.some(t => !t.is_published) && (
+                  <button
+                    onClick={async () => {
+                      const draftIds = careTemplates.filter(t => !t.is_published).map(t => t.id);
+                      await supabase.from("checklist_templates")
+                        .update({ is_published: true })
+                        .in("id", draftIds);
+                      reloadCare();
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-3 border border-dashed border-[hsl(var(--status-done)/0.4)] rounded-xl text-sm text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.08)] transition-all whitespace-nowrap"
+                  >
+                    <CheckCheck size={14} /> Publish all drafts
+                  </button>
+                )}
+              </div>
             )}
           </>
         )}

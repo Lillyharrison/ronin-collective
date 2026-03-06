@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,9 +14,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft, Printer, Eye, EyeOff, Plus, Pencil, Trash2,
-  GripVertical, Image as ImageIcon, X, Settings, Users,
-  Check, BookOpen,
+  GripVertical, Image as ImageIcon, X, Settings, Check, BookOpen,
 } from "lucide-react";
+import ReactDOM from "react-dom";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface CareGuideTemplate {
@@ -41,6 +41,7 @@ const ICON_BANK = [
   "🪨","🪵","✨","⬜","🧴","🧽","💧","⛔","🔄","📅","💎","🌿","☀️","🔒","⚡","☕","🛡️","🎨","✅","⚠️","🔧","📸","🌡️","🧊","🫧",
   "🪥","🧻","🪣","🧹","🛁","🚿","🏡","🪞","🛏️","🔑","🗝️","🪟","🚪","🌊","🍃","🌺","🌸","🔍","📋","📌","💡","🕯️","🎭","🖼️",
   "🏺","⚗️","🔬","🧪","🌙","⭐","🎯","🏷️","🎀","📦","🛒","🔐","🛠️","⚙️","🔩","🪛","🔨","🪚","🏗️","🧲","⚖️","🪤","🗄️",
+  "🫆","🤲","👋","✋","💪","🧤","🪣","🚰","🫧","🌀","🔵","🟡","🟠","🟢","🔴","🟣","⬛","🟥","🟦","🟨","🟩","🟧","🟪",
 ];
 
 const ROLES = ["master_admin","admin","manager","staff","principal"];
@@ -54,12 +55,73 @@ const COLOR_MAP: Record<string, { border: string; bg: string; text: string }> = 
   green:  { border: "border-[hsl(var(--status-done)/0.5)]", bg: "bg-[hsl(var(--status-done)/0.1)]", text: "text-[hsl(var(--status-done))]" },
 };
 
+/* ─── Portal Icon Picker ─────────────────────────────────────── */
+function IconPickerPortal({
+  anchor,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  anchor: HTMLButtonElement | null;
+  selected: string;
+  onSelect: (icon: string) => void;
+  onClose: () => void;
+}) {
+  const [style, setStyle] = useState<React.CSSProperties>({});
+
+  useEffect(() => {
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const pickerWidth = 272;
+    const left = Math.min(rect.left, window.innerWidth - pickerWidth - 8);
+    setStyle({
+      position: "fixed",
+      top: rect.bottom + 8,
+      left: Math.max(8, left),
+      zIndex: 9999,
+      width: pickerWidth,
+    });
+  }, [anchor]);
+
+  if (!anchor) return null;
+
+  return ReactDOM.createPortal(
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+      {/* Picker */}
+      <div
+        style={style}
+        className="bg-card border border-border rounded-2xl p-3 shadow-2xl max-h-64 overflow-y-auto"
+      >
+        <p className="text-[10px] text-muted-foreground mb-2 font-semibold uppercase tracking-wider">Choose icon</p>
+        <div className="grid grid-cols-8 gap-1">
+          {ICON_BANK.map(ic => (
+            <button
+              key={ic}
+              onMouseDown={e => { e.preventDefault(); onSelect(ic); }}
+              className={cn(
+                "text-xl p-1.5 rounded-xl hover:bg-muted transition-colors leading-none",
+                selected === ic && "bg-muted ring-1 ring-primary"
+              )}
+            >
+              {ic}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}
+
 /* ─── Sortable item wrapper ─────────────────────────────────── */
 function SortableGuideItem({
-  item, isAdmin, onUpdate, onDelete, onPhotoDrop,
+  item, isAdmin, column, onUpdate, onDelete, onPhotoDrop,
 }: {
   item: ChecklistItem;
   isAdmin: boolean;
+  column: "basic" | "deep";
   onUpdate: (id: string, changes: Partial<ChecklistItem>) => void;
   onDelete: (id: string) => void;
   onPhotoDrop: (id: string, file: File) => void;
@@ -70,7 +132,7 @@ function SortableGuideItem({
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [editIcon, setEditIcon] = useState(item.icon);
-  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconAnchor, setIconAnchor] = useState<HTMLButtonElement | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const save = async () => {
@@ -81,52 +143,53 @@ function SortableGuideItem({
     setEditing(false);
   };
 
+  // item color field: "basic" or "deep" for column; is_required for equipment
+  const isEquipment = item.is_required;
+
   return (
     <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.4 : 1,
-      }}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
       className="group relative"
       onDragOver={isAdmin ? e => e.preventDefault() : undefined}
-      onDrop={isAdmin ? e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) onPhotoDrop(item.id, f); } : undefined}
+      onDrop={isAdmin ? e => {
+        e.preventDefault();
+        const f = e.dataTransfer.files[0];
+        if (f?.type.startsWith("image/")) onPhotoDrop(item.id, f);
+      } : undefined}
     >
-      {/* Dotted rule above */}
-      <div className="border-t border-dashed border-border/50 mx-4" />
+      <div className="border-t border-dashed border-border/40" />
 
-      <div className="flex items-start gap-3 px-4 py-3">
-        {/* Drag handle */}
+      <div className="flex items-start gap-2.5 px-3 py-2.5">
         {isAdmin && (
           <button
             {...attributes} {...listeners}
-            className="mt-0.5 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+            className="mt-0.5 flex-shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground/30 hover:text-muted-foreground transition-colors pt-0.5"
           >
-            <GripVertical size={14} />
+            <GripVertical size={13} />
           </button>
         )}
 
         {/* Icon */}
-        <div className="flex-shrink-0 mt-0.5">
+        <div className="flex-shrink-0">
           {editing ? (
-            <div className="relative">
+            <>
               <button
-                onClick={() => setShowIconPicker(v => !v)}
+                ref={el => setIconAnchor(el)}
+                onMouseDown={e => { e.preventDefault(); setIconAnchor(v => v ? null : e.currentTarget); }}
                 className="text-xl w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:border-primary transition-colors"
               >
                 {editIcon}
               </button>
-              {showIconPicker && (
-                <div className="absolute top-9 left-0 z-50 bg-card border border-border rounded-xl p-2 grid grid-cols-5 gap-1 shadow-xl w-48 max-h-52 overflow-y-auto">
-                  {ICON_BANK.map(ic => (
-                    <button key={ic} onClick={() => { setEditIcon(ic); setShowIconPicker(false); }}
-                      className={cn("text-lg p-1.5 rounded-lg hover:bg-muted transition-colors", editIcon === ic && "bg-muted ring-1 ring-primary")}
-                    >{ic}</button>
-                  ))}
-                </div>
+              {iconAnchor && (
+                <IconPickerPortal
+                  anchor={iconAnchor}
+                  selected={editIcon}
+                  onSelect={ic => { setEditIcon(ic); setIconAnchor(null); }}
+                  onClose={() => setIconAnchor(null)}
+                />
               )}
-            </div>
+            </>
           ) : (
             <span className="text-xl leading-none">{item.icon}</span>
           )}
@@ -144,12 +207,18 @@ function SortableGuideItem({
               className="w-full text-sm bg-muted/50 border border-border rounded-lg px-2.5 py-1.5 outline-none focus:border-primary"
             />
           ) : (
-            <p className="text-sm text-foreground leading-relaxed font-light tracking-wide">{item.title}</p>
+            <p className="text-sm text-foreground leading-relaxed font-light">{item.title}</p>
           )}
 
           {item.photo_url && (
             <div className="mt-2 relative group/img">
-              <img src={item.photo_url} alt="" className="h-28 w-full object-cover rounded-xl border border-border cursor-pointer" onClick={() => window.open(item.photo_url!, "_blank")} />
+              <img
+                src={item.photo_url}
+                alt=""
+                className="w-full rounded-xl border border-border cursor-pointer object-contain"
+                style={{ maxHeight: 200 }}
+                onClick={() => window.open(item.photo_url!, "_blank")}
+              />
               {isAdmin && (
                 <button
                   onClick={() => onUpdate(item.id, { photo_url: null })}
@@ -168,16 +237,123 @@ function SortableGuideItem({
               + drop or click to add reference image
             </button>
           )}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onPhotoDrop(item.id, f); }} />
+          <input
+            ref={fileRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onPhotoDrop(item.id, f); }}
+          />
         </div>
 
         {/* Admin actions */}
         {isAdmin && !editing && (
           <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => { setEditing(true); setEditTitle(item.title); setEditIcon(item.icon); }}
-              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors"><Pencil size={12} /></button>
-            <button onClick={() => onDelete(item.id)}
-              className="p-1.5 rounded-lg hover:bg-muted text-[hsl(var(--status-urgent))] transition-colors"><Trash2 size={12} /></button>
+            {/* Equipment toggle */}
+            <button
+              onClick={() => onUpdate(item.id, { is_required: !isEquipment })}
+              title={isEquipment ? "Mark as instruction" : "Mark as equipment"}
+              className={cn(
+                "px-1.5 py-0.5 rounded text-[9px] font-semibold border transition-colors",
+                isEquipment
+                  ? "border-amber-400/40 text-amber-400 bg-amber-400/10"
+                  : "border-muted-foreground/20 text-muted-foreground hover:border-primary"
+              )}
+            >
+              {isEquipment ? "EQ" : "INST"}
+            </button>
+            {/* Column toggle */}
+            <button
+              onClick={() => onUpdate(item.id, { color: column === "basic" ? "deep" : "basic" })}
+              title="Move to other column"
+              className="px-1.5 py-0.5 rounded text-[9px] font-semibold border border-muted-foreground/20 text-muted-foreground hover:border-primary transition-colors"
+            >
+              {column === "basic" ? "→ Deep" : "← Basic"}
+            </button>
+            <button
+              onClick={() => { setEditing(true); setEditTitle(item.title); setEditIcon(item.icon); }}
+              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+            >
+              <Pencil size={12} />
+            </button>
+            <button
+              onClick={() => onDelete(item.id)}
+              className="p-1.5 rounded-lg hover:bg-muted text-[hsl(var(--status-urgent))] transition-colors"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Column Section ─────────────────────────────────────────── */
+function ColumnSection({
+  title, items, isAdmin, onUpdate, onDelete, onPhotoDrop, onAddItem, colorAccent,
+}: {
+  title: string;
+  items: ChecklistItem[];
+  isAdmin: boolean;
+  onUpdate: (id: string, changes: Partial<ChecklistItem>) => void;
+  onDelete: (id: string) => void;
+  onPhotoDrop: (id: string, file: File) => void;
+  onAddItem: (column: "basic" | "deep", isEquipment: boolean) => void;
+  colorAccent: string;
+}) {
+  const col = title.toLowerCase().includes("basic") ? "basic" : "deep";
+  const equipment = items.filter(i => i.is_required);
+  const instructions = items.filter(i => !i.is_required);
+
+  return (
+    <div className="flex-1 min-w-0 space-y-2">
+      {/* Column header */}
+      <div className={cn("px-3 py-2 rounded-xl border", colorAccent)}>
+        <h3 className="text-xs font-bold uppercase tracking-widest">{title}</h3>
+      </div>
+
+      {/* Equipment */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-3 py-1.5 bg-muted/30 border-b border-border">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Equipment</p>
+        </div>
+        {equipment.map(item => (
+          <SortableGuideItem key={item.id} item={item} isAdmin={isAdmin} column={col}
+            onUpdate={onUpdate} onDelete={onDelete} onPhotoDrop={onPhotoDrop} />
+        ))}
+        {equipment.length === 0 && (
+          <p className="text-xs text-muted-foreground/40 px-3 py-2 italic">No equipment</p>
+        )}
+        {isAdmin && (
+          <div className="border-t border-dashed border-border/40 px-3 py-1.5">
+            <button
+              onClick={() => onAddItem(col, true)}
+              className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            >
+              <Plus size={11} /> Add equipment
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Instructions */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-3 py-1.5 bg-muted/30 border-b border-border">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Instructions</p>
+        </div>
+        {instructions.map(item => (
+          <SortableGuideItem key={item.id} item={item} isAdmin={isAdmin} column={col}
+            onUpdate={onUpdate} onDelete={onDelete} onPhotoDrop={onPhotoDrop} />
+        ))}
+        {instructions.length === 0 && (
+          <p className="text-xs text-muted-foreground/40 px-3 py-2 italic">No instructions</p>
+        )}
+        {isAdmin && (
+          <div className="border-t border-dashed border-border/40 px-3 py-1.5">
+            <button
+              onClick={() => onAddItem(col, false)}
+              className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            >
+              <Plus size={11} /> Add instruction
+            </button>
           </div>
         )}
       </div>
@@ -192,27 +368,30 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
   const [template, setTemplate] = useState(initialTemplate);
   const { items, loading, setItems } = useChecklistItems(template.id);
 
-  // ── UI state
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [addingItem, setAddingItem] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newIcon, setNewIcon] = useState("▸");
-  const [showNewIconPicker, setShowNewIconPicker] = useState(false);
 
-  // ── Title / icon editing
+  // Icon picker portal
+  const [iconAnchorEl, setIconAnchorEl] = useState<HTMLButtonElement | null>(null);
+
+  // Title editing
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(template.title);
-  const [showIconPicker, setShowIconPicker] = useState(false);
 
-  // ── Back image (for print)
+  // Back image
   const [backImageUrl, setBackImageUrl] = useState<string | null>(template.cover_image_url);
   const [backUploading, setBackUploading] = useState(false);
   const backImgRef = useRef<HTMLInputElement>(null);
 
-  // ── Admin settings
+  // Admin settings
   const [assignedRole, setAssignedRole] = useState(template.assigned_role ?? "");
   const [assignedDepartment, setAssignedDepartment] = useState(template.assigned_department ?? "");
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Adding item state
+  const [addingItem, setAddingItem] = useState<{ column: "basic" | "deep"; isEquipment: boolean } | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+  const [newIcon, setNewIcon] = useState("▸");
+  const [newIconAnchor, setNewIconAnchor] = useState<HTMLButtonElement | null>(null);
 
   const updateTemplate = (changes: Partial<CareGuideTemplate>) => {
     const updated = { ...template, ...changes };
@@ -220,7 +399,6 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     onTemplateUpdate?.(updated);
   };
 
-  // ── DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -238,7 +416,6 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     ));
   };
 
-  // ── Item CRUD
   const handleUpdate = async (id: string, changes: Partial<ChecklistItem>) => {
     await supabase.from("checklist_items").update(changes).eq("id", id);
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...changes } : i));
@@ -258,21 +435,27 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     }
   };
 
-  const addItem = async () => {
-    if (!newTitle.trim()) return;
+  const handleAddItem = async (column: "basic" | "deep", isEquipment: boolean) => {
+    setAddingItem({ column, isEquipment });
+    setNewTitle("");
+    setNewIcon(isEquipment ? "🧽" : "▸");
+  };
+
+  const commitAdd = async () => {
+    if (!newTitle.trim() || !addingItem) return;
     const maxOrder = items.length > 0 ? Math.max(...items.map(i => i.sort_order)) + 1 : 0;
     const { data } = await supabase.from("checklist_items").insert({
       template_id: template.id,
       title: newTitle.trim(),
       icon: newIcon,
-      color: "default",
+      color: addingItem.column,
+      is_required: addingItem.isEquipment,
       sort_order: maxOrder,
     }).select().single();
     if (data) setItems(prev => [...prev, data as ChecklistItem]);
-    setNewTitle(""); setNewIcon("▸"); setAddingItem(false);
+    setNewTitle(""); setAddingItem(null);
   };
 
-  // ── Title save
   const saveTitle = async () => {
     if (!titleDraft.trim()) { setEditingTitle(false); return; }
     await supabase.from("checklist_templates").update({ title: titleDraft.trim() }).eq("id", template.id);
@@ -280,20 +463,18 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     setEditingTitle(false);
   };
 
-  // ── Icon save
   const saveIcon = async (icon: string) => {
     await supabase.from("checklist_templates").update({ icon }).eq("id", template.id);
     updateTemplate({ icon });
-    setShowIconPicker(false);
+    setIconAnchorEl(null);
   };
 
-  // ── Publish toggle
   const togglePublish = async () => {
-    await supabase.from("checklist_templates").update({ is_published: !template.is_published }).eq("id", template.id);
-    updateTemplate({ is_published: !template.is_published });
+    const next = !template.is_published;
+    await supabase.from("checklist_templates").update({ is_published: next }).eq("id", template.id);
+    updateTemplate({ is_published: next });
   };
 
-  // ── Back image upload
   const handleBackImageUpload = async (file: File) => {
     if (!file.type.startsWith("image/")) return;
     setBackUploading(true);
@@ -308,7 +489,6 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     setBackUploading(false);
   };
 
-  // ── Save admin settings
   const saveSettings = async () => {
     setSavingSettings(true);
     await supabase.from("checklist_templates").update({
@@ -319,176 +499,194 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     setSavingSettings(false);
   };
 
-  // ── Print (2-sided PDF via browser print)
+  /* ─── Print ─────────────────────────────────────────────────── */
   const handlePrint = () => {
-    const printContent = document.getElementById("care-guide-print-area");
-    if (!printContent) return;
+    const basicItems = items.filter(i => i.color !== "deep");
+    const deepItems = items.filter(i => i.color === "deep");
+
+    const basicEquip = basicItems.filter(i => i.is_required);
+    const basicInstr = basicItems.filter(i => !i.is_required);
+    const deepEquip = deepItems.filter(i => i.is_required);
+    const deepInstr = deepItems.filter(i => !i.is_required);
+
+    const renderEquipRow = (item: ChecklistItem) =>
+      `<div class="equip-item"><span class="eq-icon">${item.icon}</span><span class="eq-label">${item.title}</span></div>`;
+
+    const renderInstrRow = (item: ChecklistItem, idx: number) =>
+      `<div class="instr-row">
+        <span class="instr-icon">${item.icon}</span>
+        <span class="instr-text">${item.title}</span>
+       </div>`;
 
     const printWindow = window.open("", "_blank", "width=900,height=700");
     if (!printWindow) return;
 
     printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
+      <!DOCTYPE html><html><head>
         <title>${template.title} — Care Guide</title>
         <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Helvetica Neue', Arial, sans-serif; background: white; color: #1a1a1a; }
+          * { margin:0; padding:0; box-sizing:border-box; }
+          body { font-family:'Helvetica Neue',Arial,sans-serif; background:white; color:#1a1a1a; }
+          @page { size: A5 landscape; margin: 12mm 14mm; }
 
-          @page {
-            size: A5 landscape;
-            margin: 10mm;
-          }
+          /* ── Only 2 physical pages ── */
+          .page { width:100%; page-break-after:always; }
+          .page:last-child { page-break-after:auto; }
 
-          .page {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            page-break-after: always;
-          }
-          .page:last-child { page-break-after: auto; }
-
-          /* FRONT PAGE */
-          .front { padding: 16px 20px; }
+          /* ── FRONT ── */
+          .front { min-height:0; }
           .front-header {
-            display: flex; align-items: center; gap: 12px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #1a1a1a;
-            margin-bottom: 14px;
+            display:flex; align-items:center; gap:10px;
+            border-bottom:2px solid #1a1a1a;
+            padding-bottom:10px; margin-bottom:12px;
           }
-          .front-header .guide-icon { font-size: 28px; }
-          .front-header h1 {
-            font-size: 20px; font-weight: 700; letter-spacing: 0.06em;
-            text-transform: uppercase;
-          }
-          .front-header .draft-badge {
-            margin-left: auto;
-            font-size: 9px; font-weight: 700;
-            border: 1px solid #999;
-            padding: 2px 6px; border-radius: 4px;
-            color: #999; letter-spacing: 0.08em;
+          .guide-icon { font-size:24px; }
+          .guide-title { font-size:16px; font-weight:800; letter-spacing:0.07em; text-transform:uppercase; }
+          .draft-badge {
+            margin-left:auto; font-size:8px; font-weight:700;
+            border:1px solid #999; padding:2px 5px; border-radius:3px; color:#999;
           }
 
-          .items-list { list-style: none; }
-          .item-row {
-            display: flex; align-items: flex-start; gap: 10px;
-            padding: 7px 0;
-            border-bottom: 1px dashed #e0e0e0;
-          }
-          .item-row:last-child { border-bottom: none; }
-          .item-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
-          .item-text { font-size: 12px; line-height: 1.5; font-weight: 300; letter-spacing: 0.02em; }
-          .item-photo {
-            margin-top: 5px;
-            width: 100%;
-            max-height: 70px;
-            object-fit: cover;
-            border-radius: 6px;
-            border: 1px solid #e0e0e0;
+          /* ── Two columns ── */
+          .columns { display:flex; gap:0; }
+          .col { flex:1; padding:0 10px; }
+          .col:first-child { padding-left:0; border-right:1px dashed #ccc; }
+          .col:last-child { padding-right:0; }
+
+          .col-title {
+            font-size:11px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase;
+            border-bottom:1px solid #1a1a1a; padding-bottom:5px; margin-bottom:8px;
           }
 
+          /* Section labels */
+          .section-label {
+            font-size:8px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
+            color:#555; margin:8px 0 5px; border-bottom:1px dotted #ddd; padding-bottom:3px;
+          }
+
+          /* Equipment grid */
+          .equip-grid { display:flex; flex-wrap:wrap; gap:6px 10px; margin-bottom:4px; }
+          .equip-item { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:36px; }
+          .eq-icon { font-size:20px; }
+          .eq-label { font-size:7px; text-align:center; color:#444; max-width:40px; line-height:1.2; }
+
+          /* Instructions */
+          .instr-row { display:flex; align-items:flex-start; gap:7px; padding:4px 0; border-bottom:1px dotted #e8e8e8; }
+          .instr-row:last-child { border-bottom:none; }
+          .instr-icon { font-size:14px; flex-shrink:0; width:18px; text-align:center; margin-top:1px; }
+          .instr-text { font-size:9.5px; line-height:1.45; font-weight:300; }
+
+          /* Footer */
           .front-footer {
-            margin-top: auto;
-            padding-top: 10px;
-            border-top: 1px solid #e0e0e0;
-            font-size: 9px;
-            color: #999;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+            margin-top:12px; padding-top:8px;
+            border-top:1px solid #e0e0e0;
+            font-size:8px; color:#999; letter-spacing:0.05em; text-transform:uppercase;
+            display:flex; justify-content:space-between;
           }
 
-          /* BACK PAGE */
-          .back {
-            position: relative;
-            overflow: hidden;
+          /* ── BACK ── */
+          .back { display:flex; align-items:stretch; justify-content:center; min-height:120mm; overflow:hidden; position:relative; }
+          .back-img { width:100%; height:auto; object-fit:contain; display:block; }
+          .back-placeholder {
+            width:100%; display:flex; flex-direction:column;
+            align-items:center; justify-content:center; gap:8px;
+            min-height:100mm;
           }
-          .back-img {
-            width: 100%; height: 100%;
-            object-fit: cover;
-          }
-          .back-overlay {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.6));
-            padding: 20px;
-          }
-          .back-overlay .back-label {
-            color: white; font-size: 18px; font-weight: 700;
-            letter-spacing: 0.06em; text-transform: uppercase;
-          }
-          .back-no-image {
-            width: 100%; height: 100%;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            gap: 10px; color: #ccc;
-          }
-          .back-no-image .back-icon { font-size: 60px; }
-          .back-no-image .back-title {
-            font-size: 22px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.08em; color: #888;
+          .back-placeholder .ph-icon { font-size:64px; }
+          .back-placeholder .ph-title { font-size:20px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#888; }
+          .back-label {
+            position:absolute; bottom:14px; left:0; right:0;
+            text-align:center; font-size:14px; font-weight:700;
+            text-transform:uppercase; letter-spacing:0.06em; color:rgba(0,0,0,0.5);
           }
         </style>
-      </head>
-      <body>
-        <!-- FRONT -->
-        <div class="page front">
-          <div class="front-header">
-            <span class="guide-icon">${template.icon}</span>
-            <h1>${template.title}</h1>
-            ${!template.is_published ? '<span class="draft-badge">DRAFT</span>' : ""}
+      </head><body>
+
+      <!-- FRONT PAGE -->
+      <div class="page front">
+        <div class="front-header">
+          <span class="guide-icon">${template.icon}</span>
+          <span class="guide-title">${template.title}</span>
+          ${!template.is_published ? '<span class="draft-badge">DRAFT</span>' : ""}
+        </div>
+
+        <div class="columns">
+          <!-- Basic Clean column -->
+          <div class="col">
+            <div class="col-title">Basic Clean</div>
+            ${basicEquip.length > 0 ? `
+              <div class="section-label">Equipment</div>
+              <div class="equip-grid">${basicEquip.map(renderEquipRow).join("")}</div>
+            ` : ""}
+            ${basicInstr.length > 0 ? `
+              <div class="section-label">Instructions</div>
+              ${basicInstr.map(renderInstrRow).join("")}
+            ` : ""}
+            ${basicEquip.length === 0 && basicInstr.length === 0 ? '<p style="font-size:9px;color:#ccc;font-style:italic;">No items</p>' : ""}
           </div>
-          <ul class="items-list">
-            ${items.map(item => `
-              <li class="item-row">
-                <span class="item-icon">${item.icon}</span>
-                <div>
-                  <span class="item-text">${item.title}</span>
-                  ${item.photo_url ? `<img src="${item.photo_url}" class="item-photo" />` : ""}
-                </div>
-              </li>
-            `).join("")}
-          </ul>
-          <div class="front-footer">Estate Care Guide · ${new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long" })}</div>
+
+          <!-- Deep Clean column -->
+          <div class="col">
+            <div class="col-title">Deep Clean</div>
+            ${deepEquip.length > 0 ? `
+              <div class="section-label">Equipment</div>
+              <div class="equip-grid">${deepEquip.map(renderEquipRow).join("")}</div>
+            ` : ""}
+            ${deepInstr.length > 0 ? `
+              <div class="section-label">Instructions</div>
+              ${deepInstr.map(renderInstrRow).join("")}
+            ` : ""}
+            ${deepEquip.length === 0 && deepInstr.length === 0 ? '<p style="font-size:9px;color:#ccc;font-style:italic;">No items</p>' : ""}
+          </div>
         </div>
 
-        <!-- BACK -->
-        <div class="page back">
-          ${backImageUrl
-            ? `<img src="${backImageUrl}" class="back-img" />
-               <div class="back-overlay"><span class="back-label">${template.title}</span></div>`
-            : `<div class="back-no-image">
-                 <span class="back-icon">${template.icon}</span>
-                 <span class="back-title">${template.title}</span>
-               </div>`
-          }
+        <div class="front-footer">
+          <span>Estate Care Guide</span>
+          <span>${new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long" })}</span>
         </div>
-      </body>
-      </html>
+      </div>
+
+      <!-- BACK PAGE -->
+      <div class="page back">
+        ${backImageUrl
+          ? `<img src="${backImageUrl}" class="back-img" /><div class="back-label">${template.title}</div>`
+          : `<div class="back-placeholder"><span class="ph-icon">${template.icon}</span><span class="ph-title">${template.title}</span></div>`
+        }
+      </div>
+
+      </body></html>
     `);
-
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 600);
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 600);
   };
 
+  /* ─── Derived ───────────────────────────────────────────────── */
   const colorSet = COLOR_MAP[template.color] ?? COLOR_MAP.gold;
   const isDraft = !template.is_published;
+  const basicItems = items.filter(i => i.color !== "deep");
+  const deepItems = items.filter(i => i.color === "deep");
 
   return (
     <div className="animate-fade-in flex flex-col h-full">
+
+      {/* Icon picker portal */}
+      {iconAnchorEl && (
+        <IconPickerPortal
+          anchor={iconAnchorEl}
+          selected={template.icon}
+          onSelect={saveIcon}
+          onClose={() => setIconAnchorEl(null)}
+        />
+      )}
+
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="bg-charcoal border-b border-charcoal-light px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center gap-3 mb-3">
           <button onClick={onBack} className="p-1.5 rounded-xl hover:bg-white/10 transition-colors text-cream/60 hover:text-cream">
             <ArrowLeft size={18} />
           </button>
-          <p className="text-xs text-cream/40 uppercase tracking-widest">
-            {language === "es" ? "Guías de Cuidado" : "Care Guides"}
-          </p>
+          <p className="text-xs text-cream/40 uppercase tracking-widest">Care Guides</p>
           <div className="ml-auto flex items-center gap-2">
             {isMasterAdmin && (
               <button
@@ -506,7 +704,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
             <button
               onClick={handlePrint}
               className="p-1.5 rounded-xl border border-white/20 text-cream/50 hover:text-cream hover:border-white/40 transition-all"
-              title="Print 2-sided card"
+              title="Print 2-sided A5 card"
             >
               <Printer size={15} />
             </button>
@@ -515,36 +713,27 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
 
         {/* Title row */}
         <div className="flex items-center gap-3">
-          {/* Icon */}
-          <div className="relative">
-            <button
-              onClick={() => isMasterAdmin && setShowIconPicker(v => !v)}
-              className={cn(
-                "w-12 h-12 rounded-2xl border-2 flex items-center justify-center text-2xl flex-shrink-0 transition-all",
-                colorSet.border, colorSet.bg,
-                isMasterAdmin && "cursor-pointer hover:scale-105"
-              )}
-            >
-              {template.icon}
-            </button>
-            {showIconPicker && (
-              <div className="absolute top-14 left-0 z-50 bg-card border border-border rounded-2xl p-3 grid grid-cols-6 gap-1.5 shadow-2xl w-64 max-h-56 overflow-y-auto">
-                <p className="col-span-6 text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wider">Choose icon</p>
-                {ICON_BANK.map(ic => (
-                  <button key={ic} onClick={() => saveIcon(ic)}
-                    className={cn("text-xl p-1.5 rounded-xl hover:bg-muted transition-colors", template.icon === ic && "bg-muted ring-1 ring-primary")}
-                  >{ic}</button>
-                ))}
-              </div>
+          {/* Icon — opens portal picker */}
+          <button
+            ref={el => { if (isMasterAdmin) setIconAnchorEl(null); }}
+            onClick={e => {
+              if (!isMasterAdmin) return;
+              setIconAnchorEl(v => v ? null : e.currentTarget as HTMLButtonElement);
+            }}
+            className={cn(
+              "w-12 h-12 rounded-2xl border-2 flex items-center justify-center text-2xl flex-shrink-0 transition-all",
+              colorSet.border, colorSet.bg,
+              isMasterAdmin && "cursor-pointer hover:scale-105 active:scale-95"
             )}
-          </div>
+          >
+            {template.icon}
+          </button>
 
           {/* Title */}
           <div className="flex-1 min-w-0">
             {editingTitle && isMasterAdmin ? (
               <input
-                autoFocus
-                value={titleDraft}
+                autoFocus value={titleDraft}
                 onChange={e => setTitleDraft(e.target.value)}
                 onBlur={saveTitle}
                 onKeyDown={e => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
@@ -552,22 +741,19 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
               />
             ) : (
               <h1
-                className={cn("font-display text-2xl leading-tight cursor-default", isDraft ? "text-cream/40" : "text-cream")}
+                className={cn("font-display text-2xl leading-tight", isDraft ? "text-cream/40" : "text-cream", isMasterAdmin && "cursor-pointer")}
                 onClick={() => isMasterAdmin && setEditingTitle(true)}
               >
                 {template.title}
-                {isMasterAdmin && <Pencil size={12} className="inline ml-2 text-cream/30 hover:text-cream/60 transition-colors" />}
+                {isMasterAdmin && <Pencil size={12} className="inline ml-2 text-cream/30" />}
               </h1>
             )}
             <div className="flex items-center gap-2 mt-0.5">
               <span className={cn("text-xs font-medium", colorSet.text)}>
-                <BookOpen size={10} className="inline mr-1" />
-                {language === "es" ? "Guía de cuidado" : "Care guide"}
+                <BookOpen size={10} className="inline mr-1" />Care guide
               </span>
               {isDraft && (
-                <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border">
-                  DRAFT
-                </span>
+                <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border">DRAFT</span>
               )}
             </div>
           </div>
@@ -579,7 +765,6 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
         <div className="bg-card border-b border-border px-4 py-4 space-y-4 flex-shrink-0">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Admin Settings</p>
 
-          {/* Published toggle */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Status</p>
@@ -598,78 +783,56 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
             </button>
           </div>
 
-          {/* Assign role */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block font-medium">Assign to role</label>
-              <select
-                value={assignedRole}
-                onChange={e => setAssignedRole(e.target.value)}
-                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
+              <select value={assignedRole} onChange={e => setAssignedRole(e.target.value)}
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
                 <option value="">All roles</option>
                 {ROLES.map(r => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block font-medium">Assign to dept.</label>
-              <select
-                value={assignedDepartment}
-                onChange={e => setAssignedDepartment(e.target.value)}
-                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              >
+              <select value={assignedDepartment} onChange={e => setAssignedDepartment(e.target.value)}
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
                 <option value="">All departments</option>
                 {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
           </div>
 
-          <button
-            onClick={saveSettings}
-            disabled={savingSettings}
-            className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
-          >
+          <button onClick={saveSettings} disabled={savingSettings}
+            className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2">
             {savingSettings ? "Saving…" : <><Check size={14} /> Save Settings</>}
           </button>
 
-          {/* Back image for print */}
+          {/* Back image */}
           <div>
-            <p className="text-xs text-muted-foreground mb-2 font-medium">Back of card (for printing)</p>
+            <p className="text-xs text-muted-foreground mb-2 font-medium">Back of card (prints as reverse side)</p>
             {backImageUrl ? (
               <div className="relative rounded-xl overflow-hidden border border-border group">
-                <img src={backImageUrl} alt="Back of card" className="w-full h-32 object-cover" />
+                {/* Auto-sized image */}
+                <img src={backImageUrl} alt="Back of card" className="w-full h-auto block" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => backImgRef.current?.click()}
-                    className="bg-card/90 rounded-xl px-3 py-1.5 text-xs font-medium text-foreground"
-                  >
-                    Replace
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await supabase.from("checklist_templates").update({ cover_image_url: null }).eq("id", template.id);
-                      setBackImageUrl(null); updateTemplate({ cover_image_url: null });
-                    }}
-                    className="bg-card/90 rounded-xl px-3 py-1.5 text-xs font-medium text-[hsl(var(--status-urgent))]"
-                  >
-                    Remove
-                  </button>
+                  <button onClick={() => backImgRef.current?.click()}
+                    className="bg-card/90 rounded-xl px-3 py-1.5 text-xs font-medium text-foreground">Replace</button>
+                  <button onClick={async () => {
+                    await supabase.from("checklist_templates").update({ cover_image_url: null }).eq("id", template.id);
+                    setBackImageUrl(null); updateTemplate({ cover_image_url: null });
+                  }} className="bg-card/90 rounded-xl px-3 py-1.5 text-xs font-medium text-[hsl(var(--status-urgent))]">Remove</button>
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => backImgRef.current?.click()}
+              <button onClick={() => backImgRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleBackImageUpload(f); }}
-                className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-primary flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-all"
-              >
-                {backUploading ? (
-                  <div className="text-xs">Uploading…</div>
-                ) : (
+                className="w-full py-8 rounded-xl border-2 border-dashed border-border hover:border-primary flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-all">
+                {backUploading ? <div className="text-xs">Uploading…</div> : (
                   <>
                     <ImageIcon size={20} />
                     <p className="text-xs">Drag & drop or click to add back image</p>
-                    <p className="text-[10px] text-muted-foreground/60">This will print on the back of the care card</p>
+                    <p className="text-[10px] text-muted-foreground/60">Prints on reverse side of the card</p>
                   </>
                 )}
               </button>
@@ -680,91 +843,93 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
         </div>
       )}
 
-      {/* ── Guide items ─────────────────────────────────────────── */}
-      <div id="care-guide-print-area" className="flex-1 overflow-y-auto pb-8">
-        {/* Intro caption */}
-        <div className="px-5 pt-4 pb-2">
+      {/* ── Add item inline form ─────────────────────────────────── */}
+      {addingItem && (
+        <div className="bg-muted/30 border-b border-border px-4 py-3 flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-muted-foreground font-medium">
+            {addingItem.isEquipment ? "Equipment" : "Instruction"} → {addingItem.column === "basic" ? "Basic" : "Deep"} Clean
+          </span>
+          <div className="relative">
+            <button
+              ref={el => setNewIconAnchor(null)}
+              onClick={e => setNewIconAnchor(v => v ? null : e.currentTarget as HTMLButtonElement)}
+              className="text-lg w-8 h-8 border border-border rounded-lg flex items-center justify-center bg-card"
+            >
+              {newIcon}
+            </button>
+            {newIconAnchor && (
+              <IconPickerPortal
+                anchor={newIconAnchor}
+                selected={newIcon}
+                onSelect={ic => { setNewIcon(ic); setNewIconAnchor(null); }}
+                onClose={() => setNewIconAnchor(null)}
+              />
+            )}
+          </div>
+          <input
+            autoFocus value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") commitAdd(); if (e.key === "Escape") setAddingItem(null); }}
+            placeholder="Enter text…"
+            className="flex-1 text-sm bg-card border border-border rounded-lg px-2.5 py-1.5 outline-none focus:border-primary"
+          />
+          <button onClick={commitAdd} className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg font-medium">Add</button>
+          <button onClick={() => setAddingItem(null)} className="text-xs text-muted-foreground">✕</button>
+        </div>
+      )}
+
+      {/* ── Content — 2 column layout ───────────────────────────── */}
+      <div className="flex-1 overflow-y-auto pb-8">
+        <div className="px-4 pt-3 pb-2">
           <p className="text-[11px] text-muted-foreground/60 uppercase tracking-widest font-medium">
-            {language === "es" ? "Instrucciones" : "Instructions"}
+            {language === "es" ? "Instrucciones de Cuidado" : "Care Instructions"}
           </p>
+          {isAdmin && (
+            <p className="text-[10px] text-muted-foreground/40 mt-0.5">
+              Hover items to assign to Basic or Deep column, or mark as Equipment/Instruction
+            </p>
+          )}
         </div>
 
         {loading ? (
-          <div className="px-4 space-y-2 pt-2">
-            {[1,2,3,4].map(i => <div key={i} className="h-10 bg-muted rounded-xl animate-pulse" />)}
+          <div className="px-4 space-y-2">
+            {[1,2,3].map(i => <div key={i} className="h-10 bg-muted rounded-xl animate-pulse" />)}
           </div>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-              <div className="bg-card mx-4 rounded-2xl border border-border overflow-hidden">
-                {items.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <BookOpen size={24} className="mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No guidelines yet.</p>
-                  </div>
-                ) : (
-                  items.map((item, index) => (
-                    <SortableGuideItem
-                      key={item.id}
-                      item={item}
-                      isAdmin={isAdmin}
-                      onUpdate={handleUpdate}
-                      onDelete={handleDelete}
-                      onPhotoDrop={handlePhotoDrop}
-                    />
-                  ))
-                )}
-
-                {/* Add item row */}
-                {isAdmin && (
-                  <div className="border-t border-dashed border-border/50 px-4 py-3">
-                    {addingItem ? (
-                      <div className="flex items-center gap-2">
-                        {/* New icon picker */}
-                        <div className="relative">
-                          <button onClick={() => setShowNewIconPicker(v => !v)}
-                            className="text-lg w-8 h-8 border border-border rounded-lg flex items-center justify-center">
-                            {newIcon}
-                          </button>
-                          {showNewIconPicker && (
-                            <div className="absolute bottom-10 left-0 z-50 bg-card border border-border rounded-xl p-2 grid grid-cols-5 gap-1 shadow-xl w-44 max-h-52 overflow-y-auto">
-                              {ICON_BANK.map(ic => (
-                                <button key={ic} onClick={e => { e.stopPropagation(); setNewIcon(ic); setShowNewIconPicker(false); }}
-                                  className={cn("text-base p-1 rounded hover:bg-muted", newIcon === ic && "bg-muted")}
-                                >{ic}</button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <input
-                          autoFocus value={newTitle}
-                          onChange={e => setNewTitle(e.target.value)}
-                          onKeyDown={e => { if (e.key === "Enter") addItem(); if (e.key === "Escape") setAddingItem(false); }}
-                          placeholder="New guideline…"
-                          className="flex-1 text-sm bg-muted/50 border border-border rounded-lg px-2.5 py-1.5 outline-none focus:border-primary"
-                        />
-                        <button onClick={addItem} className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg font-medium">Add</button>
-                        <button onClick={() => setAddingItem(false)} className="text-xs text-muted-foreground">✕</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setAddingItem(true)}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground py-1 transition-colors">
-                        <Plus size={12} /> Add guideline
-                      </button>
-                    )}
-                  </div>
-                )}
+              <div className="px-4 flex gap-3">
+                <ColumnSection
+                  title="Basic Clean"
+                  items={basicItems}
+                  isAdmin={isAdmin}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  onPhotoDrop={handlePhotoDrop}
+                  onAddItem={handleAddItem}
+                  colorAccent="border-[hsl(var(--gold)/0.3)] bg-[hsl(var(--gold)/0.06)] text-[hsl(var(--gold))]"
+                />
+                <ColumnSection
+                  title="Deep Clean"
+                  items={deepItems}
+                  isAdmin={isAdmin}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  onPhotoDrop={handlePhotoDrop}
+                  onAddItem={handleAddItem}
+                  colorAccent="border-[hsl(var(--status-progress)/0.3)] bg-[hsl(var(--status-progress)/0.06)] text-[hsl(var(--status-progress))]"
+                />
               </div>
             </SortableContext>
           </DndContext>
         )}
 
-        {/* Back image preview (non-admin read view) */}
+        {/* Back image preview */}
         {backImageUrl && !showAdminPanel && (
           <div className="mx-4 mt-4">
-            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">Material reference</p>
+            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">Material reference (back of card)</p>
             <div className="rounded-2xl overflow-hidden border border-border">
-              <img src={backImageUrl} alt="Material" className="w-full h-40 object-cover" />
+              <img src={backImageUrl} alt="Material" className="w-full h-auto block" />
             </div>
           </div>
         )}
@@ -773,9 +938,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
         <div className="mx-4 mt-4 flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-2xl">
           <Printer size={14} className="text-muted-foreground flex-shrink-0" />
           <p className="text-xs text-muted-foreground">
-            {language === "es"
-              ? "Imprime esta guía como tarjeta de 2 caras (frente + foto del material)"
-              : "Print this as a 2-sided card — instructions on the front, material photo on the back"}
+            Prints as 2-sided A5 landscape card — Basic/Deep columns on front, material photo on back
           </p>
         </div>
       </div>
