@@ -389,6 +389,7 @@ export function RulesSection() {
       enacted_keywords: rule.enacted_keywords.join(", "),
       is_universal: rule.is_universal,
       property_id: rule.property_id ?? "",
+      only_when_occupied: (rule as any).only_when_occupied ?? false,
     });
     setEditingId(rule.id);
     setShowForm(true);
