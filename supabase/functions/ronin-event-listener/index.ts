@@ -562,12 +562,6 @@ Write a SHORT, professional message (max 80 words) to assigned staff listing the
     );
   }
 });
-
-    const propertyName = propRes.data?.name ?? "Estate";
-    const allStaff = staffRes.data ?? [];
-    const masterAdminId = masterRes.data?.[0]?.user_id ?? null;
-
-    // Resolve assigned staff names
     const assignedIds: string[] = event.assigned_staff_ids ?? [];
     const assignedStaff = allStaff.filter((s: { id: string }) => assignedIds.includes(s.id));
     const assignedNames = assignedStaff.map((s: { full_name: string | null }) => s.full_name ?? "Unknown");
