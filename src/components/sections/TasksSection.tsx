@@ -27,7 +27,7 @@ function PartialChecklistsWidget() {
       const { data: roleRow } = await supabase.from("user_roles").select("role").eq("user_id", userId!).single();
       const userRole = roleRow?.role ?? profile.level ?? "staff";
       const propIds: string[] = profile.assigned_property_ids ?? assignedPropertyIds;
-      let q = supabase.from("checklist_templates").select("id, title, icon, property_id, recurrence, assigned_role, assigned_department");
+      let q = supabase.from("checklist_templates").select("id, title, icon, property_id, recurrence, assigned_role, assigned_department").in("category", ["cleaning", "audit", "checklist", "activity"]);
       if (propIds.length > 0) {
         q = q.or(`property_id.in.(${propIds.join(",")}),is_universal.eq.true`);
       } else {
@@ -108,7 +108,7 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
   };
 
   return (
-    <div className="flex flex-col min-w-[260px] max-w-[300px] w-[72vw] snap-start flex-shrink-0">
+    <div className="flex flex-col flex-1 min-w-0">
       {/* Column header */}
       <div className={cn("flex items-center justify-between px-3 py-2 rounded-t-xl border-b", cfg.badge)}>
         <div className="flex items-center gap-1.5">
@@ -130,7 +130,7 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
         )}
       </div>
       {/* Cards */}
-      <div className="flex-1 bg-muted/30 rounded-b-xl p-2 space-y-2 min-h-[120px]">
+      <div className="bg-muted/30 rounded-b-xl p-2 space-y-2 min-h-[80px] max-h-[55vh] overflow-y-auto">
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center h-16">
             <p className="text-[10px] text-muted-foreground/50 italic">
@@ -317,16 +317,16 @@ export function TasksSection() {
 
       {/* Kanban board */}
       {loading ? (
-        <div className="flex gap-3 px-4 pt-2 overflow-x-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
           {columns.map(s => (
-            <div key={s} className="min-w-[260px] w-[72vw] flex-shrink-0">
+            <div key={s}>
               <div className="h-8 rounded-t-xl bg-muted animate-pulse mb-2" />
-              {[1,2,3].map(i => <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse mb-2" />)}
+              {[1,2].map(i => <div key={i} className="h-20 rounded-xl bg-card border border-border animate-pulse mb-2" />)}
             </div>
           ))}
         </div>
       ) : (
-        <div className="flex gap-3 px-4 pt-2 pb-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
           {columns.map(s => (
             <KanbanColumn
               key={s}
