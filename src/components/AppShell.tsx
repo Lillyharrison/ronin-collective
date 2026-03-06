@@ -49,6 +49,7 @@ const sectionTitles: Record<string, string> = {
   achievements: "Achievements",
   "master-import": "Master Import",
   alerts:       "Alerts",
+  rules:        "Property Rules",
 };
 
 function ActiveSection() {
