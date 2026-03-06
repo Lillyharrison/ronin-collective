@@ -20,7 +20,8 @@ export type ActiveSection =
   | "achievements"
   | "master-import"
   | "memory"
-  | "alerts";
+  | "alerts"
+  | "rules";
 
 interface HistoryEntry {
   section: ActiveSection;

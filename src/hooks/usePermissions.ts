@@ -40,6 +40,7 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   travel:          ["master_admin", "admin", "principal"],
   calendar:        ["master_admin", "admin", "manager", "staff", "principal"],
   "master-import": ["master_admin"],
+  rules:           ["master_admin", "admin", "manager", "staff"],
 };
 
 export function usePermissions(): UserPermissions {
