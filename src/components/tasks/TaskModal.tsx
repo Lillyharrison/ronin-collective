@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { fireConfetti } from "@/lib/confetti";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
   ChevronDown, Check, Send, Trash2, Clock, AlertTriangle, Package,
+  CheckSquare, MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -57,23 +59,43 @@ const PRIORITIES = [
 
 export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Props) {
   const { language } = useLanguage();
-  const { userId, isAdmin, isMasterAdmin } = usePermissions();
+  const { userId, isAdmin, isMasterAdmin, isManager, department } = usePermissions();
   const isL = language === "es";
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // ── Edit permission logic ────────────────────────────────────────────────────
+  // Master admin / admin: always edit
+  // Manager: edit if task belongs to their department (or no dept set)
+  // Staff / assignee: read-only view
+  const canEdit = (() => {
+    if (!task?.id) return true; // new task — always edit mode
+    if (isMasterAdmin || isAdmin) return true;
+    if (isManager) {
+      const taskDept = task?.assigned_department;
+      return !taskDept || (!!department && taskDept.toLowerCase() === department.toLowerCase());
+    }
+    return false;
+  })();
+
+  // ── Edit state ───────────────────────────────────────────────────────────────
   const [title, setTitle]               = useState(task?.title_en ?? "");
   const [description, setDescription]   = useState(task?.description_en ?? "");
   const [priority, setPriority]         = useState(task?.priority ?? 2);
   const [dueDate, setDueDate]           = useState(task?.due_date ? task.due_date.slice(0, 10) : "");
   const [assignedTo, setAssignedTo]     = useState(task?.assigned_to ?? "");
   const [propertyId, setPropertyId]     = useState(task?.property_id ?? "");
-  const [department, setDepartment]     = useState(task?.assigned_department ?? "");
+  const [dept, setDept]                 = useState(task?.assigned_department ?? "");
   const [role, setRole]                 = useState(task?.assigned_role ?? "");
   const [linkedChecklist, setLinkedChecklist] = useState(task?.linked_checklist_id ?? "");
   const [isDraft, setIsDraft]           = useState(task?.is_draft ?? defaultDraft);
   const [attachments, setAttachments]   = useState<TaskAttachment[]>(task?.attachments ?? []);
   const [uploading, setUploading]       = useState(false);
   const [saving, setSaving]             = useState(false);
+
+  // ── Read-only / assignee state ───────────────────────────────────────────────
+  const [comment, setComment]           = useState("");
+  const [completing, setCompleting]     = useState(false);
+  const [completed, setCompleted]       = useState(task?.status === "completed");
 
   const [profiles, setProfiles]         = useState<Profile[]>([]);
   const [properties, setProperties]     = useState<Property[]>([]);
@@ -116,7 +138,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       due_date: dueDate || null,
       assigned_to: assignedTo || null,
       property_id: propertyId || null,
-      assigned_department: department || null,
+      assigned_department: dept || null,
       assigned_role: role || null,
       linked_checklist_id: linkedChecklist || null,
       is_draft: publishNow ? false : isDraft,
@@ -135,6 +157,21 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     onClose();
   };
 
+  const handleComplete = async () => {
+    if (!task?.id || !userId) return;
+    setCompleting(true);
+    await supabase.from("tasks").update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+    } as any).eq("id", task.id);
+    setCompleted(true);
+    fireConfetti();
+    setTimeout(() => {
+      onSaved();
+      onClose();
+    }, 1800);
+  };
+
   const handleDelete = async () => {
     if (!task?.id || !window.confirm("Delete this task?")) return;
     await supabase.from("tasks").delete().eq("id", task.id);
@@ -143,10 +180,157 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   };
 
   const isEditing = !!task?.id;
-  const selectedProfile = profiles.find(p => p.id === assignedTo);
-  const selectedProperty = properties.find(p => p.id === propertyId);
   const selectedChecklist = checklists.find(c => c.id === linkedChecklist);
+  const assigneeName = profiles.find(p => p.id === (task?.assigned_to ?? assignedTo))?.full_name ?? null;
+  const propertyName = properties.find(p => p.id === (task?.property_id ?? propertyId))?.name ?? null;
+  const checklistLinked = checklists.find(c => c.id === (task?.linked_checklist_id ?? linkedChecklist));
+  const isOverdue = task?.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // READ-ONLY VIEW (staff assignee)
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (isEditing && !canEdit) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative w-full sm:max-w-lg bg-card rounded-t-3xl sm:rounded-2xl border border-border shadow-2xl z-10 flex flex-col max-h-[90dvh]">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+            <div className="flex items-center gap-2">
+              {task.ai_suggested && (
+                <span className="text-[10px] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-2 py-0.5 rounded-full">
+                  ✦ RONIN
+                </span>
+              )}
+              <span className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                task.status === "urgent" ? "bg-[hsl(var(--status-urgent)/0.12)] text-status-urgent border-status-urgent/30" :
+                task.status === "completed" ? "bg-[hsl(var(--status-done)/0.12)] text-status-done border-[hsl(var(--status-done)/0.3)]" :
+                task.status === "in_progress" ? "bg-accent/10 text-accent border-accent/30" :
+                "bg-muted text-muted-foreground border-border"
+              )}>
+                {task.status === "urgent" ? (isL ? "URGENTE" : "URGENT") :
+                 task.status === "completed" ? (isL ? "COMPLETADO" : "COMPLETED") :
+                 task.status === "in_progress" ? (isL ? "EN PROGRESO" : "IN PROGRESS") :
+                 (isL ? "PENDIENTE" : "PENDING")}
+              </span>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+              <X size={16} className="text-muted-foreground" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            {/* Title */}
+            <h2 className="font-display text-lg font-semibold text-foreground leading-snug">{task.title_en}</h2>
+
+            {/* Description */}
+            {task.description_en && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{task.description_en}</p>
+            )}
+
+            {/* Meta pills */}
+            <div className="flex flex-wrap gap-2">
+              {task.due_date && (
+                <span className={cn("flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border",
+                  isOverdue ? "bg-[hsl(var(--status-urgent)/0.1)] text-status-urgent border-status-urgent/30"
+                            : "bg-muted text-muted-foreground border-border")}>
+                  <Clock size={10} />
+                  {new Date(task.due_date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                </span>
+              )}
+              {propertyName && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">
+                  <MapPin size={10} /> {propertyName}
+                </span>
+              )}
+              {assigneeName && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">
+                  <User size={10} /> {assigneeName}
+                </span>
+              )}
+              {checklistLinked && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-[hsl(var(--gold)/0.1)] text-[hsl(var(--gold))] border-[hsl(var(--gold)/0.3)]">
+                  <BookOpen size={10} /> {checklistLinked.icon} {checklistLinked.title}
+                </span>
+              )}
+            </div>
+
+            {/* Attachments (view only) */}
+            {(task.attachments ?? []).length > 0 && (
+              <div>
+                <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
+                  {isL ? "Adjuntos" : "Attachments"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(task.attachments as TaskAttachment[]).map((a, i) => (
+                    a.type === "image"
+                      ? <img key={i} src={a.url} className="w-16 h-16 rounded-xl object-cover border border-border" />
+                      : <a key={i} href={a.url} target="_blank" rel="noreferrer"
+                          className="w-16 h-16 rounded-xl border border-border bg-muted flex flex-col items-center justify-center gap-1">
+                          <Paperclip size={16} className="text-muted-foreground" />
+                          <span className="text-[8px] text-muted-foreground truncate w-12 text-center">{a.name}</span>
+                        </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Comment box */}
+            {!completed && task.status !== "completed" && (
+              <div>
+                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <MessageSquare size={10} /> {isL ? "Comentario / Actualización" : "Comment / Update"}
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  placeholder={isL ? "Añade una nota o actualización…" : "Add a note or update…"}
+                  rows={3}
+                  className="w-full text-sm bg-muted border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground resize-none"
+                />
+              </div>
+            )}
+
+            {/* Completed state */}
+            {(completed || task.status === "completed") && (
+              <div className="flex items-center gap-2 px-3 py-3 bg-[hsl(var(--status-done)/0.1)] border border-[hsl(var(--status-done)/0.3)] rounded-xl">
+                <CheckSquare size={16} className="text-status-done flex-shrink-0" />
+                <p className="text-sm font-medium text-status-done">
+                  {isL ? "¡Tarea completada!" : "Task completed!"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-border px-5 py-4 flex gap-2 flex-shrink-0">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+            >
+              {isL ? "Cerrar" : "Close"}
+            </button>
+            {task.status !== "completed" && !completed && (
+              <button
+                onClick={handleComplete}
+                disabled={completing}
+                className="flex-1 py-2.5 rounded-xl bg-[hsl(var(--status-done))] text-white text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 transition-all active:scale-95"
+              >
+                <CheckSquare size={14} />
+                {completing ? "🎉" : (isL ? "Marcar Completado" : "Mark Complete")}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // EDIT VIEW (admin / manager / new task)
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       {/* Backdrop */}
@@ -264,7 +448,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             </label>
             <select
               value={assignedTo}
-              onChange={e => { setAssignedTo(e.target.value); if (e.target.value) { setDepartment(""); setRole(""); } }}
+              onChange={e => { setAssignedTo(e.target.value); if (e.target.value) { setDept(""); setRole(""); } }}
               className="w-full text-sm bg-muted border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary text-foreground"
             >
               <option value="">{isL ? "Persona específica…" : "Specific person…"}</option>
@@ -273,8 +457,8 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             {!assignedTo && (
               <div className="grid grid-cols-2 gap-2">
                 <select
-                  value={department}
-                  onChange={e => setDepartment(e.target.value)}
+                  value={dept}
+                  onChange={e => setDept(e.target.value)}
                   className="text-sm bg-muted border border-border rounded-xl px-3 py-2 outline-none focus:border-primary text-foreground"
                 >
                   <option value="">{isL ? "Departamento…" : "Department…"}</option>
