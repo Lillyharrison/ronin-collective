@@ -92,9 +92,6 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const [linkedChecklist, setLinkedChecklist] = useState(task?.linked_checklist_id ?? "");
   const [isDraft, setIsDraft]           = useState(task?.is_draft ?? defaultDraft);
   const [isOrder, setIsOrder]           = useState(task?.category === "order");
-  const [deliveryDate, setDeliveryDate] = useState(
-    task?.category === "order" && task?.due_date ? task.due_date.slice(0, 10) : ""
-  );
   const [attachments, setAttachments]   = useState<TaskAttachment[]>(task?.attachments ?? []);
   const [uploading, setUploading]       = useState(false);
   const [saving, setSaving]             = useState(false);
@@ -103,6 +100,8 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const [comment, setComment]           = useState("");
   const [completing, setCompleting]     = useState(false);
   const [completed, setCompleted]       = useState(task?.status === "completed");
+  const [askDelivery, setAskDelivery]   = useState(false);   // show delivery date prompt after order complete
+  const [deliveryDate, setDeliveryDate] = useState("");
 
   const [profiles, setProfiles]         = useState<Profile[]>([]);
   const [properties, setProperties]     = useState<Property[]>([]);
@@ -142,7 +141,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       description_en: description.trim() || null,
       priority,
       status: task?.status ?? "pending",
-      due_date: isOrder ? (deliveryDate || null) : (dueDate || null),
+      due_date: dueDate || null,
       assigned_to: assignedTo || null,
       property_id: propertyId || null,
       assigned_department: dept || null,
@@ -166,10 +165,18 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
   const handleComplete = async () => {
     if (!task?.id || !userId) return;
+    // For order tasks: ask for delivery date first, then complete
+    const isOrderTask = task?.category === "order";
+    if (isOrderTask && !askDelivery) {
+      setAskDelivery(true);
+      return;
+    }
     setCompleting(true);
     await supabase.from("tasks").update({
       status: "completed",
       completed_at: new Date().toISOString(),
+      // Store expected delivery date in due_date field
+      ...(isOrderTask && deliveryDate ? { due_date: deliveryDate } : {}),
     } as any).eq("id", task.id);
     setCompleted(true);
     fireConfetti();
@@ -319,31 +326,53 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           </div>
 
           {/* Footer */}
-          <div className="border-t border-border px-5 py-4 flex gap-2 flex-shrink-0">
-            <button
-              onClick={onClose}
-              className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
-            >
-              {isL ? "Cerrar" : "Close"}
-            </button>
-            {canEdit && (
-              <button
-                onClick={() => setEditMode(true)}
-                className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-colors flex items-center gap-1.5"
-              >
-                ✏️ {isL ? "Editar" : "Edit"}
-              </button>
+          <div className="border-t border-border px-5 py-4 flex-shrink-0">
+            {/* Delivery date prompt for order tasks */}
+            {askDelivery && !completed && (
+              <div className="mb-3 space-y-2">
+                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <ShoppingCart size={12} className="text-[hsl(var(--gold))]" />
+                  {isL ? "¿Cuándo se espera la entrega?" : "When is delivery expected?"}
+                </p>
+                <input
+                  type="date"
+                  value={deliveryDate}
+                  onChange={e => setDeliveryDate(e.target.value)}
+                  className="w-full text-sm bg-muted border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary text-foreground"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  {isL ? "Opcional — puedes añadirlo más tarde en Pedidos" : "Optional — you can add this later in Orders"}
+                </p>
+              </div>
             )}
-            {task.status !== "completed" && !completed && (
+            <div className="flex gap-2">
               <button
-                onClick={handleComplete}
-                disabled={completing}
-                className="flex-1 py-2.5 rounded-xl bg-[hsl(var(--status-done))] text-white text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 transition-all active:scale-95"
+                onClick={askDelivery ? () => setAskDelivery(false) : onClose}
+                className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
               >
-                <CheckSquare size={14} />
-                {completing ? "🎉" : (isL ? "Marcar Completado" : "Mark Complete")}
+                {askDelivery ? (isL ? "Atrás" : "Back") : (isL ? "Cerrar" : "Close")}
               </button>
-            )}
+              {canEdit && !askDelivery && (
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-colors flex items-center gap-1.5"
+                >
+                  ✏️ {isL ? "Editar" : "Edit"}
+                </button>
+              )}
+              {task.status !== "completed" && !completed && (
+                <button
+                  onClick={handleComplete}
+                  disabled={completing}
+                  className="flex-1 py-2.5 rounded-xl bg-[hsl(var(--status-done))] text-white text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 transition-all active:scale-95"
+                >
+                  <CheckSquare size={14} />
+                  {completing ? "🎉" : askDelivery
+                    ? (isL ? "Confirmar pedido" : "Confirm order placed")
+                    : (isL ? "Marcar Completado" : "Mark Complete")}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -473,24 +502,6 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                 isOrder ? "translate-x-4" : "translate-x-0.5")} />
             </button>
           </div>
-
-          {/* Delivery date (only when isOrder) */}
-          {isOrder && (
-            <div>
-              <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Calendar size={10} /> {isL ? "Fecha de entrega esperada" : "Expected delivery date"}
-              </label>
-              <div className="relative">
-                <Calendar size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                <input
-                  type="date"
-                  value={deliveryDate}
-                  onChange={e => setDeliveryDate(e.target.value)}
-                  className="w-full text-xs bg-muted border border-border rounded-xl pl-8 pr-3 py-2.5 outline-none focus:border-primary text-foreground"
-                />
-              </div>
-            </div>
-          )}
 
           {/* Assign to property */}
           <div>
