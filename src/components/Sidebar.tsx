@@ -7,13 +7,13 @@ import {
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
   Building2, Trophy, FileSpreadsheet, Calendar, Brain,
-  ClipboardList,
+  ClipboardList, Shield,
 } from "lucide-react";
 
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
