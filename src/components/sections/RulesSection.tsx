@@ -177,6 +177,21 @@ function RuleForm({ form, setForm, properties, editingId, onSave, onCancel }: Ru
         )}
       </div>
 
+      {/* Only when occupied */}
+      {!form.is_universal && !!form.property_id && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <div
+            onClick={() => setForm(f => ({ ...f, only_when_occupied: !f.only_when_occupied }))}
+            className={cn("w-9 h-5 rounded-full border-2 transition-all relative flex-shrink-0", form.only_when_occupied ? "bg-amber-500 border-amber-500" : "border-border")}
+          >
+            <div className={cn("w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all", form.only_when_occupied ? "left-4" : "left-0.5")} />
+          </div>
+          <span className="text-xs text-muted-foreground">
+            Auto-deactivate when property is unoccupied
+          </span>
+        </label>
+      )}
+
       {/* Triggered by event type */}
       <div>
         <p className="text-xs text-muted-foreground mb-1.5">Triggered by calendar event type</p>
