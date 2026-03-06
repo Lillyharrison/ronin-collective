@@ -562,12 +562,6 @@ Write a SHORT, professional message (max 80 words) to assigned staff listing the
     );
   }
 });
-
-    // ── Classify the event ───────────────────────────────────────────────────
-    const classification = classifyEvent(
-      event.title ?? event.payload?.title ?? "",
-      event.description ?? event.payload?.description ?? "",
-      event.keywords ?? [],
       event.event_type ?? "",
       event.location ?? "",
     );
