@@ -107,6 +107,7 @@ const DEPT_OPTIONS: { value: Department; label: string; labelEs: string }[] = [
 
 const LEVEL_COLORS: Record<string, string> = {
   master_admin:    "text-gold border-gold/60 bg-gold/15",
+  admin:           "text-gold border-gold/40 bg-gold/10",
   principal:       "text-gold border-gold/40 bg-gold/10",
   extended_family: "text-amber-400 border-amber-400/40 bg-amber-400/10",
   manager:         "text-blue-400 border-blue-400/40 bg-blue-400/10",
@@ -259,13 +260,17 @@ export function MeetTeamSection() {
 
   const groups: Record<string, TeamMember[]> = {};
   filtered.forEach(m => {
-    const key = m.role === "master_admin" ? "master_admin" : (m.level || "staff");
+    let key: string;
+    if (m.role === "master_admin") key = "master_admin";
+    else if (m.role === "admin") key = "admin";
+    else key = m.level || "staff";
     if (!groups[key]) groups[key] = [];
     groups[key].push(m);
   });
-  const levelOrder = ["master_admin", "principal", "extended_family", "manager", "staff"] as const;
+  const levelOrder = ["master_admin", "admin", "principal", "extended_family", "manager", "staff"] as const;
   const LEVEL_LABELS: Record<string, { en: string; es: string }> = {
     master_admin:    { en: "Master Admin",      es: "Master Admin" },
+    admin:           { en: "Admin",             es: "Administrador" },
     principal:       { en: "Main Family",       es: "Familia Principal" },
     extended_family: { en: "Extended Family",   es: "Familia Extendida" },
     manager:         { en: "Manager",           es: "Gerente" },
