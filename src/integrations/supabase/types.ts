@@ -275,6 +275,7 @@ export type Database = {
       checklist_items: {
         Row: {
           color: string
+          container: string | null
           created_at: string
           icon: string
           id: string
@@ -288,6 +289,7 @@ export type Database = {
         }
         Insert: {
           color?: string
+          container?: string | null
           created_at?: string
           icon?: string
           id?: string
@@ -301,6 +303,7 @@ export type Database = {
         }
         Update: {
           color?: string
+          container?: string | null
           created_at?: string
           icon?: string
           id?: string
