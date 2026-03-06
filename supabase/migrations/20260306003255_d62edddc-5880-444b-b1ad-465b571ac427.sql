@@ -1,0 +1,1 @@
+ALTER TABLE public.checklist_templates ADD COLUMN IF NOT EXISTS location text DEFAULT NULL;

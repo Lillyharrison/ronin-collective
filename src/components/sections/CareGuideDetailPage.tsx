@@ -29,6 +29,7 @@ interface CareGuideTemplate {
   cover_image_url: string | null;
   assigned_role: string | null;
   assigned_department: string | null;
+  location: string | null;
 }
 
 interface Props {
@@ -600,6 +601,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
   const backImgRef = useRef<HTMLInputElement>(null);
   const [assignedRole, setAssignedRole] = useState(template.assigned_role ?? "");
   const [assignedDepartment, setAssignedDepartment] = useState(template.assigned_department ?? "");
+  const [locationDraft, setLocationDraft] = useState((template as any).location ?? "");
   const [savingSettings, setSavingSettings] = useState(false);
   const [addingItem, setAddingItem] = useState<{ column: "basic" | "deep"; isEquipment: boolean; container?: string } | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -753,8 +755,9 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     await supabase.from("checklist_templates").update({
       assigned_role: assignedRole || null,
       assigned_department: assignedDepartment || null,
-    }).eq("id", template.id);
-    updateTemplate({ assigned_role: assignedRole || null, assigned_department: assignedDepartment || null });
+      location: locationDraft.trim() || null,
+    } as any).eq("id", template.id);
+    updateTemplate({ assigned_role: assignedRole || null, assigned_department: assignedDepartment || null, location: locationDraft.trim() || null });
     setSavingSettings(false);
   };
 
@@ -844,7 +847,10 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
       <div class="page front">
         <div class="front-header">
           ${isUrl(template.icon) ? `<img src="${template.icon}" class="guide-icon-img" />` : `<span class="guide-icon">${template.icon}</span>`}
-          <span class="guide-title">${template.title}</span>
+          <div>
+            <span class="guide-title">${template.title}</span>
+            ${(template as any).location ? `<div style="font-size:9px;font-weight:500;color:#666;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}
+          </div>
           ${!template.is_published ? '<span class="draft-badge">DRAFT</span>' : ""}
         </div>
         <div class="columns">
@@ -985,6 +991,17 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
                         : "border-[hsl(var(--status-done)/0.4)] text-[hsl(var(--status-done))] bg-[hsl(var(--status-done)/0.08)]")}>
               {isDraft ? <><Eye size={12} /> Publish</> : <><EyeOff size={12} /> Unpublish</>}
             </button>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block font-medium">Location (optional)</label>
+            <input
+              value={locationDraft}
+              onChange={e => setLocationDraft(e.target.value)}
+              placeholder="e.g. Master Bedroom, Kitchen Marble..."
+              className="w-full text-sm bg-muted border border-border rounded-lg px-2.5 py-1.5 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
