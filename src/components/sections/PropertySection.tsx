@@ -536,7 +536,11 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
           {PROPERTY_SUB_SECTIONS.map(s => (
             <button
               key={s.key}
-              onClick={() => s.key === "staff" ? setShowStaff(true) : onNavigate(s.key)}
+              onClick={() => {
+                if (s.key === "staff") setShowStaff(true);
+                else if (s.key === "rooms") setShowRooms(true);
+                else onNavigate(s.key);
+              }}
               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-card border border-border hover:border-primary/40 hover:bg-accent transition-all text-left group"
             >
               <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
