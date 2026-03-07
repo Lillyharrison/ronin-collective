@@ -242,7 +242,7 @@ export function TasksSection() {
       is_draft: task.is_draft,
       ai_suggested: task.ai_suggested,
       attachments: (task.attachments ?? []) as any,
-      category: (task as any).category ?? null,
+      category: task.category ?? null,
     });
   };
 
