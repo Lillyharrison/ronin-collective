@@ -155,7 +155,7 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
       {/* Actions */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
-          {canEdit && !isNotPlaced && (
+          {canEdit_orders && !isNotPlaced && (
             <button
               onClick={handleDeliver}
               disabled={delivering}
