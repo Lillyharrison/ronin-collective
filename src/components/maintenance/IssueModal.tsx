@@ -437,9 +437,9 @@ function ModalContent({
             </div>
           )}
 
-          {/* Assign + Schedule (edit mode) */}
-          {mode === "edit" && (
-            <div className="grid grid-cols-2 gap-3">
+          {/* Assign + Schedule — always visible */}
+          <div className="grid grid-cols-2 gap-3">
+            {mode === "edit" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                   Assign to
@@ -447,7 +447,6 @@ function ModalContent({
                 <select
                   value={assignedTo}
                   onChange={e => setAssignedTo(e.target.value)}
-                  style={{ fontSize: "16px" }}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]"
                 >
                   <option value="">Unassigned</option>
@@ -456,20 +455,19 @@ function ModalContent({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                  Schedule date
-                </label>
-                <input
-                  type="date"
-                  value={scheduledDate}
-                  onChange={e => setScheduled(e.target.value)}
-                  style={{ fontSize: "16px" }}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]"
-                />
-              </div>
+            )}
+            <div className={mode === "create" ? "col-span-2" : ""}>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                Scheduled date <span className="font-normal normal-case text-muted-foreground/60">(optional)</span>
+              </label>
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={e => setScheduled(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]"
+              />
             </div>
-          )}
+          </div>
 
           {/* Close-out photo (edit when in_progress or resolved) */}
           {mode === "edit" && (status === "in_progress" || status === "resolved") && (

@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
-  Flag, Tag,
+  Flag, Tag, Clock, CheckCircle2,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMaintenanceIssues, MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues";
@@ -28,7 +28,7 @@ const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, 
 type ViewMode = "board" | "list" | "table";
 
 export function MaintenanceSection() {
-  const { isAdmin, isManager, isMasterAdmin, isFamily, userId } = usePermissions();
+  const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds } = usePermissions();
   const canManage = isMasterAdmin || isAdmin || isManager;
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
 
@@ -42,12 +42,17 @@ export function MaintenanceSection() {
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editIssue,    setEditIssue]    = useState<MaintenanceIssue | null>(null);
   const [detailIssue,  setDetailIssue]  = useState<MaintenanceIssue | null>(null);
-  const [properties,   setProperties]   = useState<{ id: string; name: string }[]>([]);
+  const [allProperties, setAllProperties] = useState<{ id: string; name: string }[]>([]);
   const [profiles,     setProfiles]     = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+
+  // Scoped properties: master_admin/admin/manager see all; others only see assigned
+  const properties = (isMasterAdmin || isAdmin || isManager)
+    ? allProperties
+    : allProperties.filter(p => assignedPropertyIds.includes(p.id));
 
   useEffect(() => {
     supabase.from("properties").select("id, name").order("name")
-      .then(({ data }) => setProperties((data ?? []).map((p: any) => p)));
+      .then(({ data }) => setAllProperties((data ?? []).map((p: any) => p)));
     supabase.from("profiles").select("id, full_name, avatar_url").order("full_name")
       .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
@@ -56,6 +61,12 @@ export function MaintenanceSection() {
 
   const filtered = useCallback(() => {
     let list = [...issues];
+
+    // Non-admin: always scope to assigned properties
+    if (!isMasterAdmin && !isAdmin && !isManager && assignedPropertyIds.length > 0) {
+      list = list.filter(i => !i.property_id || assignedPropertyIds.includes(i.property_id));
+    }
+
     if (search)     list = list.filter(i => i.title.toLowerCase().includes(search.toLowerCase()) || (i.description ?? "").toLowerCase().includes(search.toLowerCase()));
     if (filterProp) list = list.filter(i => i.property_id === filterProp);
     if (filterCat)  list = list.filter(i => i.category === filterCat);
@@ -67,10 +78,14 @@ export function MaintenanceSection() {
       return 0;
     });
     return list;
-  }, [issues, search, filterProp, filterCat, filterPri, sortBy]);
+  }, [issues, search, filterProp, filterCat, filterPri, sortBy, isMasterAdmin, isAdmin, isManager, assignedPropertyIds]);
 
   const displayIssues = filtered();
+  // Pending = reported status (staff-logged, not yet approved)
+  const pendingIssues = displayIssues.filter(i => i.status === "reported");
   const openCount = displayIssues.filter(i => i.status !== "resolved").length;
+  // Non-pending for the main board
+  const boardIssues = displayIssues.filter(i => i.status !== "reported");
 
   const handleCreate = async (payload: Partial<MaintenanceIssue>) => {
     if (!userId) return;
@@ -89,8 +104,11 @@ export function MaintenanceSection() {
     await updateIssue(issue.id, patch);
   };
 
+  const handleApprove = async (issue: MaintenanceIssue) => {
+    await updateIssue(issue.id, { status: "approved" });
+  };
+
   const handleCategoryAdded = () => {
-    // fetchCategories is exposed via hook
     fetchIssues();
   };
 
@@ -158,7 +176,6 @@ export function MaintenanceSection() {
     <div className="animate-fade-in">
       {/* Top bar */}
       <div className="px-4 pt-4 pb-3 space-y-3">
-        {/* Title + actions */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-xl text-foreground">Maintenance</h2>
@@ -185,7 +202,6 @@ export function MaintenanceSection() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search issues…"
-            style={{ fontSize: "16px" }}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
           />
         </div>
@@ -203,7 +219,6 @@ export function MaintenanceSection() {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              style={{ fontSize: "16px" }}
               className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer"
             >
               <option value="newest">Newest first</option>
@@ -215,7 +230,7 @@ export function MaintenanceSection() {
             <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
 
-          {/* View toggle: board / table / list */}
+          {/* View toggle */}
           <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden ml-auto">
             <button onClick={() => setViewMode("board")} title="Kanban board"
               className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
@@ -236,19 +251,16 @@ export function MaintenanceSection() {
         {showFilters && (
           <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
             <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
-              style={{ fontSize: "16px" }}
               className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
               <option value="">All properties</option>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
-              style={{ fontSize: "16px" }}
               className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
               <option value="">All categories</option>
               {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
             </select>
             <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
-              style={{ fontSize: "16px" }}
               className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
               <option value="">All priorities</option>
               <option value="urgent">🔴 Urgent</option>
@@ -260,12 +272,65 @@ export function MaintenanceSection() {
         )}
       </div>
 
+      {/* ─── Pending Approvals (master admin only) ─── */}
+      {isMasterAdmin && pendingIssues.length > 0 && (
+        <div className="mx-4 mb-4 rounded-xl border border-amber-400/30 bg-amber-400/5 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-400/20 bg-amber-400/10">
+            <Clock size={13} className="text-amber-400" />
+            <span className="text-xs font-semibold text-amber-400">Pending Approval</span>
+            <span className="ml-auto text-[10px] bg-amber-400/20 text-amber-400 rounded-full px-2 py-0.5 font-bold">
+              {pendingIssues.length}
+            </span>
+          </div>
+          <div className="divide-y divide-amber-400/10">
+            {pendingIssues.map(issue => (
+              <div key={issue.id} className="flex items-start gap-3 px-4 py-3">
+                {issue.photo_url && (
+                  <img src={issue.photo_url} alt={issue.title}
+                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0 cursor-pointer"
+                    onClick={() => setDetailIssue(issue)} />
+                )}
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailIssue(issue)}>
+                  <p className="text-sm font-semibold text-foreground truncate">{issue.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{issue.description}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <IssuePriorityBadge priority={issue.priority} />
+                    {issue.reporter_name && (
+                      <span className="text-[10px] text-muted-foreground">by {issue.reporter_name}</span>
+                    )}
+                    {issue.property_name && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                        <MapPin size={8} />{issue.property_name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => handleApprove(issue)}
+                    className="flex items-center gap-1 text-[11px] font-semibold bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] border border-[hsl(var(--status-done)/0.3)] rounded-lg px-2.5 py-1.5 hover:bg-[hsl(var(--status-done)/0.25)] transition-colors"
+                  >
+                    <CheckCircle2 size={11} /> Approve
+                  </button>
+                  <button
+                    onClick={() => { setEditIssue(issue); }}
+                    className="text-[11px] text-muted-foreground border border-border rounded-lg px-2.5 py-1.5 hover:bg-muted transition-colors"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ─── Content ─── */}
       {loading ? (
         <div className="px-4 grid grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
         </div>
-      ) : displayIssues.length === 0 ? (
+      ) : boardIssues.length === 0 && pendingIssues.length === 0 ? (
         <div className="mx-4 rounded-2xl bg-card border border-border p-10 text-center">
           <Wrench size={36} className="mx-auto text-muted-foreground/30 mb-3" />
           <p className="font-semibold text-foreground">No issues found</p>
@@ -279,19 +344,18 @@ export function MaintenanceSection() {
           )}
         </div>
       ) : viewMode === "board" ? (
-        // ── Kanban Board — responsive wrap on mobile, horizontal scroll on desktop ──
         <BoardView
-          displayIssues={displayIssues}
+          displayIssues={boardIssues}
           onCardClick={setDetailIssue}
+          onStatusChange={handleStatusChange}
+          canManage={canManage}
         />
       ) : viewMode === "table" ? (
-        // ── Spreadsheet / Table View ──
         <TableView
           displayIssues={displayIssues}
           onRowClick={setDetailIssue}
         />
       ) : (
-        // ── List View ──
         <div className="px-4 space-y-2 pb-6">
           {displayIssues.map(issue => (
             <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
@@ -343,13 +407,55 @@ export function MaintenanceSection() {
   );
 }
 
-// ─── Board view: wraps into 2-col grid on mobile, horizontal scroll on ≥md ───
-function BoardView({ displayIssues, onCardClick }: { displayIssues: MaintenanceIssue[]; onCardClick: (i: MaintenanceIssue) => void }) {
+// ─── Drag-and-drop Kanban Board ───────────────────────────────────────────────
+function BoardView({
+  displayIssues,
+  onCardClick,
+  onStatusChange,
+  canManage,
+}: {
+  displayIssues: MaintenanceIssue[];
+  onCardClick: (i: MaintenanceIssue) => void;
+  onStatusChange: (i: MaintenanceIssue, s: IssueStatus) => void;
+  canManage: boolean;
+}) {
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
+
+  // Non-reported statuses for the board
+  const BOARD_COLS = STATUS_COLUMNS.filter(c => c.key !== "reported");
+
+  const handleDragStart = (e: React.DragEvent, issueId: string) => {
+    e.dataTransfer.setData("issueId", issueId);
+    setDraggingId(issueId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: IssueStatus) => {
+    e.preventDefault();
+    setDragOverCol(status);
+  };
+
+  const handleDrop = (e: React.DragEvent, status: IssueStatus) => {
+    e.preventDefault();
+    const issueId = e.dataTransfer.getData("issueId");
+    const issue = displayIssues.find(i => i.id === issueId);
+    if (issue && issue.status !== status && canManage) {
+      onStatusChange(issue, status);
+    }
+    setDraggingId(null);
+    setDragOverCol(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverCol(null);
+  };
+
   return (
     <>
       {/* Mobile: 2-column grid grouped by status */}
       <div className="md:hidden px-4 pb-6 space-y-4">
-        {STATUS_COLUMNS.map(col => {
+        {BOARD_COLS.map(col => {
           const colIssues = displayIssues.filter(i => i.status === col.key);
           if (colIssues.length === 0) return null;
           return (
@@ -362,7 +468,14 @@ function BoardView({ displayIssues, onCardClick }: { displayIssues: MaintenanceI
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {colIssues.map(issue => (
-                  <IssueCard key={issue.id} issue={issue} onClick={() => onCardClick(issue)} />
+                  <KanbanCard
+                    key={issue.id}
+                    issue={issue}
+                    onClick={() => onCardClick(issue)}
+                    isDragging={draggingId === issue.id}
+                    onDragStart={canManage ? handleDragStart : undefined}
+                    onDragEnd={handleDragEnd}
+                  />
                 ))}
               </div>
             </div>
@@ -370,26 +483,48 @@ function BoardView({ displayIssues, onCardClick }: { displayIssues: MaintenanceI
         })}
       </div>
 
-      {/* Desktop ≥md: classic horizontal Kanban */}
+      {/* Desktop ≥md: classic horizontal Kanban with drag-and-drop */}
       <div className="hidden md:block overflow-x-auto pb-6">
         <div className="flex gap-3 px-4 min-w-max">
-          {STATUS_COLUMNS.map(col => {
+          {BOARD_COLS.map(col => {
             const colIssues = displayIssues.filter(i => i.status === col.key);
+            const isOver = dragOverCol === col.key;
             return (
-              <div key={col.key} className="w-64 flex-shrink-0">
-                <div className="flex items-center gap-2 mb-2 px-1">
+              <div
+                key={col.key}
+                className={cn(
+                  "w-64 flex-shrink-0 rounded-xl transition-colors",
+                  isOver && canManage ? "bg-gold/5 ring-1 ring-gold/30" : ""
+                )}
+                onDragOver={e => handleDragOver(e, col.key)}
+                onDrop={e => handleDrop(e, col.key)}
+                onDragLeave={() => setDragOverCol(null)}
+              >
+                <div className="flex items-center gap-2 mb-2 px-1 py-1">
                   <IssueStatusBadge status={col.key} />
                   <span className="ml-auto text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
                     {colIssues.length}
                   </span>
                 </div>
-                <div className="space-y-2.5">
+                <div className="space-y-2.5 min-h-[4rem]">
                   {colIssues.map(issue => (
-                    <IssueCard key={issue.id} issue={issue} onClick={() => onCardClick(issue)} />
+                    <KanbanCard
+                      key={issue.id}
+                      issue={issue}
+                      onClick={() => onCardClick(issue)}
+                      isDragging={draggingId === issue.id}
+                      onDragStart={canManage ? handleDragStart : undefined}
+                      onDragEnd={handleDragEnd}
+                    />
                   ))}
                   {colIssues.length === 0 && (
-                    <div className="rounded-xl border border-dashed border-border h-16 flex items-center justify-center">
-                      <p className="text-xs text-muted-foreground/40">—</p>
+                    <div className={cn(
+                      "rounded-xl border border-dashed h-16 flex items-center justify-center transition-colors",
+                      isOver && canManage ? "border-gold/50 bg-gold/5" : "border-border"
+                    )}>
+                      <p className="text-xs text-muted-foreground/40">
+                        {isOver && canManage ? "Drop here" : "—"}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -399,6 +534,86 @@ function BoardView({ displayIssues, onCardClick }: { displayIssues: MaintenanceI
         </div>
       </div>
     </>
+  );
+}
+
+// Kanban card with photo thumbnail + drag handle
+function KanbanCard({
+  issue,
+  onClick,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+}: {
+  issue: MaintenanceIssue;
+  onClick: () => void;
+  isDragging: boolean;
+  onDragStart?: (e: React.DragEvent, id: string) => void;
+  onDragEnd?: () => void;
+}) {
+  const CATEGORY_ICONS: Record<string, string> = {
+    "Plumbing": "🔵", "Electrical / Tech": "⚡", "Climate / HVAC": "❄️",
+    "Outdoor / Grounds": "🌿", "Appliances": "🏠", "Structural": "🧱",
+    "Security": "🔒", "General": "🔧",
+  };
+  const icon = CATEGORY_ICONS[issue.category] ?? "🔧";
+
+  return (
+    <div
+      draggable={!!onDragStart}
+      onDragStart={onDragStart ? e => onDragStart(e, issue.id) : undefined}
+      onDragEnd={onDragEnd}
+      onClick={onClick}
+      className={cn(
+        "bg-card border border-border rounded-xl overflow-hidden cursor-pointer",
+        "hover:border-gold/30 hover:shadow-sm transition-all active:scale-[0.99] group",
+        issue.priority === "urgent" && "border-l-4 border-l-[hsl(var(--status-urgent))]",
+        issue.priority === "high" && "border-l-4 border-l-orange-400",
+        isDragging && "opacity-40 scale-95 rotate-1",
+        onDragStart && "cursor-grab active:cursor-grabbing"
+      )}
+    >
+      {/* Photo thumbnail */}
+      {issue.photo_url && (
+        <div className="relative h-24 bg-muted overflow-hidden">
+          <img
+            src={issue.photo_url}
+            alt={issue.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        </div>
+      )}
+      <div className="p-2.5 space-y-1.5">
+        <div className="flex items-start gap-1.5">
+          <span className="text-base flex-shrink-0">{icon}</span>
+          <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2 flex-1">{issue.title}</p>
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          <IssuePriorityBadge priority={issue.priority} />
+          {issue.scheduled_date && (
+            <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
+              <Calendar size={8} />
+              {format(new Date(issue.scheduled_date), "MMM d")}
+            </span>
+          )}
+        </div>
+        {issue.assignee_name && (
+          <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
+            {issue.assignee_avatar
+              ? <img src={issue.assignee_avatar} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+              : <div className="w-3.5 h-3.5 rounded-full bg-muted flex items-center justify-center"><User size={7} /></div>
+            }
+            <span className="truncate">{issue.assignee_name}</span>
+          </div>
+        )}
+        {issue.property_name && (
+          <div className="flex items-center gap-0.5 text-[9px] text-muted-foreground">
+            <MapPin size={8} /><span className="truncate">{issue.property_name}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -431,7 +646,6 @@ function TableView({ displayIssues, onRowClick }: { displayIssues: MaintenanceIs
               onClick={() => onRowClick(issue)}
               className="hover:bg-muted/40 cursor-pointer transition-colors group"
             >
-              {/* Title */}
               <td className="py-2.5 px-3 max-w-[200px]">
                 <div className="flex items-center gap-2">
                   {issue.photo_url && (
@@ -442,26 +656,21 @@ function TableView({ displayIssues, onRowClick }: { displayIssues: MaintenanceIs
                   </span>
                 </div>
               </td>
-              {/* Priority */}
               <td className="py-2.5 px-3 whitespace-nowrap">
                 <IssuePriorityBadge priority={issue.priority} />
               </td>
-              {/* Status */}
               <td className="py-2.5 px-3 whitespace-nowrap">
                 <IssueStatusBadge status={issue.status} />
               </td>
-              {/* Category */}
               <td className="py-2.5 px-3 whitespace-nowrap">
                 <span className="text-xs text-muted-foreground">{issue.category}</span>
               </td>
-              {/* Property / Room */}
               <td className="py-2.5 px-3">
                 <div className="flex flex-col">
                   <span className="text-xs font-medium text-foreground">{issue.property_name ?? "—"}</span>
                   {issue.location_detail && <span className="text-[10px] text-muted-foreground">{issue.location_detail}</span>}
                 </div>
               </td>
-              {/* Assigned */}
               <td className="py-2.5 px-3 whitespace-nowrap">
                 {issue.assignee_name ? (
                   <div className="flex items-center gap-1.5">
@@ -477,7 +686,6 @@ function TableView({ displayIssues, onRowClick }: { displayIssues: MaintenanceIs
                   <span className="text-xs text-muted-foreground/50">Unassigned</span>
                 )}
               </td>
-              {/* Date */}
               <td className="py-2.5 px-3 whitespace-nowrap">
                 <span className="text-xs text-muted-foreground">
                   {format(new Date(issue.created_at), "MMM d, yy")}
