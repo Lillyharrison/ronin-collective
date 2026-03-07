@@ -55,7 +55,7 @@ export function usePermissions(): UserPermissions {
   const [assignedPropertyIds, setAssignedPropertyIds] = useState<string[]>([]);
   const [fullName, setFullName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [sectionPermissions, setSectionPermissions] = useState<Record<string, { view: boolean }> | null>(null);
+  const [sectionPermissions, setSectionPermissions] = useState<Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
