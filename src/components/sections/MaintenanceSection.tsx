@@ -483,55 +483,62 @@ function BoardView({
         })}
       </div>
 
-      {/* Desktop ≥md: classic horizontal Kanban with drag-and-drop */}
-      <div className="hidden md:block overflow-x-auto pb-6">
-        <div className="flex gap-3 px-4 min-w-max">
-          {BOARD_COLS.map(col => {
-            const colIssues = displayIssues.filter(i => i.status === col.key);
-            const isOver = dragOverCol === col.key;
-            return (
-              <div
-                key={col.key}
-                className={cn(
-                  "w-64 flex-shrink-0 rounded-xl transition-colors",
-                  isOver && canManage ? "bg-gold/5 ring-1 ring-gold/30" : ""
-                )}
-                onDragOver={e => handleDragOver(e, col.key)}
-                onDrop={e => handleDrop(e, col.key)}
-                onDragLeave={() => setDragOverCol(null)}
-              >
-                <div className="flex items-center gap-2 mb-2 px-1 py-1">
-                  <IssueStatusBadge status={col.key} />
-                  <span className="ml-auto text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                    {colIssues.length}
-                  </span>
-                </div>
-                <div className="space-y-2.5 min-h-[4rem]">
-                  {colIssues.map(issue => (
-                    <KanbanCard
-                      key={issue.id}
-                      issue={issue}
-                      onClick={() => onCardClick(issue)}
-                      isDragging={draggingId === issue.id}
-                      onDragStart={canManage ? handleDragStart : undefined}
-                      onDragEnd={handleDragEnd}
-                    />
-                  ))}
-                  {colIssues.length === 0 && (
-                    <div className={cn(
-                      "rounded-xl border border-dashed h-16 flex items-center justify-center transition-colors",
-                      isOver && canManage ? "border-gold/50 bg-gold/5" : "border-border"
-                    )}>
-                      <p className="text-xs text-muted-foreground/40">
-                        {isOver && canManage ? "Drop here" : "—"}
-                      </p>
-                    </div>
+      {/* Desktop ≥md: 2-column layout — col 1: Reported/Approved/Assigned, col 2: Scheduled/In Progress/Resolved */}
+      <div className="hidden md:grid md:grid-cols-2 gap-4 px-4 pb-6">
+        {[
+          { label: "Incoming", cols: ["reported", "approved", "assigned"] as IssueStatus[] },
+          { label: "Active",   cols: ["scheduled", "in_progress", "resolved"] as IssueStatus[] },
+        ].map(group => (
+          <div key={group.label} className="space-y-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1">{group.label}</p>
+            {group.cols.map(colKey => {
+              const col = STATUS_COLUMNS.find(c => c.key === colKey)!;
+              const colIssues = displayIssues.filter(i => i.status === col.key);
+              const isOver = dragOverCol === col.key;
+              return (
+                <div
+                  key={col.key}
+                  className={cn(
+                    "rounded-xl border border-border p-3 transition-colors",
+                    isOver && canManage ? "bg-gold/5 border-gold/30" : "bg-card/50"
                   )}
+                  onDragOver={e => handleDragOver(e, col.key)}
+                  onDrop={e => handleDrop(e, col.key)}
+                  onDragLeave={() => setDragOverCol(null)}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <IssueStatusBadge status={col.key} />
+                    <span className="ml-auto text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                      {colIssues.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 min-h-[3rem]">
+                    {colIssues.map(issue => (
+                      <KanbanCard
+                        key={issue.id}
+                        issue={issue}
+                        onClick={() => onCardClick(issue)}
+                        isDragging={draggingId === issue.id}
+                        onDragStart={canManage ? handleDragStart : undefined}
+                        onDragEnd={handleDragEnd}
+                      />
+                    ))}
+                    {colIssues.length === 0 && (
+                      <div className={cn(
+                        "col-span-2 rounded-xl border border-dashed h-12 flex items-center justify-center transition-colors",
+                        isOver && canManage ? "border-gold/50 bg-gold/5" : "border-border/50"
+                      )}>
+                        <p className="text-xs text-muted-foreground/30">
+                          {isOver && canManage ? "Drop here" : "—"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </>
   );
