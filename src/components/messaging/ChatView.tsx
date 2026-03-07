@@ -176,6 +176,10 @@ export function ChatView({
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith("image")) return;
 
+    // Capture any text the user typed alongside the photo, then clear the input
+    const captionText = input.trim();
+    setInput("");
+
     setSending(true);
     const path = `${currentUserId}/${Date.now()}_vision_${file.name}`;
     const { data: uploaded, error: uploadErr } = await supabase.storage
@@ -191,11 +195,12 @@ export function ChatView({
     const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
     const publicUrl = urlData.publicUrl;
 
-    // 1. Save the image as a visible chat message
+    // 1. Save the image as a visible chat message (include caption if provided)
     await sendMediaMessage(publicUrl, "image", currentUserId);
+    if (captionText) await sendMessage(captionText, currentUserId);
     setSending(false);
 
-    // 2. Trigger Gemini Vision analysis
+    // 2. Trigger Gemini Vision analysis, passing the user's caption as context
     setAgentAnalyzing(true);
     try {
       const auth = await getAuthHeader();
@@ -206,12 +211,17 @@ export function ChatView({
           content: m.content_text!,
         }));
 
+      // Use caption as the prompt if provided, otherwise fall back to default
+      const visionPrompt = captionText
+        ? captionText
+        : "Please analyse this image and help me log it to the estate inventory.";
+
       await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: auth },
         body: JSON.stringify({
           type: "message",
-          content: "Please analyse this image and help me log it to the estate inventory.",
+          content: visionPrompt,
           image_url: publicUrl,
           messages: history,
           thread_id: threadId,
