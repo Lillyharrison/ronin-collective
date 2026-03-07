@@ -261,7 +261,7 @@ export function TasksSection() {
       </div>
 
       {/* Top bar: new task button */}
-      {(isAdmin || isManager || isMasterAdmin) && (
+      {canManageTasks && (
         <div className="flex justify-end px-4 py-3 border-b border-border">
           <button
             onClick={() => openNew("pending")}
