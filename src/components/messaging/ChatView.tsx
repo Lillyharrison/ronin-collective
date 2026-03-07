@@ -123,7 +123,7 @@ export function ChatView({
             body: JSON.stringify({
               type: "message",
               content: text,
-              messages: messages.filter(m => m.content_text).map(m => ({
+              messages: messages.filter(m => m.content_text && !m.content_text.startsWith("ACT:")).slice(-20).map(m => ({
                 role: m.is_ai_generated ? "assistant" as const : "user" as const,
                 content: m.content_text!,
               })),
