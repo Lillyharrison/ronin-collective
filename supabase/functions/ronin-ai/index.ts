@@ -350,6 +350,33 @@ async function saveMemorySilently(
   }
 }
 
+/** Add items to the shopping list */
+async function addShoppingListItemsSilently(
+  args: Record<string, unknown>,
+  callerUserId: string | null,
+  adminClient: ReturnType<typeof createClient>
+): Promise<string> {
+  try {
+    const items = args.items as Array<{ name: string; category: string; quantity?: string; notes?: string }>;
+    if (!items?.length) return "⚠️ No items provided.";
+    const rows = items.map(item => ({
+      name: item.name,
+      category: item.category,
+      quantity: item.quantity ?? null,
+      notes: item.notes ?? null,
+      created_by: callerUserId,
+      is_checked: false,
+    }));
+    const { error } = await adminClient.from("shopping_list_items").insert(rows);
+    if (error) throw error;
+    const names = items.map(i => `**${i.name}**`).join(", ");
+    return `🛒 Added to the shopping list: ${names}. You can view the full list in **Orders → Shopping List**.`;
+  } catch (e) {
+    console.error("Shopping list insert failed:", e);
+    return "⚠️ Failed to add item(s) to the shopping list.";
+  }
+}
+
 // ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
