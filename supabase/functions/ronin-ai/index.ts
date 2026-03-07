@@ -1063,6 +1063,9 @@ Analyse the photo carefully:
         );
 
         const initialMessages: unknown[] = [baseSystemMsg, ...dbHistory, currentUserMessage];
+        const ctx: ContextData = { props, staff };
+        const MAX_ITERATIONS = 5;
+        let loopMessages: unknown[] = [...initialMessages];
         let finalText = "";
         let pendingWriteTool: { name: string; args: Record<string, unknown> } | null = null;
 
