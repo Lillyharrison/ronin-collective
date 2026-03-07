@@ -4,8 +4,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
-  ShoppingCart, Truck, Package, Link as LinkIcon, FileText,
-  Calendar, MapPin, User, Check, ChevronDown, ChevronUp, ExternalLink,
+  ShoppingCart, Package, Check, ExternalLink, Truck, Calendar,
+  MapPin, ChevronRight,
 } from "lucide-react";
 import { TaskModal, FullTask, TaskAttachment } from "@/components/tasks/TaskModal";
 
@@ -41,232 +41,199 @@ function getTracking(attachments: TaskAttachment[]): TrackingEntry | null {
   return t ?? null;
 }
 
-function TrackingPanel({ order, onSaved }: { order: OrderTask; onSaved: () => void }) {
-  const { language } = useLanguage();
-  const isL = language === "es";
-  const { isAdmin, isMasterAdmin, isManager } = usePermissions();
-  const canEdit = isAdmin || isMasterAdmin || isManager;
-
-  const existing = getTracking(order.attachments);
-  const [trackingNumber, setTrackingNumber] = useState(existing?.tracking_number ?? "");
-  const [trackingUrl, setTrackingUrl] = useState(existing?.tracking_url ?? "");
-  const [carrier, setCarrier] = useState(existing?.carrier ?? "");
-  const [packingList, setPackingList] = useState(existing?.packing_list ?? "");
-  const [notes, setNotes] = useState(existing?.notes ?? "");
-  const [saving, setSaving] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-
-  const handleSave = async (deliveredNow = false) => {
-    setSaving(true);
-    const trackingEntry: TrackingEntry = {
-      type: "tracking",
-      tracking_number: trackingNumber || undefined,
-      tracking_url: trackingUrl || undefined,
-      carrier: carrier || undefined,
-      packing_list: packingList || undefined,
-      notes: notes || undefined,
-      ...(deliveredNow ? { delivered_at: new Date().toISOString() } : existing?.delivered_at ? { delivered_at: existing.delivered_at } : {}),
-    };
-    const otherAttachments = order.attachments.filter((a: any) => a.type !== "tracking");
-    const updatedAttachments = [...otherAttachments, trackingEntry];
-    await supabase.from("tasks").update({ attachments: updatedAttachments as any }).eq("id", order.id);
-    setSaving(false);
-    onSaved();
-  };
-
-  const hasTracking = !!(existing?.tracking_number || existing?.tracking_url || existing?.carrier);
-
+function StatusBadge({ status, isL }: { status: string; isL: boolean }) {
   return (
-    <div className="mt-2">
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
-      >
-        <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <Truck size={12} />
-          {isL ? "Seguimiento del envío" : "Shipping & Tracking"}
-          {hasTracking && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--status-done))]" />
-          )}
-        </span>
-        {expanded ? <ChevronUp size={12} className="text-muted-foreground" /> : <ChevronDown size={12} className="text-muted-foreground" />}
-      </button>
-
-      {expanded && (
-        <div className="mt-2 space-y-2.5 px-1">
-          {/* View-only tracking link if set */}
-          {existing?.tracking_url && !canEdit && (
-            <a
-              href={existing.tracking_url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 text-xs text-accent underline"
-            >
-              <ExternalLink size={11} /> {isL ? "Ver seguimiento" : "Track shipment"}
-            </a>
-          )}
-
-          {canEdit ? (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
-                    {isL ? "N° de seguimiento" : "Tracking #"}
-                  </label>
-                  <input
-                    value={trackingNumber}
-                    onChange={e => setTrackingNumber(e.target.value)}
-                    placeholder="1Z999AA1..."
-                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
-                    {isL ? "Transportista" : "Carrier"}
-                  </label>
-                  <input
-                    value={carrier}
-                    onChange={e => setCarrier(e.target.value)}
-                    placeholder="UPS, FedEx..."
-                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
-                  <LinkIcon size={9} /> {isL ? "Enlace de seguimiento" : "Tracking link"}
-                </label>
-                <input
-                  value={trackingUrl}
-                  onChange={e => setTrackingUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
-                  <FileText size={9} /> {isL ? "Lista de empaque" : "Packing list"}
-                </label>
-                <textarea
-                  value={packingList}
-                  onChange={e => setPackingList(e.target.value)}
-                  placeholder={isL ? "Artículos incluidos…" : "Items included…"}
-                  rows={2}
-                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
-                  {isL ? "Notas" : "Notes"}
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  rows={2}
-                  placeholder={isL ? "Instrucciones de entrega, etc…" : "Delivery instructions, etc…"}
-                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground resize-none"
-                />
-              </div>
-              <button
-                onClick={() => handleSave(false)}
-                disabled={saving}
-                className="w-full py-2 rounded-xl bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60"
-              >
-                {saving ? "…" : (isL ? "Guardar detalles" : "Save details")}
-              </button>
-              <button
-                onClick={() => handleSave(true)}
-                disabled={saving}
-                className="w-full py-2 rounded-xl bg-[hsl(var(--status-done))] text-white text-xs font-semibold active:scale-95 transition-transform disabled:opacity-60 flex items-center justify-center gap-1.5"
-              >
-                <Check size={12} />
-                {isL ? "Marcar como entregado" : "Mark as Delivered"}
-              </button>
-            </>
-          ) : (
-            <div className="space-y-1.5 text-xs text-muted-foreground">
-              {existing?.carrier && <p><span className="font-medium text-foreground">{isL ? "Transportista:" : "Carrier:"}</span> {existing.carrier}</p>}
-              {existing?.tracking_number && <p><span className="font-medium text-foreground">{isL ? "N° seguimiento:" : "Tracking #:"}</span> {existing.tracking_number}</p>}
-              {existing?.packing_list && <p className="whitespace-pre-line"><span className="font-medium text-foreground">{isL ? "Lista de empaque:" : "Packing list:"}</span> {existing.packing_list}</p>}
-              {existing?.notes && <p className="whitespace-pre-line"><span className="font-medium text-foreground">{isL ? "Notas:" : "Notes:"}</span> {existing.notes}</p>}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <span className={cn(
+      "text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap",
+      status === "completed"
+        ? "bg-[hsl(var(--status-done)/0.12)] text-status-done border-[hsl(var(--status-done)/0.3)]"
+        : status === "in_progress"
+        ? "bg-accent/10 text-accent border-accent/30"
+        : status === "urgent"
+        ? "bg-[hsl(var(--status-urgent)/0.12)] text-status-urgent border-status-urgent/30"
+        : "bg-muted text-muted-foreground border-border"
+    )}>
+      {status === "completed" ? (isL ? "ENTREGADO" : "DELIVERED")
+        : status === "in_progress" ? (isL ? "EN TRÁNSITO" : "IN TRANSIT")
+        : status === "urgent" ? (isL ? "URGENTE" : "URGENT")
+        : (isL ? "PENDIENTE" : "PENDING")}
+    </span>
   );
 }
 
-function OrderCard({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask) => void }) {
+/* ─── Pending delivery table row ────────────────────────────────────────────── */
+function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask) => void }) {
   const { language } = useLanguage();
   const isL = language === "es";
+  const tracking = getTracking(order.attachments);
   const deliveryDate = order.due_date ? new Date(order.due_date) : null;
-  const isOverdue = deliveryDate && deliveryDate < new Date() && order.status !== "completed";
+  const isOverdue = deliveryDate && deliveryDate < new Date();
 
   return (
-    <div
-      className={cn(
-        "bg-card border rounded-2xl p-4 space-y-3 cursor-pointer hover:border-[hsl(var(--gold)/0.4)] transition-colors",
-        order.status === "completed" ? "border-[hsl(var(--status-done)/0.3)] opacity-70" : "border-border"
-      )}
+    <tr
       onClick={() => onOpen(order)}
+      className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group"
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* Item */}
+      <td className="px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
-          <ShoppingCart size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
-          <p className="text-sm font-semibold text-foreground leading-snug truncate">{order.title_en}</p>
+          <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />
+          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title_en}</span>
         </div>
-        <span className={cn(
-          "text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0",
-          order.status === "completed" ? "bg-[hsl(var(--status-done)/0.12)] text-status-done border-[hsl(var(--status-done)/0.3)]" :
-          order.status === "in_progress" ? "bg-accent/10 text-accent border-accent/30" :
-          order.status === "urgent" ? "bg-[hsl(var(--status-urgent)/0.12)] text-status-urgent border-status-urgent/30" :
-          "bg-muted text-muted-foreground border-border"
-        )}>
-          {order.status === "completed" ? (isL ? "ENTREGADO" : "DELIVERED") :
-           order.status === "in_progress" ? (isL ? "EN TRÁNSITO" : "IN TRANSIT") :
-           order.status === "urgent" ? (isL ? "URGENTE" : "URGENT") :
-           (isL ? "PENDIENTE" : "PENDING")}
-        </span>
-      </div>
+        {order.description_en && (
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{order.description_en}</p>
+        )}
+      </td>
 
-      {order.description_en && (
-        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{order.description_en}</p>
-      )}
-
-      <div className="flex flex-wrap gap-1.5">
-        {deliveryDate && (
-          <span className={cn("flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border",
-            isOverdue ? "bg-[hsl(var(--status-urgent)/0.1)] text-status-urgent border-status-urgent/30"
-                      : "bg-muted text-muted-foreground border-border")}>
-            <Calendar size={9} />
+      {/* Delivery date */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        {deliveryDate ? (
+          <span className={cn(
+            "flex items-center gap-1 text-xs",
+            isOverdue ? "text-status-urgent font-semibold" : "text-muted-foreground"
+          )}>
+            <Calendar size={10} className="flex-shrink-0" />
             {deliveryDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            {isOverdue && " ⚠️"}
+            {isOverdue && " ⚠"}
           </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/50 italic">{isL ? "Sin fecha" : "No date"}</span>
         )}
-        {order.property?.name && (
-          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border">
-            <MapPin size={9} /> {order.property.name}
+      </td>
+
+      {/* Destination / Property */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        {order.property?.name ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MapPin size={10} /> {order.property.name}
           </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
         )}
-        {order.assignee?.full_name && (
-          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border">
-            <User size={9} /> {order.assignee.full_name}
+      </td>
+
+      {/* Carrier */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        {tracking?.carrier ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Truck size={10} /> {tracking.carrier}
           </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
         )}
-        {getTracking(order.attachments) && (
-          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border bg-[hsl(var(--gold)/0.1)] text-[hsl(var(--gold))] border-[hsl(var(--gold)/0.3)]">
-            <Truck size={9} /> {isL ? "Seguimiento añadido" : "Tracking added"}
-          </span>
+      </td>
+
+      {/* Tracking # */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        {tracking?.tracking_number ? (
+          <span className="text-xs font-mono text-muted-foreground">{tracking.tracking_number}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
         )}
-      </div>
-    </div>
+      </td>
+
+      {/* Link */}
+      <td className="px-4 py-3">
+        {tracking?.tracking_url ? (
+          <a
+            href={tracking.tracking_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="flex items-center gap-1 text-xs text-accent underline underline-offset-2 hover:text-accent/80"
+          >
+            <ExternalLink size={10} /> {isL ? "Ver" : "Track"}
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
+        )}
+      </td>
+
+      {/* Open arrow */}
+      <td className="px-3 py-3">
+        <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+      </td>
+    </tr>
   );
 }
 
+/* ─── Delivered table row ────────────────────────────────────────────────────── */
+function DeliveredRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask) => void }) {
+  const { language } = useLanguage();
+  const isL = language === "es";
+  const tracking = getTracking(order.attachments);
+  const deliveredAt = tracking?.delivered_at ? new Date(tracking.delivered_at) : null;
+
+  return (
+    <tr
+      onClick={() => onOpen(order)}
+      className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group opacity-70"
+    >
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Check size={13} className="text-status-done flex-shrink-0" />
+          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title_en}</span>
+        </div>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {deliveredAt ? (
+          <span className="text-xs text-status-done flex items-center gap-1">
+            <Check size={10} />
+            {deliveredAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {order.property?.name ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MapPin size={10} /> {order.property.name}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {tracking?.carrier ? (
+          <span className="text-xs text-muted-foreground">{tracking.carrier}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {tracking?.tracking_number ? (
+          <span className="text-xs font-mono text-muted-foreground">{tracking.tracking_number}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {tracking?.tracking_url ? (
+          <a
+            href={tracking.tracking_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="flex items-center gap-1 text-xs text-accent underline"
+          >
+            <ExternalLink size={10} /> {isL ? "Ver" : "Track"}
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
+        )}
+      </td>
+      <td className="px-3 py-3">
+        <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+      </td>
+    </tr>
+  );
+}
+
+/* ─── Main section ───────────────────────────────────────────────────────────── */
 export function OrdersSection() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isMasterAdmin, isManager, permLoading } = usePermissions() as any;
+  const { userId, permLoading } = usePermissions() as any;
   const isL = language === "es";
 
   const [orders, setOrders] = useState<OrderTask[]>([]);
@@ -282,12 +249,11 @@ export function OrdersSection() {
       .select(`id, title_en, description_en, status, due_date, assigned_to, property_id, category, attachments, priority, is_draft, ai_suggested, property:properties(name)`)
       .eq("category", "order")
       .eq("is_draft", false)
-      .order("due_date", { ascending: true });
+      .order("due_date", { ascending: true, nullsFirst: false });
 
     if (error) console.error(error);
     const raw = (data ?? []) as any[];
 
-    // Enrich assignees
     const ids = [...new Set(raw.map((t: any) => t.assigned_to).filter(Boolean))] as string[];
     let nameMap: Record<string, string> = {};
     if (ids.length) {
@@ -321,16 +287,22 @@ export function OrdersSection() {
     });
   };
 
-  // "Active" = order task not yet placed (status != completed)
-  // "Pending delivery" = order placed (status = completed) but not yet delivered
-  // "Delivered" = has delivered_at in attachments
   const isDelivered = (o: OrderTask) => (o.attachments as any[]).some((a: any) => a.type === "tracking" && a.delivered_at);
-  const active = orders.filter(o => o.status !== "completed");
   const pendingDelivery = orders.filter(o => o.status === "completed" && !isDelivered(o));
   const delivered = orders.filter(o => o.status === "completed" && isDelivered(o));
+  const active = orders.filter(o => o.status !== "completed");
 
-  const tabData = activeTab === "pending" ? pendingDelivery : delivered;
-  const displayed = tabData;
+  const tableHeaders = [
+    isL ? "Artículo" : "Item",
+    isL ? (activeTab === "pending" ? "Fecha estimada" : "Entregado") : (activeTab === "pending" ? "Est. Delivery" : "Delivered"),
+    isL ? "Destino" : "Destination",
+    isL ? "Transportista" : "Carrier",
+    isL ? "N° Seguimiento" : "Tracking #",
+    isL ? "Enlace" : "Link",
+    "",
+  ];
+
+  const displayed = activeTab === "pending" ? pendingDelivery : delivered;
 
   return (
     <div className="animate-fade-in pb-6">
@@ -344,6 +316,34 @@ export function OrdersSection() {
           {isL ? "Pedidos, entregas pendientes y seguimiento" : "Purchase orders, pending deliveries & tracking"}
         </p>
       </div>
+
+      {/* Active orders strip (not yet completed) */}
+      {active.length > 0 && (
+        <div className="px-4 pt-4">
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
+            {isL ? "Pedidos activos (en proceso)" : "Active orders (being processed)"}
+          </p>
+          <div className="flex flex-col gap-2">
+            {active.map(o => (
+              <button
+                key={o.id}
+                onClick={() => openOrder(o)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-card border border-border rounded-xl hover:border-[hsl(var(--gold)/0.4)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />
+                  <span className="text-sm font-medium text-foreground truncate">{o.title_en}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <StatusBadge status={o.status} isL={isL} />
+                  <ChevronRight size={13} className="text-muted-foreground/40" />
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="border-b border-border mt-4" />
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 px-4 py-3 border-b border-border">
@@ -367,33 +367,48 @@ export function OrdersSection() {
         </button>
       </div>
 
-      {/* Order list */}
-      <div className="px-4 pt-4 space-y-3">
+      {/* Table */}
+      <div className="overflow-x-auto">
         {loading ? (
-          [1, 2, 3].map(i => <div key={i} className="h-28 rounded-2xl bg-card border border-border animate-pulse" />)
+          <div className="px-4 pt-4 space-y-2">
+            {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-xl bg-card border border-border animate-pulse" />)}
+          </div>
         ) : displayed.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <ShoppingCart size={36} className="text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground text-center">
               {activeTab === "pending"
-                ? (isL ? "No hay pedidos pendientes" : "No pending orders")
+                ? (isL ? "No hay pedidos pendientes de entrega" : "No pending deliveries")
                 : (isL ? "No hay entregas completadas" : "No completed deliveries")}
             </p>
-            <p className="text-xs text-muted-foreground/60 text-center">
-              {isL ? "Crea una tarea de tipo \"Pedido\" para que aparezca aquí" : "Create a task with category \"Order\" for it to appear here"}
+            <p className="text-xs text-muted-foreground/60 text-center max-w-xs">
+              {activeTab === "pending"
+                ? (isL ? "Cuando marques un pedido como completado, aparecerá aquí. Ábrelo para añadir datos de envío." : "When you mark an order complete it appears here. Open it to add shipping details.")
+                : (isL ? "Las entregas confirmadas aparecerán aquí." : "Confirmed deliveries will appear here.")}
             </p>
           </div>
         ) : (
-          displayed.map(order => (
-            <div key={order.id}>
-              <OrderCard order={order} onOpen={openOrder} />
-              <TrackingPanel order={order} onSaved={fetchOrders} />
-            </div>
-          ))
+          <table className="w-full min-w-[640px]">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                {tableHeaders.map((h, i) => (
+                  <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {activeTab === "pending"
+                ? displayed.map(o => <PendingRow key={o.id} order={o} onOpen={openOrder} />)
+                : displayed.map(o => <DeliveredRow key={o.id} order={o} onOpen={openOrder} />)
+              }
+            </tbody>
+          </table>
         )}
       </div>
 
-      {/* Task modal for editing the order */}
+      {/* Task modal */}
       {modalOrder !== undefined && (
         <TaskModal
           task={modalOrder}

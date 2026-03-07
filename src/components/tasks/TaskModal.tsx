@@ -7,7 +7,7 @@ import { fireConfetti } from "@/lib/confetti";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
   ChevronDown, Check, Send, Trash2, Clock, AlertTriangle, Package,
-  CheckSquare, MessageSquare, ShoppingCart,
+  CheckSquare, MessageSquare, ShoppingCart, Truck, Link as LinkIcon, FileText, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -96,6 +96,15 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const [uploading, setUploading]       = useState(false);
   const [saving, setSaving]             = useState(false);
 
+  // ── Tracking fields (for order tasks) ────────────────────────────────────────
+  const existingTracking = (task?.attachments as any[] ?? []).find((a: any) => a.type === "tracking");
+  const [trackingNumber, setTrackingNumber] = useState<string>(existingTracking?.tracking_number ?? "");
+  const [trackingUrl, setTrackingUrl]       = useState<string>(existingTracking?.tracking_url ?? "");
+  const [carrier, setCarrier]               = useState<string>(existingTracking?.carrier ?? "");
+  const [packingList, setPackingList]       = useState<string>(existingTracking?.packing_list ?? "");
+  const [trackingNotes, setTrackingNotes]   = useState<string>(existingTracking?.notes ?? "");
+  const [markDelivered, setMarkDelivered]   = useState<boolean>(false);
+
   // ── Read-only / assignee state ───────────────────────────────────────────────
   const [comment, setComment]           = useState("");
   const [completing, setCompleting]     = useState(false);
@@ -136,6 +145,30 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const handleSave = async (publishNow = false) => {
     if (!title.trim() || !userId) return;
     setSaving(true);
+
+    // Build attachments — merge tracking entry if this is an order
+    let finalAttachments = attachments.filter((a: any) => a.type !== "tracking");
+    if (isOrder || task?.category === "order") {
+      const hasAnyTracking = trackingNumber || trackingUrl || carrier || packingList || trackingNotes;
+      if (hasAnyTracking || existingTracking) {
+        const trackingEntry: any = {
+          type: "tracking",
+          ...(trackingNumber ? { tracking_number: trackingNumber } : {}),
+          ...(trackingUrl    ? { tracking_url: trackingUrl }       : {}),
+          ...(carrier        ? { carrier }                         : {}),
+          ...(packingList    ? { packing_list: packingList }       : {}),
+          ...(trackingNotes  ? { notes: trackingNotes }            : {}),
+          // preserve existing delivered_at unless markDelivered overrides
+          ...(markDelivered
+            ? { delivered_at: new Date().toISOString() }
+            : existingTracking?.delivered_at
+            ? { delivered_at: existingTracking.delivered_at }
+            : {}),
+        };
+        finalAttachments = [...finalAttachments, trackingEntry];
+      }
+    }
+
     const payload: Record<string, unknown> = {
       title_en: title.trim(),
       description_en: description.trim() || null,
@@ -148,7 +181,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       assigned_role: role || null,
       linked_checklist_id: linkedChecklist || null,
       is_draft: publishNow ? false : isDraft,
-      attachments,
+      attachments: finalAttachments,
       linked_inventory_ids: task?.linked_inventory_ids ?? [],
       category: isOrder ? "order" : (task?.category ?? null),
     };
@@ -162,6 +195,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     onSaved();
     onClose();
   };
+
 
   const handleComplete = async () => {
     if (!task?.id || !userId) return;
@@ -503,7 +537,99 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             </button>
           </div>
 
-          {/* Assign to property */}
+          {/* Tracking fields — shown for order tasks that are already completed (in Orders section) */}
+          {(isOrder || task?.category === "order") && task?.status === "completed" && (
+            <div className="space-y-3 px-3 py-3 bg-[hsl(var(--gold)/0.05)] border border-[hsl(var(--gold)/0.2)] rounded-xl">
+              <p className="text-[10px] font-semibold text-[hsl(var(--gold))] uppercase tracking-wider flex items-center gap-1.5">
+                <Truck size={11} /> {isL ? "Detalles de envío / seguimiento" : "Shipping & Tracking Details"}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
+                    {isL ? "N° de seguimiento" : "Tracking #"}
+                  </label>
+                  <input
+                    value={trackingNumber}
+                    onChange={e => setTrackingNumber(e.target.value)}
+                    placeholder="1Z999AA1..."
+                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
+                    {isL ? "Transportista" : "Carrier"}
+                  </label>
+                  <input
+                    value={carrier}
+                    onChange={e => setCarrier(e.target.value)}
+                    placeholder="UPS, FedEx, DHL..."
+                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                  <LinkIcon size={9} /> {isL ? "Enlace de seguimiento" : "Tracking link"}
+                </label>
+                <input
+                  value={trackingUrl}
+                  onChange={e => setTrackingUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+              {trackingUrl && (
+                <a href={trackingUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-accent underline">
+                  <ExternalLink size={10} /> {isL ? "Ver enlace" : "Open link"}
+                </a>
+              )}
+              <div>
+                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                  <FileText size={9} /> {isL ? "Lista de empaque" : "Packing list"}
+                </label>
+                <textarea
+                  value={packingList}
+                  onChange={e => setPackingList(e.target.value)}
+                  placeholder={isL ? "Artículos incluidos…" : "Items included…"}
+                  rows={2}
+                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
+                  {isL ? "Notas de entrega" : "Delivery notes"}
+                </label>
+                <textarea
+                  value={trackingNotes}
+                  onChange={e => setTrackingNotes(e.target.value)}
+                  rows={2}
+                  placeholder={isL ? "Instrucciones, etc…" : "Delivery instructions, etc…"}
+                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground resize-none"
+                />
+              </div>
+              {!existingTracking?.delivered_at && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={markDelivered}
+                    onChange={e => setMarkDelivered(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-xs font-semibold text-status-done">
+                    {isL ? "Marcar como entregado ahora" : "Mark as delivered now"}
+                  </span>
+                </label>
+              )}
+              {existingTracking?.delivered_at && (
+                <p className="text-xs text-status-done flex items-center gap-1">
+                  <Check size={11} />
+                  {isL ? "Entregado el" : "Delivered"} {new Date(existingTracking.delivered_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </p>
+              )}
+            </div>
+          )}
+
+
           <div>
             <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
               <MapPin size={10} /> {isL ? "Propiedad" : "Property"}
