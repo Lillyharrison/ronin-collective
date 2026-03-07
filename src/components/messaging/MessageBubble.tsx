@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Check, CheckCheck, Bot, Play, Pause, Trash2 } from "lucide-react";
+import { Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Message = Tables<"messages"> & { sender_profile?: { full_name: string | null; avatar_url: string | null } };
@@ -12,6 +12,8 @@ interface MessageBubbleProps {
   isAdmin?: boolean;
   onReact: (emoji: string) => void;
   onDelete?: (messageId: string) => void;
+  onConfirmTool?: (toolName: string, toolArgs: Record<string, unknown>) => void;
+  onCancelTool?: () => void;
   quickEmojis: string[];
 }
 
