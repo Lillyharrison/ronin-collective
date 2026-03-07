@@ -11,7 +11,7 @@ const corsHeaders = {
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
 const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events"];
 const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message"];
-const SILENT_TOOL_NAMES = ["save_memory"];
+const SILENT_TOOL_NAMES = ["save_memory", "add_shopping_list_item"];
 
 const RONIN_TOOLS = [
   // ── OBSERVATION TOOLS ────────────────────────────────────────────────────────
@@ -157,6 +157,33 @@ const RONIN_TOOLS = [
           subject_name: { type: "string" },
         },
         required: ["content", "summary", "category", "importance"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_shopping_list_item",
+      description: "Add one or more items to the household shopping list. Use whenever someone asks to add something to the shopping list, grocery list, or buy list. Do NOT create a task — insert directly into the shopping list. Auto-detect the category based on the item name.",
+      parameters: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            description: "One or more items to add to the shopping list",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Item name, e.g. 'Watermelon'" },
+                category: { type: "string", enum: ["food", "cleaning", "supplies", "personal", "tech", "other"], description: "Auto-detect: food=groceries/produce/drinks, cleaning=detergents/mops, supplies=paper/packaging, personal=toiletries/cosmetics, tech=electronics/batteries" },
+                quantity: { type: "string", description: "Optional quantity, e.g. '2 kg', '1 case'" },
+                notes: { type: "string", description: "Optional extra notes" },
+              },
+              required: ["name", "category"],
+            },
+          },
+        },
+        required: ["items"],
       },
     },
   },
@@ -320,6 +347,33 @@ async function saveMemorySilently(
     });
   } catch (e) {
     console.error("Memory save failed:", e);
+  }
+}
+
+/** Add items to the shopping list */
+async function addShoppingListItemsSilently(
+  args: Record<string, unknown>,
+  callerUserId: string | null,
+  adminClient: ReturnType<typeof createClient>
+): Promise<string> {
+  try {
+    const items = args.items as Array<{ name: string; category: string; quantity?: string; notes?: string }>;
+    if (!items?.length) return "⚠️ No items provided.";
+    const rows = items.map(item => ({
+      name: item.name,
+      category: item.category,
+      quantity: item.quantity ?? null,
+      notes: item.notes ?? null,
+      created_by: callerUserId,
+      is_checked: false,
+    }));
+    const { error } = await adminClient.from("shopping_list_items").insert(rows);
+    if (error) throw error;
+    const names = items.map(i => `**${i.name}**`).join(", ");
+    return `🛒 Added to the shopping list: ${names}. You can view the full list in **Orders → Shopping List**.`;
+  } catch (e) {
+    console.error("Shopping list insert failed:", e);
+    return "⚠️ Failed to add item(s) to the shopping list.";
   }
 }
 
@@ -506,6 +560,8 @@ serve(async (req) => {
       } else if (tool_name === "save_memory") {
         await saveMemorySilently(tool_args, adminClient);
         resultMessage = `🧠 **Memory saved.**`;
+      } else if (tool_name === "add_shopping_list_item") {
+        resultMessage = await addShoppingListItemsSilently(tool_args, callerUserId, adminClient);
       } else {
         resultMessage = `⚠️ Unknown tool: ${tool_name}`;
       }
@@ -572,7 +628,8 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
 ## CAPABILITIES
 - Full read access: Properties, Tasks, Team, Assets, Events, Memories.
-- Bilingual (EN/ES). Write actions: create tasks, update task status, log assets, send messages, save memories.`;
+- Bilingual (EN/ES). Write actions: create tasks, update task status, log assets, send messages, save memories.
+- **add_shopping_list_item**: Use this IMMEDIATELY (no confirmation needed) whenever someone says "add X to the shopping list", "buy X", "we need X", "put X on the list", etc. Insert directly into the shopping list — do NOT create a task for this. Auto-detect the category (food, cleaning, supplies, personal, tech, other).`;
 
     // ─── CSV IMPORT MODE ───────────────────────────────────────────────────────
     if (type === "csv_import") {
@@ -725,7 +782,11 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
             } else if (SILENT_TOOL_NAMES.includes(toolName)) {
               // Silent tool — execute immediately, no user feedback
-              await saveMemorySilently(toolArgs, adminClient);
+              if (toolName === "add_shopping_list_item") {
+                await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
+              } else {
+                await saveMemorySilently(toolArgs, adminClient);
+              }
               toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
 
             } else if (WRITE_TOOL_NAMES.includes(toolName)) {
@@ -801,8 +862,12 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
             const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
           } else if (SILENT_TOOL_NAMES.includes(toolName)) {
-            // Execute silently — this is the critical fix for save_memory
-            await saveMemorySilently(toolArgs, adminClient);
+            // Execute silently
+            if (toolName === "add_shopping_list_item") {
+              await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
+            } else {
+              await saveMemorySilently(toolArgs, adminClient);
+            }
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
           } else if (WRITE_TOOL_NAMES.includes(toolName)) {
             // Write tools need confirmation — surface the confirmation as the response
