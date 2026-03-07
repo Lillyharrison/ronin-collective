@@ -255,7 +255,6 @@ function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => v
 /* ─── Main section ───────────────────────────────────────────────────────────── */
 export function OrdersSection() {
   const { language } = useLanguage();
-  const { userId } = usePermissions() as any;
   const isL = language === "es";
 
   const [orders, setOrders]         = useState<Order[]>([]);
@@ -264,7 +263,6 @@ export function OrdersSection() {
   const [activeTab, setActiveTab]   = useState<MainTab>("pending");
 
   const fetchOrders = async () => {
-    if (!userId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
