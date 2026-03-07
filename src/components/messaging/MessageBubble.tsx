@@ -17,16 +17,32 @@ interface MessageBubbleProps {
   quickEmojis: string[];
 }
 
-export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact, onDelete, quickEmojis }: MessageBubbleProps) {
+const TOOL_LABELS: Record<string, string> = {
+  send_staff_message: "Send Message",
+  create_task: "Create Task",
+  update_task_status: "Update Task",
+  log_asset: "Log Asset",
+};
+
+export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact, onDelete, onConfirmTool, onCancelTool, quickEmojis }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const [toolExecuted, setToolExecuted] = useState(false);
 
   const time = format(new Date(message.created_at), "HH:mm");
   const isAI = message.is_ai_generated;
   const isRead = (message.seen_by ?? []).length > 0;
   const status = message.delivery_status as string;
   const canDelete = isOwn || isAdmin;
+
+  // Detect pending tool call stored in reactions field
+  const reactions = message.reactions as Record<string, unknown> | null;
+  const pendingTool = reactions?.__pending_tool as { name: string; args: Record<string, unknown> } | undefined;
+  // Filter out __pending_tool from visible emoji reactions
+  const emojiReactions = reactions
+    ? Object.entries(reactions).filter(([key]) => key !== "__pending_tool")
+    : [];
 
   const toggleAudio = () => {
     if (!audioRef) {
@@ -44,7 +60,17 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
     }
   };
 
-  const EMOJI_QUICK = quickEmojis;
+  const handleConfirm = () => {
+    if (!pendingTool || toolExecuted) return;
+    setToolExecuted(true);
+    onConfirmTool?.(pendingTool.name, pendingTool.args);
+  };
+
+  const handleCancel = () => {
+    if (toolExecuted) return;
+    setToolExecuted(true);
+    onCancelTool?.();
+  };
 
   return (
     <div
@@ -116,6 +142,38 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
             </div>
           )}
 
+          {/* ── Pending tool confirmation buttons ───────────────────────────── */}
+          {pendingTool && !toolExecuted && (
+            <div className="mt-3 pt-2 border-t border-accent/20">
+              <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
+                Action: {TOOL_LABELS[pendingTool.name] ?? pendingTool.name}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleConfirm}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <CheckCircle size={13} />
+                  Confirm
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-muted/50 hover:bg-muted border border-border text-muted-foreground text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <XCircle size={13} />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Executed state */}
+          {pendingTool && toolExecuted && (
+            <div className="mt-2 pt-2 border-t border-border">
+              <p className="text-[10px] text-muted-foreground italic">Action confirmed — executing…</p>
+            </div>
+          )}
+
           {/* Time + delivery status */}
           <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
             <span className={`text-[9px] ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{time}</span>
@@ -132,17 +190,13 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
         {/* Context menu (long-press / right-click) */}
         {showMenu && (
           <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-20"
-              onClick={() => setShowMenu(false)}
-            />
+            <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
             <div
               className={`absolute ${isOwn ? "right-0" : "left-0"} -top-2 translate-y-[-100%] bg-card border border-border rounded-xl shadow-lg z-30 py-1 min-w-[140px]`}
             >
               {/* Emoji reactions row */}
               <div className="flex gap-1 px-2 py-1.5 border-b border-border">
-                {EMOJI_QUICK.map((emoji) => (
+                {quickEmojis.map((emoji) => (
                   <button
                     key={emoji}
                     onClick={() => { onReact(emoji); setShowMenu(false); }}
@@ -166,10 +220,10 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
           </>
         )}
 
-        {/* Displayed reactions */}
-        {message.reactions && typeof message.reactions === "object" && Object.keys(message.reactions).length > 0 && (
+        {/* Emoji reactions (excluding __pending_tool) */}
+        {emojiReactions.length > 0 && (
           <div className={`flex gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
-            {Object.entries(message.reactions as Record<string, string[]>).map(([emoji, users]) => (
+            {emojiReactions.map(([emoji, users]) => (
               <button
                 key={emoji}
                 onClick={() => onReact(emoji)}
