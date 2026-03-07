@@ -1046,13 +1046,23 @@ Analyse the photo carefully:
         : { role: "user", content };
 
       const baseSystemMsg = { role: "system", content: systemPrompt + visionAddition + contextNote };
-      const initialMessages: unknown[] = [baseSystemMsg, ...conversationHistory, currentUserMessage];
 
       // ── ReAct Loop (thread_id: non-streaming, synchronous) ─────────────────
       if (thread_id) {
-        const ctx: ContextData = { props, staff };
-        const MAX_ITERATIONS = 5;
-        let loopMessages: unknown[] = [...initialMessages];
+        // Load conversation history directly from DB when thread_id is provided
+        // This avoids client-supplied history contaminating the context with leaked thinking
+        const { data: dbMessages } = await adminClient
+          .from("messages")
+          .select("id, content_text, is_ai_generated, sender_id")
+          .eq("thread_id", thread_id)
+          .order("created_at", { ascending: true })
+          .limit(30);
+
+        const dbHistory = cleanHistory(
+          (dbMessages ?? []).filter(m => m.content_text && m.id !== undefined)
+        );
+
+        const initialMessages: unknown[] = [baseSystemMsg, ...dbHistory, currentUserMessage];
         let finalText = "";
         let pendingWriteTool: { name: string; args: Record<string, unknown> } | null = null;
 
