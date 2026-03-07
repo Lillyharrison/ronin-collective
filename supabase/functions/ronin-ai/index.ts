@@ -891,7 +891,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 - **get_calendar_events**: Use for schedule/property activity questions.
 
 ### WRITE TOOLS — present confirmation before executing:
-- **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order.
+- **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order. Category must be one of: Plumbing, Electrical / Tech, Climate / HVAC, Outdoor / Grounds, Appliances, Structural, Security, General. Priority: urgent/high/medium/low.
 - **create_task**: Use for operational work orders that are NOT physical maintenance issues.
 - **update_task_status**, **log_asset**, **send_staff_message**
 
