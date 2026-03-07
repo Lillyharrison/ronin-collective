@@ -859,8 +859,12 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
             const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
           } else if (SILENT_TOOL_NAMES.includes(toolName)) {
-            // Execute silently — this is the critical fix for save_memory
-            await saveMemorySilently(toolArgs, adminClient);
+            // Execute silently
+            if (toolName === "add_shopping_list_item") {
+              await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
+            } else {
+              await saveMemorySilently(toolArgs, adminClient);
+            }
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
           } else if (WRITE_TOOL_NAMES.includes(toolName)) {
             // Write tools need confirmation — surface the confirmation as the response
