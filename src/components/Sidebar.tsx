@@ -6,8 +6,8 @@ import {
   X, Home, Wrench, MessageCircle, User,
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
-  Building2, Trophy, FileSpreadsheet, Calendar, Brain,
-  ClipboardList, Shield,
+  Building2, FileSpreadsheet, Calendar, Brain,
+  ClipboardList, Shield, Bell,
 } from "lucide-react";
 
 
