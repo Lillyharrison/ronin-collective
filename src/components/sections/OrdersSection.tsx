@@ -5,12 +5,42 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Package, Check, ExternalLink, Truck, Calendar,
-  MapPin, ChevronRight, ShoppingBag,
+  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle,
 } from "lucide-react";
 import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
 import { ShoppingList } from "@/components/orders/ShoppingList";
 
 type MainTab = "pending" | "delivered" | "shopping";
+
+/* ─── Status badge ───────────────────────────────────────────────────────────── */
+function StatusBadge({ status }: { status: string }) {
+  const { language } = useLanguage();
+  const isL = language === "es";
+
+  if (status === "not_placed") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase tracking-wide whitespace-nowrap">
+        <Clock size={8} /> {isL ? "No colocado" : "Not placed"}
+      </span>
+    );
+  }
+  if (status === "placed") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 uppercase tracking-wide whitespace-nowrap">
+        <Package size={8} /> {isL ? "Colocado" : "Placed"}
+      </span>
+    );
+  }
+  // Legacy: pending_delivery
+  if (status === "pending_delivery") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 uppercase tracking-wide whitespace-nowrap">
+        <Truck size={8} /> {isL ? "En tránsito" : "In transit"}
+      </span>
+    );
+  }
+  return null;
+}
 
 /* ─── Pending row ────────────────────────────────────────────────────────────── */
 function PendingRow({ order, onOpen, onMarkDelivered }: {
@@ -25,7 +55,8 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
   const canEdit = isAdmin || isMasterAdmin || isManager;
 
   const deliveryDate = order.expected_delivery ? new Date(order.expected_delivery) : null;
-  const isOverdue = deliveryDate && deliveryDate < new Date();
+  const isOverdue = deliveryDate && deliveryDate < new Date() && order.status !== "not_placed";
+  const isNotPlaced = order.status === "not_placed";
 
   const handleDeliver = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -41,16 +72,22 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
   return (
     <tr
       onClick={() => onOpen(order)}
-      className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group"
+      className={cn(
+        "border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group",
+        isNotPlaced && "bg-amber-500/[0.03]"
+      )}
     >
       {/* Item */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
-          <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />
-          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title}</span>
+          {isNotPlaced
+            ? <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
+            : <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />}
+          <span className="text-sm font-medium text-foreground truncate max-w-[140px]">{order.title}</span>
+          <StatusBadge status={order.status} />
         </div>
         {order.description && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{order.description}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[200px] pl-5">{order.description}</p>
         )}
       </td>
 
@@ -63,7 +100,7 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
             {isOverdue && " ⚠"}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground/50 italic">{isL ? "Sin fecha" : "No date"}</span>
+          <span className="text-xs text-muted-foreground/40 italic">{isNotPlaced ? "—" : (isL ? "Sin fecha" : "No date")}</span>
         )}
       </td>
 
@@ -115,10 +152,10 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
         )}
       </td>
 
-      {/* Mark delivered */}
+      {/* Actions */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
-          {canEdit && (
+          {canEdit && !isNotPlaced && (
             <button
               onClick={handleDeliver}
               disabled={delivering}
@@ -127,6 +164,11 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
             >
               <Check size={10} /> {delivering ? "…" : (isL ? "Entregar" : "Deliver")}
             </button>
+          )}
+          {isNotPlaced && (
+            <span className="text-[10px] text-amber-500/70 italic whitespace-nowrap">
+              {isL ? "Tarea abierta" : "Task open"}
+            </span>
           )}
           <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
         </div>
@@ -216,10 +258,10 @@ export function OrdersSection() {
   const { userId } = usePermissions() as any;
   const isL = language === "es";
 
-  const [orders, setOrders]       = useState<Order[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [orders, setOrders]         = useState<Order[]>([]);
+  const [loading, setLoading]       = useState(true);
   const [modalOrder, setModalOrder] = useState<Order | null>(null);
-  const [activeTab, setActiveTab] = useState<MainTab>("pending");
+  const [activeTab, setActiveTab]   = useState<MainTab>("pending");
 
   const fetchOrders = async () => {
     if (!userId) return;
@@ -227,7 +269,7 @@ export function OrdersSection() {
     const { data, error } = await supabase
       .from("orders")
       .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, property:properties(name)")
-      .order("expected_delivery", { ascending: true, nullsFirst: false });
+      .order("created_at", { ascending: false });
     if (error) console.error(error);
     setOrders((data as any[]) ?? []);
     setLoading(false);
@@ -235,8 +277,12 @@ export function OrdersSection() {
 
   useEffect(() => { fetchOrders(); }, [userId]);
 
-  const pending   = orders.filter(o => o.status === "pending_delivery");
+  // pending = not_placed + placed + pending_delivery (legacy)
+  const pending   = orders.filter(o => o.status !== "delivered");
   const delivered = orders.filter(o => o.status === "delivered");
+
+  // Count breakdown for badge
+  const notPlacedCount = pending.filter(o => o.status === "not_placed").length;
 
   const tableHeaders = [
     isL ? "Artículo" : "Item",
@@ -272,7 +318,18 @@ export function OrdersSection() {
           )}
         >
           <Package size={12} />
-          {isL ? "Pendiente" : "Pending"} {pending.length > 0 && `(${pending.length})`}
+          {isL ? "Pedidos" : "Orders"}
+          {pending.length > 0 && (
+            <span className={cn(
+              "ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold",
+              activeTab === "pending" ? "bg-charcoal/20 text-charcoal" : "bg-muted-foreground/20 text-muted-foreground"
+            )}>
+              {pending.length}
+            </span>
+          )}
+          {notPlacedCount > 0 && activeTab !== "pending" && (
+            <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+          )}
         </button>
         <button
           onClick={() => setActiveTab("delivered")}
@@ -294,8 +351,16 @@ export function OrdersSection() {
         </button>
       </div>
 
-      {/* Shopping list sub-section */}
+      {/* Shopping list */}
       {activeTab === "shopping" && <ShoppingList />}
+
+      {/* Legend for pending tab */}
+      {activeTab === "pending" && !loading && pending.length > 0 && (
+        <div className="flex items-center gap-4 px-4 py-2 bg-muted/30 border-b border-border text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> {isL ? "No colocado (tarea abierta)" : "Not placed (task open)"}</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> {isL ? "Colocado / en tránsito" : "Placed / in transit"}</span>
+        </div>
+      )}
 
       {/* Delivery table */}
       {activeTab !== "shopping" && (
@@ -309,12 +374,12 @@ export function OrdersSection() {
               <ShoppingCart size={36} className="text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground text-center">
                 {activeTab === "pending"
-                  ? (isL ? "No hay pedidos pendientes de entrega" : "No pending deliveries")
+                  ? (isL ? "No hay pedidos" : "No orders yet")
                   : (isL ? "No hay entregas completadas" : "No completed deliveries")}
               </p>
               <p className="text-xs text-muted-foreground/60 text-center max-w-xs">
                 {activeTab === "pending"
-                  ? (isL ? "Cuando marques un pedido de tarea como completado, aparecerá aquí automáticamente." : "When you complete a task marked as an order, it appears here automatically.")
+                  ? (isL ? "Activa el toggle 'Pedido' al crear una tarea para que aparezca aquí." : "Enable the 'Order' toggle when creating a task to track it here.")
                   : (isL ? "Las entregas confirmadas aparecerán aquí como historial permanente." : "Confirmed deliveries appear here as a permanent record.")}
               </p>
             </div>
