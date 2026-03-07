@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { fireConfetti } from "@/lib/confetti";
 import { notifySection } from "@/lib/notifySection";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
