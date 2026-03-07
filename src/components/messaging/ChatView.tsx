@@ -131,9 +131,10 @@ export function ChatView({
             }),
           });
         } else {
-          // Standard AI message
+          // Standard AI message — always include thread_id so Ronin uses the DB-persisted ReAct path
           const history = messages
-            .filter(m => m.content_text)
+            .filter(m => m.content_text && !m.content_text.startsWith("ACT:") && !m.content_text.startsWith("RESPOND:"))
+            .slice(-20) // keep last 20 messages to avoid prompt bloat
             .map(m => ({
               role: m.is_ai_generated ? "assistant" as const : "user" as const,
               content: m.content_text!,

@@ -93,8 +93,8 @@ const RONIN_TOOLS = [
         properties: {
           title: { type: "string", description: "Clear, concise issue title (e.g. 'Broken lamp in master bedroom')" },
           description: { type: "string", description: "Detailed description of the issue" },
-          category: { type: "string", enum: ["plumbing", "electrical", "hvac", "appliances", "structural", "grounds", "general"], description: "Issue category" },
-          priority: { type: "string", enum: ["low", "medium", "high", "critical"], description: "Priority level: critical=safety risk, high=urgent, medium=normal, low=can wait" },
+          category: { type: "string", enum: ["Plumbing", "Electrical / Tech", "Climate / HVAC", "Outdoor / Grounds", "Appliances", "Structural", "Security", "General"], description: "Issue category — must match exactly. Use 'General' if unsure." },
+          priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Priority level: urgent=safety risk, high=urgent, medium=normal, low=can wait" },
           property_name: { type: "string", description: "Property where the issue is located" },
           location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
         },
