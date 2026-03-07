@@ -5,69 +5,38 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Package, Check, ExternalLink, Truck, Calendar,
-  MapPin, ChevronRight,
+  MapPin, ChevronRight, ShoppingBag,
 } from "lucide-react";
-import { TaskModal, FullTask, TaskAttachment } from "@/components/tasks/TaskModal";
+import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
+import { ShoppingList } from "@/components/orders/ShoppingList";
 
-interface OrderTask {
-  id: string;
-  title_en: string;
-  description_en: string | null;
-  status: "pending" | "in_progress" | "completed" | "urgent";
-  due_date: string | null;
-  assigned_to: string | null;
-  property_id: string | null;
-  category: string | null;
-  attachments: TaskAttachment[];
-  priority: number;
-  is_draft: boolean;
-  ai_suggested: boolean;
-  assignee?: { full_name: string | null } | null;
-  property?: { name: string } | null;
-}
+type MainTab = "pending" | "delivered" | "shopping";
 
-interface TrackingEntry {
-  type: "tracking";
-  tracking_number?: string;
-  tracking_url?: string;
-  carrier?: string;
-  packing_list?: string;
-  notes?: string;
-  delivered_at?: string;
-}
-
-function getTracking(attachments: TaskAttachment[]): TrackingEntry | null {
-  const t = (attachments as any[]).find((a: any) => a.type === "tracking");
-  return t ?? null;
-}
-
-function StatusBadge({ status, isL }: { status: string; isL: boolean }) {
-  return (
-    <span className={cn(
-      "text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap",
-      status === "completed"
-        ? "bg-[hsl(var(--status-done)/0.12)] text-status-done border-[hsl(var(--status-done)/0.3)]"
-        : status === "in_progress"
-        ? "bg-accent/10 text-accent border-accent/30"
-        : status === "urgent"
-        ? "bg-[hsl(var(--status-urgent)/0.12)] text-status-urgent border-status-urgent/30"
-        : "bg-muted text-muted-foreground border-border"
-    )}>
-      {status === "completed" ? (isL ? "ENTREGADO" : "DELIVERED")
-        : status === "in_progress" ? (isL ? "EN TRÁNSITO" : "IN TRANSIT")
-        : status === "urgent" ? (isL ? "URGENTE" : "URGENT")
-        : (isL ? "PENDIENTE" : "PENDING")}
-    </span>
-  );
-}
-
-/* ─── Pending delivery table row ────────────────────────────────────────────── */
-function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask) => void }) {
+/* ─── Pending row ────────────────────────────────────────────────────────────── */
+function PendingRow({ order, onOpen, onMarkDelivered }: {
+  order: Order;
+  onOpen: (o: Order) => void;
+  onMarkDelivered: (id: string) => void;
+}) {
   const { language } = useLanguage();
   const isL = language === "es";
-  const tracking = getTracking(order.attachments);
-  const deliveryDate = order.due_date ? new Date(order.due_date) : null;
+  const [delivering, setDelivering] = useState(false);
+  const { isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const canEdit = isAdmin || isMasterAdmin || isManager;
+
+  const deliveryDate = order.expected_delivery ? new Date(order.expected_delivery) : null;
   const isOverdue = deliveryDate && deliveryDate < new Date();
+
+  const handleDeliver = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDelivering(true);
+    await supabase.from("orders").update({
+      status: "delivered",
+      delivered_at: new Date().toISOString(),
+    } as any).eq("id", order.id);
+    setDelivering(false);
+    onMarkDelivered(order.id);
+  };
 
   return (
     <tr
@@ -78,20 +47,17 @@ function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />
-          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title_en}</span>
+          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title}</span>
         </div>
-        {order.description_en && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{order.description_en}</p>
+        {order.description && (
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{order.description}</p>
         )}
       </td>
 
-      {/* Delivery date */}
+      {/* Expected delivery */}
       <td className="px-4 py-3 whitespace-nowrap">
         {deliveryDate ? (
-          <span className={cn(
-            "flex items-center gap-1 text-xs",
-            isOverdue ? "text-status-urgent font-semibold" : "text-muted-foreground"
-          )}>
+          <span className={cn("flex items-center gap-1 text-xs", isOverdue ? "text-status-urgent font-semibold" : "text-muted-foreground")}>
             <Calendar size={10} className="flex-shrink-0" />
             {deliveryDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             {isOverdue && " ⚠"}
@@ -101,7 +67,7 @@ function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask
         )}
       </td>
 
-      {/* Destination / Property */}
+      {/* Destination */}
       <td className="px-4 py-3 whitespace-nowrap">
         {order.property?.name ? (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -114,9 +80,9 @@ function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask
 
       {/* Carrier */}
       <td className="px-4 py-3 whitespace-nowrap">
-        {tracking?.carrier ? (
+        {order.carrier ? (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Truck size={10} /> {tracking.carrier}
+            <Truck size={10} /> {order.carrier}
           </span>
         ) : (
           <span className="text-xs text-muted-foreground/40">—</span>
@@ -125,8 +91,8 @@ function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask
 
       {/* Tracking # */}
       <td className="px-4 py-3 whitespace-nowrap">
-        {tracking?.tracking_number ? (
-          <span className="text-xs font-mono text-muted-foreground">{tracking.tracking_number}</span>
+        {order.tracking_number ? (
+          <span className="text-xs font-mono text-muted-foreground">{order.tracking_number}</span>
         ) : (
           <span className="text-xs text-muted-foreground/40">—</span>
         )}
@@ -134,9 +100,9 @@ function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask
 
       {/* Link */}
       <td className="px-4 py-3">
-        {tracking?.tracking_url ? (
+        {order.tracking_url ? (
           <a
-            href={tracking.tracking_url}
+            href={order.tracking_url}
             target="_blank"
             rel="noreferrer"
             onClick={e => e.stopPropagation()}
@@ -149,20 +115,31 @@ function PendingRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask
         )}
       </td>
 
-      {/* Open arrow */}
+      {/* Mark delivered */}
       <td className="px-3 py-3">
-        <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+        <div className="flex items-center gap-1.5">
+          {canEdit && (
+            <button
+              onClick={handleDeliver}
+              disabled={delivering}
+              title={isL ? "Marcar como entregado" : "Mark as delivered"}
+              className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg bg-[hsl(var(--status-done)/0.1)] text-status-done border border-[hsl(var(--status-done)/0.25)] hover:bg-[hsl(var(--status-done)/0.2)] transition-colors active:scale-95 disabled:opacity-50 whitespace-nowrap"
+            >
+              <Check size={10} /> {delivering ? "…" : (isL ? "Entregar" : "Deliver")}
+            </button>
+          )}
+          <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+        </div>
       </td>
     </tr>
   );
 }
 
-/* ─── Delivered table row ────────────────────────────────────────────────────── */
-function DeliveredRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTask) => void }) {
+/* ─── Delivered row ──────────────────────────────────────────────────────────── */
+function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => void }) {
   const { language } = useLanguage();
   const isL = language === "es";
-  const tracking = getTracking(order.attachments);
-  const deliveredAt = tracking?.delivered_at ? new Date(tracking.delivered_at) : null;
+  const deliveredAt = order.delivered_at ? new Date(order.delivered_at) : null;
 
   return (
     <tr
@@ -172,8 +149,11 @@ function DeliveredRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTa
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <Check size={13} className="text-status-done flex-shrink-0" />
-          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title_en}</span>
+          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title}</span>
         </div>
+        {order.description && (
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{order.description}</p>
+        )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
         {deliveredAt ? (
@@ -195,23 +175,23 @@ function DeliveredRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTa
         )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
-        {tracking?.carrier ? (
-          <span className="text-xs text-muted-foreground">{tracking.carrier}</span>
+        {order.carrier ? (
+          <span className="text-xs text-muted-foreground">{order.carrier}</span>
         ) : (
           <span className="text-xs text-muted-foreground/40">—</span>
         )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
-        {tracking?.tracking_number ? (
-          <span className="text-xs font-mono text-muted-foreground">{tracking.tracking_number}</span>
+        {order.tracking_number ? (
+          <span className="text-xs font-mono text-muted-foreground">{order.tracking_number}</span>
         ) : (
           <span className="text-xs text-muted-foreground/40">—</span>
         )}
       </td>
       <td className="px-4 py-3">
-        {tracking?.tracking_url ? (
+        {order.tracking_url ? (
           <a
-            href={tracking.tracking_url}
+            href={order.tracking_url}
             target="_blank"
             rel="noreferrer"
             onClick={e => e.stopPropagation()}
@@ -233,68 +213,34 @@ function DeliveredRow({ order, onOpen }: { order: OrderTask; onOpen: (o: OrderTa
 /* ─── Main section ───────────────────────────────────────────────────────────── */
 export function OrdersSection() {
   const { language } = useLanguage();
-  const { userId, permLoading } = usePermissions() as any;
+  const { userId } = usePermissions() as any;
   const isL = language === "es";
 
-  const [orders, setOrders] = useState<OrderTask[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOrder, setModalOrder] = useState<FullTask | null | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<"pending" | "completed">("pending");
+  const [orders, setOrders]       = useState<Order[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [modalOrder, setModalOrder] = useState<Order | null>(null);
+  const [activeTab, setActiveTab] = useState<MainTab>("pending");
 
   const fetchOrders = async () => {
     if (!userId) return;
     setLoading(true);
     const { data, error } = await supabase
-      .from("tasks")
-      .select(`id, title_en, description_en, status, due_date, assigned_to, property_id, category, attachments, priority, is_draft, ai_suggested, property:properties(name)`)
-      .eq("category", "order")
-      .eq("is_draft", false)
-      .order("due_date", { ascending: true, nullsFirst: false });
-
+      .from("orders")
+      .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, property:properties(name)")
+      .order("expected_delivery", { ascending: true, nullsFirst: false });
     if (error) console.error(error);
-    const raw = (data ?? []) as any[];
-
-    const ids = [...new Set(raw.map((t: any) => t.assigned_to).filter(Boolean))] as string[];
-    let nameMap: Record<string, string> = {};
-    if (ids.length) {
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ids);
-      (profiles ?? []).forEach((p: any) => { if (p.full_name) nameMap[p.id] = p.full_name; });
-    }
-    const enriched: OrderTask[] = raw.map((t: any) => ({
-      ...t,
-      assignee: t.assigned_to ? { full_name: nameMap[t.assigned_to] ?? null } : null,
-    }));
-    setOrders(enriched);
+    setOrders((data as any[]) ?? []);
     setLoading(false);
   };
 
   useEffect(() => { fetchOrders(); }, [userId]);
 
-  const openOrder = (o: OrderTask) => {
-    setModalOrder({
-      id: o.id,
-      title_en: o.title_en,
-      description_en: o.description_en,
-      status: o.status,
-      priority: o.priority,
-      due_date: o.due_date,
-      assigned_to: o.assigned_to,
-      property_id: o.property_id,
-      is_draft: o.is_draft,
-      ai_suggested: o.ai_suggested,
-      attachments: o.attachments,
-      category: "order",
-    });
-  };
-
-  const isDelivered = (o: OrderTask) => (o.attachments as any[]).some((a: any) => a.type === "tracking" && a.delivered_at);
-  const pendingDelivery = orders.filter(o => o.status === "completed" && !isDelivered(o));
-  const delivered = orders.filter(o => o.status === "completed" && isDelivered(o));
-  const active = orders.filter(o => o.status !== "completed");
+  const pending   = orders.filter(o => o.status === "pending_delivery");
+  const delivered = orders.filter(o => o.status === "delivered");
 
   const tableHeaders = [
     isL ? "Artículo" : "Item",
-    isL ? (activeTab === "pending" ? "Fecha estimada" : "Entregado") : (activeTab === "pending" ? "Est. Delivery" : "Delivered"),
+    activeTab === "pending" ? (isL ? "Fecha estimada" : "Est. Delivery") : (isL ? "Entregado" : "Delivered"),
     isL ? "Destino" : "Destination",
     isL ? "Transportista" : "Carrier",
     isL ? "N° Seguimiento" : "Tracking #",
@@ -302,7 +248,7 @@ export function OrdersSection() {
     "",
   ];
 
-  const displayed = activeTab === "pending" ? pendingDelivery : delivered;
+  const displayed = activeTab === "pending" ? pending : delivered;
 
   return (
     <div className="animate-fade-in pb-6">
@@ -313,37 +259,9 @@ export function OrdersSection() {
           {isL ? "Entregas" : "Deliveries"}
         </h1>
         <p className="text-cream/40 text-xs mt-1 tracking-wide">
-          {isL ? "Pedidos, entregas pendientes y seguimiento" : "Purchase orders, pending deliveries & tracking"}
+          {isL ? "Pedidos, entregas pendientes y lista de compras" : "Purchase orders, pending deliveries & shopping list"}
         </p>
       </div>
-
-      {/* Active orders strip (not yet completed) */}
-      {active.length > 0 && (
-        <div className="px-4 pt-4">
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
-            {isL ? "Pedidos activos (en proceso)" : "Active orders (being processed)"}
-          </p>
-          <div className="flex flex-col gap-2">
-            {active.map(o => (
-              <button
-                key={o.id}
-                onClick={() => openOrder(o)}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-card border border-border rounded-xl hover:border-[hsl(var(--gold)/0.4)] transition-colors text-left"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />
-                  <span className="text-sm font-medium text-foreground truncate">{o.title_en}</span>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <StatusBadge status={o.status} isL={isL} />
-                  <ChevronRight size={13} className="text-muted-foreground/40" />
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="border-b border-border mt-4" />
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="flex gap-1 px-4 py-3 border-b border-border">
@@ -354,66 +272,88 @@ export function OrdersSection() {
           )}
         >
           <Package size={12} />
-          {isL ? "Entrega pendiente" : "Pending Delivery"} {pendingDelivery.length > 0 && `(${pendingDelivery.length})`}
+          {isL ? "Pendiente" : "Pending"} {pending.length > 0 && `(${pending.length})`}
         </button>
         <button
-          onClick={() => setActiveTab("completed")}
+          onClick={() => setActiveTab("delivered")}
           className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
-            activeTab === "completed" ? "bg-[hsl(var(--status-done))] text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+            activeTab === "delivered" ? "bg-[hsl(var(--status-done))] text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
         >
           <Check size={12} />
           {isL ? "Entregados" : "Delivered"} {delivered.length > 0 && `(${delivered.length})`}
         </button>
+        <button
+          onClick={() => setActiveTab("shopping")}
+          className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+            activeTab === "shopping" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+          )}
+        >
+          <ShoppingBag size={12} />
+          {isL ? "Lista" : "List"}
+        </button>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        {loading ? (
-          <div className="px-4 pt-4 space-y-2">
-            {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-xl bg-card border border-border animate-pulse" />)}
-          </div>
-        ) : displayed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <ShoppingCart size={36} className="text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground text-center">
-              {activeTab === "pending"
-                ? (isL ? "No hay pedidos pendientes de entrega" : "No pending deliveries")
-                : (isL ? "No hay entregas completadas" : "No completed deliveries")}
-            </p>
-            <p className="text-xs text-muted-foreground/60 text-center max-w-xs">
-              {activeTab === "pending"
-                ? (isL ? "Cuando marques un pedido como completado, aparecerá aquí. Ábrelo para añadir datos de envío." : "When you mark an order complete it appears here. Open it to add shipping details.")
-                : (isL ? "Las entregas confirmadas aparecerán aquí." : "Confirmed deliveries will appear here.")}
-            </p>
-          </div>
-        ) : (
-          <table className="w-full min-w-[640px]">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                {tableHeaders.map((h, i) => (
-                  <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {activeTab === "pending"
-                ? displayed.map(o => <PendingRow key={o.id} order={o} onOpen={openOrder} />)
-                : displayed.map(o => <DeliveredRow key={o.id} order={o} onOpen={openOrder} />)
-              }
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* Shopping list sub-section */}
+      {activeTab === "shopping" && <ShoppingList />}
 
-      {/* Task modal */}
-      {modalOrder !== undefined && (
-        <TaskModal
-          task={modalOrder}
-          defaultDraft={false}
-          onClose={() => setModalOrder(undefined)}
+      {/* Delivery table */}
+      {activeTab !== "shopping" && (
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="px-4 pt-4 space-y-2">
+              {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-xl bg-card border border-border animate-pulse" />)}
+            </div>
+          ) : displayed.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <ShoppingCart size={36} className="text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground text-center">
+                {activeTab === "pending"
+                  ? (isL ? "No hay pedidos pendientes de entrega" : "No pending deliveries")
+                  : (isL ? "No hay entregas completadas" : "No completed deliveries")}
+              </p>
+              <p className="text-xs text-muted-foreground/60 text-center max-w-xs">
+                {activeTab === "pending"
+                  ? (isL ? "Cuando marques un pedido de tarea como completado, aparecerá aquí automáticamente." : "When you complete a task marked as an order, it appears here automatically.")
+                  : (isL ? "Las entregas confirmadas aparecerán aquí como historial permanente." : "Confirmed deliveries appear here as a permanent record.")}
+              </p>
+            </div>
+          ) : (
+            <table className="w-full min-w-[640px]">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  {tableHeaders.map((h, i) => (
+                    <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {activeTab === "pending"
+                  ? pending.map(o => (
+                      <PendingRow
+                        key={o.id}
+                        order={o}
+                        onOpen={setModalOrder}
+                        onMarkDelivered={() => fetchOrders()}
+                      />
+                    ))
+                  : delivered.map(o => (
+                      <DeliveredRow key={o.id} order={o} onOpen={setModalOrder} />
+                    ))
+                }
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Order detail modal */}
+      {modalOrder && (
+        <OrderDetailModal
+          order={modalOrder}
+          onClose={() => setModalOrder(null)}
           onSaved={fetchOrders}
         />
       )}
