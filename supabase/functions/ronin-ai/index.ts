@@ -898,10 +898,11 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
       // If we have a pre-built confirmation message, stream it as a fake SSE response
       if (precomputedFinal) {
+        const cleaned = stripThinking(precomputedFinal);
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           start(controller) {
-            const words = precomputedFinal!.split(/(?<=\s)/);
+            const words = cleaned.split(/(?<=\s)/);
             for (const word of words) {
               const chunk = `data: ${JSON.stringify({ choices: [{ delta: { content: word } }] })}\n\n`;
               controller.enqueue(encoder.encode(chunk));
@@ -913,11 +914,11 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
 
-      // Final answer — stream with pro model using enriched context (all observations done)
+      // Final answer — use Flash (no thinking leakage) with enriched context
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-2.5-pro", messages: loopMessages, stream: true }),
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: loopMessages, stream: true }),
       });
       if (!aiResponse.ok) {
         if (aiResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
