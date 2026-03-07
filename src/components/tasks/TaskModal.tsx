@@ -7,7 +7,7 @@ import { fireConfetti } from "@/lib/confetti";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
   ChevronDown, Check, Send, Trash2, Clock, AlertTriangle, Package,
-  CheckSquare, MessageSquare, ShoppingCart,
+  CheckSquare, MessageSquare, ShoppingCart, Truck, Link as LinkIcon, FileText, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 
