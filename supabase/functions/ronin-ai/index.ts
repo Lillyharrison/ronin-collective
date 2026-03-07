@@ -560,6 +560,8 @@ serve(async (req) => {
       } else if (tool_name === "save_memory") {
         await saveMemorySilently(tool_args, adminClient);
         resultMessage = `🧠 **Memory saved.**`;
+      } else if (tool_name === "add_shopping_list_item") {
+        resultMessage = await addShoppingListItemsSilently(tool_args, callerUserId, adminClient);
       } else {
         resultMessage = `⚠️ Unknown tool: ${tool_name}`;
       }
