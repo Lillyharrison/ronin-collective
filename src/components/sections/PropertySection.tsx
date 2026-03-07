@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical } from "lucide-react";
+import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical, DoorOpen } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 
 type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
