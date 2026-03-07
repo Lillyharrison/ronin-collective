@@ -160,6 +160,33 @@ const RONIN_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "add_shopping_list_item",
+      description: "Add one or more items to the household shopping list. Use whenever someone asks to add something to the shopping list, grocery list, or buy list. Do NOT create a task — insert directly into the shopping list. Auto-detect the category based on the item name.",
+      parameters: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            description: "One or more items to add to the shopping list",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Item name, e.g. 'Watermelon'" },
+                category: { type: "string", enum: ["food", "cleaning", "supplies", "personal", "tech", "other"], description: "Auto-detect: food=groceries/produce/drinks, cleaning=detergents/mops, supplies=paper/packaging, personal=toiletries/cosmetics, tech=electronics/batteries" },
+                quantity: { type: "string", description: "Optional quantity, e.g. '2 kg', '1 case'" },
+                notes: { type: "string", description: "Optional extra notes" },
+              },
+              required: ["name", "category"],
+            },
+          },
+        },
+        required: ["items"],
+      },
+    },
+  },
 ];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
