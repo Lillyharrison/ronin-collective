@@ -87,7 +87,19 @@ export function MaintenanceSection() {
 
   const handleCreate = async (payload: Partial<MaintenanceIssue>) => {
     if (!userId) return;
-    await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+    const { data: newIssue } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+    // Notify all users with maintenance alerts enabled
+    if (newIssue) {
+      await notifySection("maintenance", {
+        title: `🔧 New issue reported: ${payload.title ?? "Maintenance issue"}`,
+        body: payload.location_detail ? `Location: ${payload.location_detail}` : undefined,
+        type: "warning",
+        action_url: "maintenance",
+        entity_id: newIssue.id,
+        entity_type: "maintenance_issue",
+        property_id: payload.property_id ?? undefined,
+      }, userId);
+    }
   };
 
   const handleEdit = async (patch: Partial<MaintenanceIssue>) => {
