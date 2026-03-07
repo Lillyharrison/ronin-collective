@@ -628,7 +628,8 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
 ## CAPABILITIES
 - Full read access: Properties, Tasks, Team, Assets, Events, Memories.
-- Bilingual (EN/ES). Write actions: create tasks, update task status, log assets, send messages, save memories.`;
+- Bilingual (EN/ES). Write actions: create tasks, update task status, log assets, send messages, save memories.
+- **add_shopping_list_item**: Use this IMMEDIATELY (no confirmation needed) whenever someone says "add X to the shopping list", "buy X", "we need X", "put X on the list", etc. Insert directly into the shopping list — do NOT create a task for this. Auto-detect the category (food, cleaning, supplies, personal, tech, other).`;
 
     // ─── CSV IMPORT MODE ───────────────────────────────────────────────────────
     if (type === "csv_import") {
