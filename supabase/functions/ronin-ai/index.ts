@@ -191,6 +191,19 @@ const RONIN_TOOLS = [
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
+/** Strip Gemini thinking/reasoning blocks that should never reach the user */
+function stripThinking(text: string): string {
+  // Remove <think>...</think> and <thinking>...</thinking> blocks (Gemini 2.5 Pro)
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+    .replace(/^THINK:.*$/gim, "")
+    .replace(/^OBSERVE:.*$/gim, "")
+    .replace(/^REASON:.*$/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** Non-streaming LLM call for ReAct loop iterations */
 async function callLLMSync(
   messages: unknown[],
@@ -756,7 +769,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
           const toolCalls = choice.message?.tool_calls ?? [];
           if (!toolCalls.length) {
             // No tool calls — this is the final text response
-            finalText = choice.message?.content ?? "";
+            finalText = stripThinking(choice.message?.content ?? "");
             break;
           }
 
@@ -802,23 +815,23 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
           if (hitWriteTool) {
             // Ask LLM to generate the human-readable confirmation text (no tools — force text)
             const confirmResp = await callLLMSync(loopMessages, [], LOVABLE_API_KEY, "google/gemini-2.5-flash");
-            finalText = confirmResp.choices?.[0]?.message?.content
-              ?? buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args);
+            finalText = stripThinking(confirmResp.choices?.[0]?.message?.content
+              ?? buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args));
             break;
           }
         }
 
-        // Persist to DB
+        // Persist to DB — always strip thinking before saving
         if (pendingWriteTool) {
           await adminClient.from("messages").insert({
             thread_id, sender_id: null, is_ai_generated: true,
-            content_text: finalText || buildConfirmationMessage(pendingWriteTool.name, pendingWriteTool.args),
+            content_text: stripThinking(finalText || buildConfirmationMessage(pendingWriteTool.name, pendingWriteTool.args)),
             delivery_status: "sent",
             reactions: { __pending_tool: { name: pendingWriteTool.name, args: pendingWriteTool.args } } as unknown as never,
           });
         } else if (finalText) {
           await adminClient.from("messages").insert({
-            thread_id, content_text: finalText, sender_id: null, is_ai_generated: true, delivery_status: "sent",
+            thread_id, content_text: stripThinking(finalText), sender_id: null, is_ai_generated: true, delivery_status: "sent",
           });
         }
         await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread_id);
@@ -885,10 +898,11 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
       // If we have a pre-built confirmation message, stream it as a fake SSE response
       if (precomputedFinal) {
+        const cleaned = stripThinking(precomputedFinal);
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           start(controller) {
-            const words = precomputedFinal!.split(/(?<=\s)/);
+            const words = cleaned.split(/(?<=\s)/);
             for (const word of words) {
               const chunk = `data: ${JSON.stringify({ choices: [{ delta: { content: word } }] })}\n\n`;
               controller.enqueue(encoder.encode(chunk));
@@ -900,11 +914,11 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
 
-      // Final answer — stream with pro model using enriched context (all observations done)
+      // Final answer — use Flash (no thinking leakage) with enriched context
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-2.5-pro", messages: loopMessages, stream: true }),
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: loopMessages, stream: true }),
       });
       if (!aiResponse.ok) {
         if (aiResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
