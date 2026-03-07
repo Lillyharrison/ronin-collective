@@ -11,6 +11,8 @@ import {
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
 import { DraftTasksWidget } from "@/components/tasks/DraftTasksWidget";
+import { IssueModal } from "@/components/maintenance/IssueModal";
+import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
 
 interface Property {
   id: string;
@@ -133,12 +135,14 @@ export function Dashboard() {
   const { setActiveSection, setTargetPropertyId, setActivePropertyId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
+  const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [reportIssueOpen, setReportIssueOpen] = useState(false);
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
@@ -150,6 +154,7 @@ export function Dashboard() {
   const [taglineDuration, setTaglineDuration] = useState<"today" | "date" | "permanent">("today");
   const [taglineEndDate, setTaglineEndDate] = useState("");
   const taglineInputRef = useRef<HTMLInputElement>(null);
+
 
   // Load properties
   useEffect(() => {
@@ -310,6 +315,22 @@ export function Dashboard() {
 
   return (
     <div className="animate-fade-in pb-4">
+      {/* Quick-log Report Issue modal — triggered from dashboard quick action */}
+      {reportIssueOpen && (
+        <IssueModal
+          open={reportIssueOpen}
+          onClose={() => setReportIssueOpen(false)}
+          onSave={async (payload) => {
+            if (!userId) return;
+            await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+          }}
+          categories={maintenanceCategories}
+          properties={properties.map(p => ({ id: p.id, name: p.name }))}
+          profiles={[]}
+          mode="create"
+        />
+      )}
+
       {/* Greeting banner */}
       <div className="bg-charcoal px-5 pt-6 pb-5 border-b border-charcoal-light">
         <p className="text-cream/50 text-xs tracking-widest uppercase mb-1">{dateStr}</p>
@@ -502,7 +523,13 @@ export function Dashboard() {
           {quickActions.filter(a => isMasterAdmin || canSee(a.section)).map((action) => (
             <button
               key={action.labelKey}
-              onClick={() => setActiveSection(action.section)}
+              onClick={() => {
+                if (action.labelKey === "reportIssue") {
+                  setReportIssueOpen(true);
+                } else {
+                  setActiveSection(action.section);
+                }
+              }}
               className="flex flex-col items-center justify-center gap-2 bg-card border border-border rounded-xl p-4 min-h-[88px] hover:border-gold/40 hover:bg-gold/5 transition-all active:scale-95"
             >
               <span className="text-gold">{action.icon}</span>

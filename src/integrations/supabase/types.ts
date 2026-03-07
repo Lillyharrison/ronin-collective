@@ -484,6 +484,117 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_categories: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          is_custom: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_custom?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_custom?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      maintenance_issues: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          close_out_photo_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_draft: boolean
+          location_detail: string | null
+          photo_url: string | null
+          priority: string
+          property_id: string | null
+          related_issue_id: string | null
+          reported_by: string
+          resolved_at: string | null
+          scheduled_date: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          close_out_photo_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_draft?: boolean
+          location_detail?: string | null
+          photo_url?: string | null
+          priority?: string
+          property_id?: string | null
+          related_issue_id?: string | null
+          reported_by: string
+          resolved_at?: string | null
+          scheduled_date?: string | null
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          close_out_photo_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_draft?: boolean
+          location_detail?: string | null
+          photo_url?: string | null
+          priority?: string
+          property_id?: string | null
+          related_issue_id?: string | null
+          reported_by?: string
+          resolved_at?: string | null
+          scheduled_date?: string | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_issues_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_issues_related_issue_id_fkey"
+            columns: ["related_issue_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manuals: {
         Row: {
           category: string
