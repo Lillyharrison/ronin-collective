@@ -148,7 +148,8 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
 // ─── Main TasksSection ────────────────────────────────────────────────────────
 export function TasksSection() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading } = usePermissions();
+  const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
+  const canManageTasks = isMasterAdmin || isAdmin || isManager || canEdit("tasks");
   const isL = language === "es";
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);

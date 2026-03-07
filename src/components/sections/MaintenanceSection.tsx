@@ -27,8 +27,8 @@ const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, 
 type ViewMode = "board" | "list" | "table";
 
 export function MaintenanceSection() {
-  const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds } = usePermissions();
-  const canManage = isMasterAdmin || isAdmin || isManager;
+  const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
+  const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
 
   const [search,      setSearch]      = useState("");
