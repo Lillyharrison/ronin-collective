@@ -318,13 +318,13 @@ export function TasksSection() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
           {columns.map(s => (
-            <KanbanColumn
+          <KanbanColumn
               key={s}
               status={s}
               tasks={byStatus(s)}
               onTaskClick={openEdit}
               onAddClick={() => openNew(s)}
-              isAdmin={isAdmin || isMasterAdmin}
+              isAdmin={canManageTasks}
             />
           ))}
         </div>

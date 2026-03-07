@@ -51,8 +51,8 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
   const { language } = useLanguage();
   const isL = language === "es";
   const [delivering, setDelivering] = useState(false);
-  const { isAdmin, isMasterAdmin, isManager } = usePermissions();
-  const canEdit = isAdmin || isMasterAdmin || isManager;
+  const { isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
+  const canEdit_orders = isAdmin || isMasterAdmin || isManager || canEdit("orders");
 
   const deliveryDate = order.expected_delivery ? new Date(order.expected_delivery) : null;
   const isOverdue = deliveryDate && deliveryDate < new Date() && order.status !== "not_placed";
