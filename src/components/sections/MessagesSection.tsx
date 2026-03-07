@@ -26,6 +26,26 @@ export function MessagesSection() {
 
   const { threads, loading, createDM, createGroup, deleteThread } = useThreads(currentUserId);
 
+  // Auto-create the dedicated #Maintenance thread if it doesn't exist yet
+  useEffect(() => {
+    if (!currentUserId) return;
+    const existing = threads.find(t => t.title === "Maintenance Reports");
+    if (existing) return;
+    if (threads.length === 0) return; // wait for threads to load
+    // Create it once (all admins + managers get added via participant_ids null = system thread)
+    supabase.from("chat_threads").insert({
+      type: "group" as const,
+      title: "Maintenance Reports",
+      participant_ids: [currentUserId],
+      created_by: currentUserId,
+    }).then(({ error }) => {
+      if (!error) {
+        // Intentionally don't navigate — just ensure it exists
+      }
+    });
+  }, [currentUserId, threads]);
+
+
   const activeThread = threads.find(t => t.id === activeThreadId);
 
   const handleSelectThread = (id: string) => {
