@@ -1142,9 +1142,18 @@ Analyse the photo carefully:
       }
 
       // ── No thread_id: sync ReAct loop then stream final answer ──────────────
+      // Build initial messages for the streaming path from client-supplied history (cleaned)
+      const cleanedClientHistory = cleanHistory(
+        (conversationHistory as Array<{ content_text: string | null; is_ai_generated: boolean }>).map((m, i) => ({
+          id: String(i),
+          content_text: typeof m === "object" && "content" in m ? (m as { content: string }).content : m.content_text,
+          is_ai_generated: typeof m === "object" && "role" in m ? (m as { role: string }).role === "assistant" : m.is_ai_generated,
+        }))
+      );
+      const streamInitialMessages: unknown[] = [baseSystemMsg, ...cleanedClientHistory, currentUserMessage];
       const ctx: ContextData = { props, staff };
       const MAX_ITER = 5;
-      let loopMessages: unknown[] = [...initialMessages];
+      let loopMessages: unknown[] = [...streamInitialMessages];
       let precomputedFinal: string | null = null;
 
       for (let i = 0; i < MAX_ITER; i++) {
