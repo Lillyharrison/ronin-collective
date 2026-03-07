@@ -116,6 +116,7 @@ export const translations = {
     calendar: "Calendario",
     memory: "Memoria de Ronin",
     rules: "Reglas",
+    alerts: "Alertas",
   },
 } as const;
 
