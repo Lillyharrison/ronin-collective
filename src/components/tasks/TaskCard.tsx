@@ -19,6 +19,7 @@ export interface KanbanTask {
   linked_checklist_id?: string | null;
   is_draft?: boolean;
   ai_suggested?: boolean;
+  category?: string | null;
   attachments?: { url: string; type: string; name: string }[];
   created_at: string;
   property?: { name: string } | null;

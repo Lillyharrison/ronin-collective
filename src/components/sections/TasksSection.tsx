@@ -168,7 +168,7 @@ export function TasksSection() {
       .select(`
         id, title_en, title_es, description_en, status, priority, due_date,
         assigned_to, property_id, assigned_department, assigned_role,
-        linked_checklist_id, is_draft, ai_suggested, attachments, created_at,
+        linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category,
         property:properties(name),
         linked_checklist:checklist_templates(title, icon)
       `)
@@ -242,6 +242,7 @@ export function TasksSection() {
       is_draft: task.is_draft,
       ai_suggested: task.ai_suggested,
       attachments: (task.attachments ?? []) as any,
+      category: task.category ?? null,
     });
   };
 
