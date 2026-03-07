@@ -11,6 +11,8 @@ import {
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
 import { DraftTasksWidget } from "@/components/tasks/DraftTasksWidget";
+import { IssueModal } from "@/components/maintenance/IssueModal";
+import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
 
 interface Property {
   id: string;
