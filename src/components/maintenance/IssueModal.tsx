@@ -76,7 +76,7 @@ function ModalContent({ onClose, onSave, initial = {}, categories, onCategoryAdd
       .select("id, name")
       .eq("property_id", propertyId)
       .order("sort_order")
-      .then(({ data }) => setRooms((data ?? []) as { id: string; name: string }[]));
+      .then(({ data }) => setRooms(((data ?? []) as unknown) as { id: string; name: string }[]));
   }, [propertyId]);
 
   const uploadPhoto = async (file: File, type: "main" | "closeout") => {
