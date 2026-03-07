@@ -105,31 +105,19 @@ export function MaintenanceSection() {
     if (newStatus === "resolved") patch.resolved_at = new Date().toISOString();
     await updateIssue(issue.id, patch);
 
-    // Notify all admins (except the approver themselves) when an issue is approved
+    // Notify all users with maintenance alerts when an issue is approved
     if (newStatus === "approved" && userId) {
-      const { data: admins } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .in("role", ["master_admin", "admin", "manager"]);
-
-      if (admins) {
-        const approverProfile = profiles.find(p => p.id === userId);
-        const approverName = approverProfile?.name ?? "Admin";
-        const others = admins.filter((a: { user_id: string }) => a.user_id !== userId);
-        if (others.length > 0) {
-          await supabase.from("notifications").insert(
-            others.map((a: { user_id: string }) => ({
-              user_id: a.user_id,
-              title: `Issue approved: ${issue.title}`,
-              body: `${approverName} approved a maintenance issue for ${issue.property_name ?? "a property"}.`,
-              type: "success",
-              action_url: "maintenance",
-              entity_id: issue.id,
-              entity_type: "maintenance_issue",
-            }))
-          );
-        }
-      }
+      const approverProfile = profiles.find(p => p.id === userId);
+      const approverName = approverProfile?.name ?? "Admin";
+      await notifySection("maintenance", {
+        title: `Issue approved: ${issue.title}`,
+        body: `${approverName} approved a maintenance issue for ${issue.property_name ?? "a property"}.`,
+        type: "success",
+        action_url: "maintenance",
+        entity_id: issue.id,
+        entity_type: "maintenance_issue",
+        property_id: issue.property_id ?? undefined,
+      }, userId);
     }
   };
 
