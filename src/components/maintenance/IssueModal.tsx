@@ -135,12 +135,17 @@ function ModalContent({ onClose, onSave, initial = {}, categories, onCategoryAdd
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Modal container: flex column, fixed height, footer always visible */}
-      <div className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col"
-        style={{ maxHeight: "92dvh", height: "auto" }}>
+      {/* Modal container — fills available height, never overflows viewport */}
+      <div
+        className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col"
+        style={{
+          height: "min(92dvh, 92vh)",
+          maxHeight: "92dvh",
+        }}
+      >
 
         {/* ── Sticky header ── */}
         <div className="flex-shrink-0 bg-background border-b border-border px-5 py-4 flex items-center justify-between rounded-t-2xl sm:rounded-t-2xl">
@@ -157,8 +162,8 @@ function ModalContent({ onClose, onSave, initial = {}, categories, onCategoryAdd
           </button>
         </div>
 
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 overscroll-contain">
+        {/* ── Scrollable body — min-h-0 is required for flex children to scroll ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5 overscroll-contain [-webkit-overflow-scrolling:touch]">
 
           {/* Photo upload */}
           <div>
