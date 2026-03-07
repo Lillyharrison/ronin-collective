@@ -4,7 +4,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  MapPin, Clock, ShoppingBag, TriangleAlert,
+  MapPin, Clock, ShoppingBag, TriangleAlert, CheckSquare,
   ChevronRight, Activity, Zap, Shield, ClipboardList, X, Bell,
   Pencil, Check,
 } from "lucide-react";
