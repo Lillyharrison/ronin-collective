@@ -96,6 +96,15 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const [uploading, setUploading]       = useState(false);
   const [saving, setSaving]             = useState(false);
 
+  // ── Tracking fields (for order tasks) ────────────────────────────────────────
+  const existingTracking = (task?.attachments as any[] ?? []).find((a: any) => a.type === "tracking");
+  const [trackingNumber, setTrackingNumber] = useState<string>(existingTracking?.tracking_number ?? "");
+  const [trackingUrl, setTrackingUrl]       = useState<string>(existingTracking?.tracking_url ?? "");
+  const [carrier, setCarrier]               = useState<string>(existingTracking?.carrier ?? "");
+  const [packingList, setPackingList]       = useState<string>(existingTracking?.packing_list ?? "");
+  const [trackingNotes, setTrackingNotes]   = useState<string>(existingTracking?.notes ?? "");
+  const [markDelivered, setMarkDelivered]   = useState<boolean>(false);
+
   // ── Read-only / assignee state ───────────────────────────────────────────────
   const [comment, setComment]           = useState("");
   const [completing, setCompleting]     = useState(false);
