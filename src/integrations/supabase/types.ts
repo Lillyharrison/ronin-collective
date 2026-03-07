@@ -685,6 +685,71 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          carrier: string | null
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          description: string | null
+          expected_delivery: string | null
+          id: string
+          notes: string | null
+          packing_list: string | null
+          property_id: string | null
+          source_task_id: string | null
+          status: string
+          title: string
+          tracking_number: string | null
+          tracking_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          carrier?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          description?: string | null
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          packing_list?: string | null
+          property_id?: string | null
+          source_task_id?: string | null
+          status?: string
+          title: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          carrier?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          description?: string | null
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          packing_list?: string | null
+          property_id?: string | null
+          source_task_id?: string | null
+          status?: string
+          title?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           assigned_property_ids: string[] | null
@@ -946,6 +1011,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ronin_memories_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_list_items: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_checked: boolean
+          name: string
+          notes: string | null
+          property_id: string | null
+          quantity: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_checked?: boolean
+          name: string
+          notes?: string | null
+          property_id?: string | null
+          quantity?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_checked?: boolean
+          name?: string
+          notes?: string | null
+          property_id?: string | null
+          quantity?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_list_items_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
