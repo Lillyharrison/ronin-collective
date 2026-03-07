@@ -779,7 +779,11 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
             } else if (SILENT_TOOL_NAMES.includes(toolName)) {
               // Silent tool — execute immediately, no user feedback
-              await saveMemorySilently(toolArgs, adminClient);
+              if (toolName === "add_shopping_list_item") {
+                await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
+              } else {
+                await saveMemorySilently(toolArgs, adminClient);
+              }
               toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
 
             } else if (WRITE_TOOL_NAMES.includes(toolName)) {
