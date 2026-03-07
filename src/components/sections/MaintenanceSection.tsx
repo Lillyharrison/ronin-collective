@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
@@ -24,7 +24,6 @@ const STATUS_COLUMNS: { key: IssueStatus; label: string }[] = [
 ];
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-
 type ViewMode = "board" | "list" | "table";
 
 export function MaintenanceSection() {
@@ -32,27 +31,27 @@ export function MaintenanceSection() {
   const canManage = isMasterAdmin || isAdmin || isManager;
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
 
-  const [search,       setSearch]       = useState("");
-  const [filterProp,   setFilterProp]   = useState("");
-  const [filterCat,    setFilterCat]    = useState("");
-  const [filterPri,    setFilterPri]    = useState("");
-  const [sortBy,       setSortBy]       = useState<"newest" | "oldest" | "priority" | "status">("newest");
-  const [viewMode,     setViewMode]     = useState<ViewMode>("board");
-  const [showFilters,  setShowFilters]  = useState(false);
-  const [modalOpen,    setModalOpen]    = useState(false);
-  const [editIssue,    setEditIssue]    = useState<MaintenanceIssue | null>(null);
-  const [detailIssue,  setDetailIssue]  = useState<MaintenanceIssue | null>(null);
+  const [search,      setSearch]      = useState("");
+  const [filterProp,  setFilterProp]  = useState("");
+  const [filterCat,   setFilterCat]   = useState("");
+  const [filterPri,   setFilterPri]   = useState("");
+  const [sortBy,      setSortBy]      = useState<"newest"|"oldest"|"priority"|"status">("newest");
+  const [viewMode,    setViewMode]    = useState<ViewMode>("board");
+  const [showFilters, setShowFilters] = useState(false);
+  const [modalOpen,   setModalOpen]   = useState(false);
+  const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
+  const [detailIssue, setDetailIssue] = useState<MaintenanceIssue | null>(null);
   const [allProperties, setAllProperties] = useState<{ id: string; name: string }[]>([]);
-  const [profiles,     setProfiles]     = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [profiles, setProfiles] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
 
-  // Scoped properties: master_admin/admin/manager see all; others only see assigned
+  // ── Property scoping: staff/family only see their assigned properties ─────────
   const properties = (isMasterAdmin || isAdmin || isManager)
     ? allProperties
     : allProperties.filter(p => assignedPropertyIds.includes(p.id));
 
   useEffect(() => {
     supabase.from("properties").select("id, name").order("name")
-      .then(({ data }) => setAllProperties((data ?? []).map((p: any) => p)));
+      .then(({ data }) => setAllProperties((data ?? []) as { id: string; name: string }[]));
     supabase.from("profiles").select("id, full_name, avatar_url").order("full_name")
       .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
@@ -62,7 +61,7 @@ export function MaintenanceSection() {
   const filtered = useCallback(() => {
     let list = [...issues];
 
-    // Non-admin: always scope to assigned properties
+    // Non-admin/manager: restrict to assigned properties
     if (!isMasterAdmin && !isAdmin && !isManager && assignedPropertyIds.length > 0) {
       list = list.filter(i => !i.property_id || assignedPropertyIds.includes(i.property_id));
     }
@@ -71,6 +70,7 @@ export function MaintenanceSection() {
     if (filterProp) list = list.filter(i => i.property_id === filterProp);
     if (filterCat)  list = list.filter(i => i.category === filterCat);
     if (filterPri)  list = list.filter(i => i.priority === filterPri);
+
     list.sort((a, b) => {
       if (sortBy === "newest")   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === "oldest")   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -81,11 +81,8 @@ export function MaintenanceSection() {
   }, [issues, search, filterProp, filterCat, filterPri, sortBy, isMasterAdmin, isAdmin, isManager, assignedPropertyIds]);
 
   const displayIssues = filtered();
-  // Pending = reported status (staff-logged, not yet approved)
-  const pendingIssues = displayIssues.filter(i => i.status === "reported");
   const openCount = displayIssues.filter(i => i.status !== "resolved").length;
-  // Non-pending for the main board
-  const boardIssues = displayIssues.filter(i => i.status !== "reported");
+  const reportedCount = displayIssues.filter(i => i.status === "reported").length;
 
   const handleCreate = async (payload: Partial<MaintenanceIssue>) => {
     if (!userId) return;
@@ -98,19 +95,43 @@ export function MaintenanceSection() {
     setEditIssue(null);
   };
 
+  // Only canManage users can change status; reported→approved only for master admin/admin
   const handleStatusChange = async (issue: MaintenanceIssue, newStatus: IssueStatus) => {
+    if (!canManage) return;
+    // Only master admin / admin can approve (reported → approved)
+    if (issue.status === "reported" && newStatus === "approved" && !isAdmin && !isMasterAdmin) return;
     const patch: Partial<MaintenanceIssue> = { status: newStatus };
     if (newStatus === "resolved") patch.resolved_at = new Date().toISOString();
     await updateIssue(issue.id, patch);
+
+    // Notify all admins when an issue is approved
+    if (newStatus === "approved") {
+      const { data: admins } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["master_admin", "admin", "manager"]);
+
+      if (admins && userId) {
+        const approverProfile = profiles.find(p => p.id === userId);
+        const approverName = approverProfile?.name ?? "Admin";
+        await Promise.all(
+          admins.map((a: { user_id: string }) =>
+            supabase.from("notifications").insert({
+              user_id: a.user_id,
+              title: `Issue approved: ${issue.title}`,
+              body: `${approverName} approved a maintenance issue for ${issue.property_name ?? "a property"}.`,
+              type: "success",
+              action_url: "maintenance",
+              entity_id: issue.id,
+              entity_type: "maintenance_issue",
+            })
+          )
+        );
+      }
+    }
   };
 
-  const handleApprove = async (issue: MaintenanceIssue) => {
-    await updateIssue(issue.id, { status: "approved" });
-  };
-
-  const handleCategoryAdded = () => {
-    fetchIssues();
-  };
+  const handleApprove = (issue: MaintenanceIssue) => handleStatusChange(issue, "approved");
 
   // ─── Family read-only status feed ────────────────────────────────────────────
   if (isFamily && !canManage) {
@@ -156,15 +177,44 @@ export function MaintenanceSection() {
         )}
 
         <IssueModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleCreate}
-          categories={categories} onCategoryAdded={handleCategoryAdded}
+          categories={categories} onCategoryAdded={fetchIssues}
           properties={properties} profiles={profiles}
           existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
           mode="create" />
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
-            onEdit={canManage ? (i) => { setEditIssue(i); setDetailIssue(null); } : undefined}
-            onStatusChange={canManage ? handleStatusChange : undefined}
-            onDelete={canManage ? deleteIssue : undefined}
+            categories={categories} />
+        )}
+      </div>
+    );
+  }
+
+  // ─── Staff read-only ─────────────────────────────────────────────────────────
+  if (!canManage) {
+    return (
+      <div className="animate-fade-in px-4 py-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-display text-xl text-foreground">Maintenance</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{openCount} open issue{openCount !== 1 ? "s" : ""}</p>
+          </div>
+          <button onClick={() => { setModalOpen(true); setEditIssue(null); }}
+            className="flex items-center gap-2 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+            <Plus size={14} /> Report
+          </button>
+        </div>
+        <div className="space-y-3">
+          {displayIssues.map(issue => (
+            <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+          ))}
+        </div>
+        <IssueModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleCreate}
+          categories={categories} onCategoryAdded={fetchIssues}
+          properties={properties} profiles={profiles}
+          existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
+          mode="create" />
+        {detailIssue && (
+          <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
             categories={categories} />
         )}
       </div>
@@ -181,6 +231,9 @@ export function MaintenanceSection() {
             <h2 className="font-display text-xl text-foreground">Maintenance</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {openCount} open · {displayIssues.filter(i => i.status === "resolved").length} resolved
+              {reportedCount > 0 && (
+                <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} awaiting approval</span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -216,11 +269,8 @@ export function MaintenanceSection() {
           </button>
 
           <div className="relative flex-shrink-0">
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer"
-            >
+            <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
+              className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer">
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="priority">By priority</option>
@@ -272,65 +322,12 @@ export function MaintenanceSection() {
         )}
       </div>
 
-      {/* ─── Pending Approvals (master admin only) ─── */}
-      {isMasterAdmin && pendingIssues.length > 0 && (
-        <div className="mx-4 mb-4 rounded-xl border border-amber-400/30 bg-amber-400/5 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-400/20 bg-amber-400/10">
-            <Clock size={13} className="text-amber-400" />
-            <span className="text-xs font-semibold text-amber-400">Pending Approval</span>
-            <span className="ml-auto text-[10px] bg-amber-400/20 text-amber-400 rounded-full px-2 py-0.5 font-bold">
-              {pendingIssues.length}
-            </span>
-          </div>
-          <div className="divide-y divide-amber-400/10">
-            {pendingIssues.map(issue => (
-              <div key={issue.id} className="flex items-start gap-3 px-4 py-3">
-                {issue.photo_url && (
-                  <img src={issue.photo_url} alt={issue.title}
-                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0 cursor-pointer"
-                    onClick={() => setDetailIssue(issue)} />
-                )}
-                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setDetailIssue(issue)}>
-                  <p className="text-sm font-semibold text-foreground truncate">{issue.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{issue.description}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <IssuePriorityBadge priority={issue.priority} />
-                    {issue.reporter_name && (
-                      <span className="text-[10px] text-muted-foreground">by {issue.reporter_name}</span>
-                    )}
-                    {issue.property_name && (
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                        <MapPin size={8} />{issue.property_name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  <button
-                    onClick={() => handleApprove(issue)}
-                    className="flex items-center gap-1 text-[11px] font-semibold bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] border border-[hsl(var(--status-done)/0.3)] rounded-lg px-2.5 py-1.5 hover:bg-[hsl(var(--status-done)/0.25)] transition-colors"
-                  >
-                    <CheckCircle2 size={11} /> Approve
-                  </button>
-                  <button
-                    onClick={() => { setEditIssue(issue); }}
-                    className="text-[11px] text-muted-foreground border border-border rounded-lg px-2.5 py-1.5 hover:bg-muted transition-colors"
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ─── Content ─── */}
       {loading ? (
         <div className="px-4 grid grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
         </div>
-      ) : boardIssues.length === 0 && pendingIssues.length === 0 ? (
+      ) : displayIssues.length === 0 ? (
         <div className="mx-4 rounded-2xl bg-card border border-border p-10 text-center">
           <Wrench size={36} className="mx-auto text-muted-foreground/30 mb-3" />
           <p className="font-semibold text-foreground">No issues found</p>
@@ -345,16 +342,15 @@ export function MaintenanceSection() {
         </div>
       ) : viewMode === "board" ? (
         <BoardView
-          displayIssues={boardIssues}
+          displayIssues={displayIssues}
           onCardClick={setDetailIssue}
           onStatusChange={handleStatusChange}
+          onApprove={handleApprove}
           canManage={canManage}
+          canApprove={isMasterAdmin || isAdmin}
         />
       ) : viewMode === "table" ? (
-        <TableView
-          displayIssues={displayIssues}
-          onRowClick={setDetailIssue}
-        />
+        <TableView displayIssues={displayIssues} onRowClick={setDetailIssue} />
       ) : (
         <div className="px-4 space-y-2 pb-6">
           {displayIssues.map(issue => (
@@ -369,14 +365,14 @@ export function MaintenanceSection() {
         onClose={() => setModalOpen(false)}
         onSave={handleCreate}
         categories={categories}
-        onCategoryAdded={handleCategoryAdded}
+        onCategoryAdded={fetchIssues}
         properties={properties}
         profiles={profiles}
         existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
         mode="create"
       />
 
-      {/* Edit modal */}
+      {/* Edit modal — only for canManage on approved+ issues */}
       {editIssue && (
         <IssueModal
           open={!!editIssue}
@@ -384,7 +380,7 @@ export function MaintenanceSection() {
           onSave={handleEdit}
           initial={editIssue}
           categories={categories}
-          onCategoryAdded={handleCategoryAdded}
+          onCategoryAdded={fetchIssues}
           properties={properties}
           profiles={profiles}
           existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
@@ -397,9 +393,9 @@ export function MaintenanceSection() {
         <IssueDetailDrawer
           issue={detailIssue}
           onClose={() => setDetailIssue(null)}
-          onEdit={canManage ? (i) => { setEditIssue(i); setDetailIssue(null); } : undefined}
+          onEdit={canManage && detailIssue.status !== "reported" ? (i) => { setEditIssue(i); setDetailIssue(null); } : undefined}
           onStatusChange={canManage ? handleStatusChange : undefined}
-          onDelete={canManage ? deleteIssue : undefined}
+          onDelete={isAdmin || isMasterAdmin ? deleteIssue : undefined}
           categories={categories}
         />
       )}
@@ -407,23 +403,38 @@ export function MaintenanceSection() {
   );
 }
 
-// ─── Drag-and-drop Kanban Board ───────────────────────────────────────────────
+// ─── Kanban Board ─────────────────────────────────────────────────────────────
 function BoardView({
   displayIssues,
   onCardClick,
   onStatusChange,
+  onApprove,
   canManage,
+  canApprove,
 }: {
   displayIssues: MaintenanceIssue[];
   onCardClick: (i: MaintenanceIssue) => void;
   onStatusChange: (i: MaintenanceIssue, s: IssueStatus) => void;
+  onApprove: (i: MaintenanceIssue) => void;
   canManage: boolean;
+  canApprove: boolean;
 }) {
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [draggingId,  setDraggingId]  = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
 
-  // Non-reported statuses for the board
-  const BOARD_COLS = STATUS_COLUMNS.filter(c => c.key !== "reported");
+  // All 6 statuses live in the Kanban — Reported is the inbox
+  const GROUPS = [
+    {
+      label: "Incoming",
+      subtitle: "Needs review & action",
+      cols: ["reported", "approved", "assigned"] as IssueStatus[],
+    },
+    {
+      label: "Active",
+      subtitle: "Scheduled through resolved",
+      cols: ["scheduled", "in_progress", "resolved"] as IssueStatus[],
+    },
+  ];
 
   const handleDragStart = (e: React.DragEvent, issueId: string) => {
     e.dataTransfer.setData("issueId", issueId);
@@ -440,7 +451,13 @@ function BoardView({
     const issueId = e.dataTransfer.getData("issueId");
     const issue = displayIssues.find(i => i.id === issueId);
     if (issue && issue.status !== status && canManage) {
-      onStatusChange(issue, status);
+      // Dragging into "approved" col counts as an approve action
+      if (status === "approved") {
+        onApprove(issue);
+      } else if (issue.status !== "reported") {
+        // Only approved+ issues can be dragged further
+        onStatusChange(issue, status);
+      }
     }
     setDraggingId(null);
     setDragOverCol(null);
@@ -453,65 +470,92 @@ function BoardView({
 
   return (
     <>
-      {/* Mobile: 2-column grid grouped by status */}
+      {/* Mobile: single-column stacked groups */}
       <div className="md:hidden px-4 pb-6 space-y-4">
-        {BOARD_COLS.map(col => {
-          const colIssues = displayIssues.filter(i => i.status === col.key);
-          if (colIssues.length === 0) return null;
+        {GROUPS.map(group => {
+          const groupIssues = displayIssues.filter(i => group.cols.includes(i.status));
+          if (groupIssues.length === 0) return null;
           return (
-            <div key={col.key}>
-              <div className="flex items-center gap-2 mb-2">
-                <IssueStatusBadge status={col.key} />
-                <span className="text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                  {colIssues.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {colIssues.map(issue => (
-                  <KanbanCard
-                    key={issue.id}
-                    issue={issue}
-                    onClick={() => onCardClick(issue)}
-                    isDragging={draggingId === issue.id}
-                    onDragStart={canManage ? handleDragStart : undefined}
-                    onDragEnd={handleDragEnd}
-                  />
-                ))}
+            <div key={group.label}>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2 px-1">
+                {group.label}
+              </p>
+              <div className="space-y-3">
+                {group.cols.map(colKey => {
+                  const col = STATUS_COLUMNS.find(c => c.key === colKey)!;
+                  const colIssues = displayIssues.filter(i => i.status === col.key);
+                  if (colIssues.length === 0) return null;
+                  return (
+                    <div key={col.key}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <IssueStatusBadge status={col.key} />
+                        <span className="text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                          {colIssues.length}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {colIssues.map(issue => (
+                          <KanbanCard
+                            key={issue.id}
+                            issue={issue}
+                            onClick={() => onCardClick(issue)}
+                            isDragging={draggingId === issue.id}
+                            onDragStart={canManage && issue.status !== "reported" ? handleDragStart : undefined}
+                            onDragEnd={handleDragEnd}
+                            onApprove={canApprove && issue.status === "reported" ? () => onApprove(issue) : undefined}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Desktop ≥md: 2-column layout — col 1: Reported/Approved/Assigned, col 2: Scheduled/In Progress/Resolved */}
+      {/* Desktop ≥md: 2-column grid */}
       <div className="hidden md:grid md:grid-cols-2 gap-4 px-4 pb-6">
-        {[
-          { label: "Incoming", cols: ["reported", "approved", "assigned"] as IssueStatus[] },
-          { label: "Active",   cols: ["scheduled", "in_progress", "resolved"] as IssueStatus[] },
-        ].map(group => (
-          <div key={group.label} className="space-y-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-1">{group.label}</p>
+        {GROUPS.map(group => (
+          <div key={group.label} className="space-y-3">
+            <div className="px-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">{group.label}</p>
+              <p className="text-[10px] text-muted-foreground/40 mt-0.5">{group.subtitle}</p>
+            </div>
             {group.cols.map(colKey => {
               const col = STATUS_COLUMNS.find(c => c.key === colKey)!;
               const colIssues = displayIssues.filter(i => i.status === col.key);
               const isOver = dragOverCol === col.key;
+              const isReportedCol = col.key === "reported";
+
               return (
                 <div
                   key={col.key}
                   className={cn(
-                    "rounded-xl border border-border p-3 transition-colors",
-                    isOver && canManage ? "bg-gold/5 border-gold/30" : "bg-card/50"
+                    "rounded-xl border p-3 transition-colors",
+                    isReportedCol
+                      ? "border-amber-400/20 bg-amber-400/5"
+                      : isOver && canManage
+                        ? "bg-gold/5 border-gold/30"
+                        : "border-border bg-card/50"
                   )}
                   onDragOver={e => handleDragOver(e, col.key)}
                   onDrop={e => handleDrop(e, col.key)}
                   onDragLeave={() => setDragOverCol(null)}
                 >
+                  {/* Column header */}
                   <div className="flex items-center gap-2 mb-3">
                     <IssueStatusBadge status={col.key} />
+                    {isReportedCol && colIssues.length > 0 && (
+                      <span className="text-[10px] text-amber-400 font-medium">Awaiting approval</span>
+                    )}
                     <span className="ml-auto text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
                       {colIssues.length}
                     </span>
                   </div>
+
+                  {/* Cards */}
                   <div className="grid grid-cols-2 gap-2 min-h-[3rem]">
                     {colIssues.map(issue => (
                       <KanbanCard
@@ -519,8 +563,10 @@ function BoardView({
                         issue={issue}
                         onClick={() => onCardClick(issue)}
                         isDragging={draggingId === issue.id}
-                        onDragStart={canManage ? handleDragStart : undefined}
+                        // Reported issues cannot be dragged; they must be approved first
+                        onDragStart={canManage && issue.status !== "reported" ? handleDragStart : undefined}
                         onDragEnd={handleDragEnd}
+                        onApprove={canApprove && issue.status === "reported" ? () => onApprove(issue) : undefined}
                       />
                     ))}
                     {colIssues.length === 0 && (
@@ -544,19 +590,21 @@ function BoardView({
   );
 }
 
-// Kanban card with photo thumbnail + drag handle
+// ─── Kanban card ─────────────────────────────────────────────────────────────
 function KanbanCard({
   issue,
   onClick,
   isDragging,
   onDragStart,
   onDragEnd,
+  onApprove,
 }: {
   issue: MaintenanceIssue;
   onClick: () => void;
   isDragging: boolean;
   onDragStart?: (e: React.DragEvent, id: string) => void;
   onDragEnd?: () => void;
+  onApprove?: () => void;
 }) {
   const CATEGORY_ICONS: Record<string, string> = {
     "Plumbing": "🔵", "Electrical / Tech": "⚡", "Climate / HVAC": "❄️",
@@ -564,25 +612,25 @@ function KanbanCard({
     "Security": "🔒", "General": "🔧",
   };
   const icon = CATEGORY_ICONS[issue.category] ?? "🔧";
+  const isReported = issue.status === "reported";
 
   return (
     <div
       draggable={!!onDragStart}
       onDragStart={onDragStart ? e => onDragStart(e, issue.id) : undefined}
       onDragEnd={onDragEnd}
-      onClick={onClick}
       className={cn(
-        "bg-card border border-border rounded-xl overflow-hidden cursor-pointer",
-        "hover:border-gold/30 hover:shadow-sm transition-all active:scale-[0.99] group",
+        "bg-card border border-border rounded-xl overflow-hidden transition-all group",
+        isReported ? "border-amber-400/30" : "hover:border-gold/30 hover:shadow-sm",
         issue.priority === "urgent" && "border-l-4 border-l-[hsl(var(--status-urgent))]",
         issue.priority === "high" && "border-l-4 border-l-orange-400",
         isDragging && "opacity-40 scale-95 rotate-1",
-        onDragStart && "cursor-grab active:cursor-grabbing"
+        onDragStart ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
       )}
     >
       {/* Photo thumbnail */}
       {issue.photo_url && (
-        <div className="relative h-24 bg-muted overflow-hidden">
+        <div className="relative h-24 bg-muted overflow-hidden cursor-pointer" onClick={onClick}>
           <img
             src={issue.photo_url}
             alt={issue.title}
@@ -591,7 +639,8 @@ function KanbanCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         </div>
       )}
-      <div className="p-2.5 space-y-1.5">
+
+      <div className="p-2.5 space-y-1.5 cursor-pointer" onClick={onClick}>
         <div className="flex items-start gap-1.5">
           <span className="text-base flex-shrink-0">{icon}</span>
           <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2 flex-1">{issue.title}</p>
@@ -605,7 +654,10 @@ function KanbanCard({
             </span>
           )}
         </div>
-        {issue.assignee_name && (
+        {issue.reporter_name && isReported && (
+          <p className="text-[9px] text-muted-foreground">by {issue.reporter_name}</p>
+        )}
+        {issue.assignee_name && !isReported && (
           <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
             {issue.assignee_avatar
               ? <img src={issue.assignee_avatar} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
@@ -620,6 +672,18 @@ function KanbanCard({
           </div>
         )}
       </div>
+
+      {/* Approve button — only on reported cards for admins */}
+      {onApprove && (
+        <div className="px-2.5 pb-2.5">
+          <button
+            onClick={e => { e.stopPropagation(); onApprove(); }}
+            className="w-full flex items-center justify-center gap-1 text-[10px] font-semibold bg-[hsl(var(--status-done)/0.12)] text-[hsl(var(--status-done))] border border-[hsl(var(--status-done)/0.3)] rounded-lg py-1.5 hover:bg-[hsl(var(--status-done)/0.22)] transition-colors"
+          >
+            <CheckCircle2 size={10} /> Approve
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -648,11 +712,8 @@ function TableView({ displayIssues, onRowClick }: { displayIssues: MaintenanceIs
         </thead>
         <tbody className="divide-y divide-border">
           {displayIssues.map(issue => (
-            <tr
-              key={issue.id}
-              onClick={() => onRowClick(issue)}
-              className="hover:bg-muted/40 cursor-pointer transition-colors group"
-            >
+            <tr key={issue.id} onClick={() => onRowClick(issue)}
+              className="hover:bg-muted/40 cursor-pointer transition-colors group">
               <td className="py-2.5 px-3 max-w-[200px]">
                 <div className="flex items-center gap-2">
                   {issue.photo_url && (
@@ -663,15 +724,9 @@ function TableView({ displayIssues, onRowClick }: { displayIssues: MaintenanceIs
                   </span>
                 </div>
               </td>
-              <td className="py-2.5 px-3 whitespace-nowrap">
-                <IssuePriorityBadge priority={issue.priority} />
-              </td>
-              <td className="py-2.5 px-3 whitespace-nowrap">
-                <IssueStatusBadge status={issue.status} />
-              </td>
-              <td className="py-2.5 px-3 whitespace-nowrap">
-                <span className="text-xs text-muted-foreground">{issue.category}</span>
-              </td>
+              <td className="py-2.5 px-3 whitespace-nowrap"><IssuePriorityBadge priority={issue.priority} /></td>
+              <td className="py-2.5 px-3 whitespace-nowrap"><IssueStatusBadge status={issue.status} /></td>
+              <td className="py-2.5 px-3 whitespace-nowrap"><span className="text-xs text-muted-foreground">{issue.category}</span></td>
               <td className="py-2.5 px-3">
                 <div className="flex flex-col">
                   <span className="text-xs font-medium text-foreground">{issue.property_name ?? "—"}</span>
@@ -694,9 +749,7 @@ function TableView({ displayIssues, onRowClick }: { displayIssues: MaintenanceIs
                 )}
               </td>
               <td className="py-2.5 px-3 whitespace-nowrap">
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(issue.created_at), "MMM d, yy")}
-                </span>
+                <span className="text-xs text-muted-foreground">{format(new Date(issue.created_at), "MMM d, yy")}</span>
               </td>
             </tr>
           ))}
