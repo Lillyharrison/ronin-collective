@@ -1199,7 +1199,7 @@ Analyse the photo carefully:
 function buildConfirmationMessage(toolName: string, args: Record<string, unknown>): string {
   switch (toolName) {
     case "log_maintenance_issue": {
-      const priorityEmoji: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+      const priorityEmoji: Record<string, string> = { urgent: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
       return [
         `🔧 **I'm ready to log the following maintenance issue:**`, ``,
         `**Title:** ${args.title}`,
