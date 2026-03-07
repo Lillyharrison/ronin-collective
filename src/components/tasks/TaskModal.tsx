@@ -183,6 +183,18 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     } else {
       const { data } = await supabase.from("tasks").insert({ ...payload, created_by: userId } as any).select("id").single();
       savedTaskId = data?.id;
+      // Notify users with tasks alerts enabled
+      if (savedTaskId && !isDraft) {
+        await notifySection("tasks", {
+          title: `📋 New task: ${title.trim()}`,
+          body: assignedTo ? `Assigned to a team member` : undefined,
+          type: "task",
+          action_url: "tasks",
+          entity_id: savedTaskId,
+          entity_type: "task",
+          property_id: propertyId || undefined,
+        }, userId ?? undefined);
+      }
     }
 
     // If order toggle is active, upsert a linked order record with status "not_placed"
