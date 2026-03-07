@@ -315,6 +315,22 @@ export function Dashboard() {
 
   return (
     <div className="animate-fade-in pb-4">
+      {/* Quick-log Report Issue modal — triggered from dashboard quick action */}
+      {reportIssueOpen && (
+        <IssueModal
+          open={reportIssueOpen}
+          onClose={() => setReportIssueOpen(false)}
+          onSave={async (payload) => {
+            if (!userId) return;
+            await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+          }}
+          categories={maintenanceCategories}
+          properties={properties.map(p => ({ id: p.id, name: p.name }))}
+          profiles={[]}
+          mode="create"
+        />
+      )}
+
       {/* Greeting banner */}
       <div className="bg-charcoal px-5 pt-6 pb-5 border-b border-charcoal-light">
         <p className="text-cream/50 text-xs tracking-widest uppercase mb-1">{dateStr}</p>
