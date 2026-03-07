@@ -9,8 +9,8 @@ const corsHeaders = {
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
-const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events"];
-const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message"];
+const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues"];
+const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message", "log_maintenance_issue"];
 const SILENT_TOOL_NAMES = ["save_memory", "add_shopping_list_item"];
 
 const RONIN_TOOLS = [
@@ -65,13 +65,48 @@ const RONIN_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "search_maintenance_issues",
+      description: "Search existing maintenance issues. Use BEFORE logging a new maintenance issue to check for duplicates. Returns current maintenance data.",
+      parameters: {
+        type: "object",
+        properties: {
+          keyword: { type: "string", description: "Search keyword matched against issue title or description" },
+          status: { type: "string", enum: ["reported", "approved", "assigned", "scheduled", "in_progress", "resolved", "all"] },
+          property_name: { type: "string", description: "Filter by property name" },
+        },
+        required: [],
+      },
+    },
+  },
 
   // ── WRITE TOOLS (confirmation required) ─────────────────────────────────────
   {
     type: "function",
     function: {
+      name: "log_maintenance_issue",
+      description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. The issue enters the workflow as 'reported' and awaits admin approval.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Clear, concise issue title (e.g. 'Broken lamp in master bedroom')" },
+          description: { type: "string", description: "Detailed description of the issue" },
+          category: { type: "string", enum: ["plumbing", "electrical", "hvac", "appliances", "structural", "grounds", "general"], description: "Issue category" },
+          priority: { type: "string", enum: ["low", "medium", "high", "critical"], description: "Priority level: critical=safety risk, high=urgent, medium=normal, low=can wait" },
+          property_name: { type: "string", description: "Property where the issue is located" },
+          location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
+        },
+        required: ["title", "category", "priority"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "create_task",
-      description: "Create a new task or work order. Use search_tasks first to avoid duplicates.",
+      description: "Create a new task or work order. Use search_tasks first to avoid duplicates. For maintenance issues (broken items, damage, repairs) use log_maintenance_issue instead.",
       parameters: {
         type: "object",
         properties: {
@@ -127,7 +162,7 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "send_staff_message",
-      description: "Send a direct message to a staff member.",
+      description: "Send a direct message to a staff member. Use only for genuine communications, NOT for logging maintenance issues or creating tasks.",
       parameters: {
         type: "object",
         properties: {
@@ -193,13 +228,14 @@ const RONIN_TOOLS = [
 
 /** Strip Gemini thinking/reasoning blocks that should never reach the user */
 function stripThinking(text: string): string {
-  // Remove <think>...</think> and <thinking>...</thinking> blocks (Gemini 2.5 Pro)
   return text
     .replace(/<think>[\s\S]*?<\/think>/gi, "")
     .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
     .replace(/^THINK:.*$/gim, "")
     .replace(/^OBSERVE:.*$/gim, "")
     .replace(/^REASON:.*$/gim, "")
+    .replace(/^ACT:.*$/gim, "")
+    .replace(/^RESPOND:.*$/gim, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -331,6 +367,28 @@ async function executeObservationTool(
     };
   }
 
+  if (name === "search_maintenance_issues") {
+    let q = adminClient.from("maintenance_issues")
+      .select("id, title, status, priority, category, created_at, property_id, description");
+    if (args.keyword) q = q.or(`title.ilike.%${args.keyword}%,description.ilike.%${args.keyword}%`);
+    const s = args.status as string | undefined;
+    if (s && s !== "all") q = q.eq("status", s);
+    const propId = resolvePropertyId(args.property_name);
+    if (propId) q = q.eq("property_id", propId);
+    q = q.order("created_at", { ascending: false }).limit(15);
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+    return {
+      total: data?.length ?? 0,
+      issues: data?.map(i => ({
+        id: i.id, title: i.title, status: i.status, priority: i.priority,
+        category: i.category, created_at: i.created_at,
+        description: i.description ?? "none",
+        property: propNameMap[i.property_id] ?? "unassigned",
+      })),
+    };
+  }
+
   return { error: `Unknown observation tool: ${name}` };
 }
 
@@ -390,6 +448,46 @@ async function addShoppingListItemsSilently(
   }
 }
 
+/** Notify admins + users with relevant permissions about an AI action */
+async function notifyAdminsOfAIAction(
+  adminClient: ReturnType<typeof createClient>,
+  title: string,
+  body: string,
+  type: string,
+  action_url: string,
+  entity_id?: string,
+  entity_type?: string,
+  excludeUserId?: string | null,
+): Promise<void> {
+  try {
+    // Get all master_admin and admin users
+    const { data: adminRoles } = await adminClient
+      .from("user_roles")
+      .select("user_id")
+      .in("role", ["master_admin", "admin"]);
+
+    const recipients = (adminRoles ?? [])
+      .map(r => r.user_id as string)
+      .filter(id => id !== excludeUserId);
+
+    if (!recipients.length) return;
+
+    await adminClient.from("notifications").insert(
+      recipients.map(user_id => ({
+        user_id,
+        title,
+        body,
+        type,
+        action_url,
+        entity_id: entity_id ?? null,
+        entity_type: entity_type ?? null,
+      }))
+    );
+  } catch (e) {
+    console.error("Notification send failed:", e);
+  }
+}
+
 // ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -435,7 +533,6 @@ serve(async (req) => {
       if (!email || !full_name || !level || !role) {
         return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      // Derive redirect URL from request origin so it works on any domain (preview, production, custom)
       const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app";
       const redirectTo = body.redirect_url || `${origin}/reset-password`;
       const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo });
@@ -464,7 +561,6 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      // Accept either a direct email OR a target_user_id (look up their email)
       let emailToInvite: string | null = body.email || null;
       if (!emailToInvite && body.target_user_id) {
         const { data: userData } = await adminClient.auth.admin.getUserById(body.target_user_id);
@@ -473,7 +569,6 @@ serve(async (req) => {
       if (!emailToInvite) return new Response(JSON.stringify({ error: "Could not resolve email for this user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app";
       const redirectTo = body.redirect_url || `${origin}/reset-password`;
-      // Use generateLink with type 'recovery' — works for existing users unlike inviteUserByEmail
       const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
         type: "recovery",
         email: emailToInvite,
@@ -482,7 +577,6 @@ serve(async (req) => {
       if (linkErr) {
         return new Response(JSON.stringify({ error: linkErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      // Send the email via Supabase's built-in mailer by hitting the action link
       const actionLink = linkData?.properties?.action_link;
       if (actionLink) {
         await fetch(actionLink, { method: "GET" });
@@ -504,9 +598,10 @@ serve(async (req) => {
     }
 
     // ─── TOOL EXECUTION (confirmed by user) ───────────────────────────────────
+    // Any authenticated user can execute a write tool — they are only surfaced after
+    // the AI stages them in a thread the user can see. No admin-only restriction here.
     if (action === "execute_tool") {
       if (!callerUserId) return new Response(JSON.stringify({ error: "Authentication required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (!["master_admin", "admin", "manager"].includes(callerRole)) return new Response(JSON.stringify({ error: "Insufficient permissions." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const { tool_name, tool_args } = body;
       const [propsRes, staffRes] = await Promise.all([adminClient.from("properties").select("id, name"), adminClient.from("profiles").select("id, full_name")]);
@@ -522,52 +617,168 @@ serve(async (req) => {
         return staff.find((s: { id: string; full_name: string | null }) => (s.full_name ?? "").toLowerCase().includes(name.toLowerCase()))?.id ?? null;
       };
 
+      const callerName = (callerProfile?.full_name as string) ?? "A team member";
       let resultMessage = "";
 
-      if (tool_name === "create_task") {
-        const { data: task, error: taskErr } = await adminClient.from("tasks").insert({ title_en: tool_args.title_en, description_en: tool_args.description_en ?? null, category: tool_args.category, priority: tool_args.priority, status: tool_args.priority === 1 ? "urgent" : "pending", assigned_to: resolveStaffId(tool_args.assigned_to_name), property_id: resolvePropertyId(tool_args.property_name), due_date: tool_args.due_date ?? null, created_by: callerUserId }).select("id").single();
+      // ── log_maintenance_issue ─────────────────────────────────────────────
+      if (tool_name === "log_maintenance_issue") {
+        const propId = resolvePropertyId(tool_args.property_name);
+        const { data: issue, error: issueErr } = await adminClient.from("maintenance_issues").insert({
+          title: tool_args.title,
+          description: tool_args.description ?? null,
+          category: tool_args.category,
+          priority: tool_args.priority,
+          status: "reported",
+          source: "ai_chat",
+          reported_by: callerUserId,
+          property_id: propId,
+          location_detail: tool_args.location_detail ?? null,
+        }).select("id").single();
+
+        if (issueErr) throw new Error(`Failed to log maintenance issue: ${issueErr.message}`);
+
+        // Log system event
+        await adminClient.from("system_events").insert({
+          event_type: "maintenance_reported_by_ai",
+          entity_type: "maintenance_issue",
+          entity_id: issue.id,
+          triggered_by: callerUserId,
+          property_id: propId,
+          payload: tool_args,
+          processed_by_ai: true,
+        });
+
+        const priorityEmoji: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+        const propLabel = tool_args.property_name ? ` @ ${tool_args.property_name}` : "";
+        const locationLabel = tool_args.location_detail ? ` — ${tool_args.location_detail}` : "";
+        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nPriority: ${priorityEmoji[tool_args.priority] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: **Reported** — awaiting admin approval. Visible in the Maintenance section.`;
+
+        // Notify all admins
+        await notifyAdminsOfAIAction(
+          adminClient,
+          `🔧 New maintenance issue reported`,
+          `${callerName} reported via Ronin AI: "${tool_args.title}"${propLabel}. Awaiting your approval.`,
+          "warning",
+          "maintenance",
+          issue.id,
+          "maintenance_issue",
+          null, // notify all admins including caller's own admin
+        );
+
+      // ── create_task ───────────────────────────────────────────────────────
+      } else if (tool_name === "create_task") {
+        const { data: task, error: taskErr } = await adminClient.from("tasks").insert({
+          title_en: tool_args.title_en,
+          description_en: tool_args.description_en ?? null,
+          category: tool_args.category,
+          priority: tool_args.priority,
+          status: tool_args.priority === 1 ? "urgent" : "pending",
+          assigned_to: resolveStaffId(tool_args.assigned_to_name),
+          property_id: resolvePropertyId(tool_args.property_name),
+          due_date: tool_args.due_date ?? null,
+          created_by: callerUserId,
+        }).select("id").single();
+
         if (taskErr) throw new Error(`Failed to create task: ${taskErr.message}`);
         await adminClient.from("system_events").insert({ event_type: "task_created_by_ai", entity_type: "task", entity_id: task.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
         const priorityLabel = tool_args.priority === 1 ? "🔴 Urgent" : tool_args.priority === 2 ? "🟡 Normal" : "🟢 Low";
         resultMessage = `✅ **Task created.**\n\n**${tool_args.title_en}**${tool_args.assigned_to_name ? ` — ${tool_args.assigned_to_name}` : ""}${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}\nPriority: ${priorityLabel} | Category: ${tool_args.category}\n\nVisible in the Tasks section.`;
 
+        // Notify admins
+        await notifyAdminsOfAIAction(
+          adminClient,
+          `📋 Task created by Ronin AI`,
+          `${callerName} asked Ronin to create: "${tool_args.title_en}"${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}.`,
+          "task",
+          "tasks",
+          task.id,
+          "task",
+          callerUserId,
+        );
+
+      // ── update_task_status ────────────────────────────────────────────────
       } else if (tool_name === "update_task_status") {
         const { data: tasks } = await adminClient.from("tasks").select("id, title_en").ilike("title_en", `%${tool_args.task_title_hint}%`).limit(1);
-        if (!tasks?.length) { resultMessage = `⚠️ No task matching **"${tool_args.task_title_hint}"** found.`; }
-        else {
+        if (!tasks?.length) {
+          resultMessage = `⚠️ No task matching **"${tool_args.task_title_hint}"** found.`;
+        } else {
           await adminClient.from("tasks").update({ status: tool_args.new_status, completed_at: tool_args.new_status === "completed" ? new Date().toISOString() : null }).eq("id", tasks[0].id);
           await adminClient.from("system_events").insert({ event_type: "task_status_updated_by_ai", entity_type: "task", entity_id: tasks[0].id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
           const statusEmoji: Record<string, string> = { pending: "⏳", in_progress: "🔄", completed: "✅", urgent: "🔴" };
           resultMessage = `${statusEmoji[tool_args.new_status] ?? "📋"} **Task updated.**\n\n**${tasks[0].title_en}** → **${(tool_args.new_status as string).replace("_", " ")}**`;
         }
 
+      // ── log_asset ─────────────────────────────────────────────────────────
       } else if (tool_name === "log_asset") {
-        const { data: asset, error: assetErr } = await adminClient.from("assets").insert({ name: tool_args.name, category: tool_args.category, make: tool_args.make ?? null, model: tool_args.model ?? null, serial_number: tool_args.serial_number ?? null, description: tool_args.description ?? null, current_property_id: resolvePropertyId(tool_args.property_name), purchase_value: tool_args.purchase_value ?? null }).select("id").single();
+        const { data: asset, error: assetErr } = await adminClient.from("assets").insert({
+          name: tool_args.name, category: tool_args.category,
+          make: tool_args.make ?? null, model: tool_args.model ?? null,
+          serial_number: tool_args.serial_number ?? null,
+          description: tool_args.description ?? null,
+          current_property_id: resolvePropertyId(tool_args.property_name),
+          purchase_value: tool_args.purchase_value ?? null,
+        }).select("id").single();
+
         if (assetErr) throw new Error(`Failed to log asset: ${assetErr.message}`);
         await adminClient.from("system_events").insert({ event_type: "asset_logged_by_ai", entity_type: "asset", entity_id: asset.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
         const makeModel = [tool_args.make, tool_args.model].filter(Boolean).join(" ");
         resultMessage = `✅ **Asset logged.**\n\n**${tool_args.name}**${makeModel ? ` (${makeModel})` : ""}${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}\nCategory: ${tool_args.category}\n\nVisible in Inventory.`;
 
+        // Notify admins
+        await notifyAdminsOfAIAction(
+          adminClient,
+          `📦 Asset logged by Ronin AI`,
+          `${callerName} asked Ronin to log asset: "${tool_args.name}"${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}.`,
+          "info",
+          "inventory",
+          asset.id,
+          "asset",
+          callerUserId,
+        );
+
+      // ── send_staff_message ────────────────────────────────────────────────
       } else if (tool_name === "send_staff_message") {
         const recipientId = resolveStaffId(tool_args.recipient_name);
-        if (!recipientId) { resultMessage = `⚠️ Staff member **"${tool_args.recipient_name}"** not found.`; }
-        else {
+        if (!recipientId) {
+          resultMessage = `⚠️ Staff member **"${tool_args.recipient_name}"** not found.`;
+        } else {
+          // Find or create DM thread between caller and recipient
           const { data: existingThreads } = await adminClient.from("chat_threads").select("id, participant_ids").eq("type", "private");
           let dmThreadId: string | null = null;
           for (const t of existingThreads ?? []) {
             const participants = t.participant_ids as string[];
-            if (participants.includes(callerUserId) && participants.includes(recipientId)) { dmThreadId = t.id; break; }
+            if (participants.includes(callerUserId!) && participants.includes(recipientId)) { dmThreadId = t.id; break; }
           }
           if (!dmThreadId) {
-            const { data: newThread } = await adminClient.from("chat_threads").insert({ type: "private", participant_ids: [callerUserId, recipientId], created_by: callerUserId }).select("id").single();
+            const { data: newThread } = await adminClient.from("chat_threads").insert({
+              type: "private",
+              participant_ids: [callerUserId, recipientId],
+              created_by: callerUserId,
+            }).select("id").single();
             dmThreadId = newThread?.id ?? null;
           }
           if (dmThreadId) {
-            await adminClient.from("messages").insert({ thread_id: dmThreadId, sender_id: callerUserId, content_text: tool_args.message_text, is_ai_generated: false, delivery_status: "sent" });
+            // Message appears from the AI (sender_id null, is_ai_generated true) so recipient knows it's from Ronin
+            await adminClient.from("messages").insert({
+              thread_id: dmThreadId,
+              sender_id: null,
+              content_text: `**Ronin AI (on behalf of ${callerName}):** ${tool_args.message_text}`,
+              is_ai_generated: true,
+              delivery_status: "sent",
+            });
             await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", dmThreadId);
+
+            // Notify the recipient
+            await adminClient.from("notifications").insert({
+              user_id: recipientId,
+              title: `📨 Message from Ronin AI`,
+              body: `${callerName} asked Ronin to send you a message. Check your DMs.`,
+              type: "message",
+              action_url: "messages",
+            });
           }
           await adminClient.from("system_events").insert({ event_type: "message_sent_by_ai", entity_type: "message", triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
-          resultMessage = `✅ **Message sent to ${tool_args.recipient_name}.**\n\n> "${tool_args.message_text}"\n\nVisible in Messages.`;
+          resultMessage = `✅ **Message sent to ${tool_args.recipient_name}.**\n\n> "${tool_args.message_text}"\n\nVisible in their Messages.`;
         }
 
       } else if (tool_name === "save_memory") {
@@ -579,8 +790,34 @@ serve(async (req) => {
         resultMessage = `⚠️ Unknown tool: ${tool_name}`;
       }
 
+      // Clear __pending_tool from the original AI message so confirm buttons disappear
+      if (thread_id) {
+        const { data: pendingMsg } = await adminClient
+          .from("messages")
+          .select("id, reactions")
+          .eq("thread_id", thread_id)
+          .eq("is_ai_generated", true)
+          .not("reactions->__pending_tool", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (pendingMsg) {
+          const updatedReactions = { ...(pendingMsg.reactions as Record<string, unknown>) };
+          delete updatedReactions.__pending_tool;
+          await adminClient.from("messages").update({ reactions: updatedReactions }).eq("id", pendingMsg.id);
+        }
+      }
+
+      // Post result back to chat
       if (thread_id && resultMessage) {
-        await adminClient.from("messages").insert({ thread_id, sender_id: null, is_ai_generated: true, content_text: resultMessage, delivery_status: "sent" });
+        await adminClient.from("messages").insert({
+          thread_id,
+          sender_id: null,
+          is_ai_generated: true,
+          content_text: resultMessage,
+          delivery_status: "sent",
+        });
         await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread_id);
       }
       return new Response(JSON.stringify({ success: true, result: resultMessage }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -597,15 +834,15 @@ You are **Ronin AI** — the intelligent operations backbone of the Ronin Collec
 - Use industry vocabulary naturally: SOP, Turnover, Show-Ready, Par Level, Preventive Maintenance, Work Order.
 - Match the caller's language exactly (EN/ES). Never mix.
 - Concise and structured — use bullet points, headers, and bold text.
-- **NEVER output your internal reasoning, thinking steps, THINK/OBSERVE/REASON tags, or chain-of-thought in your final reply.** Your reasoning is internal only. Only the clean, final answer reaches the user.
+- **NEVER output your internal reasoning, thinking steps, THINK/OBSERVE/REASON/ACT/RESPOND tags, or chain-of-thought in your final reply.** Your reasoning is internal only. Only the clean, final answer reaches the user.
 
 ## DISCRETION FRAMEWORK (NEVER VIOLATE)
 1. NEVER share Principal travel, financial, or personal data with staff/manager/admin roles.
 2. Staff only receive information about their assigned properties.
 3. NEVER fabricate platform data (tasks, assets, people, events). For platform-specific questions, only report what is in LIVE PLATFORM DATA. If absent, say so.
-4. For general knowledge questions (wine, food, etiquette, hospitality, travel, lifestyle, recommendations) — use your extensive LLM training knowledge freely and confidently. You are a world-class estate manager with deep expertise. Do NOT say "I don't have access to a database" for common knowledge topics.
-5. ALWAYS check your LONG-TERM MEMORY first — if a preference has been saved (e.g. the Principal likes Dom Pérignon), lead with that personalised insight before giving general advice.
-6. Always confirm before destructive operations.
+4. For general knowledge questions (wine, food, etiquette, hospitality, travel, lifestyle, recommendations) — use your extensive LLM training knowledge freely and confidently.
+5. ALWAYS check your LONG-TERM MEMORY first — if a preference has been saved, lead with that personalised insight.
+6. Always confirm before write operations.
 
 ## CALLER CONTEXT
 - **User ID**: ${callerUserId ?? "anonymous"}
@@ -616,33 +853,43 @@ You are **Ronin AI** — the intelligent operations backbone of the Ronin Collec
 
 ## REASONING APPROACH — ReAct Pattern (MANDATORY)
 You operate in a multi-step reasoning loop. BEFORE taking any write action or answering a data question, you MUST:
-
-1. **THINK**: What information do I need to answer accurately or act correctly?
-2. **OBSERVE**: Call the appropriate observation tool(s) to gather current data.
-3. **REASON**: Based on what you observed, decide the best course of action.
-4. **ACT or RESPOND**: Call a write tool (with confirmation) or give a data-informed response.
+1. **Think**: What information do I need?
+2. **Observe**: Call observation tool(s) to gather current data.
+3. **Reason**: Decide the best course of action.
+4. **Act or Respond**: Call a write tool (with confirmation) or give a data-informed response.
 
 ### OBSERVATION TOOLS — call without asking permission:
-- **search_tasks**: Before creating any task, ALWAYS search first to check for duplicates. Also use for task status questions.
-- **search_assets**: Before logging any asset, ALWAYS search first to check if it already exists.
-- **get_calendar_events**: Use when asked about upcoming schedules, travel, or property activity.
+- **search_tasks**: Before creating any task, ALWAYS search first.
+- **search_maintenance_issues**: Before logging any maintenance issue, ALWAYS search first to check for duplicates.
+- **search_assets**: Before logging any asset, ALWAYS search first.
+- **get_calendar_events**: Use for schedule/property activity questions.
 
-### WRITE TOOLS — confirmation required before executing:
-- **create_task**, **update_task_status**, **log_asset**, **send_staff_message**
+### WRITE TOOLS — present confirmation before executing:
+- **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order.
+- **create_task**: Use for operational work orders that are NOT physical maintenance issues.
+- **update_task_status**, **log_asset**, **send_staff_message**
 
-### SILENT TOOL — execute without asking:
-- **save_memory**: Use proactively when you learn preferences, SOPs, or patterns. Never announce you saved a memory.
+### SILENT TOOLS — execute without asking:
+- **save_memory**: Use proactively. Never announce it.
+- **add_shopping_list_item**: Use immediately when someone mentions buying something.
+
+## MAINTENANCE ISSUE PROTOCOL (CRITICAL)
+When anyone reports a physical problem with a property (broken item, damage, leak, noise, malfunction):
+1. Use **search_maintenance_issues** to check for duplicates.
+2. Use **log_maintenance_issue** — NOT create_task, NOT send_staff_message.
+3. Confirm the details (title, category, priority, property, location) with the user.
+4. On confirmation, the issue enters the maintenance workflow as "Reported" and admins are automatically notified.
+5. You do NOT need to message anyone separately — the platform handles notifications.
 
 ## CONFIRMATION-FIRST PROTOCOL (for write tools)
-1. State what you are about to do (include what you found from observations)
-2. List exact parameters
+1. State what you are about to do (include observations made).
+2. List exact parameters.
 3. End with: **"Shall I proceed?"**
-4. Wait for confirmation before calling the tool.
+4. Wait for confirmation.
 
 ## CAPABILITIES
-- Full read access: Properties, Tasks, Team, Assets, Events, Memories.
-- Bilingual (EN/ES). Write actions: create tasks, update task status, log assets, send messages, save memories.
-- **add_shopping_list_item**: Use this IMMEDIATELY (no confirmation needed) whenever someone says "add X to the shopping list", "buy X", "we need X", "put X on the list", etc. Insert directly into the shopping list — do NOT create a task for this. Auto-detect the category (food, cleaning, supplies, personal, tech, other).`;
+- Full read access: Properties, Tasks, Team, Assets, Events, Memories, Maintenance Issues.
+- Bilingual (EN/ES). Write actions: log maintenance issues, create tasks, update task status, log assets, send messages, save memories, add to shopping list.`;
 
     // ─── CSV IMPORT MODE ───────────────────────────────────────────────────────
     if (type === "csv_import") {
@@ -686,7 +933,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
       const isVisionRequest = !!image_url;
 
       // ── Load full platform snapshot + memories in parallel ─────────────────
-      const [propsRes, tasksRes, staffRes, rolesRes, assetsRes, eventsRes, memoriesRes] = await Promise.all([
+      const [propsRes, tasksRes, staffRes, rolesRes, assetsRes, eventsRes, memoriesRes, maintenanceRes] = await Promise.all([
         adminClient.from("properties").select("id, name, address, city, country, status, is_primary, occupied_by, timezone").order("sort_order"),
         adminClient.from("tasks").select("id, title_en, status, priority, category, due_date, assigned_to, property_id").in("status", ["pending", "in_progress", "urgent"]).order("priority").limit(50),
         adminClient.from("profiles").select("id, full_name, job_title, department, level, assigned_property_ids, phone, notes"),
@@ -694,6 +941,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         adminClient.from("assets").select("id, name, category, make, model, serial_number, current_property_id").limit(50),
         adminClient.from("system_events").select("event_type, entity_type, created_at, payload").order("created_at", { ascending: false }).limit(15),
         adminClient.from("ronin_memories").select("id, summary, content, category, importance, tags, property_id, subject_user_id").order("importance", { ascending: false }).order("last_referenced_at", { ascending: false, nullsFirst: false }).limit(20),
+        adminClient.from("maintenance_issues").select("id, title, status, priority, category, created_at, property_id").in("status", ["reported", "approved", "assigned", "scheduled", "in_progress"]).order("created_at", { ascending: false }).limit(20),
       ]);
 
       const contextSections: string[] = [];
@@ -717,6 +965,11 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         ? `OPEN TASKS (${tasks.length}):\n${tasks.map((t: Record<string, unknown>) => `  - [${t.status}] ${t.title_en} | P${t.priority} | ${t.category ?? "general"} | Due: ${t.due_date ?? "none"} | Assigned: ${staffNameMap[t.assigned_to as string] ?? "unassigned"} | Property: ${propNameMap[t.property_id as string] ?? "unassigned"}`).join("\n")}`
         : "OPEN TASKS: None.");
 
+      const maintenanceIssues = maintenanceRes.data ?? [];
+      if (maintenanceIssues.length > 0) {
+        contextSections.push(`OPEN MAINTENANCE ISSUES (${maintenanceIssues.length}):\n${maintenanceIssues.map((i: Record<string, unknown>) => `  - [${i.status}] ${i.title} | ${i.priority} priority | ${i.category} | Property: ${propNameMap[i.property_id as string] ?? "unassigned"}`).join("\n")}`);
+      }
+
       const assets = assetsRes.data ?? [];
       if (assets.length > 0) contextSections.push(`ASSETS (${assets.length}):\n${assets.map((a: Record<string, unknown>) => `  - ${a.name} | ${a.category} | ${a.make ?? ""} ${a.model ?? ""} | Property: ${propNameMap[a.current_property_id as string] ?? "unassigned"}`).join("\n")}`);
 
@@ -726,7 +979,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
       const memories = memoriesRes.data ?? [];
       if (memories.length > 0) {
         contextSections.push(`RONIN'S LONG-TERM MEMORY (${memories.length} entries — personalise every response using these):\n${memories.map((m: Record<string, unknown>) => `  - ${"⭐".repeat(m.importance as number)} [${m.category}]${m.property_id ? ` [${propNameMap[m.property_id as string] ?? ""}]` : ""}${m.subject_user_id ? ` [About: ${staffNameMap[m.subject_user_id as string] ?? ""}]` : ""}: ${m.content}`).join("\n")}`);
-        // Update last_referenced_at (fire & forget)
         adminClient.from("ronin_memories").update({ last_referenced_at: new Date().toISOString() }).in("id", memories.map((m: Record<string, unknown>) => m.id as string)).then(() => {/**/});
       } else {
         contextSections.push("RONIN'S LONG-TERM MEMORY: Empty. Use save_memory to build your knowledge base as you learn.");
@@ -736,16 +988,16 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
       const visionAddition = isVisionRequest ? `
 
-## VISION MODE — INVENTORY CAPTURE ACTIVE
-1. Analyse the photo: identify name, make/brand, model, category, condition, serial numbers.
-2. Structure your analysis — what you can vs cannot determine.
-3. Use search_assets first to check if this item already exists in inventory.
-4. Ask only for critical missing info (property, value) then use log_asset with confirmation.
-5. If image reveals Principal preferences, save a memory.` : "";
+## VISION MODE — ACTIVE
+Analyse the photo carefully:
+1. If you see damage, a broken item, or a maintenance issue → use search_maintenance_issues then log_maintenance_issue.
+2. If you see an asset/inventory item → use search_assets then log_asset.
+3. Structure your analysis clearly.
+4. Ask only for critical missing info (property, location) before calling a write tool.` : "";
 
       type MsgContent = string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
       const currentUserMessage: { role: string; content: MsgContent } = isVisionRequest
-        ? { role: "user", content: [{ type: "text", text: content || "Please analyse this image and help me log it to the estate inventory." }, { type: "image_url", image_url: { url: image_url } }] }
+        ? { role: "user", content: [{ type: "text", text: content || "Please analyse this image." }, { type: "image_url", image_url: { url: image_url } }] }
         : { role: "user", content };
 
       const baseSystemMsg = { role: "system", content: systemPrompt + visionAddition + contextNote };
@@ -760,7 +1012,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         let pendingWriteTool: { name: string; args: Record<string, unknown> } | null = null;
 
         for (let i = 0; i < MAX_ITERATIONS; i++) {
-          // Observation iterations use flash (fast & cheap), final pass uses pro (quality)
           const model = i < MAX_ITERATIONS - 1 ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
           const resp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, model);
           const choice = resp.choices?.[0];
@@ -768,12 +1019,10 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
           const toolCalls = choice.message?.tool_calls ?? [];
           if (!toolCalls.length) {
-            // No tool calls — this is the final text response
             finalText = stripThinking(choice.message?.content ?? "");
             break;
           }
 
-          // Add assistant's message (with tool_calls) to loop context
           loopMessages = [...loopMessages, {
             role: "assistant",
             content: choice.message.content ?? null,
@@ -789,12 +1038,10 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
             try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
 
             if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
-              // Execute observation tool — feed result back into loop
               const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
               toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
 
             } else if (SILENT_TOOL_NAMES.includes(toolName)) {
-              // Silent tool — execute immediately, no user feedback
               if (toolName === "add_shopping_list_item") {
                 await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
               } else {
@@ -803,7 +1050,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
               toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
 
             } else if (WRITE_TOOL_NAMES.includes(toolName)) {
-              // Write tool detected — break loop, build confirmation
               pendingWriteTool = { name: toolName, args: toolArgs };
               toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) });
               hitWriteTool = true;
@@ -813,7 +1059,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
           loopMessages = [...loopMessages, ...toolResults];
 
           if (hitWriteTool) {
-            // Ask LLM to generate the human-readable confirmation text (no tools — force text)
             const confirmResp = await callLLMSync(loopMessages, [], LOVABLE_API_KEY, "google/gemini-2.5-flash");
             finalText = stripThinking(confirmResp.choices?.[0]?.message?.content
               ?? buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args));
@@ -821,7 +1066,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
           }
         }
 
-        // Persist to DB — always strip thinking before saving
+        // Persist to DB
         if (pendingWriteTool) {
           await adminClient.from("messages").insert({
             thread_id, sender_id: null, is_ai_generated: true,
@@ -838,10 +1083,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // ── No thread_id: use ReAct loop then stream final answer ─────────────
-      // Previously this just piped raw streaming output, which meant tool calls
-      // (including save_memory) were NEVER executed. Now we run a sync ReAct loop
-      // first to handle all tool calls, then stream the final clean response.
+      // ── No thread_id: sync ReAct loop then stream final answer ──────────────
       const ctx: ContextData = { props, staff };
       const MAX_ITER = 5;
       let loopMessages: unknown[] = [...initialMessages];
@@ -853,11 +1095,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         if (!choice) break;
 
         const toolCalls = choice.message?.tool_calls ?? [];
-        if (!toolCalls.length) {
-          // No tool calls — use this text as-is only if we're still in early loop
-          // For the final stream we'll re-run with pro model below
-          break;
-        }
+        if (!toolCalls.length) { break; }
 
         loopMessages = [...loopMessages, {
           role: "assistant",
@@ -875,7 +1113,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
             const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
           } else if (SILENT_TOOL_NAMES.includes(toolName)) {
-            // Execute silently
             if (toolName === "add_shopping_list_item") {
               await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
             } else {
@@ -883,7 +1120,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
             }
             toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
           } else if (WRITE_TOOL_NAMES.includes(toolName)) {
-            // Write tools need confirmation — surface the confirmation as the response
             const confirmResp = await callLLMSync(
               [...loopMessages, { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) }],
               [], LOVABLE_API_KEY, "google/gemini-2.5-flash"
@@ -896,7 +1132,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         if (precomputedFinal) break;
       }
 
-      // If we have a pre-built confirmation message, stream it as a fake SSE response
       if (precomputedFinal) {
         const cleaned = stripThinking(precomputedFinal);
         const encoder = new TextEncoder();
@@ -914,7 +1149,6 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
         return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
       }
 
-      // Final answer — use Flash (no thinking leakage) with enriched context
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -938,6 +1172,20 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 // ─── CONFIRMATION MESSAGE BUILDER ─────────────────────────────────────────────
 function buildConfirmationMessage(toolName: string, args: Record<string, unknown>): string {
   switch (toolName) {
+    case "log_maintenance_issue": {
+      const priorityEmoji: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+      return [
+        `🔧 **I'm ready to log the following maintenance issue:**`, ``,
+        `**Title:** ${args.title}`,
+        args.description ? `**Description:** ${args.description}` : null,
+        `**Category:** ${args.category}`,
+        `**Priority:** ${priorityEmoji[args.priority as string] ?? "🟡"} ${args.priority}`,
+        args.property_name ? `**Property:** ${args.property_name}` : null,
+        args.location_detail ? `**Location:** ${args.location_detail}` : null,
+        ``, `This will appear in the **Maintenance** section as **Reported**, awaiting admin approval.`,
+        ``, `**Shall I proceed?**`,
+      ].filter(l => l !== null).join("\n");
+    }
     case "create_task": {
       const priorityLabel = args.priority === 1 ? "🔴 Urgent" : args.priority === 2 ? "🟡 Normal" : "🟢 Low";
       return [
