@@ -359,6 +359,30 @@ export function ChatView({
                 isAdmin={isAdmin}
                 onReact={(emoji) => toggleReaction(msg.id, currentUserId, emoji)}
                 onDelete={(id) => deleteMessage(id)}
+                onConfirmTool={async (toolName, toolArgs) => {
+                  setAgentTyping(true);
+                  try {
+                    const auth = await getAuthHeader();
+                    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: auth },
+                      body: JSON.stringify({ action: "execute_tool", tool_name: toolName, tool_args: toolArgs, thread_id: threadId }),
+                    });
+                  } catch (e) { console.error("Tool confirm error:", e); }
+                  finally { setAgentTyping(false); }
+                }}
+                onCancelTool={async () => {
+                  setAgentTyping(true);
+                  try {
+                    const auth = await getAuthHeader();
+                    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: auth },
+                      body: JSON.stringify({ type: "message", content: "Cancel that action please.", messages: [], thread_id: threadId }),
+                    });
+                  } catch (e) { console.error("Tool cancel error:", e); }
+                  finally { setAgentTyping(false); }
+                }}
                 quickEmojis={EMOJI_QUICK}
               />
             ))}
