@@ -135,12 +135,14 @@ export function Dashboard() {
   const { setActiveSection, setTargetPropertyId, setActivePropertyId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
+  const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [reportIssueOpen, setReportIssueOpen] = useState(false);
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
@@ -152,6 +154,7 @@ export function Dashboard() {
   const [taglineDuration, setTaglineDuration] = useState<"today" | "date" | "permanent">("today");
   const [taglineEndDate, setTaglineEndDate] = useState("");
   const taglineInputRef = useRef<HTMLInputElement>(null);
+
 
   // Load properties
   useEffect(() => {
