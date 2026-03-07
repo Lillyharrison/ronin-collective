@@ -18,6 +18,10 @@ export interface UserPermissions {
   fullName: string | null;
   avatarUrl: string | null;
   canSee: (section: string) => boolean;
+  /** Returns true if the user has edit rights for the section */
+  canEdit: (section: string) => boolean;
+  /** Returns true if the user wants notifications/alerts for the section */
+  wantsAlerts: (section: string) => boolean;
   loading: boolean;
 }
 
