@@ -159,7 +159,7 @@ export function ChecklistsSection() {
                 />
               ))
             )}
-            {isAdmin && (
+            {canManageChecklists && (
               <button
                 onClick={async () => {
                   const title = window.prompt("Checklist title:");
@@ -206,7 +206,7 @@ export function ChecklistsSection() {
                 );
               })
             )}
-            {isAdmin && (
+            {canManageChecklists && (
               <button
                 onClick={async () => {
                   const title = window.prompt("Activity list title:");
