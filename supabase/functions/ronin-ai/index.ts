@@ -673,12 +673,12 @@ serve(async (req) => {
           processed_by_ai: true,
         });
 
-        const priorityEmoji: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+        const priorityEmoji: Record<string, string> = { urgent: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
         const propLabel = tool_args.property_name ? ` @ ${tool_args.property_name}` : "";
         const locationLabel = tool_args.location_detail ? ` — ${tool_args.location_detail}` : "";
-        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nPriority: ${priorityEmoji[tool_args.priority] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: **Reported** — awaiting admin approval. Visible in the Maintenance section.`;
+        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nPriority: ${priorityEmoji[tool_args.priority as string] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: **Reported** — awaiting admin approval. Visible in the Maintenance section.`;
 
-        // Notify all admins
+        // Notify all admins + managers with maintenance permissions
         await notifyAdminsOfAIAction(
           adminClient,
           `🔧 New maintenance issue reported`,
@@ -688,6 +688,7 @@ serve(async (req) => {
           issue.id,
           "maintenance_issue",
           null, // notify all admins including caller's own admin
+          "maintenance", // also notify managers with maintenance section access
         );
 
       // ── create_task ───────────────────────────────────────────────────────
