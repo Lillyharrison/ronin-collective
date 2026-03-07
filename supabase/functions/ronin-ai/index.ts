@@ -11,7 +11,7 @@ const corsHeaders = {
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
 const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events"];
 const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message"];
-const SILENT_TOOL_NAMES = ["save_memory"];
+const SILENT_TOOL_NAMES = ["save_memory", "add_shopping_list_item"];
 
 const RONIN_TOOLS = [
   // ── OBSERVATION TOOLS ────────────────────────────────────────────────────────
