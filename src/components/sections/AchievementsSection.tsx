@@ -26,11 +26,11 @@ interface UserStats {
 
 // Mock stats for demo (until auth is wired up)
 const DEMO_STATS: UserStats = {
-  points_total: 475,
-  current_streak: 7,
-  longest_streak: 14,
-  tasks_completed: 23,
-  badges_earned: ["first_task", "streak_3", "streak_7", "tasks_10", "photo_pro", "all_tasks_day"],
+  points_total: 0,
+  current_streak: 0,
+  longest_streak: 0,
+  tasks_completed: 0,
+  badges_earned: [],
 };
 
 const categoryColors: Record<string, string> = {
