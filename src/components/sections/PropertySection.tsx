@@ -466,10 +466,15 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
   onNavigate: (key: string) => void;
 }) {
   const [showStaff, setShowStaff] = useState(false);
+  const [showRooms, setShowRooms] = useState(false);
   const cfg = STATUS_CONFIG[p.status];
 
   if (showStaff) {
     return <PropertyStaffList propertyId={p.id} onBack={() => setShowStaff(false)} />;
+  }
+
+  if (showRooms) {
+    return <PropertyRoomsManager property={p} onBack={() => setShowRooms(false)} />;
   }
 
   return (
