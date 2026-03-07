@@ -448,7 +448,7 @@ async function addShoppingListItemsSilently(
   }
 }
 
-/** Notify admins + users with relevant permissions about an AI action */
+/** Notify admins + managers with relevant section permissions about an AI action */
 async function notifyAdminsOfAIAction(
   adminClient: ReturnType<typeof createClient>,
   title: string,
@@ -458,17 +458,42 @@ async function notifyAdminsOfAIAction(
   entity_id?: string,
   entity_type?: string,
   excludeUserId?: string | null,
+  requiredSection?: string | null, // if set, also notify managers who have this section enabled
 ): Promise<void> {
   try {
-    // Get all master_admin and admin users
+    // Get all master_admin and admin user_ids
     const { data: adminRoles } = await adminClient
       .from("user_roles")
       .select("user_id")
       .in("role", ["master_admin", "admin"]);
 
-    const recipients = (adminRoles ?? [])
-      .map(r => r.user_id as string)
-      .filter(id => id !== excludeUserId);
+    const adminIds = new Set((adminRoles ?? []).map(r => r.user_id as string));
+
+    // Also get managers who have the relevant section permission enabled
+    let managerIds: string[] = [];
+    if (requiredSection) {
+      const { data: managerRoles } = await adminClient
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "manager");
+      const managerUserIds = (managerRoles ?? []).map(r => r.user_id as string);
+      if (managerUserIds.length > 0) {
+        const { data: managerProfiles } = await adminClient
+          .from("profiles")
+          .select("id, section_permissions")
+          .in("id", managerUserIds);
+        managerIds = (managerProfiles ?? [])
+          .filter((p: { id: string; section_permissions: unknown }) => {
+            const perms = p.section_permissions as Record<string, { read?: boolean; notifications?: boolean }> | null;
+            return perms?.[requiredSection]?.notifications === true || perms?.[requiredSection]?.read === true;
+          })
+          .map((p: { id: string }) => p.id);
+      }
+    }
+
+    const recipientSet = new Set([...adminIds, ...managerIds]);
+    if (excludeUserId) recipientSet.delete(excludeUserId);
+    const recipients = [...recipientSet];
 
     if (!recipients.length) return;
 
