@@ -821,17 +821,17 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
           }
         }
 
-        // Persist to DB
+        // Persist to DB — always strip thinking before saving
         if (pendingWriteTool) {
           await adminClient.from("messages").insert({
             thread_id, sender_id: null, is_ai_generated: true,
-            content_text: finalText || buildConfirmationMessage(pendingWriteTool.name, pendingWriteTool.args),
+            content_text: stripThinking(finalText || buildConfirmationMessage(pendingWriteTool.name, pendingWriteTool.args)),
             delivery_status: "sent",
             reactions: { __pending_tool: { name: pendingWriteTool.name, args: pendingWriteTool.args } } as unknown as never,
           });
         } else if (finalText) {
           await adminClient.from("messages").insert({
-            thread_id, content_text: finalText, sender_id: null, is_ai_generated: true, delivery_status: "sent",
+            thread_id, content_text: stripThinking(finalText), sender_id: null, is_ai_generated: true, delivery_status: "sent",
           });
         }
         await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread_id);
