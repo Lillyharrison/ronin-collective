@@ -188,7 +188,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     if (isOrder && savedTaskId) {
       const existing = await findLinkedOrder(savedTaskId);
       if (!existing) {
-        await supabase.from("orders").insert({
+        const { error: orderErr } = await supabase.from("orders").insert({
           title: title.trim(),
           description: description.trim() || null,
           property_id: propertyId || null,
@@ -196,6 +196,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           status: "not_placed",
           created_by: userId,
         } as any);
+        if (orderErr) console.error("Order insert failed:", orderErr);
       } else {
         // Keep existing status — only update title/description/property if changed
         await supabase.from("orders").update({
