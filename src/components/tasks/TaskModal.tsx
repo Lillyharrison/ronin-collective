@@ -199,19 +199,35 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
   const handleComplete = async () => {
     if (!task?.id || !userId) return;
-    // For order tasks: ask for delivery date first, then complete
     const isOrderTask = task?.category === "order";
+
+    // For order tasks: ask for expected delivery date first
     if (isOrderTask && !askDelivery) {
       setAskDelivery(true);
       return;
     }
+
     setCompleting(true);
+
+    // Mark the task complete
     await supabase.from("tasks").update({
       status: "completed",
       completed_at: new Date().toISOString(),
-      // Store expected delivery date in due_date field
-      ...(isOrderTask && deliveryDate ? { due_date: deliveryDate } : {}),
     } as any).eq("id", task.id);
+
+    // If this is an order task, create a standalone order record
+    if (isOrderTask) {
+      await supabase.from("orders").insert({
+        title:             task.title_en,
+        description:       task.description_en ?? null,
+        property_id:       task.property_id ?? null,
+        source_task_id:    task.id,
+        status:            "pending_delivery",
+        expected_delivery: deliveryDate || null,
+        created_by:        userId,
+      } as any);
+    }
+
     setCompleted(true);
     fireConfetti();
     setTimeout(() => {
@@ -537,99 +553,19 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             </button>
           </div>
 
-          {/* Tracking fields — shown for order tasks that are already completed (in Orders section) */}
+          {/* Order info note — tracking is managed in the Orders section */}
           {(isOrder || task?.category === "order") && task?.status === "completed" && (
-            <div className="space-y-3 px-3 py-3 bg-[hsl(var(--gold)/0.05)] border border-[hsl(var(--gold)/0.2)] rounded-xl">
-              <p className="text-[10px] font-semibold text-[hsl(var(--gold))] uppercase tracking-wider flex items-center gap-1.5">
-                <Truck size={11} /> {isL ? "Detalles de envío / seguimiento" : "Shipping & Tracking Details"}
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-[hsl(var(--gold)/0.08)] border border-[hsl(var(--gold)/0.2)] rounded-xl">
+              <span className="text-[hsl(var(--gold))]">📦</span>
+              <p className="text-xs text-muted-foreground">
+                {isL ? "Pedido creado. Añade detalles de envío en la sección" : "Order created. Add shipping details in the"}{" "}
+                <span className="font-semibold text-[hsl(var(--gold))]">{isL ? "Pedidos" : "Orders"}</span>{" "}
+                {isL ? "" : "section"}.
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
-                    {isL ? "N° de seguimiento" : "Tracking #"}
-                  </label>
-                  <input
-                    value={trackingNumber}
-                    onChange={e => setTrackingNumber(e.target.value)}
-                    placeholder="1Z999AA1..."
-                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
-                    {isL ? "Transportista" : "Carrier"}
-                  </label>
-                  <input
-                    value={carrier}
-                    onChange={e => setCarrier(e.target.value)}
-                    placeholder="UPS, FedEx, DHL..."
-                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
-                  <LinkIcon size={9} /> {isL ? "Enlace de seguimiento" : "Tracking link"}
-                </label>
-                <input
-                  value={trackingUrl}
-                  onChange={e => setTrackingUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground"
-                />
-              </div>
-              {trackingUrl && (
-                <a href={trackingUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-accent underline">
-                  <ExternalLink size={10} /> {isL ? "Ver enlace" : "Open link"}
-                </a>
-              )}
-              <div>
-                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
-                  <FileText size={9} /> {isL ? "Lista de empaque" : "Packing list"}
-                </label>
-                <textarea
-                  value={packingList}
-                  onChange={e => setPackingList(e.target.value)}
-                  placeholder={isL ? "Artículos incluidos…" : "Items included…"}
-                  rows={2}
-                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
-                  {isL ? "Notas de entrega" : "Delivery notes"}
-                </label>
-                <textarea
-                  value={trackingNotes}
-                  onChange={e => setTrackingNotes(e.target.value)}
-                  rows={2}
-                  placeholder={isL ? "Instrucciones, etc…" : "Delivery instructions, etc…"}
-                  className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground resize-none"
-                />
-              </div>
-              {!existingTracking?.delivered_at && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={markDelivered}
-                    onChange={e => setMarkDelivered(e.target.checked)}
-                    className="rounded"
-                  />
-                  <span className="text-xs font-semibold text-status-done">
-                    {isL ? "Marcar como entregado ahora" : "Mark as delivered now"}
-                  </span>
-                </label>
-              )}
-              {existingTracking?.delivered_at && (
-                <p className="text-xs text-status-done flex items-center gap-1">
-                  <Check size={11} />
-                  {isL ? "Entregado el" : "Delivered"} {new Date(existingTracking.delivered_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </p>
-              )}
             </div>
           )}
 
-
+          {/* Assign to property */}
           <div>
             <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
               <MapPin size={10} /> {isL ? "Propiedad" : "Property"}
