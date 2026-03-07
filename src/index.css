@@ -109,6 +109,11 @@
 @layer base {
   * { @apply border-border; }
 
+  /* Prevent iOS auto-zoom on input focus (requires 16px minimum) */
+  input, textarea, select {
+    font-size: 16px;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;

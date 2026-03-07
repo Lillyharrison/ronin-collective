@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Filter, SortAsc, Wrench, ChevronDown, LayoutGrid, List, RefreshCw, Eye } from "lucide-react";
+import {
+  Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
+  LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
+  Flag, Tag,
+} from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMaintenanceIssues, MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues";
 import { supabase } from "@/integrations/supabase/client";
 import { IssueCard } from "@/components/maintenance/IssueCard";
 import { IssueModal } from "@/components/maintenance/IssueModal";
-import { IssueStatusBadge } from "@/components/maintenance/IssueStatusBadge";
+import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/IssueStatusBadge";
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 const STATUS_COLUMNS: { key: IssueStatus; label: string }[] = [
   { key: "reported",    label: "Reported" },
@@ -20,17 +25,19 @@ const STATUS_COLUMNS: { key: IssueStatus; label: string }[] = [
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
+type ViewMode = "board" | "list" | "table";
+
 export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId } = usePermissions();
   const canManage = isMasterAdmin || isAdmin || isManager;
-  const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue } = useMaintenanceIssues();
+  const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
 
   const [search,       setSearch]       = useState("");
   const [filterProp,   setFilterProp]   = useState("");
   const [filterCat,    setFilterCat]    = useState("");
   const [filterPri,    setFilterPri]    = useState("");
   const [sortBy,       setSortBy]       = useState<"newest" | "oldest" | "priority" | "status">("newest");
-  const [viewMode,     setViewMode]     = useState<"board" | "list">("board");
+  const [viewMode,     setViewMode]     = useState<ViewMode>("board");
   const [showFilters,  setShowFilters]  = useState(false);
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editIssue,    setEditIssue]    = useState<MaintenanceIssue | null>(null);
@@ -38,12 +45,11 @@ export function MaintenanceSection() {
   const [properties,   setProperties]   = useState<{ id: string; name: string }[]>([]);
   const [profiles,     setProfiles]     = useState<{ id: string; name: string; avatar: string | null }[]>([]);
 
-  // Load properties + profiles for modals
   useEffect(() => {
     supabase.from("properties").select("id, name").order("name")
-      .then(({ data }) => setProperties((data ?? []).map((p: { id: string; name: string }) => p)));
+      .then(({ data }) => setProperties((data ?? []).map((p: any) => p)));
     supabase.from("profiles").select("id, full_name, avatar_url").order("full_name")
-      .then(({ data }) => setProfiles((data ?? []).map((p: { id: string; full_name: string | null; avatar_url: string | null }) => ({
+      .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
   }, []);
@@ -54,7 +60,6 @@ export function MaintenanceSection() {
     if (filterProp) list = list.filter(i => i.property_id === filterProp);
     if (filterCat)  list = list.filter(i => i.category === filterCat);
     if (filterPri)  list = list.filter(i => i.priority === filterPri);
-
     list.sort((a, b) => {
       if (sortBy === "newest")   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === "oldest")   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -84,12 +89,16 @@ export function MaintenanceSection() {
     await updateIssue(issue.id, patch);
   };
 
+  const handleCategoryAdded = () => {
+    // fetchCategories is exposed via hook
+    fetchIssues();
+  };
+
   // ─── Family read-only status feed ────────────────────────────────────────────
   if (isFamily && !canManage) {
     const openIssues = displayIssues.filter(i => i.status !== "resolved");
     return (
       <div className="animate-fade-in px-4 py-4">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-display text-xl text-foreground">Maintenance</h2>
@@ -101,7 +110,6 @@ export function MaintenanceSection() {
           </button>
         </div>
 
-        {/* Filter bar */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
           {properties.map(p => (
             <button key={p.id} onClick={() => setFilterProp(filterProp === p.id ? "" : p.id)}
@@ -130,7 +138,8 @@ export function MaintenanceSection() {
         )}
 
         <IssueModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleCreate}
-          categories={categories} properties={properties} profiles={profiles}
+          categories={categories} onCategoryAdded={handleCategoryAdded}
+          properties={properties} profiles={profiles}
           existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
           mode="create" />
         {detailIssue && (
@@ -162,10 +171,8 @@ export function MaintenanceSection() {
               className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground", loading && "animate-spin text-gold")}>
               <RefreshCw size={15} />
             </button>
-            <button
-              onClick={() => { setEditIssue(null); setModalOpen(true); }}
-              className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-            >
+            <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
+              className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
               <Plus size={14} /> Report Issue
             </button>
           </div>
@@ -178,6 +185,7 @@ export function MaintenanceSection() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search issues…"
+            style={{ fontSize: "16px" }}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
           />
         </div>
@@ -191,11 +199,11 @@ export function MaintenanceSection() {
             <Filter size={11} /> Filters {(filterProp || filterCat || filterPri) ? "●" : ""}
           </button>
 
-          {/* Sort */}
           <div className="relative flex-shrink-0">
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as typeof sortBy)}
+              style={{ fontSize: "16px" }}
               className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer"
             >
               <option value="newest">Newest first</option>
@@ -207,13 +215,19 @@ export function MaintenanceSection() {
             <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
 
-          {/* View toggle */}
+          {/* View toggle: board / table / list */}
           <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden ml-auto">
-            <button onClick={() => setViewMode("board")} className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+            <button onClick={() => setViewMode("board")} title="Kanban board"
+              className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
               <LayoutGrid size={13} />
             </button>
-            <button onClick={() => setViewMode("list")} className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
-              <List size={13} />
+            <button onClick={() => setViewMode("table")} title="Spreadsheet"
+              className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+              <Table2 size={13} />
+            </button>
+            <button onClick={() => setViewMode("list")} title="List"
+              className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+              <Filter size={13} />
             </button>
           </div>
         </div>
@@ -222,16 +236,19 @@ export function MaintenanceSection() {
         {showFilters && (
           <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
             <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
+              style={{ fontSize: "16px" }}
               className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
               <option value="">All properties</option>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+              style={{ fontSize: "16px" }}
               className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
               <option value="">All categories</option>
               {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
             </select>
             <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
+              style={{ fontSize: "16px" }}
               className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
               <option value="">All priorities</option>
               <option value="urgent">🔴 Urgent</option>
@@ -243,7 +260,7 @@ export function MaintenanceSection() {
         )}
       </div>
 
-      {/* ─── Board / List content ─── */}
+      {/* ─── Content ─── */}
       {loading ? (
         <div className="px-4 grid grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
@@ -262,34 +279,17 @@ export function MaintenanceSection() {
           )}
         </div>
       ) : viewMode === "board" ? (
-        // ── Kanban Board ──
-        <div className="overflow-x-auto pb-6">
-          <div className="flex gap-3 px-4 min-w-max">
-            {STATUS_COLUMNS.map(col => {
-              const colIssues = displayIssues.filter(i => i.status === col.key);
-              return (
-                <div key={col.key} className="w-64 flex-shrink-0">
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <IssueStatusBadge status={col.key} />
-                    <span className="ml-auto text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                      {colIssues.length}
-                    </span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {colIssues.map(issue => (
-                      <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} />
-                    ))}
-                    {colIssues.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-border h-16 flex items-center justify-center">
-                        <p className="text-xs text-muted-foreground/40">—</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        // ── Kanban Board — responsive wrap on mobile, horizontal scroll on desktop ──
+        <BoardView
+          displayIssues={displayIssues}
+          onCardClick={setDetailIssue}
+        />
+      ) : viewMode === "table" ? (
+        // ── Spreadsheet / Table View ──
+        <TableView
+          displayIssues={displayIssues}
+          onRowClick={setDetailIssue}
+        />
       ) : (
         // ── List View ──
         <div className="px-4 space-y-2 pb-6">
@@ -305,6 +305,7 @@ export function MaintenanceSection() {
         onClose={() => setModalOpen(false)}
         onSave={handleCreate}
         categories={categories}
+        onCategoryAdded={handleCategoryAdded}
         properties={properties}
         profiles={profiles}
         existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
@@ -319,6 +320,7 @@ export function MaintenanceSection() {
           onSave={handleEdit}
           initial={editIssue}
           categories={categories}
+          onCategoryAdded={handleCategoryAdded}
           properties={properties}
           profiles={profiles}
           existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
@@ -337,6 +339,154 @@ export function MaintenanceSection() {
           categories={categories}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Board view: wraps into 2-col grid on mobile, horizontal scroll on ≥md ───
+function BoardView({ displayIssues, onCardClick }: { displayIssues: MaintenanceIssue[]; onCardClick: (i: MaintenanceIssue) => void }) {
+  return (
+    <>
+      {/* Mobile: 2-column grid grouped by status */}
+      <div className="md:hidden px-4 pb-6 space-y-4">
+        {STATUS_COLUMNS.map(col => {
+          const colIssues = displayIssues.filter(i => i.status === col.key);
+          if (colIssues.length === 0) return null;
+          return (
+            <div key={col.key}>
+              <div className="flex items-center gap-2 mb-2">
+                <IssueStatusBadge status={col.key} />
+                <span className="text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                  {colIssues.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {colIssues.map(issue => (
+                  <IssueCard key={issue.id} issue={issue} onClick={() => onCardClick(issue)} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop ≥md: classic horizontal Kanban */}
+      <div className="hidden md:block overflow-x-auto pb-6">
+        <div className="flex gap-3 px-4 min-w-max">
+          {STATUS_COLUMNS.map(col => {
+            const colIssues = displayIssues.filter(i => i.status === col.key);
+            return (
+              <div key={col.key} className="w-64 flex-shrink-0">
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <IssueStatusBadge status={col.key} />
+                  <span className="ml-auto text-[10px] text-muted-foreground bg-muted rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                    {colIssues.length}
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {colIssues.map(issue => (
+                    <IssueCard key={issue.id} issue={issue} onClick={() => onCardClick(issue)} />
+                  ))}
+                  {colIssues.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-border h-16 flex items-center justify-center">
+                      <p className="text-xs text-muted-foreground/40">—</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Spreadsheet / Table view ─────────────────────────────────────────────────
+function TableView({ displayIssues, onRowClick }: { displayIssues: MaintenanceIssue[]; onRowClick: (i: MaintenanceIssue) => void }) {
+  return (
+    <div className="px-4 pb-6 overflow-x-auto">
+      <table className="w-full min-w-[640px] border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            {[
+              { icon: <Tag size={11}/>,      label: "Issue" },
+              { icon: <Flag size={11}/>,     label: "Priority" },
+              { icon: <Filter size={11}/>,   label: "Status" },
+              { icon: <Tag size={11}/>,      label: "Category" },
+              { icon: <MapPin size={11}/>,   label: "Property / Room" },
+              { icon: <User size={11}/>,     label: "Assigned" },
+              { icon: <Calendar size={11}/>, label: "Date" },
+            ].map(h => (
+              <th key={h.label} className="text-left py-2.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                <span className="flex items-center gap-1">{h.icon}{h.label}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {displayIssues.map(issue => (
+            <tr
+              key={issue.id}
+              onClick={() => onRowClick(issue)}
+              className="hover:bg-muted/40 cursor-pointer transition-colors group"
+            >
+              {/* Title */}
+              <td className="py-2.5 px-3 max-w-[200px]">
+                <div className="flex items-center gap-2">
+                  {issue.photo_url && (
+                    <img src={issue.photo_url} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
+                  )}
+                  <span className="font-medium text-foreground truncate text-xs group-hover:text-gold transition-colors">
+                    {issue.title}
+                  </span>
+                </div>
+              </td>
+              {/* Priority */}
+              <td className="py-2.5 px-3 whitespace-nowrap">
+                <IssuePriorityBadge priority={issue.priority} />
+              </td>
+              {/* Status */}
+              <td className="py-2.5 px-3 whitespace-nowrap">
+                <IssueStatusBadge status={issue.status} />
+              </td>
+              {/* Category */}
+              <td className="py-2.5 px-3 whitespace-nowrap">
+                <span className="text-xs text-muted-foreground">{issue.category}</span>
+              </td>
+              {/* Property / Room */}
+              <td className="py-2.5 px-3">
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-foreground">{issue.property_name ?? "—"}</span>
+                  {issue.location_detail && <span className="text-[10px] text-muted-foreground">{issue.location_detail}</span>}
+                </div>
+              </td>
+              {/* Assigned */}
+              <td className="py-2.5 px-3 whitespace-nowrap">
+                {issue.assignee_name ? (
+                  <div className="flex items-center gap-1.5">
+                    {issue.assignee_avatar
+                      ? <img src={issue.assignee_avatar} alt={issue.assignee_name} className="w-5 h-5 rounded-full object-cover" />
+                      : <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                          {issue.assignee_name.charAt(0)}
+                        </div>
+                    }
+                    <span className="text-xs text-foreground">{issue.assignee_name}</span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground/50">Unassigned</span>
+                )}
+              </td>
+              {/* Date */}
+              <td className="py-2.5 px-3 whitespace-nowrap">
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(issue.created_at), "MMM d, yy")}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

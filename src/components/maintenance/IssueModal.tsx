@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { X, Upload, Camera, AlertTriangle, Search } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, Upload, Camera, AlertTriangle, Search, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { MaintenanceIssue, MaintenanceCategory, IssuePriority, IssueStatus } from "@/hooks/useMaintenanceIssues";
@@ -11,6 +11,7 @@ interface Props {
   onSave: (issue: Partial<MaintenanceIssue>) => Promise<void>;
   initial?: Partial<MaintenanceIssue>;
   categories: MaintenanceCategory[];
+  onCategoryAdded?: () => void;
   properties: { id: string; name: string }[];
   profiles: { id: string; name: string; avatar: string | null }[];
   existingIssues?: { id: string; title: string; created_at: string }[];
@@ -33,15 +34,18 @@ const STATUSES: { value: IssueStatus; label: string }[] = [
   { value: "resolved",    label: "Resolved" },
 ];
 
-export function IssueModal({ open, onClose, onSave, initial = {}, categories, properties, profiles, existingIssues = [], mode = "create" }: Props) {
-  const { userId } = usePermissions();
+// Inner component so key-based reset works cleanly
+function ModalContent({ onClose, onSave, initial = {}, categories, onCategoryAdded, properties, profiles, existingIssues = [], mode = "create" }: Omit<Props, "open">) {
+  const { userId, isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const canManageCategories = isMasterAdmin || isAdmin || isManager;
+
   const [title, setTitle]               = useState(initial.title ?? "");
   const [description, setDescription]   = useState(initial.description ?? "");
-  const [category, setCategory]         = useState(initial.category ?? "General");
+  const [category, setCategory]         = useState(initial.category ?? "");
   const [priority, setPriority]         = useState<IssuePriority>(initial.priority ?? "medium");
   const [status, setStatus]             = useState<IssueStatus>(initial.status ?? "reported");
   const [propertyId, setPropertyId]     = useState(initial.property_id ?? "");
-  const [locationDetail, setLocation]   = useState(initial.location_detail ?? "");
+  const [room, setRoom]                 = useState(initial.location_detail ?? "");
   const [assignedTo, setAssignedTo]     = useState(initial.assigned_to ?? "");
   const [scheduledDate, setScheduled]   = useState(initial.scheduled_date ? initial.scheduled_date.slice(0, 10) : "");
   const [relatedIssueId, setRelated]    = useState(initial.related_issue_id ?? "");
@@ -51,10 +55,29 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
   const [uploading, setUploading]       = useState(false);
   const [closeUploading, setCloseUp]    = useState(false);
   const [saving, setSaving]             = useState(false);
+
+  // Rooms for the selected property
+  const [rooms, setRooms]               = useState<{ id: string; name: string }[]>([]);
+
+  // New category inline creation
+  const [showNewCat, setShowNewCat]     = useState(false);
+  const [newCatName, setNewCatName]     = useState("");
+  const [newCatIcon, setNewCatIcon]     = useState("🔧");
+  const [savingCat, setSavingCat]       = useState(false);
+
   const photoRef    = useRef<HTMLInputElement>(null);
   const closeOutRef = useRef<HTMLInputElement>(null);
 
-  if (!open) return null;
+  // Load rooms when property changes
+  useEffect(() => {
+    if (!propertyId) { setRooms([]); return; }
+    supabase
+      .from("property_rooms" as any)
+      .select("id, name")
+      .eq("property_id", propertyId)
+      .order("sort_order")
+      .then(({ data }) => setRooms((data ?? []) as { id: string; name: string }[]));
+  }, [propertyId]);
 
   const uploadPhoto = async (file: File, type: "main" | "closeout") => {
     const path = `${Date.now()}-${file.name}`;
@@ -68,17 +91,31 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
     type === "main" ? setUploading(false) : setCloseUp(false);
   };
 
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    setSavingCat(true);
+    await supabase.from("maintenance_categories").insert({
+      name: newCatName.trim(), icon: newCatIcon, color: "gray", is_custom: true, sort_order: 99,
+    });
+    setCategory(newCatName.trim());
+    setNewCatName("");
+    setNewCatIcon("🔧");
+    setShowNewCat(false);
+    setSavingCat(false);
+    onCategoryAdded?.();
+  };
+
   const handleSave = async () => {
     if (!title.trim() || !userId) return;
     setSaving(true);
     await onSave({
       title:               title.trim(),
       description:         description || null,
-      category,
+      category:            category || "General",
       priority,
       status,
       property_id:         propertyId || null,
-      location_detail:     locationDetail || null,
+      location_detail:     room || null,
       reported_by:         initial.reported_by ?? userId,
       assigned_to:         assignedTo || null,
       photo_url:           photoUrl || null,
@@ -93,15 +130,20 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
   };
 
   const filteredRelated = existingIssues.filter(i =>
-    i.id !== initial.id &&
-    (i.title.toLowerCase().includes(relatedSearch.toLowerCase()))
+    i.id !== initial.id && i.title.toLowerCase().includes(relatedSearch.toLowerCase())
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-background border-b border-border px-5 py-4 flex items-center justify-between">
+    <div
+      className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* Modal container: flex column, fixed height, footer always visible */}
+      <div className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col"
+        style={{ maxHeight: "92dvh", height: "auto" }}>
+
+        {/* ── Sticky header ── */}
+        <div className="flex-shrink-0 bg-background border-b border-border px-5 py-4 flex items-center justify-between rounded-t-2xl sm:rounded-t-2xl">
           <div>
             <h2 className="font-semibold text-base text-foreground">
               {mode === "create" ? "Report Issue" : "Edit Issue"}
@@ -115,8 +157,10 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
-          {/* Photo upload — primary, large */}
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 overscroll-contain">
+
+          {/* Photo upload */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
               Photo <span className="text-muted-foreground/60 font-normal normal-case">(recommended)</span>
@@ -124,18 +168,14 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
             {photoUrl ? (
               <div className="relative rounded-xl overflow-hidden">
                 <img src={photoUrl} alt="Issue" className="w-full h-48 object-cover" />
-                <button
-                  onClick={() => setPhotoUrl("")}
-                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
-                >
+                <button onClick={() => setPhotoUrl("")}
+                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">
                   <X size={14} />
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => photoRef.current?.click()}
-                className="w-full h-40 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 hover:bg-gold/5 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground"
-              >
+              <button onClick={() => photoRef.current?.click()}
+                className="w-full h-40 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 hover:bg-gold/5 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 {uploading
                   ? <div className="w-6 h-6 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
                   : <>
@@ -158,8 +198,9 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Kitchen tap dripping, A/C not cooling..."
+              placeholder="e.g. Kitchen tap dripping, A/C not cooling…"
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
+              style={{ fontSize: "16px" }}
             />
           </div>
 
@@ -171,6 +212,7 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
               onChange={e => setDescription(e.target.value)}
               placeholder="Any additional context — when did it start, how severe, etc."
               rows={3}
+              style={{ fontSize: "16px" }}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40 resize-none"
             />
           </div>
@@ -180,11 +222,8 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Priority</label>
             <div className="grid grid-cols-2 gap-2">
               {PRIORITIES.map(p => (
-                <button
-                  key={p.value}
-                  onClick={() => setPriority(p.value)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-semibold text-left transition-all ${priority === p.value ? p.color : "border-border text-muted-foreground hover:border-gold/30"}`}
-                >
+                <button key={p.value} onClick={() => setPriority(p.value)}
+                  className={`rounded-lg border px-3 py-2 text-xs font-semibold text-left transition-all ${priority === p.value ? p.color : "border-border text-muted-foreground hover:border-gold/30"}`}>
                   {p.label}
                 </button>
               ))}
@@ -193,45 +232,98 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
 
           {/* Category */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Category</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</label>
+              {canManageCategories && !showNewCat && (
+                <button onClick={() => setShowNewCat(true)}
+                  className="flex items-center gap-1 text-xs text-gold/80 hover:text-gold transition-colors">
+                  <Plus size={12} /> Add new
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {categories.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setCategory(c.name)}
+                <button key={c.id} onClick={() => setCategory(c.name)}
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
                     category === c.name
                       ? "border-gold/60 bg-gold/10 text-gold"
                       : "border-border text-muted-foreground hover:border-gold/30"
-                  }`}
-                >
+                  }`}>
                   {c.icon} {c.name}
                 </button>
               ))}
             </div>
+
+            {/* Inline new-category form */}
+            {showNewCat && (
+              <div className="mt-3 p-3 rounded-xl bg-muted/40 border border-border space-y-2">
+                <p className="text-xs font-semibold text-foreground">New category</p>
+                <div className="flex gap-2">
+                  <input
+                    value={newCatIcon}
+                    onChange={e => setNewCatIcon(e.target.value)}
+                    placeholder="🔧"
+                    style={{ fontSize: "16px" }}
+                    className="w-12 rounded-lg border border-input bg-background px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-gold/40"
+                  />
+                  <input
+                    value={newCatName}
+                    onChange={e => setNewCatName(e.target.value)}
+                    placeholder="Category name…"
+                    style={{ fontSize: "16px" }}
+                    className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { setShowNewCat(false); setNewCatName(""); }}
+                    className="flex-1 rounded-lg border border-border py-2 text-xs text-muted-foreground hover:bg-muted transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleAddCategory} disabled={!newCatName.trim() || savingCat}
+                    className="flex-1 rounded-lg bg-gold/90 hover:bg-gold text-charcoal py-2 text-xs font-semibold transition-colors disabled:opacity-50">
+                    {savingCat ? "Saving…" : "Add category"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Property + Location */}
+          {/* Property + Room */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Property</label>
               <select
                 value={propertyId}
-                onChange={e => setPropertyId(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
-              >
+                onChange={e => { setPropertyId(e.target.value); setRoom(""); }}
+                style={{ fontSize: "16px" }}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40">
                 <option value="">All / Unknown</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Location</label>
-              <input
-                value={locationDetail}
-                onChange={e => setLocation(e.target.value)}
-                placeholder="Room / area"
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
-              />
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                Room / Area
+              </label>
+              {rooms.length > 0 ? (
+                <select
+                  value={room}
+                  onChange={e => setRoom(e.target.value)}
+                  style={{ fontSize: "16px" }}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40">
+                  <option value="">Select room…</option>
+                  {rooms.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
+                </select>
+              ) : (
+                <input
+                  value={room}
+                  onChange={e => setRoom(e.target.value)}
+                  placeholder={propertyId ? "Enter room/area" : "Select property first"}
+                  disabled={!!propertyId && rooms.length === 0 && !room}
+                  style={{ fontSize: "16px" }}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40 disabled:opacity-50"
+                />
+              )}
             </div>
           </div>
 
@@ -241,13 +333,10 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Status</label>
               <div className="flex flex-wrap gap-2">
                 {STATUSES.map(s => (
-                  <button
-                    key={s.value}
-                    onClick={() => setStatus(s.value)}
+                  <button key={s.value} onClick={() => setStatus(s.value)}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
                       status === s.value ? "border-gold/60 bg-gold/10 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
-                    }`}
-                  >
+                    }`}>
                     <IssueStatusBadge status={s.value} size="xs" />
                   </button>
                 ))}
@@ -263,8 +352,8 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
                 <select
                   value={assignedTo}
                   onChange={e => setAssignedTo(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
-                >
+                  style={{ fontSize: "16px" }}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40">
                   <option value="">Unassigned</option>
                   {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -275,6 +364,7 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
                   type="date"
                   value={scheduledDate}
                   onChange={e => setScheduled(e.target.value)}
+                  style={{ fontSize: "16px" }}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
                 />
               </div>
@@ -295,10 +385,8 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => closeOutRef.current?.click()}
-                  className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 flex items-center justify-center gap-2 text-muted-foreground text-sm"
-                >
+                <button onClick={() => closeOutRef.current?.click()}
+                  className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 flex items-center justify-center gap-2 text-muted-foreground text-sm">
                   {closeUploading
                     ? <div className="w-5 h-5 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
                     : <><Upload size={18} /> Add close-out photo</>
@@ -332,6 +420,7 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
                     value={relatedSearch}
                     onChange={e => setRelatedSch(e.target.value)}
                     placeholder="Search prior issues…"
+                    style={{ fontSize: "16px" }}
                     className="w-full rounded-lg border border-input bg-background pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
                   />
                 </div>
@@ -350,23 +439,28 @@ export function IssueModal({ open, onClose, onSave, initial = {}, categories, pr
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-background border-t border-border px-5 py-4 flex gap-3">
-          <button onClick={onClose} className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+        {/* ── Sticky footer — always visible ── */}
+        <div className="flex-shrink-0 bg-background border-t border-border px-5 py-4 flex gap-3 rounded-b-2xl">
+          <button onClick={onClose}
+            className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={!title.trim() || saving}
-            className="flex-1 rounded-xl bg-gold/90 hover:bg-gold py-3 text-sm font-semibold text-charcoal transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
+          <button onClick={handleSave} disabled={!title.trim() || saving}
+            className="flex-1 rounded-xl bg-gold/90 hover:bg-gold py-3 text-sm font-semibold text-charcoal transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
             {saving
               ? <div className="w-4 h-4 border-2 border-charcoal/30 border-t-charcoal rounded-full animate-spin" />
-              : priority === "urgent" ? <><AlertTriangle size={14} /> Report Urgent Issue</> : "Save Issue"
+              : priority === "urgent" ? <><AlertTriangle size={14} /> Report Urgent</> : "Save Issue"
             }
           </button>
         </div>
       </div>
     </div>
   );
+}
+
+export function IssueModal(props: Props) {
+  if (!props.open) return null;
+  // key forces full remount (clean state) every time modal opens
+  const key = props.open ? `${props.mode}-${props.initial?.id ?? "new"}` : "closed";
+  return <ModalContent key={key} {...props} />;
 }
