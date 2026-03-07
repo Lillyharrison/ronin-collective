@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical } from "lucide-react";
+import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical, DoorOpen } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 
 type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
@@ -37,6 +37,7 @@ const PROPERTY_SUB_SECTIONS = [
   { key: "tasks",       label: "Tasks",       icon: <CheckCircle size={20} />,  description: "Open & assigned tasks" },
   { key: "maintenance", label: "Maintenance", icon: <Wrench size={20} />,       description: "Issues & requests" },
   { key: "staff",       label: "Users",       icon: <Users size={20} />,        description: "Assigned people" },
+  { key: "rooms",       label: "Rooms",       icon: <DoorOpen size={20} />,     description: "Manage property rooms" },
   { key: "checklists",  label: "Checklists",  icon: <BookOpen size={20} />,     description: "SOPs & procedures" },
   { key: "manuals",     label: "Manuals",     icon: <BookOpen size={20} />,     description: "Care guides & rules" },
   { key: "calendar",    label: "Schedule",    icon: <Calendar size={20} />,     description: "Events & bookings" },
@@ -465,10 +466,15 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
   onNavigate: (key: string) => void;
 }) {
   const [showStaff, setShowStaff] = useState(false);
+  const [showRooms, setShowRooms] = useState(false);
   const cfg = STATUS_CONFIG[p.status];
 
   if (showStaff) {
     return <PropertyStaffList propertyId={p.id} onBack={() => setShowStaff(false)} />;
+  }
+
+  if (showRooms) {
+    return <PropertyRoomsManager property={p} onBack={() => setShowRooms(false)} />;
   }
 
   return (
@@ -530,7 +536,11 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
           {PROPERTY_SUB_SECTIONS.map(s => (
             <button
               key={s.key}
-              onClick={() => s.key === "staff" ? setShowStaff(true) : onNavigate(s.key)}
+              onClick={() => {
+                if (s.key === "staff") setShowStaff(true);
+                else if (s.key === "rooms") setShowRooms(true);
+                else onNavigate(s.key);
+              }}
               className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-card border border-border hover:border-primary/40 hover:bg-accent transition-all text-left group"
             >
               <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -840,3 +850,127 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
     </Dialog>
   );
 }
+
+// ─── Property Rooms Manager ───────────────────────────────────────────────────
+function PropertyRoomsManager({ property, onBack }: { property: Property; onBack: () => void }) {
+  const [rooms, setRooms] = useState<{ id: string; name: string; sort_order: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newRoom, setNewRoom] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const fetchRooms = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("property_rooms" as any)
+      .select("id, name, sort_order")
+      .eq("property_id", property.id)
+      .order("sort_order");
+    setRooms(((data ?? []) as unknown) as { id: string; name: string; sort_order: number }[]);
+    setLoading(false);
+  }, [property.id]);
+
+  useEffect(() => { fetchRooms(); }, [fetchRooms]);
+
+  const handleAdd = async () => {
+    if (!newRoom.trim()) return;
+    setSaving(true);
+    await supabase.from("property_rooms" as any).insert({
+      property_id: property.id,
+      name: newRoom.trim(),
+      sort_order: rooms.length,
+    });
+    setNewRoom("");
+    await fetchRooms();
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("property_rooms" as any).delete().eq("id", id);
+    setDeleteId(null);
+    await fetchRooms();
+  };
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-7rem)]">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors">
+          <ArrowLeft size={18} />
+        </button>
+        <div>
+          <h2 className="font-display text-lg text-foreground">Rooms</h2>
+          <p className="text-xs text-muted-foreground">{property.name}</p>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4 flex-1">
+        {/* Add room */}
+        <div className="flex gap-2">
+          <input
+            value={newRoom}
+            onChange={e => setNewRoom(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleAdd(); }}
+            placeholder="e.g. Master Bedroom, Kitchen, Pool…"
+            style={{ fontSize: "16px" }}
+            className="flex-1 rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!newRoom.trim() || saving}
+            className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold disabled:opacity-50 text-charcoal text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors"
+          >
+            <Plus size={14} /> Add
+          </button>
+        </div>
+
+        {/* Room list */}
+        {loading ? (
+          <div className="space-y-2">
+            {[1,2,3].map(i => <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />)}
+          </div>
+        ) : rooms.length === 0 ? (
+          <div className="rounded-2xl bg-card border border-dashed border-border p-8 text-center">
+            <DoorOpen size={32} className="mx-auto text-muted-foreground/30 mb-2" />
+            <p className="text-sm font-medium text-foreground">No rooms yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Add rooms above so staff can select them when logging issues.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {rooms.map(room => (
+              <div key={room.id} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+                <DoorOpen size={16} className="text-muted-foreground flex-shrink-0" />
+                <span className="flex-1 text-sm text-foreground font-medium">{room.name}</span>
+                <button
+                  onClick={() => setDeleteId(room.id)}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove room?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This room will no longer appear in the issue report form.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteId && handleDelete(deleteId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
