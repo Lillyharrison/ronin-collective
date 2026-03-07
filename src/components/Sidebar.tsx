@@ -13,7 +13,7 @@ import {
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
