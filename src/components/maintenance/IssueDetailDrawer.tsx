@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon, ChevronRight } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
 import type { MaintenanceIssue, IssueStatus, MaintenanceCategory } from "@/hooks/useMaintenanceIssues";
