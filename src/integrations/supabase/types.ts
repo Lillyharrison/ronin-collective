@@ -963,6 +963,38 @@ export type Database = {
         }
         Relationships: []
       }
+      property_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          property_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          property_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          property_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_rooms_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_rules: {
         Row: {
           applies_to_roles: string[]
