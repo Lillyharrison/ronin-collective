@@ -11,7 +11,7 @@ import { IssueCard } from "@/components/maintenance/IssueCard";
 import { IssueModal } from "@/components/maintenance/IssueModal";
 import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/IssueStatusBadge";
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
-import { cn } from "@/lib/utils";
+import { notifySection } from "@/lib/notifySection";
 import { format } from "date-fns";
 
 const STATUS_COLUMNS: { key: IssueStatus; label: string }[] = [
