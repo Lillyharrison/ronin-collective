@@ -4,7 +4,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  MapPin, Clock, CheckSquare, TriangleAlert,
+  MapPin, Clock, ShoppingBag, TriangleAlert, CheckSquare,
   ChevronRight, Activity, Zap, Shield, ClipboardList, X, Bell,
   Pencil, Check,
 } from "lucide-react";
@@ -53,7 +53,7 @@ const statusConfig: Record<string, { label: string; labelEs: string; className: 
 // Quick actions shown to all users, filtered by per-user canSee permissions
 const quickActions = [
   { labelKey: "checklists" as const,   labelEs: "Listas",            icon: <ClipboardList size={26} />, section: "checklists" as const },
-  { labelKey: "myTasks" as const,      labelEs: "Mis Tareas",        icon: <CheckSquare size={26} />,  section: "tasks" as const },
+  { labelKey: "orders" as const,       labelEs: "Pedidos",           icon: <ShoppingBag size={26} />,  section: "orders" as const },
   { labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />,section: "maintenance" as const },
   { labelKey: "calendar" as const,     labelEs: "Calendario",        icon: <Clock size={26} />,        section: "calendar" as const },
 ];
