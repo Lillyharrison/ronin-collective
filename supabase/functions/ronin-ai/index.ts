@@ -955,7 +955,26 @@ When anyone reports a physical problem with a property (broken item, damage, lea
 
     // ─── CHAT MESSAGE MODE ─────────────────────────────────────────────────────
     if (type === "message") {
+      // Build clean conversation history — strip any leaked reasoning patterns and limit to recent messages
+      const cleanHistory = (msgs: Array<{ id: string; content_text: string | null; is_ai_generated: boolean }>) =>
+        msgs
+          .filter(m => m.content_text && m.content_text.trim().length > 0)
+          .map(m => ({
+            role: m.is_ai_generated ? "assistant" as const : "user" as const,
+            // Strip leaked thinking prefixes from stored AI messages
+            content: m.is_ai_generated
+              ? m.content_text!
+                  .replace(/^(THINK|OBSERVE|REASON|ACT|RESPOND)[:\s].*/gim, "")
+                  .replace(/<think>[\s\S]*?<\/think>/gi, "")
+                  .replace(/\n{3,}/g, "\n\n")
+                  .trim()
+              : m.content_text!,
+          }))
+          .filter(m => m.content.length > 0)
+          .slice(-20); // keep last 20 messages
+
       const { messages: conversationHistory = [], image_url } = body;
+
       const isVisionRequest = !!image_url;
 
       // ── Load full platform snapshot + memories in parallel ─────────────────
