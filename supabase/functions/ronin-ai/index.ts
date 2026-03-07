@@ -769,7 +769,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
           const toolCalls = choice.message?.tool_calls ?? [];
           if (!toolCalls.length) {
             // No tool calls — this is the final text response
-            finalText = choice.message?.content ?? "";
+            finalText = stripThinking(choice.message?.content ?? "");
             break;
           }
 
@@ -815,8 +815,8 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
           if (hitWriteTool) {
             // Ask LLM to generate the human-readable confirmation text (no tools — force text)
             const confirmResp = await callLLMSync(loopMessages, [], LOVABLE_API_KEY, "google/gemini-2.5-flash");
-            finalText = confirmResp.choices?.[0]?.message?.content
-              ?? buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args);
+            finalText = stripThinking(confirmResp.choices?.[0]?.message?.content
+              ?? buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args));
             break;
           }
         }
