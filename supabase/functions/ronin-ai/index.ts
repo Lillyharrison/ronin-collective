@@ -93,8 +93,8 @@ const RONIN_TOOLS = [
         properties: {
           title: { type: "string", description: "Clear, concise issue title (e.g. 'Broken lamp in master bedroom')" },
           description: { type: "string", description: "Detailed description of the issue" },
-          category: { type: "string", enum: ["plumbing", "electrical", "hvac", "appliances", "structural", "grounds", "general"], description: "Issue category" },
-          priority: { type: "string", enum: ["low", "medium", "high", "critical"], description: "Priority level: critical=safety risk, high=urgent, medium=normal, low=can wait" },
+          category: { type: "string", enum: ["Plumbing", "Electrical / Tech", "Climate / HVAC", "Outdoor / Grounds", "Appliances", "Structural", "Security", "General"], description: "Issue category — must match exactly. Use 'General' if unsure." },
+          priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Priority level: urgent=safety risk, high=urgent, medium=normal, low=can wait" },
           property_name: { type: "string", description: "Property where the issue is located" },
           location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
         },
@@ -448,7 +448,7 @@ async function addShoppingListItemsSilently(
   }
 }
 
-/** Notify admins + users with relevant permissions about an AI action */
+/** Notify admins + managers with relevant section permissions about an AI action */
 async function notifyAdminsOfAIAction(
   adminClient: ReturnType<typeof createClient>,
   title: string,
@@ -458,17 +458,42 @@ async function notifyAdminsOfAIAction(
   entity_id?: string,
   entity_type?: string,
   excludeUserId?: string | null,
+  requiredSection?: string | null, // if set, also notify managers who have this section enabled
 ): Promise<void> {
   try {
-    // Get all master_admin and admin users
+    // Get all master_admin and admin user_ids
     const { data: adminRoles } = await adminClient
       .from("user_roles")
       .select("user_id")
       .in("role", ["master_admin", "admin"]);
 
-    const recipients = (adminRoles ?? [])
-      .map(r => r.user_id as string)
-      .filter(id => id !== excludeUserId);
+    const adminIds = new Set((adminRoles ?? []).map(r => r.user_id as string));
+
+    // Also get managers who have the relevant section permission enabled
+    let managerIds: string[] = [];
+    if (requiredSection) {
+      const { data: managerRoles } = await adminClient
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "manager");
+      const managerUserIds = (managerRoles ?? []).map(r => r.user_id as string);
+      if (managerUserIds.length > 0) {
+        const { data: managerProfiles } = await adminClient
+          .from("profiles")
+          .select("id, section_permissions")
+          .in("id", managerUserIds);
+        managerIds = (managerProfiles ?? [])
+          .filter((p: { id: string; section_permissions: unknown }) => {
+            const perms = p.section_permissions as Record<string, { read?: boolean; notifications?: boolean }> | null;
+            return perms?.[requiredSection]?.notifications === true || perms?.[requiredSection]?.read === true;
+          })
+          .map((p: { id: string }) => p.id);
+      }
+    }
+
+    const recipientSet = new Set([...adminIds, ...managerIds]);
+    if (excludeUserId) recipientSet.delete(excludeUserId);
+    const recipients = [...recipientSet];
 
     if (!recipients.length) return;
 
@@ -648,12 +673,12 @@ serve(async (req) => {
           processed_by_ai: true,
         });
 
-        const priorityEmoji: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+        const priorityEmoji: Record<string, string> = { urgent: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
         const propLabel = tool_args.property_name ? ` @ ${tool_args.property_name}` : "";
         const locationLabel = tool_args.location_detail ? ` — ${tool_args.location_detail}` : "";
-        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nPriority: ${priorityEmoji[tool_args.priority] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: **Reported** — awaiting admin approval. Visible in the Maintenance section.`;
+        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nPriority: ${priorityEmoji[tool_args.priority as string] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: **Reported** — awaiting admin approval. Visible in the Maintenance section.`;
 
-        // Notify all admins
+        // Notify all admins + managers with maintenance permissions
         await notifyAdminsOfAIAction(
           adminClient,
           `🔧 New maintenance issue reported`,
@@ -663,6 +688,7 @@ serve(async (req) => {
           issue.id,
           "maintenance_issue",
           null, // notify all admins including caller's own admin
+          "maintenance", // also notify managers with maintenance section access
         );
 
       // ── create_task ───────────────────────────────────────────────────────
@@ -865,7 +891,7 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 - **get_calendar_events**: Use for schedule/property activity questions.
 
 ### WRITE TOOLS — present confirmation before executing:
-- **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order.
+- **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order. Category must be one of: Plumbing, Electrical / Tech, Climate / HVAC, Outdoor / Grounds, Appliances, Structural, Security, General. Priority: urgent/high/medium/low.
 - **create_task**: Use for operational work orders that are NOT physical maintenance issues.
 - **update_task_status**, **log_asset**, **send_staff_message**
 
@@ -929,7 +955,26 @@ When anyone reports a physical problem with a property (broken item, damage, lea
 
     // ─── CHAT MESSAGE MODE ─────────────────────────────────────────────────────
     if (type === "message") {
+      // Build clean conversation history — strip any leaked reasoning patterns and limit to recent messages
+      const cleanHistory = (msgs: Array<{ id: string; content_text: string | null; is_ai_generated: boolean }>) =>
+        msgs
+          .filter(m => m.content_text && m.content_text.trim().length > 0)
+          .map(m => ({
+            role: m.is_ai_generated ? "assistant" as const : "user" as const,
+            // Strip leaked thinking prefixes from stored AI messages
+            content: m.is_ai_generated
+              ? m.content_text!
+                  .replace(/^(THINK|OBSERVE|REASON|ACT|RESPOND)[:\s].*/gim, "")
+                  .replace(/<think>[\s\S]*?<\/think>/gi, "")
+                  .replace(/\n{3,}/g, "\n\n")
+                  .trim()
+              : m.content_text!,
+          }))
+          .filter(m => m.content.length > 0)
+          .slice(-20); // keep last 20 messages
+
       const { messages: conversationHistory = [], image_url } = body;
+
       const isVisionRequest = !!image_url;
 
       // ── Load full platform snapshot + memories in parallel ─────────────────
@@ -1001,10 +1046,23 @@ Analyse the photo carefully:
         : { role: "user", content };
 
       const baseSystemMsg = { role: "system", content: systemPrompt + visionAddition + contextNote };
-      const initialMessages: unknown[] = [baseSystemMsg, ...conversationHistory, currentUserMessage];
 
       // ── ReAct Loop (thread_id: non-streaming, synchronous) ─────────────────
       if (thread_id) {
+        // Load conversation history directly from DB when thread_id is provided
+        // This avoids client-supplied history contaminating the context with leaked thinking
+        const { data: dbMessages } = await adminClient
+          .from("messages")
+          .select("id, content_text, is_ai_generated, sender_id")
+          .eq("thread_id", thread_id)
+          .order("created_at", { ascending: true })
+          .limit(30);
+
+        const dbHistory = cleanHistory(
+          (dbMessages ?? []).filter(m => m.content_text && m.id !== undefined)
+        );
+
+        const initialMessages: unknown[] = [baseSystemMsg, ...dbHistory, currentUserMessage];
         const ctx: ContextData = { props, staff };
         const MAX_ITERATIONS = 5;
         let loopMessages: unknown[] = [...initialMessages];
@@ -1084,9 +1142,18 @@ Analyse the photo carefully:
       }
 
       // ── No thread_id: sync ReAct loop then stream final answer ──────────────
+      // Build initial messages for the streaming path from client-supplied history (cleaned)
+      const cleanedClientHistory = cleanHistory(
+        (conversationHistory as Array<{ content_text: string | null; is_ai_generated: boolean }>).map((m, i) => ({
+          id: String(i),
+          content_text: typeof m === "object" && "content" in m ? (m as { content: string }).content : m.content_text,
+          is_ai_generated: typeof m === "object" && "role" in m ? (m as { role: string }).role === "assistant" : m.is_ai_generated,
+        }))
+      );
+      const streamInitialMessages: unknown[] = [baseSystemMsg, ...cleanedClientHistory, currentUserMessage];
       const ctx: ContextData = { props, staff };
       const MAX_ITER = 5;
-      let loopMessages: unknown[] = [...initialMessages];
+      let loopMessages: unknown[] = [...streamInitialMessages];
       let precomputedFinal: string | null = null;
 
       for (let i = 0; i < MAX_ITER; i++) {
@@ -1173,7 +1240,7 @@ Analyse the photo carefully:
 function buildConfirmationMessage(toolName: string, args: Record<string, unknown>): string {
   switch (toolName) {
     case "log_maintenance_issue": {
-      const priorityEmoji: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
+      const priorityEmoji: Record<string, string> = { urgent: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
       return [
         `🔧 **I'm ready to log the following maintenance issue:**`, ``,
         `**Title:** ${args.title}`,
