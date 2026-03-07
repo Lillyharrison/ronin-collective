@@ -189,5 +189,3 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
   );
 }
 
-// useState needs to be imported
-import { useState } from "react";
