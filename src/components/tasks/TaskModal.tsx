@@ -145,6 +145,30 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const handleSave = async (publishNow = false) => {
     if (!title.trim() || !userId) return;
     setSaving(true);
+
+    // Build attachments — merge tracking entry if this is an order
+    let finalAttachments = attachments.filter((a: any) => a.type !== "tracking");
+    if (isOrder || task?.category === "order") {
+      const hasAnyTracking = trackingNumber || trackingUrl || carrier || packingList || trackingNotes;
+      if (hasAnyTracking || existingTracking) {
+        const trackingEntry: any = {
+          type: "tracking",
+          ...(trackingNumber ? { tracking_number: trackingNumber } : {}),
+          ...(trackingUrl    ? { tracking_url: trackingUrl }       : {}),
+          ...(carrier        ? { carrier }                         : {}),
+          ...(packingList    ? { packing_list: packingList }       : {}),
+          ...(trackingNotes  ? { notes: trackingNotes }            : {}),
+          // preserve existing delivered_at unless markDelivered overrides
+          ...(markDelivered
+            ? { delivered_at: new Date().toISOString() }
+            : existingTracking?.delivered_at
+            ? { delivered_at: existingTracking.delivered_at }
+            : {}),
+        };
+        finalAttachments = [...finalAttachments, trackingEntry];
+      }
+    }
+
     const payload: Record<string, unknown> = {
       title_en: title.trim(),
       description_en: description.trim() || null,
@@ -157,7 +181,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       assigned_role: role || null,
       linked_checklist_id: linkedChecklist || null,
       is_draft: publishNow ? false : isDraft,
-      attachments,
+      attachments: finalAttachments,
       linked_inventory_ids: task?.linked_inventory_ids ?? [],
       category: isOrder ? "order" : (task?.category ?? null),
     };
@@ -171,6 +195,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     onSaved();
     onClose();
   };
+
 
   const handleComplete = async () => {
     if (!task?.id || !userId) return;
