@@ -191,6 +191,19 @@ const RONIN_TOOLS = [
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
+/** Strip Gemini thinking/reasoning blocks that should never reach the user */
+function stripThinking(text: string): string {
+  // Remove <think>...</think> and <thinking>...</thinking> blocks (Gemini 2.5 Pro)
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+    .replace(/^THINK:.*$/gim, "")
+    .replace(/^OBSERVE:.*$/gim, "")
+    .replace(/^REASON:.*$/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** Non-streaming LLM call for ReAct loop iterations */
 async function callLLMSync(
   messages: unknown[],
