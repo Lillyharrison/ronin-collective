@@ -60,6 +60,7 @@ export const translations = {
     calendar: "Calendar",
     memory: "Ronin's Memory",
     rules: "Rules",
+    alerts: "Alerts",
   },
   es: {
     home: "Inicio",
@@ -115,6 +116,7 @@ export const translations = {
     calendar: "Calendario",
     memory: "Memoria de Ronin",
     rules: "Reglas",
+    alerts: "Alertas",
   },
 } as const;
 

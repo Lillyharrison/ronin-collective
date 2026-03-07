@@ -6,14 +6,14 @@ import {
   X, Home, Wrench, MessageCircle, User,
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
-  Building2, Trophy, FileSpreadsheet, Calendar, Brain,
-  ClipboardList, Shield,
+  Building2, FileSpreadsheet, Calendar, Brain,
+  ClipboardList, Shield, Bell,
 } from "lucide-react";
 
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
@@ -21,21 +21,21 @@ interface SidebarItem {
 const ALL_ITEMS: SidebarItem[] = [
   { section: "dashboard",    labelKey: "home",         icon: <Home size={20} /> },
   { section: "property",     labelKey: "property",     icon: <Building2 size={20} /> },
-  { section: "maintenance",  labelKey: "maintenance",  icon: <Wrench size={20} /> },
   { section: "messages",     labelKey: "messages",     icon: <MessageCircle size={20} /> },
+  { section: "maintenance",  labelKey: "maintenance",  icon: <Wrench size={20} /> },
   { section: "profile",      labelKey: "profile",      icon: <User size={20} /> },
-  { section: "achievements", labelKey: "achievements", icon: <Trophy size={20} />, dividerBefore: true },
-  { section: "manuals",      labelKey: "manuals",      icon: <BookOpen size={20} /> },
-  { section: "checklists",   labelKey: "checklists",   icon: <ClipboardList size={20} /> },
-  { section: "tasks",        labelKey: "tasks",        icon: <CheckSquare size={20} /> },
-  { section: "contacts",     labelKey: "contacts",     icon: <Users size={20} /> },
-  { section: "inventory",    labelKey: "inventory",    icon: <Package size={20} /> },
-  { section: "laundry",      labelKey: "laundry",      icon: <Shirt size={20} />, dividerBefore: true },
-  { section: "orders",       labelKey: "orders",       icon: <ShoppingCart size={20} /> },
-  { section: "meet-team",    labelKey: "meetTeam",     icon: <UsersRound size={20} /> },
+  { section: "calendar",     labelKey: "calendar",     icon: <Calendar size={20} />, dividerBefore: true },
   { section: "travel",       labelKey: "travel",       icon: <Plane size={20} /> },
-  { section: "calendar",     labelKey: "calendar",     icon: <Calendar size={20} /> },
-  { section: "rules",        labelKey: "rules",        icon: <Shield size={20} />, dividerBefore: true },
+  { section: "tasks",        labelKey: "tasks",        icon: <CheckSquare size={20} />, dividerBefore: true },
+  { section: "alerts",       labelKey: "alerts",       icon: <Bell size={20} /> },
+  { section: "checklists",   labelKey: "checklists",   icon: <ClipboardList size={20} /> },
+  { section: "manuals",      labelKey: "manuals",      icon: <BookOpen size={20} /> },
+  { section: "orders",       labelKey: "orders",       icon: <ShoppingCart size={20} /> },
+  { section: "inventory",    labelKey: "inventory",    icon: <Package size={20} /> },
+  { section: "laundry",      labelKey: "laundry",      icon: <Shirt size={20} /> },
+  { section: "meet-team",    labelKey: "meetTeam",     icon: <UsersRound size={20} />, dividerBefore: true },
+  { section: "contacts",     labelKey: "contacts",     icon: <Users size={20} /> },
+  { section: "rules",        labelKey: "rules",        icon: <Shield size={20} /> },
   { section: "master-import",labelKey: "masterImport", icon: <FileSpreadsheet size={20} /> },
   { section: "memory",       labelKey: "memory",       icon: <Brain size={20} /> },
 ];
