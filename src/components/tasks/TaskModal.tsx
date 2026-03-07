@@ -199,19 +199,35 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
   const handleComplete = async () => {
     if (!task?.id || !userId) return;
-    // For order tasks: ask for delivery date first, then complete
     const isOrderTask = task?.category === "order";
+
+    // For order tasks: ask for expected delivery date first
     if (isOrderTask && !askDelivery) {
       setAskDelivery(true);
       return;
     }
+
     setCompleting(true);
+
+    // Mark the task complete
     await supabase.from("tasks").update({
       status: "completed",
       completed_at: new Date().toISOString(),
-      // Store expected delivery date in due_date field
-      ...(isOrderTask && deliveryDate ? { due_date: deliveryDate } : {}),
     } as any).eq("id", task.id);
+
+    // If this is an order task, create a standalone order record
+    if (isOrderTask) {
+      await supabase.from("orders").insert({
+        title:             task.title_en,
+        description:       task.description_en ?? null,
+        property_id:       task.property_id ?? null,
+        source_task_id:    task.id,
+        status:            "pending_delivery",
+        expected_delivery: deliveryDate || null,
+        created_by:        userId,
+      } as any);
+    }
+
     setCompleted(true);
     fireConfetti();
     setTimeout(() => {
