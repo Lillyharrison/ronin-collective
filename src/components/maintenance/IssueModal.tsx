@@ -162,8 +162,8 @@ function ModalContent({ onClose, onSave, initial = {}, categories, onCategoryAdd
           </button>
         </div>
 
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 overscroll-contain">
+        {/* ── Scrollable body — min-h-0 is required for flex children to scroll ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5 overscroll-contain [-webkit-overflow-scrolling:touch]">
 
           {/* Photo upload */}
           <div>
