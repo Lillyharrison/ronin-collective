@@ -60,6 +60,7 @@ export const translations = {
     calendar: "Calendar",
     memory: "Ronin's Memory",
     rules: "Rules",
+    alerts: "Alerts",
   },
   es: {
     home: "Inicio",
