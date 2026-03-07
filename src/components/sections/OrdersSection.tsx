@@ -273,7 +273,7 @@ export function OrdersSection() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchOrders(); }, [userId]);
+  useEffect(() => { fetchOrders(); }, []);
 
   // pending = not_placed + placed + pending_delivery (legacy)
   const pending   = orders.filter(o => o.status !== "delivered");
