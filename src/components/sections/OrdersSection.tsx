@@ -51,8 +51,8 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
   const { language } = useLanguage();
   const isL = language === "es";
   const [delivering, setDelivering] = useState(false);
-  const { isAdmin, isMasterAdmin, isManager } = usePermissions();
-  const canEdit = isAdmin || isMasterAdmin || isManager;
+  const { isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
+  const canEdit_orders = isAdmin || isMasterAdmin || isManager || canEdit("orders");
 
   const deliveryDate = order.expected_delivery ? new Date(order.expected_delivery) : null;
   const isOverdue = deliveryDate && deliveryDate < new Date() && order.status !== "not_placed";
@@ -155,7 +155,7 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
       {/* Actions */}
       <td className="px-3 py-3">
         <div className="flex items-center gap-1.5">
-          {canEdit && !isNotPlaced && (
+          {canEdit_orders && !isNotPlaced && (
             <button
               onClick={handleDeliver}
               disabled={delivering}

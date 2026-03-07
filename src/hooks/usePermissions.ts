@@ -18,6 +18,10 @@ export interface UserPermissions {
   fullName: string | null;
   avatarUrl: string | null;
   canSee: (section: string) => boolean;
+  /** Returns true if the user has edit rights for the section */
+  canEdit: (section: string) => boolean;
+  /** Returns true if the user wants notifications/alerts for the section */
+  wantsAlerts: (section: string) => boolean;
   loading: boolean;
 }
 
@@ -51,7 +55,7 @@ export function usePermissions(): UserPermissions {
   const [assignedPropertyIds, setAssignedPropertyIds] = useState<string[]>([]);
   const [fullName, setFullName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [sectionPermissions, setSectionPermissions] = useState<Record<string, { view: boolean }> | null>(null);
+  const [sectionPermissions, setSectionPermissions] = useState<Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,18 +76,16 @@ export function usePermissions(): UserPermissions {
         setAssignedPropertyIds(profile.assigned_property_ids || []);
         setFullName(profile.full_name || null);
         setAvatarUrl(profile.avatar_url || null);
-        // Load section_permissions if present and non-empty
         if (profile.section_permissions && typeof profile.section_permissions === "object") {
           const perms = profile.section_permissions as Record<string, unknown>;
           if (Object.keys(perms).length > 0) {
-            setSectionPermissions(perms as Record<string, { view: boolean }>);
+            setSectionPermissions(perms as Record<string, { view: boolean; edit: boolean; notifications: boolean }>);
           }
         }
       }
       setLoading(false);
     }
 
-    // Load on mount and whenever auth state changes (e.g. different user logs in)
     load();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       setLoading(true);
@@ -98,25 +100,53 @@ export function usePermissions(): UserPermissions {
   const isFamily = level === "principal" || level === "extended_family";
 
   const canSee = (section: string): boolean => {
-    // master_admin always sees everything
     if (isMasterAdmin) return true;
-
-    // If the user has custom section_permissions JSONB, use those if the section is explicitly listed
     if (sectionPermissions) {
       const perm = sectionPermissions[section];
-      if (perm !== undefined) {
-        return (perm as { view: boolean }).view === true;
-      }
-      // Section not in their custom permissions map → fall through to role-based matrix
-      // (handles newly added sections like "checklists" for existing users)
+      if (perm !== undefined) return perm.view === true;
     }
-
-    // Fallback: use the role-based matrix
     if (!role) return false;
     const allowed = SECTION_PERMISSIONS[section];
-    if (!allowed) return isMasterAdmin;
+    if (!allowed) return false;
     return allowed.includes(role);
   };
 
-  return { userId, role, level, department, assignedPropertyIds, isMasterAdmin, isAdmin, isManager, isFamily, fullName, avatarUrl, canSee, loading };
+  /**
+   * Returns true if the user may create/edit/delete items in this section.
+   * master_admin/admin always can. Others need section_permissions[section].edit === true,
+   * falling back to isManager for sections that historically always allowed manager edits.
+   */
+  const canEdit = (section: string): boolean => {
+    if (isMasterAdmin || isAdmin) return true;
+    // Must be able to see the section first
+    if (!canSee(section)) return false;
+    // If custom permissions are set, honour them
+    if (sectionPermissions) {
+      const perm = sectionPermissions[section];
+      if (perm !== undefined) return perm.edit === true;
+    }
+    // Fallback: managers can edit operational sections
+    const managerEditSections = [
+      "property", "maintenance", "tasks", "checklists", "manuals",
+      "contacts", "inventory", "laundry", "orders", "calendar", "travel", "rules",
+    ];
+    return isManager && managerEditSections.includes(section);
+  };
+
+  /**
+   * Returns true if the user wants to receive notifications/alerts for this section.
+   * master_admin always gets all alerts.
+   */
+  const wantsAlerts = (section: string): boolean => {
+    if (isMasterAdmin) return true;
+    if (!canSee(section)) return false;
+    if (sectionPermissions) {
+      const perm = sectionPermissions[section];
+      if (perm !== undefined) return perm.notifications === true;
+    }
+    // Fallback: admins & managers get alerts by default
+    return isAdmin || isManager;
+  };
+
+  return { userId, role, level, department, assignedPropertyIds, isMasterAdmin, isAdmin, isManager, isFamily, fullName, avatarUrl, canSee, canEdit, wantsAlerts, loading };
 }

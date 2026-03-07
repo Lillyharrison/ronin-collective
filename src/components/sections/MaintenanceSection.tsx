@@ -12,6 +12,7 @@ import { IssueModal } from "@/components/maintenance/IssueModal";
 import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/IssueStatusBadge";
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
+import { notifySection } from "@/lib/notifySection";
 import { format } from "date-fns";
 
 const STATUS_COLUMNS: { key: IssueStatus; label: string }[] = [
@@ -27,8 +28,8 @@ const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, 
 type ViewMode = "board" | "list" | "table";
 
 export function MaintenanceSection() {
-  const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds } = usePermissions();
-  const canManage = isMasterAdmin || isAdmin || isManager;
+  const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
+  const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
 
   const [search,      setSearch]      = useState("");
@@ -86,7 +87,19 @@ export function MaintenanceSection() {
 
   const handleCreate = async (payload: Partial<MaintenanceIssue>) => {
     if (!userId) return;
-    await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+    const { data: newIssue } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+    // Notify all users with maintenance alerts enabled
+    if (newIssue) {
+      await notifySection("maintenance", {
+        title: `🔧 New issue reported: ${payload.title ?? "Maintenance issue"}`,
+        body: payload.location_detail ? `Location: ${payload.location_detail}` : undefined,
+        type: "warning",
+        action_url: "maintenance",
+        entity_id: newIssue.id,
+        entity_type: "maintenance_issue",
+        property_id: payload.property_id ?? undefined,
+      }, userId);
+    }
   };
 
   const handleEdit = async (patch: Partial<MaintenanceIssue>) => {
@@ -104,31 +117,19 @@ export function MaintenanceSection() {
     if (newStatus === "resolved") patch.resolved_at = new Date().toISOString();
     await updateIssue(issue.id, patch);
 
-    // Notify all admins (except the approver themselves) when an issue is approved
+    // Notify all users with maintenance alerts when an issue is approved
     if (newStatus === "approved" && userId) {
-      const { data: admins } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .in("role", ["master_admin", "admin", "manager"]);
-
-      if (admins) {
-        const approverProfile = profiles.find(p => p.id === userId);
-        const approverName = approverProfile?.name ?? "Admin";
-        const others = admins.filter((a: { user_id: string }) => a.user_id !== userId);
-        if (others.length > 0) {
-          await supabase.from("notifications").insert(
-            others.map((a: { user_id: string }) => ({
-              user_id: a.user_id,
-              title: `Issue approved: ${issue.title}`,
-              body: `${approverName} approved a maintenance issue for ${issue.property_name ?? "a property"}.`,
-              type: "success",
-              action_url: "maintenance",
-              entity_id: issue.id,
-              entity_type: "maintenance_issue",
-            }))
-          );
-        }
-      }
+      const approverProfile = profiles.find(p => p.id === userId);
+      const approverName = approverProfile?.name ?? "Admin";
+      await notifySection("maintenance", {
+        title: `Issue approved: ${issue.title}`,
+        body: `${approverName} approved a maintenance issue for ${issue.property_name ?? "a property"}.`,
+        type: "success",
+        action_url: "maintenance",
+        entity_id: issue.id,
+        entity_type: "maintenance_issue",
+        property_id: issue.property_id ?? undefined,
+      }, userId);
     }
   };
 

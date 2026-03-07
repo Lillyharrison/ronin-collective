@@ -25,7 +25,8 @@ const ACTIVITY_GROUPS = [
 
 export function ChecklistsSection() {
   const { language } = useLanguage();
-  const { isAdmin, assignedPropertyIds } = usePermissions();
+  const { isAdmin, assignedPropertyIds, canEdit } = usePermissions();
+  const canManageChecklists = isAdmin || canEdit("checklists");
   const { openChecklistDetail, checklistsForPropertyId, setChecklistsForPropertyId } = useNavigation();
   const [tab, setTab] = useState<Tab>("cleaning");
   const [properties, setProperties] = useState<Property[]>([]);
@@ -158,7 +159,7 @@ export function ChecklistsSection() {
                 />
               ))
             )}
-            {isAdmin && (
+            {canManageChecklists && (
               <button
                 onClick={async () => {
                   const title = window.prompt("Checklist title:");
@@ -205,7 +206,7 @@ export function ChecklistsSection() {
                 );
               })
             )}
-            {isAdmin && (
+            {canManageChecklists && (
               <button
                 onClick={async () => {
                   const title = window.prompt("Activity list title:");

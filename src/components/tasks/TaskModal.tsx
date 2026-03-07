@@ -4,6 +4,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
+import { notifySection } from "@/lib/notifySection";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
   ChevronDown, Check, Send, Trash2, Clock, AlertTriangle, Package,
@@ -182,6 +183,18 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     } else {
       const { data } = await supabase.from("tasks").insert({ ...payload, created_by: userId } as any).select("id").single();
       savedTaskId = data?.id;
+      // Notify users with tasks alerts enabled
+      if (savedTaskId && !isDraft) {
+        await notifySection("tasks", {
+          title: `📋 New task: ${title.trim()}`,
+          body: assignedTo ? `Assigned to a team member` : undefined,
+          type: "task",
+          action_url: "tasks",
+          entity_id: savedTaskId,
+          entity_type: "task",
+          property_id: propertyId || undefined,
+        }, userId ?? undefined);
+      }
     }
 
     // If order toggle is active, upsert a linked order record with status "not_placed"

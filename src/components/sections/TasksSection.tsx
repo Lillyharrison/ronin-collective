@@ -148,7 +148,8 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
 // ─── Main TasksSection ────────────────────────────────────────────────────────
 export function TasksSection() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading } = usePermissions();
+  const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
+  const canManageTasks = isMasterAdmin || isAdmin || isManager || canEdit("tasks");
   const isL = language === "es";
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
@@ -260,7 +261,7 @@ export function TasksSection() {
       </div>
 
       {/* Top bar: new task button */}
-      {(isAdmin || isManager || isMasterAdmin) && (
+      {canManageTasks && (
         <div className="flex justify-end px-4 py-3 border-b border-border">
           <button
             onClick={() => openNew("pending")}
@@ -317,13 +318,13 @@ export function TasksSection() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
           {columns.map(s => (
-            <KanbanColumn
+          <KanbanColumn
               key={s}
               status={s}
               tasks={byStatus(s)}
               onTaskClick={openEdit}
               onAddClick={() => openNew(s)}
-              isAdmin={isAdmin || isMasterAdmin}
+              isAdmin={canManageTasks}
             />
           ))}
         </div>
