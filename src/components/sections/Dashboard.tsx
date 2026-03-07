@@ -507,7 +507,13 @@ export function Dashboard() {
           {quickActions.filter(a => isMasterAdmin || canSee(a.section)).map((action) => (
             <button
               key={action.labelKey}
-              onClick={() => setActiveSection(action.section)}
+              onClick={() => {
+                if (action.labelKey === "reportIssue") {
+                  setReportIssueOpen(true);
+                } else {
+                  setActiveSection(action.section);
+                }
+              }}
               className="flex flex-col items-center justify-center gap-2 bg-card border border-border rounded-xl p-4 min-h-[88px] hover:border-gold/40 hover:bg-gold/5 transition-all active:scale-95"
             >
               <span className="text-gold">{action.icon}</span>
