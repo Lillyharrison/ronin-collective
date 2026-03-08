@@ -25,6 +25,14 @@ interface Property {
   is_primary: boolean;
   sort_order: number;
   occupied_by: string | null;
+  occupied_by_profile_id: string | null;
+}
+
+interface OccupantProfile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  level: string | null;
 }
 
 const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon: React.ReactNode }> = {
@@ -48,6 +56,7 @@ const emptyForm = {
   name: "", address: "", city: "", country: "",
   timezone: "America/Los_Angeles", status: "vacant" as PropertyStatus,
   image_url: "", is_primary: false, occupied_by: "",
+  occupied_by_profile_id: "" as string,
 };
 
 export function PropertySection() {
