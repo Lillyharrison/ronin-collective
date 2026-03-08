@@ -18,7 +18,7 @@ export function MessagesSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { level, userId, isMasterAdmin } = usePermissions();
-  const { setIsChatOpen } = useNavigation();
+  const { setIsChatOpen, setTotalUnread } = useNavigation();
   const [view, setView] = useState<View>("threads");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
