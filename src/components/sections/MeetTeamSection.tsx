@@ -364,7 +364,7 @@ export function MeetTeamSection() {
                   >
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.role === "master_admin" ? "master_admin" : (m.level || "staff")]}`}>
                       {m.avatar_url ? (
-                        <img src={m.avatar_url} alt={m.full_name || ""} className="w-full h-full rounded-full object-cover" />
+                        <img src={m.avatar_url} alt={m.full_name || ""} loading="lazy" className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <span className="font-display text-base text-foreground">{(m.full_name || "?")[0].toUpperCase()}</span>
                       )}

@@ -24,7 +24,9 @@ export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
   const { t, language } = useLanguage();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
-  const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
+  // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
+  const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager) ? undefined : assignedPropertyIds;
+  const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds);
   const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
   const [search,      setSearch]      = useState("");
@@ -406,6 +408,12 @@ export function MaintenanceSection() {
               compact
             />
           ))}
+          {hasMore && (
+            <button onClick={loadMore} disabled={loading}
+              className="w-full py-2.5 text-xs text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors">
+              {loading ? "Loading…" : "Load more"}
+            </button>
+          )}
         </div>
       ) : (
         /* Table view */

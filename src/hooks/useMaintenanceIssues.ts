@@ -41,10 +41,15 @@ export interface MaintenanceCategory {
   is_custom: boolean;
 }
 
-export function useMaintenanceIssues() {
+// How many issues to load per page
+const PAGE_SIZE = 50;
+
+export function useMaintenanceIssues(filterPropertyIds?: string[]) {
   const [issues, setIssues] = useState<MaintenanceIssue[]>([]);
   const [categories, setCategories] = useState<MaintenanceCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(0);
 
   const fetchCategories = useCallback(async () => {
     const { data } = await supabase
@@ -54,14 +59,25 @@ export function useMaintenanceIssues() {
     if (data) setCategories(data as MaintenanceCategory[]);
   }, []);
 
-  const fetchIssues = useCallback(async () => {
+  const fetchIssues = useCallback(async (pageIndex = 0) => {
     setLoading(true);
-    const { data, error } = await supabase
+
+    // Build query with server-side property filter when scoped
+    let query = supabase
       .from("maintenance_issues")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE - 1);
+
+    if (filterPropertyIds && filterPropertyIds.length > 0) {
+      query = query.in("property_id", filterPropertyIds);
+    }
+
+    const { data, error } = await query;
 
     if (error || !data) { setLoading(false); return; }
+
+    setHasMore(data.length === PAGE_SIZE);
 
     // Gather related IDs for join
     const propertyIds = [...new Set(data.map(i => i.property_id).filter(Boolean))] as string[];
@@ -89,31 +105,36 @@ export function useMaintenanceIssues() {
 
     const enriched: MaintenanceIssue[] = (data as MaintenanceIssue[]).map(issue => ({
       ...issue,
-      property_name:        issue.property_id     ? propMap[issue.property_id]        : undefined,
+      property_name:        issue.property_id      ? propMap[issue.property_id]        : undefined,
       reporter_name:        profileMap[issue.reported_by]?.name,
-      assignee_name:        issue.assigned_to     ? profileMap[issue.assigned_to]?.name   : undefined,
-      assignee_avatar:      issue.assigned_to     ? profileMap[issue.assigned_to]?.avatar ?? undefined : undefined,
+      assignee_name:        issue.assigned_to      ? profileMap[issue.assigned_to]?.name   : undefined,
+      assignee_avatar:      issue.assigned_to      ? profileMap[issue.assigned_to]?.avatar ?? undefined : undefined,
       related_issue_title:  issue.related_issue_id ? relMap[issue.related_issue_id]    : undefined,
     }));
 
-    setIssues(enriched);
+    setIssues(prev => pageIndex === 0 ? enriched : [...prev, ...enriched]);
+    setPage(pageIndex);
     setLoading(false);
-  }, []);
+  }, [filterPropertyIds?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) fetchIssues(page + 1);
+  }, [loading, hasMore, page, fetchIssues]);
 
   useEffect(() => {
     fetchCategories();
-    fetchIssues();
+    fetchIssues(0);
   }, [fetchCategories, fetchIssues]);
 
   const createIssue = async (payload: Omit<MaintenanceIssue, "id" | "created_at" | "updated_at" | "property_name" | "reporter_name" | "assignee_name" | "assignee_avatar" | "related_issue_title">) => {
     const { data, error } = await supabase.from("maintenance_issues").insert(payload).select().single();
-    if (!error) await fetchIssues();
+    if (!error) await fetchIssues(0);
     return { data, error };
   };
 
   const updateIssue = async (id: string, patch: Partial<MaintenanceIssue>) => {
     const { error } = await supabase.from("maintenance_issues").update(patch).eq("id", id);
-    if (!error) await fetchIssues();
+    if (!error) await fetchIssues(0);
     return { error };
   };
 
@@ -131,5 +152,5 @@ export function useMaintenanceIssues() {
     return { error };
   };
 
-  return { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory };
+  return { issues, categories, loading, hasMore, loadMore, fetchIssues: () => fetchIssues(0), createIssue, updateIssue, deleteIssue, addCategory };
 }

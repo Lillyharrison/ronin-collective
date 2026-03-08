@@ -1,64 +1,78 @@
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
-import { Dashboard } from "@/components/sections/Dashboard";
-import { PropertySection } from "@/components/sections/PropertySection";
-import { MaintenanceSection } from "@/components/sections/MaintenanceSection";
-import { MessagesSection } from "@/components/sections/MessagesSection";
-import { ProfileSection } from "@/components/sections/ProfileSection";
-import { ManualsSection } from "@/components/sections/ManualsSection";
-import { ChecklistsSection } from "@/components/sections/ChecklistsSection";
-import { TasksSection } from "@/components/sections/TasksSection";
-import { ContactsSection } from "@/components/sections/ContactsSection";
-import { InventorySection } from "@/components/sections/InventorySection";
-import { LaundrySection } from "@/components/sections/LaundrySection";
-import { OrdersSection } from "@/components/sections/OrdersSection";
-import { MeetTeamSection } from "@/components/sections/MeetTeamSection";
-import { TravelSection } from "@/components/sections/TravelSection";
-import { AchievementsSection } from "@/components/sections/AchievementsSection";
-import { CalendarSection } from "@/components/sections/CalendarSection";
-import { MasterImportSection } from "@/components/sections/MasterImportSection";
-import MemorySection from "@/components/sections/MemorySection";
-import { AlertsSection } from "@/components/sections/AlertsSection";
-import { RulesSection } from "@/components/sections/RulesSection";
-
-import { ChecklistDetailPage } from "@/components/sections/ChecklistDetailPage";
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
 
+// ── Lazy-loaded section components ───────────────────────────────────────────
+// Only the active section's bundle is downloaded — everything else is deferred.
+const Dashboard          = lazy(() => import("@/components/sections/Dashboard").then(m => ({ default: m.Dashboard })));
+const PropertySection    = lazy(() => import("@/components/sections/PropertySection").then(m => ({ default: m.PropertySection })));
+const MaintenanceSection = lazy(() => import("@/components/sections/MaintenanceSection").then(m => ({ default: m.MaintenanceSection })));
+const MessagesSection    = lazy(() => import("@/components/sections/MessagesSection").then(m => ({ default: m.MessagesSection })));
+const ProfileSection     = lazy(() => import("@/components/sections/ProfileSection").then(m => ({ default: m.ProfileSection })));
+const ManualsSection     = lazy(() => import("@/components/sections/ManualsSection").then(m => ({ default: m.ManualsSection })));
+const ChecklistsSection  = lazy(() => import("@/components/sections/ChecklistsSection").then(m => ({ default: m.ChecklistsSection })));
+const TasksSection       = lazy(() => import("@/components/sections/TasksSection").then(m => ({ default: m.TasksSection })));
+const ContactsSection    = lazy(() => import("@/components/sections/ContactsSection").then(m => ({ default: m.ContactsSection })));
+const InventorySection   = lazy(() => import("@/components/sections/InventorySection").then(m => ({ default: m.InventorySection })));
+const LaundrySection     = lazy(() => import("@/components/sections/LaundrySection").then(m => ({ default: m.LaundrySection })));
+const OrdersSection      = lazy(() => import("@/components/sections/OrdersSection").then(m => ({ default: m.OrdersSection })));
+const MeetTeamSection    = lazy(() => import("@/components/sections/MeetTeamSection").then(m => ({ default: m.MeetTeamSection })));
+const TravelSection      = lazy(() => import("@/components/sections/TravelSection").then(m => ({ default: m.TravelSection })));
+const AchievementsSection= lazy(() => import("@/components/sections/AchievementsSection").then(m => ({ default: m.AchievementsSection })));
+const CalendarSection    = lazy(() => import("@/components/sections/CalendarSection").then(m => ({ default: m.CalendarSection })));
+const MasterImportSection= lazy(() => import("@/components/sections/MasterImportSection").then(m => ({ default: m.MasterImportSection })));
+const MemorySection      = lazy(() => import("@/components/sections/MemorySection"));
+const AlertsSection      = lazy(() => import("@/components/sections/AlertsSection").then(m => ({ default: m.AlertsSection })));
+const RulesSection       = lazy(() => import("@/components/sections/RulesSection").then(m => ({ default: m.RulesSection })));
+const ChecklistDetailPage= lazy(() => import("@/components/sections/ChecklistDetailPage").then(m => ({ default: m.ChecklistDetailPage })));
+
+// ── Section loading skeleton ──────────────────────────────────────────────────
+function SectionSkeleton() {
+  return (
+    <div className="px-4 py-4 space-y-3 animate-pulse">
+      <div className="h-7 w-40 bg-muted rounded-lg" />
+      <div className="h-4 w-24 bg-muted/60 rounded-lg" />
+      <div className="h-24 bg-muted/40 rounded-xl mt-4" />
+      <div className="h-24 bg-muted/40 rounded-xl" />
+      <div className="h-24 bg-muted/40 rounded-xl" />
+    </div>
+  );
+}
+
 const sectionTitles: Record<string, string> = {
-  dashboard:    "",
-  property:     "Properties",
-  maintenance:  "Maintenance",
-  messages:     "Messages",
-  profile:      "Profile",
-  manuals:      "Manuals",
-  checklists:   "Checklists",
-  tasks:        "Tasks",
-  contacts:     "Contacts & Vendors",
-  inventory:    "Inventory & Assets",
-  laundry:      "Laundry",
-  orders:       "Orders",
-  "meet-team":  "Meet the Team",
-  travel:       "Travel",
-  calendar:     "Calendar",
-  achievements: "Achievements",
+  dashboard:       "",
+  property:        "Properties",
+  maintenance:     "Maintenance",
+  messages:        "Messages",
+  profile:         "Profile",
+  manuals:         "Manuals",
+  checklists:      "Checklists",
+  tasks:           "Tasks",
+  contacts:        "Contacts & Vendors",
+  inventory:       "Inventory & Assets",
+  laundry:         "Laundry",
+  orders:          "Orders",
+  "meet-team":     "Meet the Team",
+  travel:          "Travel",
+  calendar:        "Calendar",
+  achievements:    "Achievements",
   "master-import": "Master Import",
-  alerts:       "Alerts",
-  rules:        "Property Rules",
+  alerts:          "Alerts",
+  rules:           "Property Rules",
 };
 
 function ActiveSection() {
   const { activeSection, setActiveSection } = useNavigation();
   const { canSee, loading: permLoading, isMasterAdmin } = usePermissions();
 
-  if (permLoading) return null;
+  if (permLoading) return <SectionSkeleton />;
 
   const gated = (section: string, element: React.ReactElement) => {
     if (isMasterAdmin || canSee(section)) return element;
@@ -69,27 +83,27 @@ function ActiveSection() {
   };
 
   switch (activeSection) {
-    case "dashboard":    return <Dashboard />;
-    case "property":     return gated("property",     <PropertySection />);
-    case "maintenance":  return gated("maintenance",  <MaintenanceSection />);
-    case "messages":     return gated("messages",     <MessagesSection />);
-    case "profile":      return <ProfileSection />;
-    case "manuals":      return gated("manuals",      <ManualsSection />);
-    case "checklists":   return gated("checklists",   <ChecklistsSection />);
-    case "tasks":        return gated("tasks",        <TasksSection />);
-    case "contacts":     return gated("contacts",     <ContactsSection />);
-    case "inventory":    return gated("inventory",    <InventorySection />);
-    case "laundry":      return gated("laundry",      <LaundrySection />);
-    case "orders":       return gated("orders",       <OrdersSection />);
-    case "meet-team":    return gated("meet-team",    <MeetTeamSection />);
-    case "travel":       return gated("travel",       <TravelSection />);
-    case "calendar":     return gated("calendar",     <CalendarSection />);
-    case "achievements": return gated("achievements", <AchievementsSection />);
-    case "master-import":return gated("master-import",<MasterImportSection />);
-    case "memory":       return gated("memory",       <MemorySection />);
-    case "alerts":       return <AlertsSection />;
-    case "rules":        return gated("rules",        <RulesSection />);
-    default:             return <Dashboard />;
+    case "dashboard":     return <Dashboard />;
+    case "property":      return gated("property",      <PropertySection />);
+    case "maintenance":   return gated("maintenance",   <MaintenanceSection />);
+    case "messages":      return gated("messages",      <MessagesSection />);
+    case "profile":       return <ProfileSection />;
+    case "manuals":       return gated("manuals",       <ManualsSection />);
+    case "checklists":    return gated("checklists",    <ChecklistsSection />);
+    case "tasks":         return gated("tasks",         <TasksSection />);
+    case "contacts":      return gated("contacts",      <ContactsSection />);
+    case "inventory":     return gated("inventory",     <InventorySection />);
+    case "laundry":       return gated("laundry",       <LaundrySection />);
+    case "orders":        return gated("orders",        <OrdersSection />);
+    case "meet-team":     return gated("meet-team",     <MeetTeamSection />);
+    case "travel":        return gated("travel",        <TravelSection />);
+    case "calendar":      return gated("calendar",      <CalendarSection />);
+    case "achievements":  return gated("achievements",  <AchievementsSection />);
+    case "master-import": return gated("master-import", <MasterImportSection />);
+    case "memory":        return gated("memory",        <MemorySection />);
+    case "alerts":        return <AlertsSection />;
+    case "rules":         return gated("rules",         <RulesSection />);
+    default:              return <Dashboard />;
   }
 }
 
@@ -97,10 +111,8 @@ export function AppShell() {
   const { activeSection, checklistDetailId, checklistDetailPropId, isChatOpen } = useNavigation();
   const { user } = useAuth();
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
-  // Auto-register push subscription when user is logged in
   usePushNotifications(user?.id ?? null);
 
-  // Load template for checklist detail
   const [detailTemplate, setDetailTemplate] = useState<ChecklistTemplate | null>(null);
   const [detailPropName, setDetailPropName] = useState<string | undefined>(undefined);
 
@@ -124,15 +136,17 @@ export function AppShell() {
       <Header title={showDetail ? undefined : title} />
 
       <main className={`pt-14 min-h-screen ${activeSection === "messages" ? "pb-0" : "pb-20"}`}>
-        {showDetail ? (
-          <ChecklistDetailPage
-            template={detailTemplate!}
-            propertyId={checklistDetailPropId}
-            propertyName={detailPropName}
-          />
-        ) : (
-          <ActiveSection />
-        )}
+        <Suspense fallback={<SectionSkeleton />}>
+          {showDetail ? (
+            <ChecklistDetailPage
+              template={detailTemplate!}
+              propertyId={checklistDetailPropId}
+              propertyName={detailPropName}
+            />
+          ) : (
+            <ActiveSection />
+          )}
+        </Suspense>
       </main>
 
       {!isChatOpen && <BottomNav />}

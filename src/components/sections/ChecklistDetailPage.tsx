@@ -520,7 +520,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
         <div className="px-4 mt-4">
           {template.cover_image_url ? (
             <div className="relative rounded-xl overflow-hidden border border-border">
-              <img src={template.cover_image_url} alt="Cover" className="w-full h-44 object-cover" />
+              <img src={template.cover_image_url} alt="Cover" loading="lazy" className="w-full h-44 object-cover" />
               {isMasterAdmin && (
                 <div className="absolute top-2 right-2 flex gap-1.5">
                   <button onClick={() => coverRef.current?.click()}
