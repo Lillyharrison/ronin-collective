@@ -509,6 +509,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   onSaved: () => void;
 }) {
   const [tab, setTab] = useState<"details" | "access" | "quickactions">("details");
+  const [noLogin, setNoLogin] = useState(false);
   const [form, setForm] = useState<AddUserForm>({
     full_name: "", email: "", job_title: "", level: "",
     department: "", role: "", start_date: "", birthday: "", notes: "",
@@ -552,29 +553,59 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   }
 
   async function handleSubmit() {
-    if (!form.full_name || !form.email || !form.level || !form.role) return;
+    if (!form.full_name || !form.level || !form.role) return;
+    if (!noLogin && !form.email) return;
     setSaving(true);
     try {
       const finalPerms = Object.keys(perms).length > 0
         ? { ...perms, _quick_actions: quickActions as unknown as SectionPerm }
         : null;
-      await supabase.functions.invoke("ronin-ai", {
-        body: {
-          action: "invite_user",
-          email: form.email,
-          full_name: form.full_name,
-          job_title: form.job_title,
-          level: form.level,
-          department: form.department || null,
-          role: form.role,
-          start_date: form.start_date || null,
-          birthday: form.birthday || null,
-          notes: form.notes || null,
-          phone: phone || null,
-          assigned_property_ids: assignedProps,
-          section_permissions: finalPerms,
-        },
-      });
+
+      if (noLogin) {
+        // Create profile-only record — no auth account, no invite
+        const { data: newProfile, error: profErr } = await supabase
+          .from("profiles")
+          .insert({
+            id: crypto.randomUUID(),
+            full_name: form.full_name,
+            job_title: form.job_title || null,
+            phone: phone || null,
+            level: form.level,
+            department: form.department || null,
+            start_date: form.start_date || null,
+            birthday: form.birthday || null,
+            notes: form.notes || null,
+            assigned_property_ids: assignedProps,
+            section_permissions: finalPerms as any,
+          })
+          .select("id")
+          .single();
+
+        if (profErr) throw profErr;
+
+        // Assign role
+        if (newProfile?.id && form.role) {
+          await supabase.from("user_roles").insert({ user_id: newProfile.id, role: form.role as AppRole });
+        }
+      } else {
+        await supabase.functions.invoke("ronin-ai", {
+          body: {
+            action: "invite_user",
+            email: form.email,
+            full_name: form.full_name,
+            job_title: form.job_title,
+            level: form.level,
+            department: form.department || null,
+            role: form.role,
+            start_date: form.start_date || null,
+            birthday: form.birthday || null,
+            notes: form.notes || null,
+            phone: phone || null,
+            assigned_property_ids: assignedProps,
+            section_permissions: finalPerms,
+          },
+        });
+      }
       onSaved();
     } catch (e) { console.error(e); }
     setSaving(false);
@@ -586,9 +617,11 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     { key: "quickactions", label: isEN ? "Quick Actions" : "Acciones" },
   ] as const;
 
+  const canSave = form.full_name && form.level && (noLogin || form.email);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <div className="bg-charcoal rounded-t-2xl sm:rounded-2xl w-full max-w-lg flex flex-col shadow-2xl border border-charcoal-light" style={{ maxHeight: "90dvh" }}>
+    <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
+      <div className="bg-charcoal rounded-t-2xl sm:rounded-2xl w-full max-w-lg flex flex-col shadow-2xl border border-charcoal-light h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-charcoal-light shrink-0">
@@ -597,6 +630,20 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             <p className="text-muted-foreground text-xs mt-0.5">{isEN ? "Fields marked * are required" : "Campos marcados * son obligatorios"}</p>
           </div>
           <button onClick={onClose} className="text-cream/50 hover:text-cream"><X size={20} /></button>
+        </div>
+
+        {/* No-login toggle */}
+        <div className="px-5 py-3 border-b border-charcoal-light shrink-0">
+          <button
+            type="button"
+            onClick={() => setNoLogin(v => !v)}
+            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl border transition-colors ${noLogin ? "bg-gold/10 border-gold/40 text-gold" : "bg-charcoal-light border-charcoal-light text-cream/50 hover:text-cream"}`}
+          >
+            <span className="text-xs font-semibold">{isEN ? "No login needed (family / profile only)" : "Sin inicio de sesión (perfil familiar)"}</span>
+            <div className={`w-9 h-5 rounded-full border-2 relative transition-all ${noLogin ? "bg-gold border-gold" : "border-charcoal-light"}`}>
+              <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${noLogin ? "left-4" : "left-0.5"}`} />
+            </div>
+          </button>
         </div>
 
         {/* Tabs */}
@@ -618,10 +665,12 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                 <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={isEN ? "Jane Smith" : "Ana García"} className="bg-charcoal-light border-charcoal-light text-cream" />
               </div>
 
-              <div>
-                <FieldLabel label={isEN ? "Email *" : "Correo *"} />
-                <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" className="bg-charcoal-light border-charcoal-light text-cream" />
-              </div>
+              {!noLogin && (
+                <div>
+                  <FieldLabel label={isEN ? "Email *" : "Correo *"} />
+                  <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" className="bg-charcoal-light border-charcoal-light text-cream" />
+                </div>
+              )}
 
               <div className="relative">
                 <FieldLabel label={isEN ? "Job Title" : "Puesto"} />
@@ -801,9 +850,13 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
           <Button variant="outline" onClick={onClose} className="flex-1 border-charcoal-light text-cream hover:bg-charcoal-light">
             {isEN ? "Cancel" : "Cancelar"}
           </Button>
-          <Button onClick={handleSubmit} disabled={saving || !form.full_name || !form.email || !form.level}
+          <Button onClick={handleSubmit} disabled={saving || !canSave}
             className="flex-1 bg-gold hover:bg-gold/90 text-charcoal font-semibold">
-            {saving ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Send Invite" : "Invitar")}
+            {saving
+              ? <Loader2 size={16} className="animate-spin" />
+              : noLogin
+                ? (isEN ? "Save Profile" : "Guardar Perfil")
+                : (isEN ? "Send Invite" : "Invitar")}
           </Button>
         </div>
       </div>
