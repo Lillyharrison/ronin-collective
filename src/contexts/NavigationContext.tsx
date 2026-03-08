@@ -103,6 +103,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
   const [pendingMaintenanceIssueId, setPendingMaintenanceIssueId] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   // History stack for back navigation
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
