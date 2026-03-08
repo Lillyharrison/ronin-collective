@@ -115,17 +115,21 @@ export function NotificationsPanel({ open, onClose }: Props) {
       (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
       (n.action_url as ActiveSection | undefined);
 
+    console.log("[NotifClick] entity_type:", n.entity_type, "entity_id:", n.entity_id, "targetSection:", targetSection);
+
     onClose();
 
     if (!n.is_read) markRead(n.id);
 
     if (targetSection) {
-      // Set the deep-link pending ID before navigating so the target section
-      // can open the specific entity as soon as it mounts / re-renders.
       if (n.entity_type === "maintenance_issue" && n.entity_id) {
+        console.log("[NotifClick] Setting pendingMaintenanceIssueId:", n.entity_id);
         setPendingMaintenanceIssueId(n.entity_id);
       }
-      setTimeout(() => setActiveSection(targetSection), 30);
+      setTimeout(() => {
+        console.log("[NotifClick] Navigating to:", targetSection);
+        setActiveSection(targetSection);
+      }, 30);
     }
   };
 

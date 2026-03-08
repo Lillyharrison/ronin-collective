@@ -56,17 +56,17 @@ export function MaintenanceSection() {
   // Deep-link: open specific issue from notification click
   // Runs whenever the pending ID changes OR issues finish loading
   useEffect(() => {
+    console.log("[MaintenanceSection] pendingId:", pendingMaintenanceIssueId, "loading:", loading, "issues count:", issues.length);
     if (!pendingMaintenanceIssueId) return;
     if (loading) return; // wait until loaded
     const issue = issues.find(i => i.id === pendingMaintenanceIssueId);
+    console.log("[MaintenanceSection] found issue:", issue?.title ?? "NOT FOUND");
     if (issue) {
       setDetailIssue(issue);
       setPendingMaintenanceIssueId(null);
     } else {
-      // Issue not in list yet (e.g. RLS filtered) — fetch fresh then retry once
-      fetchIssues().then(() => {
-        // effect will re-run after fetchIssues updates `issues`
-      });
+      // Issue not in list yet — fetch fresh then retry once
+      fetchIssues();
     }
   }, [pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, fetchIssues]);
 
