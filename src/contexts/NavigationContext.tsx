@@ -100,6 +100,9 @@ interface NavigationContextType {
   goBack: () => void;
   isChatOpen: boolean;
   setIsChatOpen: (open: boolean) => void;
+  /** Total unread message count — set by MessagesSection from useThreads data */
+  totalUnread: number;
+  setTotalUnread: (count: number) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({

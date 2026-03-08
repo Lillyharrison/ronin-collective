@@ -97,7 +97,10 @@ export function useThreads(userId: string | null) {
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
-  // Realtime — debounced to avoid hammering on rapid message bursts
+  // Realtime — only subscribe to thread-level changes.
+  // Message INSERT/DELETE/UPDATE are handled by useMessages (scoped subscription).
+  // Refreshing threads on message events here was creating 3 duplicate subscriptions
+  // to the messages table simultaneously.
   useEffect(() => {
     if (!userId) return;
     let debounceTimer: ReturnType<typeof setTimeout>;
@@ -109,8 +112,6 @@ export function useThreads(userId: string | null) {
     const channel = supabase
       .channel("threads-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_threads" }, refresh)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, refresh)
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, refresh)
       .subscribe();
 
     return () => {
