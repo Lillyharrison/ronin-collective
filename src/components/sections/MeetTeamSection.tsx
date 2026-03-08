@@ -101,7 +101,9 @@ const LEVEL_OPTIONS: { value: Level; label: string; labelEs: string }[] = [
   { value: "staff",           label: "Staff",            labelEs: "Personal" },
 ];
 
-const ROLE_MAP: Record<Level, AppRole> = {
+const ROLE_MAP: Record<string, AppRole> = {
+  master_admin:    "master_admin",
+  admin:           "admin",
   principal:       "principal",
   extended_family: "principal",
   manager:         "manager",
