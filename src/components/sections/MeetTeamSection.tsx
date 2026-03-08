@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { imageUrl } from "@/lib/imageUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";

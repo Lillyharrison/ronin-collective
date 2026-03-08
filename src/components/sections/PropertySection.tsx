@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical, DoorOpen } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
+import { imageUrl } from "@/lib/imageUrl";
 
 type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
 

@@ -648,7 +648,7 @@ export function Dashboard() {
                 >
                   <div className="w-14 h-14 rounded-lg bg-charcoal flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {prop.image_url
-                      ? <img src={prop.image_url} alt={prop.name} loading="lazy" className="w-full h-full object-cover" />
+                      ? <img src={imageUrl(prop.image_url, 112)} alt={prop.name} loading="lazy" className="w-full h-full object-cover" />
                       : <span className="font-display text-gold text-xl">{prop.name.charAt(0)}</span>
                     }
                   </div>
