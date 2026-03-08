@@ -562,31 +562,24 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
         : null;
 
       if (noLogin) {
-        // Create profile-only record — no auth account, no invite
-        const { data: newProfile, error: profErr } = await supabase
-          .from("profiles")
-          .insert({
-            id: crypto.randomUUID(),
+        // Create profile-only record via edge function (needs service role to bypass RLS)
+        const { error: fnErr } = await supabase.functions.invoke("ronin-ai", {
+          body: {
+            action: "create_profile_only",
             full_name: form.full_name,
             job_title: form.job_title || null,
             phone: phone || null,
             level: form.level,
             department: form.department || null,
+            role: form.role,
             start_date: form.start_date || null,
             birthday: form.birthday || null,
             notes: form.notes || null,
             assigned_property_ids: assignedProps,
             section_permissions: finalPerms as any,
-          })
-          .select("id")
-          .single();
-
-        if (profErr) throw profErr;
-
-        // Assign role
-        if (newProfile?.id && form.role) {
-          await supabase.from("user_roles").insert({ user_id: newProfile.id, role: form.role as AppRole });
-        }
+          },
+        });
+        if (fnErr) throw fnErr;
       } else {
         await supabase.functions.invoke("ronin-ai", {
           body: {

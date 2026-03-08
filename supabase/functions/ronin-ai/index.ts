@@ -577,6 +577,32 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, user_id: uid }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ─── CREATE PROFILE ONLY (no auth invite, for family/contacts without login) ─
+    if (action === "create_profile_only") {
+      if (!["master_admin", "admin"].includes(callerRole)) {
+        return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions } = body;
+      if (!full_name || !level || !role) {
+        return new Response(JSON.stringify({ error: "Missing required fields: full_name, level, role" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Use a random UUID — no auth account is created
+      const newId = crypto.randomUUID();
+      const { error: profErr } = await adminClient.from("profiles").insert({
+        id: newId, full_name, job_title: job_title || null, level,
+        department: department || null, start_date: start_date || null,
+        birthday: birthday || null, notes: notes || null,
+        phone: phone || null,
+        assigned_property_ids: assigned_property_ids || [],
+        section_permissions: section_permissions || null,
+      });
+      if (profErr) {
+        return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await adminClient.from("user_roles").insert({ user_id: newId, role });
+      return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ─── RESEND INVITATION ────────────────────────────────────────────────────
     if (action === "resend_invitation") {
       if (!["master_admin", "admin"].includes(callerRole)) {
