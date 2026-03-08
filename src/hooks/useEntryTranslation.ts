@@ -115,15 +115,16 @@ export function useBatchTranslation<T extends { [K in F]: string | null | undefi
   fields: F[],
 ): { items: T[]; translating: boolean } {
   // Flatten all text values into one array for a single batch request
+  // (hook must always be called — no conditional returns before this)
   const allTexts = items.flatMap(item =>
     fields.map(f => (item[f] as string | null | undefined) ?? "")
   );
 
   const { translated, translating } = useEntryTranslation(language, allTexts);
 
+  // Re-assemble after the hook call (safe — no hooks after this point)
   if (language !== "es") return { items, translating: false };
 
-  // Re-assemble translated values back onto items
   const translatedItems = items.map((item, i) => {
     const patch = {} as Partial<Pick<T, F>>;
     fields.forEach((f, j) => {
