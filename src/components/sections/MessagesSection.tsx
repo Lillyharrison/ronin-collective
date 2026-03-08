@@ -129,7 +129,7 @@ export function MessagesSection() {
   };
 
   return (
-    <div className="h-[calc(100vh-7.5rem)] animate-fade-in">
+    <div className={view === "chat" ? "h-[calc(100dvh-3.5rem)] flex flex-col" : "h-[calc(100dvh-7.5rem)] animate-fade-in"}>
       {view === "threads" && (
         <ThreadList
           threads={threads}
