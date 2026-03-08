@@ -195,7 +195,7 @@ function ModalContent({
                 </button>
               </div>
             ) : (
-              <button onClick={() => photoRef.current?.click()}
+              <button onClick={() => { pickerOpenRef.current = true; photoRef.current?.click(); }}
                 className="w-full h-40 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 hover:bg-gold/5 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 {uploading ? (
                   <div className="w-6 h-6 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
