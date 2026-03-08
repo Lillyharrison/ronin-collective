@@ -109,9 +109,9 @@
 @layer base {
   * { @apply border-border; }
 
-  /* Prevent iOS auto-zoom on input focus (requires 16px minimum) */
+  /* Prevent iOS auto-zoom on input focus — MUST stay 16px, never override with text-sm */
   input, textarea, select {
-    font-size: 16px;
+    font-size: 16px !important;
   }
 
   body {

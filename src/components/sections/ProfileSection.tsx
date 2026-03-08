@@ -14,15 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// Mock earned badges for demo
-const DEMO_BADGES = [
-  { icon: "🎯", label: "First Task" },
-  { icon: "🔥", label: "3-Day Streak" },
-  { icon: "⚡", label: "Week Warrior" },
-  { icon: "✅", label: "10 Tasks" },
-  { icon: "📸", label: "Photo Pro" },
-  { icon: "⭐", label: "Perfect Day" },
-];
 
 type EditField = "name" | "email" | "phone" | "birthday" | "password" | null;
 
