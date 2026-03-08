@@ -188,6 +188,28 @@ const RONIN_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "log_vendor",
+      description: "Add a new vendor or service provider to the contacts directory. Use this when the user pastes or describes contact details (name, phone, email, company, website) for a vendor, contractor, service provider, or any business contact. Use search_vendors first to avoid duplicates.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Vendor or primary contact full name" },
+          company: { type: "string", description: "Company or business name" },
+          phone: { type: "string", description: "Phone number" },
+          email: { type: "string", description: "Email address" },
+          website: { type: "string", description: "Website URL" },
+          category: { type: "string", enum: ["general", "cleaning", "maintenance", "landscaping", "security", "catering", "tech", "transport", "medical", "legal", "construction", "other"], description: "Service category" },
+          description: { type: "string", description: "What they do for the estate (max 1-2 sentences)" },
+          notes: { type: "string", description: "Any additional notes or context" },
+          address: { type: "string", description: "Business address if provided" },
+        },
+        required: ["name"],
+      },
+    },
+  },
 
   // ── SILENT TOOLS (auto-execute, no feedback) ─────────────────────────────────
   {
