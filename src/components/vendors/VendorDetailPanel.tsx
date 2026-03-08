@@ -163,9 +163,9 @@ export function VendorDetailPanel({
               vendor.contacts?.map((c) => (
                 editingContact?.id === c.id ? null : (
                   <div key={c.id} className="flex items-start gap-3 bg-muted/40 rounded-xl p-3">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground text-xs font-semibold">
+                    <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground text-xs font-semibold">
                       {c.name.charAt(0).toUpperCase()}
-                      {c.is_primary && <Star className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 fill-amber-400 text-amber-400" />}
+                      {c.is_primary && <Star className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 fill-primary text-primary" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">

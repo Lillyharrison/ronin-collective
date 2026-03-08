@@ -16,8 +16,8 @@ import { VendorDetailPanel } from "@/components/vendors/VendorDetailPanel";
 
 export function VendorsSection() {
   const { t } = useLanguage();
-  const { isMasterAdmin, level } = usePermissions();
-  const canEdit = isMasterAdmin || level === "admin" || level === "manager";
+  const { isMasterAdmin, isAdmin, isManager } = usePermissions();
+  const canEdit = isMasterAdmin || isAdmin || isManager;
   const { vendors, loading, createVendor, updateVendor, deleteVendor, createContact, updateContact, deleteContact } = useVendors();
 
   const [search, setSearch] = useState("");
