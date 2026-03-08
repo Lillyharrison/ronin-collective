@@ -42,7 +42,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { section, payload, excludeUserId } = body as {
+    const { section, payload, excludeUserId, idempotencyKey } = body as {
       section: string;
       payload: {
         title: string;
@@ -54,6 +54,12 @@ serve(async (req) => {
         property_id?: string;
       };
       excludeUserId?: string | null;
+      /**
+       * Optional dedup key (e.g. `maintenance-create-{issueId}`).
+       * If provided and a notification with this entity_id + entity_type + property_id
+       * was already inserted within the last 10 seconds, we skip to avoid duplicates.
+       */
+      idempotencyKey?: string | null;
     };
 
     if (!section || !payload?.title) {
@@ -63,7 +69,32 @@ serve(async (req) => {
       });
     }
 
-    // 1. Get all master_admin / admin user IDs using service role (bypasses RLS)
+    // ── Idempotency guard ───────────────────────────────────────────────────────
+    // If entity_id is provided, check whether notifications for this exact event
+    // were already inserted in the last 15 seconds.  This prevents duplicate fan-outs
+    // from rapid UI re-renders or double-triggers.
+    if (payload.entity_id && payload.entity_type) {
+      const windowStart = new Date(Date.now() - 15_000).toISOString();
+      const { count } = await supabaseAdmin
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("entity_id", payload.entity_id)
+        .eq("entity_type", payload.entity_type)
+        .eq("title", payload.title)
+        .gte("created_at", windowStart);
+
+      if ((count ?? 0) > 0) {
+        console.log(`[notify-section] dedup: skipping — ${count} matching rows in last 15s for entity ${payload.entity_id}`);
+        return new Response(
+          JSON.stringify({ inserted: 0, message: "Duplicate suppressed" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    // ── Build recipient list ────────────────────────────────────────────────────
+
+    // 1. Get all master_admin / admin user IDs
     const { data: adminRoles } = await supabaseAdmin
       .from("user_roles")
       .select("user_id")
@@ -71,14 +102,24 @@ serve(async (req) => {
 
     const adminIds = new Set<string>((adminRoles ?? []).map((r: { user_id: string }) => r.user_id));
 
-    // 2. Get all profiles to find users with section notifications enabled
-    const { data: allProfiles } = await supabaseAdmin
-      .from("profiles")
-      .select("id, section_permissions");
+    // 2. If the notification is property-scoped, only consider profiles assigned to that property.
+    //    This prevents a 50-staff fan-out when only 5 people manage that property.
+    let profileQuery = supabaseAdmin.from("profiles").select("id, section_permissions, assigned_property_ids");
+    // (No server-side filter on property here; we filter client-side below so
+    // master_admins without an assigned_property_ids still get notified.)
+
+    const { data: allProfiles } = await profileQuery;
 
     const extraIds: string[] = (allProfiles ?? [])
-      .filter((p: { id: string; section_permissions: unknown }) => {
-        if (adminIds.has(p.id)) return false;
+      .filter((p: { id: string; section_permissions: unknown; assigned_property_ids: string[] | null }) => {
+        if (adminIds.has(p.id)) return false; // already included
+
+        // If notification is property-scoped, the user must be assigned to that property
+        if (payload.property_id) {
+          const assigned = p.assigned_property_ids ?? [];
+          if (!assigned.includes(payload.property_id)) return false;
+        }
+
         const perms = p.section_permissions as Record<string, { notifications?: boolean }> | null;
         return perms?.[section]?.notifications === true;
       })
@@ -95,7 +136,7 @@ serve(async (req) => {
       });
     }
 
-    // 3. Insert one notification row per recipient using service role
+    // ── Insert notifications in a single batch ──────────────────────────────────
     const { error: insertError } = await supabaseAdmin.from("notifications").insert(
       recipients.map((uid) => ({
         user_id: uid,

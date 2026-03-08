@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -40,12 +41,17 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          {/* PermissionsProvider inside AuthProvider so it can react to auth state.
+              Runs ONE set of DB queries and shares results via context —
+              replaces N independent usePermissions() hook fetches. */}
+          <PermissionsProvider>
+            <Routes>
+              <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </PermissionsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

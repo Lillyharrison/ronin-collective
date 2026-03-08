@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { imageUrl } from "@/lib/imageUrl";
 import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
 import type { MaintenanceIssue, IssueStatus, MaintenanceCategory } from "@/hooks/useMaintenanceIssues";
@@ -57,7 +58,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
         <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
           {issue.photo_url && (
           <div className="rounded-xl overflow-hidden bg-muted/20">
-              <img src={issue.photo_url} alt={issue.title} loading="lazy" className="w-full h-auto object-contain" />
+              <img src={imageUrl(issue.photo_url, 800)} alt={issue.title} loading="lazy" className="w-full h-auto object-contain" />
             </div>
           )}
 
@@ -98,7 +99,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
                   {issue.assignee_avatar
-                    ? <img src={issue.assignee_avatar} alt={issue.assignee_name} loading="lazy" className="w-5 h-5 rounded-full object-cover" />
+                    ? <img src={imageUrl(issue.assignee_avatar, 40, 40)} alt={issue.assignee_name} loading="lazy" className="w-5 h-5 rounded-full object-cover" />
                     : <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
                         {issue.assignee_name.charAt(0)}
                       </div>
@@ -143,7 +144,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t("closeOutPhoto")}</p>
               <div className="rounded-xl overflow-hidden">
-                <img src={issue.close_out_photo_url} alt="Close-out" className="w-full h-40 object-cover" />
+                <img src={imageUrl(issue.close_out_photo_url, 800, 320)} alt="Close-out" loading="lazy" className="w-full h-40 object-cover" />
               </div>
             </div>
           )}
