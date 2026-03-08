@@ -1,6 +1,6 @@
+import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
-import { useChecklistSessions, useChecklistItems } from "@/hooks/useChecklists";
-import { ChecklistTemplate } from "@/hooks/useChecklists";
+import { useChecklistSessions, useChecklistItems, ChecklistTemplate } from "@/hooks/useChecklists";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff } from "lucide-react";
