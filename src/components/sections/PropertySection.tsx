@@ -210,6 +210,7 @@ export function PropertySection() {
         <PropertyDetail
           property={selectedProperty}
           isMasterAdmin={isMasterAdmin}
+          allProfiles={allProfiles}
           onBack={() => { setSelectedProperty(null); setActivePropertyId(null); }}
           onEdit={() => openEdit(selectedProperty)}
           onDelete={() => setDeleteTarget(selectedProperty)}
