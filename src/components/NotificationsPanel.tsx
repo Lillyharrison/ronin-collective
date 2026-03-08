@@ -198,9 +198,12 @@ export function NotificationsPanel({ open, onClose }: Props) {
                 const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
                 const clickable = isClickable(n);
                 return (
-                  <button
+              <div
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
+                    role={clickable ? "button" : undefined}
+                    tabIndex={clickable ? 0 : undefined}
+                    onKeyDown={clickable ? (e) => e.key === "Enter" && handleNotificationClick(n) : undefined}
                     className={cn(
                       "w-full flex items-start gap-3 px-4 py-3 text-left border-l-2 group transition-colors",
                       styles.bg,
@@ -246,7 +249,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
                     >
                       <Trash2 size={12} />
                     </button>
-                  </button>
+                  </div>
                 );
               })}
             </div>
