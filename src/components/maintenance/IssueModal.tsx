@@ -69,8 +69,9 @@ function ModalContent({
   const [newCatIcon, setNewCatIcon]   = useState("🔧");
   const [savingCat, setSavingCat]     = useState(false);
 
-  const photoRef    = useRef<HTMLInputElement>(null);
-  const closeOutRef = useRef<HTMLInputElement>(null);
+  const photoRef       = useRef<HTMLInputElement>(null);
+  const closeOutRef    = useRef<HTMLInputElement>(null);
+  const pickerOpenRef  = useRef(false); // iOS: prevent backdrop-close when photo picker returns
 
   useEffect(() => {
     const prev = document.body.style.overflow;
