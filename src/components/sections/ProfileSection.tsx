@@ -206,13 +206,13 @@ export function ProfileSection() {
           {role ? role.replace("_", " ") : "Staff"}
         </span>
 
-        {/* Mini stats */}
+        {/* Mini stats — show real zeros, no fake data */}
         {showAchievements && !permLoading && (
           <div className="flex items-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1 text-gold">
                 <Star size={12} />
-                <span className="text-cream font-semibold text-base">475</span>
+                <span className="text-cream font-semibold text-base">0</span>
               </div>
               <span className="text-cream/40 text-[9px] uppercase tracking-wider">
                 {t("Points", "Puntos")}
@@ -222,7 +222,7 @@ export function ProfileSection() {
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1 text-status-urgent">
                 <Flame size={12} />
-                <span className="text-cream font-semibold text-base">7</span>
+                <span className="text-cream font-semibold text-base">0</span>
               </div>
               <span className="text-cream/40 text-[9px] uppercase tracking-wider">
                 {t("Streak", "Racha")}
@@ -232,7 +232,7 @@ export function ProfileSection() {
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1 text-gold">
                 <Trophy size={12} />
-                <span className="text-cream font-semibold text-base">6</span>
+                <span className="text-cream font-semibold text-base">0</span>
               </div>
               <span className="text-cream/40 text-[9px] uppercase tracking-wider">
                 {t("Badges", "Logros")}
@@ -484,7 +484,7 @@ export function ProfileSection() {
         </div>
       )}
 
-      {/* ── Badges ───────────────────────────────────────────────────── */}
+      {/* ── Badges — placeholder until achievements system is live ─── */}
       {showAchievements && (
         <div className="px-4 mt-5">
           <div className="flex items-center justify-between mb-3">
@@ -498,17 +498,9 @@ export function ProfileSection() {
               {t("View all", "Ver todos")} →
             </button>
           </div>
-          <div className="grid grid-cols-6 gap-2">
-            {DEMO_BADGES.map((badge, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveSection("achievements")}
-                className="flex flex-col items-center gap-1 rounded-xl bg-card border border-border p-2 hover:border-gold/40 transition-all active:scale-95"
-              >
-                <span className="text-2xl leading-none">{badge.icon}</span>
-                <span className="text-[8px] text-muted-foreground text-center leading-tight truncate w-full">{badge.label}</span>
-              </button>
-            ))}
+          <div className="rounded-xl border border-border bg-card p-6 text-center">
+            <Trophy size={24} className="mx-auto text-muted-foreground/30 mb-2" />
+            <p className="text-xs text-muted-foreground">{t("No badges earned yet", "Aún no hay logros")}</p>
           </div>
         </div>
       )}
