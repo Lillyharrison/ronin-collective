@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePresence } from "@/hooks/usePresence";
 import { useThreads } from "@/hooks/useThreads";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { ThreadList } from "@/components/messaging/ThreadList";
 import { ChatView } from "@/components/messaging/ChatView";
 import { AddressBook } from "@/components/messaging/AddressBook";
