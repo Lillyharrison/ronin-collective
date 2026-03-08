@@ -132,6 +132,8 @@ const NavigationContext = createContext<NavigationContextType>({
   goBack: () => {},
   isChatOpen: false,
   setIsChatOpen: () => {},
+  totalUnread: 0,
+  setTotalUnread: () => {},
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
