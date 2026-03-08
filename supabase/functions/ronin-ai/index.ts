@@ -81,6 +81,21 @@ const RONIN_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "search_vendors",
+      description: "Search existing vendors/contacts directory. Use BEFORE logging a new vendor to check for duplicates. Returns vendor names, companies, categories, and contacts.",
+      parameters: {
+        type: "object",
+        properties: {
+          keyword: { type: "string", description: "Search keyword matched against vendor name, company, or description" },
+          category: { type: "string", description: "Filter by category (e.g. cleaning, maintenance, security)" },
+        },
+        required: [],
+      },
+    },
+  },
 
   // ── WRITE TOOLS (confirmation required) ─────────────────────────────────────
   {
