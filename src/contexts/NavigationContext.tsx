@@ -230,6 +230,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setPendingMaintenanceIssueId,
         canGoBack,
         goBack,
+        isChatOpen,
+        setIsChatOpen,
       }}
     >
       {children}
