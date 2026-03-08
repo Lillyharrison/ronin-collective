@@ -13,6 +13,8 @@ interface HeaderProps {
 export function Header({ title }: HeaderProps) {
   const { language, setLanguage } = useLanguage();
   const { setSidebarOpen, canGoBack, goBack, activeSection } = useNavigation();
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unreadCount = useNotificationCount();
 
   return (
     <>
