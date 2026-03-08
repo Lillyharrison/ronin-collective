@@ -600,7 +600,6 @@ function PropertyOccupantsManager({ property, isMasterAdmin, onBack, onChanged }
 }
 
 // ─── Property Detail ──────────────────────────────────────────────────────────
-function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, onOccupantsChange, onNavigate }: {
 function PropertyDetail({ property: p, isMasterAdmin, allProfiles, onBack, onEdit, onDelete, onOccupantsChange, onNavigate }: {
   property: Property; isMasterAdmin: boolean; allProfiles: OccupantProfile[];
   onBack: () => void; onEdit: () => void; onDelete: () => void;
