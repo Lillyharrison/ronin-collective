@@ -68,6 +68,7 @@ export function useThreads(userId: string | null) {
           property_id: t.property_id,
           last_message: lastMsg?.content_text ?? null,
           unread_count: count ?? 0,
+          is_pinned: (t as any).is_pinned ?? false,
           participants: (t.participant_ids ?? []).map(id => profileMap.get(id) ?? { id, full_name: null, avatar_url: null }),
         };
       })
