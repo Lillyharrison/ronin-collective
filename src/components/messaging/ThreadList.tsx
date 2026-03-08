@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ThreadWithMeta } from "@/hooks/useThreads";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format, isToday, isYesterday, isThisWeek, isThisYear } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, type Locale } from "date-fns/locale";
 import { Bot, Users, Search, Plus, MessageCircle, Trash2, Pin, PinOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
