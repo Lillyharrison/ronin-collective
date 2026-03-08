@@ -13,11 +13,6 @@ interface HeaderProps {
 export function Header({ title }: HeaderProps) {
   const { language, setLanguage } = useLanguage();
   const { setSidebarOpen, canGoBack, goBack, activeSection } = useNavigation();
-  const [notifOpen, setNotifOpen] = useState(false);
-  const unreadCount = useNotificationCount();
-
-  // Show back button instead of hamburger when we can go back AND we're not on dashboard
-  const showBack = canGoBack && activeSection !== "dashboard";
 
   return (
     <>
