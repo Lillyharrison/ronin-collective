@@ -9,6 +9,18 @@ export interface PropertyOption {
 }
 
 /**
+ * sortProperties — primary residence always first, then alphabetical.
+ * Safe to call on any array of objects with `name` and optional `is_primary`.
+ */
+export function sortProperties<T extends { name: string; is_primary?: boolean }>(list: T[]): T[] {
+  return [...list].sort((a, b) => {
+    if (a.is_primary && !b.is_primary) return -1;
+    if (!a.is_primary && b.is_primary) return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+/**
  * Returns only the properties the current user is allowed to see:
  * - master_admin / admin / manager → all properties
  * - staff / principal / family → only their assigned_property_ids
@@ -22,9 +34,8 @@ export function useScopedProperties() {
     supabase
       .from("properties")
       .select("id, name, is_primary")
-      .order("sort_order")
       .then(({ data }) => {
-        setAllProperties((data ?? []) as PropertyOption[]);
+        setAllProperties(sortProperties((data ?? []) as PropertyOption[]));
         setLoading(false);
       });
   }, []);
