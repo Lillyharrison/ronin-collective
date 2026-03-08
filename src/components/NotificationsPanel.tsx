@@ -120,18 +120,12 @@ export function NotificationsPanel({ open, onClose }: Props) {
     if (!n.is_read) markRead(n.id);
 
     if (targetSection) {
-      // Set the pending deep-link ID first, then navigate.
-      // Also set it before setActiveSection so the maintenance section
-      // effect can pick it up even if we're already on that section.
+      // Set the deep-link pending ID before navigating so the target section
+      // can open the specific entity as soon as it mounts / re-renders.
       if (n.entity_type === "maintenance_issue" && n.entity_id) {
         setPendingMaintenanceIssueId(n.entity_id);
       }
-      setTimeout(() => {
-        // Force navigation even if already on the target section by
-        // temporarily resetting to dashboard then switching back.
-        setActiveSection("dashboard" as ActiveSection);
-        setTimeout(() => setActiveSection(targetSection), 10);
-      }, 30);
+      setTimeout(() => setActiveSection(targetSection), 30);
     }
   };
 
