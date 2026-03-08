@@ -81,6 +81,8 @@ const NavigationContext = createContext<NavigationContextType>({
   careGuideDetailId: null,
   openCareGuideDetail: () => {},
   closeCareGuideDetail: () => {},
+  pendingMaintenanceIssueId: null,
+  setPendingMaintenanceIssueId: () => {},
   canGoBack: false,
   goBack: () => {},
 });
@@ -95,6 +97,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
+  const [pendingMaintenanceIssueId, setPendingMaintenanceIssueId] = useState<string | null>(null);
   // History stack for back navigation
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
