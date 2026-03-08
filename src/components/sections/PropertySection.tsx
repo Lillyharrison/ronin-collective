@@ -601,7 +601,8 @@ function PropertyOccupantsManager({ property, isMasterAdmin, onBack, onChanged }
 
 // ─── Property Detail ──────────────────────────────────────────────────────────
 function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, onOccupantsChange, onNavigate }: {
-  property: Property; isMasterAdmin: boolean;
+function PropertyDetail({ property: p, isMasterAdmin, allProfiles, onBack, onEdit, onDelete, onOccupantsChange, onNavigate }: {
+  property: Property; isMasterAdmin: boolean; allProfiles: OccupantProfile[];
   onBack: () => void; onEdit: () => void; onDelete: () => void;
   onOccupantsChange: () => void;
   onNavigate: (key: string) => void;
@@ -610,6 +611,10 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
   const [showRooms, setShowRooms] = useState(false);
   const [showOccupants, setShowOccupants] = useState(false);
   const cfg = STATUS_CONFIG[p.status];
+  const occupantNames = (p.occupied_by_profile_ids ?? [])
+    .map(id => allProfiles.find(pr => pr.id === id)?.full_name)
+    .filter(Boolean)
+    .join(", ");
 
   if (showStaff) {
     return <PropertyStaffList propertyId={p.id} onBack={() => setShowStaff(false)} />;
