@@ -17,10 +17,13 @@ const ALL_TABS: { id: ActiveTab; label: string; icon: React.ReactNode; section?:
 ];
 
 export function BottomNav() {
-  const { activeTab, setActiveTab } = useNavigation();
+  const { activeTab, setActiveTab, totalUnread } = useNavigation();
   const { canSee, isMasterAdmin, loading: permLoading } = usePermissions();
   const { user } = useAuth();
-  const unreadCount = useUnreadCount(user?.id ?? null);
+  // Seed the initial cold count before MessagesSection hydrates totalUnread
+  const coldCount = useUnreadCount(user?.id ?? null);
+  // Prefer live count from context; fall back to cold count on first load
+  const unreadCount = totalUnread > 0 ? totalUnread : coldCount;
 
   // Show home, messages, profile always; gate property & maintenance
   const tabs = ALL_TABS.filter(tab => {
