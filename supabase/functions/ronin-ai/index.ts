@@ -9,8 +9,8 @@ const corsHeaders = {
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
-const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues"];
-const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message", "log_maintenance_issue"];
+const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors"];
+const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message", "log_maintenance_issue", "log_vendor"];
 const SILENT_TOOL_NAMES = ["save_memory", "add_shopping_list_item"];
 
 const RONIN_TOOLS = [
@@ -76,6 +76,21 @@ const RONIN_TOOLS = [
           keyword: { type: "string", description: "Search keyword matched against issue title or description" },
           status: { type: "string", enum: ["reported", "approved", "assigned", "scheduled", "in_progress", "resolved", "all"] },
           property_name: { type: "string", description: "Filter by property name" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_vendors",
+      description: "Search existing vendors/contacts directory. Use BEFORE logging a new vendor to check for duplicates. Returns vendor names, companies, categories, and contacts.",
+      parameters: {
+        type: "object",
+        properties: {
+          keyword: { type: "string", description: "Search keyword matched against vendor name, company, or description" },
+          category: { type: "string", description: "Filter by category (e.g. cleaning, maintenance, security)" },
         },
         required: [],
       },
@@ -170,6 +185,28 @@ const RONIN_TOOLS = [
           message_text: { type: "string" },
         },
         required: ["recipient_name", "message_text"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "log_vendor",
+      description: "Add a new vendor or service provider to the contacts directory. Use this when the user pastes or describes contact details (name, phone, email, company, website) for a vendor, contractor, service provider, or any business contact. Use search_vendors first to avoid duplicates.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Vendor or primary contact full name" },
+          company: { type: "string", description: "Company or business name" },
+          phone: { type: "string", description: "Phone number" },
+          email: { type: "string", description: "Email address" },
+          website: { type: "string", description: "Website URL" },
+          category: { type: "string", enum: ["general", "cleaning", "maintenance", "landscaping", "security", "catering", "tech", "transport", "medical", "legal", "construction", "other"], description: "Service category" },
+          description: { type: "string", description: "What they do for the estate (max 1-2 sentences)" },
+          notes: { type: "string", description: "Any additional notes or context" },
+          address: { type: "string", description: "Business address if provided" },
+        },
+        required: ["name"],
       },
     },
   },
@@ -385,6 +422,27 @@ async function executeObservationTool(
         category: i.category, created_at: i.created_at,
         description: i.description ?? "none",
         property: propNameMap[i.property_id] ?? "unassigned",
+      })),
+    };
+  }
+
+  if (name === "search_vendors") {
+    let q = adminClient.from("vendors")
+      .select("id, name, company, category, phone, email, website, description, is_active");
+    if (args.keyword) {
+      const kw = `%${args.keyword}%`;
+      q = q.or(`name.ilike.${kw},company.ilike.${kw},description.ilike.${kw}`);
+    }
+    if (args.category) q = q.eq("category", args.category as string);
+    q = q.order("name").limit(20);
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+    return {
+      total: data?.length ?? 0,
+      vendors: data?.map((v: Record<string, unknown>) => ({
+        name: v.name, company: v.company ?? "—", category: v.category,
+        phone: v.phone ?? "—", email: v.email ?? "—", website: v.website ?? "—",
+        description: v.description ?? "—", is_active: v.is_active,
       })),
     };
   }
@@ -834,6 +892,25 @@ serve(async (req) => {
         resultMessage = `🧠 **Memory saved.**`;
       } else if (tool_name === "add_shopping_list_item") {
         resultMessage = await addShoppingListItemsSilently(tool_args, callerUserId, adminClient);
+      } else if (tool_name === "log_vendor") {
+        const { data: vendor, error: vendorErr } = await adminClient.from("vendors").insert({
+          name: tool_args.name,
+          company: tool_args.company ?? null,
+          phone: tool_args.phone ?? null,
+          email: tool_args.email ?? null,
+          website: tool_args.website ?? null,
+          category: tool_args.category ?? "general",
+          description: tool_args.description ?? null,
+          notes: tool_args.notes ?? null,
+          address: tool_args.address ?? null,
+          is_active: true,
+          created_by: callerUserId,
+        }).select("id").single();
+
+        if (vendorErr) throw new Error(`Failed to log vendor: ${vendorErr.message}`);
+        await adminClient.from("system_events").insert({ event_type: "vendor_logged_by_ai", entity_type: "vendor", entity_id: vendor.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
+        const details = [tool_args.company, tool_args.phone, tool_args.email].filter(Boolean).join(" · ");
+        resultMessage = `✅ **Vendor saved.**\n\n**${tool_args.name}**${tool_args.company ? ` — ${tool_args.company}` : ""}\nCategory: ${tool_args.category ?? "general"}${details ? `\n${details}` : ""}${tool_args.description ? `\n\n_${tool_args.description}_` : ""}\n\nVisible in the **Vendors** section.`;
       } else {
         resultMessage = `⚠️ Unknown tool: ${tool_name}`;
       }
@@ -910,16 +987,26 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 - **search_tasks**: Before creating any task, ALWAYS search first.
 - **search_maintenance_issues**: Before logging any maintenance issue, ALWAYS search first to check for duplicates.
 - **search_assets**: Before logging any asset, ALWAYS search first.
+- **search_vendors**: Before logging a new vendor, ALWAYS search first to check for duplicates.
 - **get_calendar_events**: Use for schedule/property activity questions.
 
 ### WRITE TOOLS — present confirmation before executing:
 - **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order. Category must be one of: Plumbing, Electrical / Tech, Climate / HVAC, Outdoor / Grounds, Appliances, Structural, Security, General. Priority: urgent/high/medium/low.
 - **create_task**: Use for operational work orders that are NOT physical maintenance issues.
+- **log_vendor**: Use when the user shares contact details for a vendor, contractor, service provider, or any business contact. Even from a phone screenshot, pasted vCard, or described verbally. Extract all available fields.
 - **update_task_status**, **log_asset**, **send_staff_message**
 
 ### SILENT TOOLS — execute without asking:
 - **save_memory**: Use proactively. Never announce it.
 - **add_shopping_list_item**: Use immediately when someone mentions buying something.
+
+## VENDOR PROTOCOL
+When a user pastes or describes a contact (phone number, email, name, company):
+1. Use **search_vendors** to check for existing match.
+2. Extract all available details: name, company, phone, email, website, address.
+3. Infer the **category** from context (e.g. "plumber" → maintenance, "chef" → catering).
+4. Infer **description** from context — what they do for the estate.
+5. Present details and ask **"Shall I proceed?"**
 
 ## MAINTENANCE ISSUE PROTOCOL (CRITICAL)
 When anyone reports a physical problem with a property (broken item, damage, leak, noise, malfunction):
@@ -938,8 +1025,8 @@ When anyone reports a physical problem with a property (broken item, damage, lea
 5. Wait for the user to confirm before saying anything is done.
 
 ## CAPABILITIES
-- Full read access: Properties, Tasks, Team, Assets, Events, Memories, Maintenance Issues.
-- Bilingual (EN/ES). Write actions: log maintenance issues, create tasks, update task status, log assets, send messages, save memories, add to shopping list.`;
+- Full read access: Properties, Tasks, Team, Assets, Events, Memories, Maintenance Issues, Vendors.
+- Bilingual (EN/ES). Write actions: log maintenance issues, create tasks, update task status, log assets, log vendors, send messages, save memories, add to shopping list.`;
 
     // ─── CSV IMPORT MODE ───────────────────────────────────────────────────────
     if (type === "csv_import") {
