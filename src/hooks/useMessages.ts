@@ -154,13 +154,26 @@ export function useMessages(threadId: string | null) {
   const markAsRead = async (userId: string) => {
     if (!threadId) return;
     const unread = messages.filter(m => m.sender_id !== userId && !(m.seen_by ?? []).includes(userId));
-    for (const msg of unread) {
-      const newSeenBy = [...(msg.seen_by ?? []), userId];
-      await supabase.from("messages").update({
-        seen_by: newSeenBy,
-        delivery_status: "read",
-      }).eq("id", msg.id);
-    }
+    if (!unread.length) return;
+    const unreadIds = unread.map(m => m.id);
+    // Single batch update instead of one per message
+    await supabase
+      .from("messages")
+      .update({ delivery_status: "read" })
+      .in("id", unreadIds);
+    // Update seen_by for each optimistically in state
+    setMessages(prev => prev.map(m =>
+      unreadIds.includes(m.id)
+        ? { ...m, seen_by: [...(m.seen_by ?? []), userId], delivery_status: "read" }
+        : m
+    ));
+    // Best-effort DB seen_by update (array_append isn't available via JS client, so update each)
+    // But we batch them in parallel rather than serially
+    await Promise.all(unread.map(msg =>
+      supabase.from("messages").update({
+        seen_by: [...(msg.seen_by ?? []), userId],
+      }).eq("id", msg.id)
+    ));
   };
 
   const toggleReaction = async (messageId: string, userId: string, emoji: string) => {
