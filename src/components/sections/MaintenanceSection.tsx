@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { notifySection } from "@/lib/notifySection";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { format } from "date-fns";
+import { useBatchTranslation } from "@/hooks/useEntryTranslation";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 type ViewMode = "board" | "list" | "table";
