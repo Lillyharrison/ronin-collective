@@ -206,7 +206,7 @@ function ModalContent({
                 )}
               </button>
             )}
-            <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden"
+            <input ref={photoRef} type="file" accept="image/*" className="hidden"
               onChange={e => { if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "main"); }} />
           </div>
 
@@ -449,7 +449,7 @@ function ModalContent({
                   )}
                 </button>
               )}
-              <input ref={closeOutRef} type="file" accept="image/*" capture="environment" className="hidden"
+              <input ref={closeOutRef} type="file" accept="image/*" className="hidden"
                 onChange={e => { if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "closeout"); }} />
             </div>
           )}
