@@ -11,6 +11,7 @@ export interface ThreadWithMeta {
   property_id: string | null;
   last_message?: string | null;
   unread_count: number;
+  is_pinned: boolean;
   participants: { id: string; full_name: string | null; avatar_url: string | null }[];
 }
 
