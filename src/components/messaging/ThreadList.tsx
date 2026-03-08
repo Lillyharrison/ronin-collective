@@ -146,8 +146,10 @@ export function ThreadList({
                   )}
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-xs text-muted-foreground truncate">
-                    {thread.last_message || (language === "es" ? "Sin mensajes" : "No messages yet")}
+                  <p className="text-xs text-muted-foreground truncate max-w-[calc(100%-2rem)]">
+                    {thread.last_message
+                      ? thread.last_message.split("\n")[0]
+                      : (language === "es" ? "Sin mensajes" : "No messages yet")}
                   </p>
                   {thread.unread_count > 0 && (
                     <span className="ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
