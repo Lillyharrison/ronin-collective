@@ -355,8 +355,8 @@ function ModalContent({
             </div>
           </div>
 
-          {/* Assign to (admin only) */}
-          {(isAdmin || isManager || isMasterAdmin) && profiles.length > 0 && (
+          {/* Assign to — always shown so reporters can suggest an assignee from step one */}
+          {profiles.length > 0 && (
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                 {t("assignTo")}
