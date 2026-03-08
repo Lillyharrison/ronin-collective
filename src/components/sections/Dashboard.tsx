@@ -541,11 +541,18 @@ export function Dashboard() {
           {language === "es" ? "Acciones Rápidas" : "Quick Actions"}
         </p>
         <div className="grid grid-cols-2 gap-3">
-          {quickActions.filter(a => isMasterAdmin || canSee(a.section)).map((action) => (
+          {ALL_QUICK_ACTIONS_DASHBOARD
+            .filter(a => {
+              // If user has saved prefs, respect them; otherwise show defaults filtered by canSee
+              if (userQuickActions !== null) return userQuickActions.includes(a.key);
+              // Default: show first 4 that user can see
+              return isMasterAdmin || canSee(a.section);
+            })
+            .map((action) => (
             <button
-              key={action.labelKey}
+              key={action.key}
               onClick={() => {
-                if (action.labelKey === "reportIssue") {
+                if (action.key === "reportIssue") {
                   setReportIssueOpen(true);
                 } else {
                   setActiveSection(action.section);
