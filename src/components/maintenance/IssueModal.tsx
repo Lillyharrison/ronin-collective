@@ -158,7 +158,7 @@ function ModalContent({
       }}
     >
       <div
-        className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden h-[90dvh] sm:h-auto sm:max-h-[90dvh]"
+        className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden h-[calc(100dvh-4rem)] sm:h-auto sm:max-h-[90dvh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Sticky header */}
