@@ -21,58 +21,75 @@ export function useThreads(userId: string | null) {
 
   const fetchThreads = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
-    
+
+    // 1) Fetch threads
     const { data: rawThreads } = await supabase
       .from("chat_threads")
       .select("*")
       .contains("participant_ids", [userId])
       .order("last_message_at", { ascending: false, nullsFirst: false });
 
-    if (!rawThreads) { setLoading(false); return; }
+    if (!rawThreads?.length) { setThreads([]); setLoading(false); return; }
 
-    // Get all participant profiles
+    const threadIds = rawThreads.map(t => t.id);
+
+    // 2) Batch: all participants profiles in ONE query
     const allParticipantIds = [...new Set(rawThreads.flatMap(t => t.participant_ids ?? []))];
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, avatar_url")
-      .in("id", allParticipantIds);
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
 
-    // Get last message and unread count per thread
-    const enriched: ThreadWithMeta[] = await Promise.all(
-      rawThreads.map(async (t) => {
-        const { data: lastMsgs } = await supabase
-          .from("messages")
-          .select("content_text, seen_by")
-          .eq("thread_id", t.id)
-          .order("created_at", { ascending: false })
-          .limit(1);
+    // 3) Batch: latest message per thread — fetch last 1 per thread by getting all and
+    //    using a distinct-on approach via ordering + de-duplication client-side
+    //    We fetch the most-recent message for ALL threads in a single query
+    const [profilesRes, lastMsgsRes, unreadRes] = await Promise.all([
+      allParticipantIds.length
+        ? supabase.from("profiles").select("id, full_name, avatar_url").in("id", allParticipantIds)
+        : Promise.resolve({ data: [] as { id: string; full_name: string | null; avatar_url: string | null }[] }),
 
-        const lastMsg = lastMsgs?.[0];
+      // Get last message for every thread in one shot (ordered desc, we take first per thread_id)
+      supabase
+        .from("messages")
+        .select("thread_id, content_text, created_at")
+        .in("thread_id", threadIds)
+        .order("created_at", { ascending: false })
+        .limit(threadIds.length * 5), // generous cap to ensure we get at least 1 per thread
 
-        // Count unread
-        const { count } = await supabase
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("thread_id", t.id)
-          .not("sender_id", "eq", userId)
-          .not("seen_by", "cs", `{${userId}}`);
+      // Get ALL unread messages across all threads in one count query — then group client-side
+      supabase
+        .from("messages")
+        .select("thread_id, id")
+        .in("thread_id", threadIds)
+        .neq("sender_id", userId)
+        .not("seen_by", "cs", `{${userId}}`),
+    ]);
 
-        return {
-          id: t.id,
-          title: t.title,
-          type: t.type,
-          participant_ids: t.participant_ids ?? [],
-          last_message_at: t.last_message_at,
-          created_by: t.created_by,
-          property_id: t.property_id,
-          last_message: lastMsg?.content_text ?? null,
-          unread_count: count ?? 0,
-          is_pinned: (t as any).is_pinned ?? false,
-          participants: (t.participant_ids ?? []).map(id => profileMap.get(id) ?? { id, full_name: null, avatar_url: null }),
-        };
-      })
-    );
+    const profileMap = new Map((profilesRes.data ?? []).map(p => [p.id, p]));
+
+    // Build last-message map: first occurrence per thread_id (already sorted desc)
+    const lastMsgMap = new Map<string, string | null>();
+    for (const msg of lastMsgsRes.data ?? []) {
+      if (!lastMsgMap.has(msg.thread_id)) {
+        lastMsgMap.set(msg.thread_id, msg.content_text);
+      }
+    }
+
+    // Build unread count map
+    const unreadMap = new Map<string, number>();
+    for (const msg of unreadRes.data ?? []) {
+      unreadMap.set(msg.thread_id, (unreadMap.get(msg.thread_id) ?? 0) + 1);
+    }
+
+    const enriched: ThreadWithMeta[] = rawThreads.map(t => ({
+      id: t.id,
+      title: t.title,
+      type: t.type,
+      participant_ids: t.participant_ids ?? [],
+      last_message_at: t.last_message_at,
+      created_by: t.created_by,
+      property_id: t.property_id,
+      last_message: lastMsgMap.get(t.id) ?? null,
+      unread_count: unreadMap.get(t.id) ?? 0,
+      is_pinned: (t as any).is_pinned ?? false,
+      participants: (t.participant_ids ?? []).map(id => profileMap.get(id) ?? { id, full_name: null, avatar_url: null }),
+    }));
 
     setThreads(enriched);
     setLoading(false);
@@ -80,79 +97,63 @@ export function useThreads(userId: string | null) {
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
-  // Realtime for thread updates
+  // Realtime — debounced to avoid hammering on rapid message bursts
   useEffect(() => {
     if (!userId) return;
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(fetchThreads, 300);
+    };
+
     const channel = supabase
       .channel("threads-list")
-      .on("postgres_changes", { event: "*", schema: "public", table: "chat_threads" }, () => {
-        fetchThreads();
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
-        fetchThreads();
-      })
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, () => {
-        fetchThreads();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_threads" }, refresh)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, refresh)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, refresh)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
   }, [userId, fetchThreads]);
 
-  // Create a new DM thread
   const createDM = async (otherUserId: string): Promise<string | null> => {
     if (!userId) return null;
-    // Check if a DM already exists between these two
     const { data: existing } = await supabase
       .from("chat_threads")
       .select("id")
       .eq("type", "private")
       .contains("participant_ids", [userId, otherUserId]);
 
-    const found = existing?.find(t => true); // first match
+    const found = existing?.[0];
     if (found) return found.id;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("chat_threads")
-      .insert({
-        type: "private",
-        participant_ids: [userId, otherUserId],
-        created_by: userId,
-      })
+      .insert({ type: "private", participant_ids: [userId, otherUserId], created_by: userId })
       .select("id")
       .single();
 
-    if (data) {
-      await fetchThreads();
-      return data.id;
-    }
+    if (data) { await fetchThreads(); return data.id; }
     return null;
   };
 
-  // Create a group thread
   const createGroup = async (name: string, participantIds: string[]): Promise<string | null> => {
     if (!userId) return null;
     const allIds = [...new Set([userId, ...participantIds])];
     const { data } = await supabase
       .from("chat_threads")
-      .insert({
-        type: "group",
-        title: name,
-        participant_ids: allIds,
-        created_by: userId,
-      })
+      .insert({ type: "group", title: name, participant_ids: allIds, created_by: userId })
       .select("id")
       .single();
 
-    if (data) {
-      await fetchThreads();
-      return data.id;
-    }
+    if (data) { await fetchThreads(); return data.id; }
     return null;
   };
 
   const deleteThread = async (threadId: string): Promise<boolean> => {
-    // Delete all messages first (FK constraint), then the thread
     await supabase.from("messages").delete().eq("thread_id", threadId);
     const { error } = await supabase.from("chat_threads").delete().eq("id", threadId);
     if (!error) await fetchThreads();
