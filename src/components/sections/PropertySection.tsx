@@ -346,7 +346,7 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
       style={{ height: 220 }}
     >
       {p.image_url ? (
-        <img src={p.image_url} alt={p.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <img src={imageUrl(p.image_url, 800, 440)} alt={p.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
           <Building2 size={48} className="text-muted-foreground/40" />
@@ -442,7 +442,7 @@ function PropertyStaffList({ propertyId, onBack }: { propertyId: string; onBack:
             <div key={s.id} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {s.avatar_url
-                  ? <img src={s.avatar_url} alt={s.full_name ?? ""} loading="lazy" className="w-full h-full object-cover" />
+                  ? <img src={imageUrl(s.avatar_url, 80, 80)} alt={s.full_name ?? ""} loading="lazy" className="w-full h-full object-cover" />
                   : <span className="text-sm font-semibold text-primary">{(s.full_name ?? "?")[0]}</span>
                 }
               </div>
@@ -482,7 +482,7 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
     <div className="flex flex-col min-h-[calc(100vh-7rem)]">
       <div className="relative h-64 shrink-0">
         {p.image_url ? (
-          <img src={p.image_url} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+          <img src={imageUrl(p.image_url, 800, 512)} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center">
             <Building2 size={56} className="text-muted-foreground/30" />
