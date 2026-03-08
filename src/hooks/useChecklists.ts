@@ -64,7 +64,12 @@ export interface ChecklistComment {
   profile?: { full_name: string | null; avatar_url: string | null } | null;
 }
 
-export function useChecklistTemplates(category?: string, propertyId?: string | null) {
+export function useChecklistTemplates(
+  category?: string,
+  propertyId?: string | null,
+  /** Optional allowlist of subcategory values — filtered server-side */
+  subcategories?: string[],
+) {
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -79,10 +84,14 @@ export function useChecklistTemplates(category?: string, propertyId?: string | n
         q = q.eq("property_id", propertyId);
       }
     }
+    // Push subcategory filter to the DB — avoids fetching the full table client-side
+    if (subcategories && subcategories.length > 0) {
+      q = q.in("subcategory", subcategories);
+    }
     const { data } = await q;
     setTemplates((data as unknown as ChecklistTemplate[]) ?? []);
     setLoading(false);
-  }, [category, propertyId]);
+  }, [category, propertyId, subcategories?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
   return { templates, loading, reload: load };

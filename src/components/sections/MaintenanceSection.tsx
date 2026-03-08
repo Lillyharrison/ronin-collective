@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
   Flag, Tag, Clock, CheckCircle2,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useMaintenanceIssues, MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues";
+import { useMaintenanceIssues, MaintenanceIssue, IssueStatus, MaintenanceFilters } from "@/hooks/useMaintenanceIssues";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IssueCard } from "@/components/maintenance/IssueCard";
@@ -26,17 +26,32 @@ export function MaintenanceSection() {
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
   const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager) ? undefined : assignedPropertyIds;
-  const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds);
-  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
-  // Guard against double-firing notifications on rapid re-renders / StrictMode
-  const notifyingRef = useRef<Set<string>>(new Set());
-
+  // Debounce search to avoid a DB query on every keystroke
   const [search,      setSearch]      = useState("");
   const [filterProp,  setFilterProp]  = useState("");
   const [filterCat,   setFilterCat]   = useState("");
   const [filterPri,   setFilterPri]   = useState("");
   const [sortBy,      setSortBy]      = useState<"newest"|"oldest"|"priority"|"status">("newest");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const dbFilters = useMemo<MaintenanceFilters>(() => ({
+    search: debouncedSearch || undefined,
+    category: filterCat || undefined,
+    priority: filterPri || undefined,
+  }), [debouncedSearch, filterCat, filterPri]);
+
+  const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
+  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
+
+  // Guard against double-firing notifications on rapid re-renders / StrictMode
+  const notifyingRef = useRef<Set<string>>(new Set());
+
+  // filterProp stays client-side (property picker in the UI — no DB round-trip needed)
   const [viewMode,    setViewMode]    = useState<ViewMode>("board");
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
@@ -84,15 +99,10 @@ export function MaintenanceSection() {
     { key: "resolved",    label: "Resolved",     labelEs: "Resuelto" },
   ];
 
+  // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
   const filtered = useCallback(() => {
     let list = [...issues];
-    if (!isMasterAdmin && !isAdmin && !isManager && assignedPropertyIds.length > 0) {
-      list = list.filter(i => !i.property_id || assignedPropertyIds.includes(i.property_id));
-    }
-    if (search)     list = list.filter(i => i.title.toLowerCase().includes(search.toLowerCase()) || (i.description ?? "").toLowerCase().includes(search.toLowerCase()));
     if (filterProp) list = list.filter(i => i.property_id === filterProp);
-    if (filterCat)  list = list.filter(i => i.category === filterCat);
-    if (filterPri)  list = list.filter(i => i.priority === filterPri);
     list.sort((a, b) => {
       if (sortBy === "newest")   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === "oldest")   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -100,7 +110,7 @@ export function MaintenanceSection() {
       return 0;
     });
     return list;
-  }, [issues, search, filterProp, filterCat, filterPri, sortBy, isMasterAdmin, isAdmin, isManager, assignedPropertyIds]);
+  }, [issues, filterProp, sortBy]);
 
   const displayIssues = filtered();
   const openCount = displayIssues.filter(i => i.status !== "resolved").length;

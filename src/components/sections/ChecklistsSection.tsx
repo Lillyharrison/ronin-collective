@@ -58,9 +58,12 @@ export function ChecklistsSection() {
     tab === "cleaning" ? selectedPropId : undefined
   );
 
+  // All subcategory keys flattened — fetch only what exists, grouped client-side for display
+  const ALL_ACTIVITY_KEYS = ACTIVITY_GROUPS.flatMap(g => g.keys);
   const { templates: activityTemplates, loading: activityLoading } = useChecklistTemplates(
     tab === "activity" ? "activity" : undefined,
-    tab === "activity" ? null : undefined
+    tab === "activity" ? null : undefined,
+    tab === "activity" ? ALL_ACTIVITY_KEYS : undefined,
   );
 
   return (
@@ -185,6 +188,7 @@ export function ChecklistsSection() {
               <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-14 bg-card border border-border rounded-xl animate-pulse" />)}</div>
             ) : (
               ACTIVITY_GROUPS.map(group => {
+                // templates are already pre-filtered by DB; just group locally
                 const groupTemplates = activityTemplates.filter(t => group.keys.includes(t.subcategory ?? ""));
                 if (groupTemplates.length === 0) return null;
                 return (
