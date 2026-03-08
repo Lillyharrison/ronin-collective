@@ -162,6 +162,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [pendingMaintenanceIssueId, setPendingMaintenanceIssueIdState] = useState<string | null>(null);
   const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [totalUnread, setTotalUnread] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   // Keep URL hash in sync whenever the section changes
@@ -279,6 +280,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         goBack,
         isChatOpen,
         setIsChatOpen,
+        totalUnread,
+        setTotalUnread,
       }}
     >
       {children}
