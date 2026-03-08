@@ -418,6 +418,17 @@ export function OrdersSection() {
               </tbody>
             </table>
           )}
+          {/* Load more */}
+          {hasMore && !loading && (
+            <div className="flex justify-center py-4">
+              <button
+                onClick={loadMore}
+                className="text-xs font-semibold px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+              >
+                {isL ? "Cargar más" : "Load more"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
