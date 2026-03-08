@@ -32,8 +32,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col"
-        style={{ maxHeight: "90dvh", height: "90dvh", overflow: "hidden" }}>
+      <div className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden h-[90dvh] sm:h-auto sm:max-h-[90dvh]">
         {/* Header */}
         <div className="flex-shrink-0 bg-background border-b border-border px-5 py-4 flex items-start justify-between">
           <div className="flex-1 min-w-0 pr-3">
