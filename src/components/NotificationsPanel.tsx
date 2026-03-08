@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
+
 import { X, Bell, CheckCheck, Trash2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveSection } from "@/contexts/NavigationContext";
@@ -46,7 +47,7 @@ interface Props {
 
 export function NotificationsPanel({ open, onClose }: Props) {
   const { userId, isMasterAdmin } = usePermissions();
-  const { setActiveSection } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -110,21 +111,22 @@ export function NotificationsPanel({ open, onClose }: Props) {
   };
 
   const handleNotificationClick = async (n: Notification) => {
-    // Determine target section FIRST before closing
     const targetSection: ActiveSection | undefined =
       (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
       (n.action_url as ActiveSection | undefined);
 
-    // Close panel first, then navigate on next tick so the panel unmount
-    // doesn't interfere with the navigation state update
     onClose();
 
-    if (!n.is_read) {
-      markRead(n.id); // fire-and-forget, don't await
-    }
+    if (!n.is_read) markRead(n.id);
 
     if (targetSection) {
-      setTimeout(() => setActiveSection(targetSection), 50);
+      setTimeout(() => {
+        setActiveSection(targetSection);
+        // If it's a maintenance issue with an entity_id, deep-link to open that specific issue
+        if (n.entity_type === "maintenance_issue" && n.entity_id) {
+          setPendingMaintenanceIssueId(n.entity_id);
+        }
+      }, 50);
     }
   };
 
