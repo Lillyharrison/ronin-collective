@@ -170,7 +170,7 @@ export function VendorDetailPanel({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
                         <span className="text-sm font-medium">{c.name}</span>
-                        {c.is_primary && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
+                        {c.is_primary && <Star className="h-3 w-3 fill-primary text-primary" />}
                       </div>
                       {c.job_title && <p className="text-xs text-muted-foreground">{c.job_title}</p>}
                       <div className="flex flex-wrap gap-2 mt-1">
