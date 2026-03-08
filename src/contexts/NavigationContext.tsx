@@ -125,13 +125,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSetActiveSection = (section: ActiveSection) => {
-    if (section === activeSection) return;
-    // Push current state to history
-    setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
+    // Push current state to history (even if same section — allows deep-link reset)
+    if (section !== activeSection) {
+      setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
+    }
     setActiveSection(section);
     setSidebarOpen(false);
     // Close checklist detail when navigating away
-    setChecklistDetailId(null);
+    if (section !== activeSection) setChecklistDetailId(null);
     const tabMap: Partial<Record<ActiveSection, ActiveTab>> = {
       dashboard: "home",
       property: "property",
@@ -140,10 +141,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       profile: "profile",
     };
     if (tabMap[section]) setActiveTab(tabMap[section]!);
-    // Clear property context when navigating to non-property sections via sidebar/tabs
-    if (section !== "property" && section !== "checklists" && section !== "manuals") {
-      // Keep it for checklists/manuals since they are property-scoped
-    }
   };
 
   const openCareGuideDetail = (templateId: string) => {
