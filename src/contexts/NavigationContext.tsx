@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useRef, ReactNode } from "react";
 
 export type ActiveTab = "home" | "property" | "maintenance" | "messages" | "profile";
 export type ActiveSection =
@@ -25,7 +25,6 @@ export type ActiveSection =
 
 interface HistoryEntry {
   section: ActiveSection;
-  /** If we were inside a specific property detail when we navigated away, store the id */
   propertyId: string | null;
 }
 
@@ -47,7 +46,7 @@ interface NavigationContextType {
   // Deep-link to a specific property (one-shot, cleared after use)
   targetPropertyId: string | null;
   setTargetPropertyId: (id: string | null) => void;
-  // Persisted currently-selected property — survives section changes so back nav restores it
+  // Persisted currently-selected property
   activePropertyId: string | null;
   setActivePropertyId: (id: string | null) => void;
   // Deep-link to checklists filtered for a specific property
@@ -56,6 +55,8 @@ interface NavigationContextType {
   // Deep-link to open a specific maintenance issue drawer (one-shot, cleared after use)
   pendingMaintenanceIssueId: string | null;
   setPendingMaintenanceIssueId: (id: string | null) => void;
+  // Stable ref version — survives navigation state batching
+  pendingMaintenanceIssueIdRef: React.MutableRefObject<string | null>;
   // Back navigation
   canGoBack: boolean;
   goBack: () => void;
@@ -86,6 +87,7 @@ const NavigationContext = createContext<NavigationContextType>({
   closeCareGuideDetail: () => {},
   pendingMaintenanceIssueId: null,
   setPendingMaintenanceIssueId: () => {},
+  pendingMaintenanceIssueIdRef: { current: null },
   canGoBack: false,
   goBack: () => {},
   isChatOpen: false,
@@ -102,10 +104,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
-  const [pendingMaintenanceIssueId, setPendingMaintenanceIssueId] = useState<string | null>(null);
+  const [pendingMaintenanceIssueId, setPendingMaintenanceIssueIdState] = useState<string | null>(null);
+  // Ref mirrors the state — survives React batched render cycles
+  const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  // History stack for back navigation
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  const setPendingMaintenanceIssueId = (id: string | null) => {
+    pendingMaintenanceIssueIdRef.current = id;
+    setPendingMaintenanceIssueIdState(id);
+  };
 
   const handleSetActiveTab = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -120,19 +128,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
     setActiveSection(newSection);
     setSidebarOpen(false);
-    // Navigating via tab clears the active property context
     if (tab !== "property") setActivePropertyId(null);
   };
 
   const handleSetActiveSection = (section: ActiveSection) => {
-    // Push current state to history (even if same section — allows deep-link reset)
     if (section !== activeSection) {
       setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
+      setChecklistDetailId(null);
     }
     setActiveSection(section);
     setSidebarOpen(false);
-    // Close checklist detail when navigating away
-    if (section !== activeSection) setChecklistDetailId(null);
     const tabMap: Partial<Record<ActiveSection, ActiveTab>> = {
       dashboard: "home",
       property: "property",
@@ -154,30 +159,15 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   };
 
   const goBack = () => {
-    // If in care guide detail, close it first
-    if (careGuideDetailId) {
-      setCareGuideDetailId(null);
-      return;
-    }
-    // If in checklist detail, close it first (back to the list)
-    if (checklistDetailId) {
-      setChecklistDetailId(null);
-      setChecklistDetailPropId(null);
-      return;
-    }
-
+    if (careGuideDetailId) { setCareGuideDetailId(null); return; }
+    if (checklistDetailId) { setChecklistDetailId(null); setChecklistDetailPropId(null); return; }
     if (history.length === 0) return;
     const prev = history[history.length - 1];
     setHistory(h => h.slice(0, -1));
-
     setActiveSection(prev.section);
-    // Restore the property that was active when we navigated forward
     if (prev.propertyId !== undefined) {
       setActivePropertyId(prev.propertyId);
-      if (prev.propertyId) {
-        // Also set targetPropertyId so PropertySection auto-opens the detail
-        setTargetPropertyId(prev.propertyId);
-      }
+      if (prev.propertyId) setTargetPropertyId(prev.propertyId);
     }
     const tabMap: Partial<Record<ActiveSection, ActiveTab>> = {
       dashboard: "home",
@@ -195,9 +185,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setChecklistDetailPropId(propertyId);
   };
 
-  const closeChecklistDetail = () => {
-    goBack();
-  };
+  const closeChecklistDetail = () => { goBack(); };
 
   const canGoBack = history.length > 0 || !!checklistDetailId || !!careGuideDetailId;
 
@@ -225,6 +213,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setChecklistsForPropertyId,
         pendingMaintenanceIssueId,
         setPendingMaintenanceIssueId,
+        pendingMaintenanceIssueIdRef,
         canGoBack,
         goBack,
         isChatOpen,
@@ -237,4 +226,3 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 }
 
 export const useNavigation = () => useContext(NavigationContext);
-
