@@ -13,6 +13,7 @@ import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/I
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
 import { notifySection } from "@/lib/notifySection";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { format } from "date-fns";
 
 const STATUS_COLUMNS: { key: IssueStatus; label: string }[] = [
@@ -31,6 +32,7 @@ export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
+  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId } = useNavigation();
 
   const [search,      setSearch]      = useState("");
   const [filterProp,  setFilterProp]  = useState("");
@@ -58,6 +60,16 @@ export function MaintenanceSection() {
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
   }, []);
+
+  // Deep-link: when arriving from a notification, auto-open the specific issue drawer
+  useEffect(() => {
+    if (!pendingMaintenanceIssueId || loading || issues.length === 0) return;
+    const issue = issues.find(i => i.id === pendingMaintenanceIssueId);
+    if (issue) {
+      setDetailIssue(issue);
+      setPendingMaintenanceIssueId(null);
+    }
+  }, [pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
 
   const filtered = useCallback(() => {
     let list = [...issues];

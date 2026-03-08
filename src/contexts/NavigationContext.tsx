@@ -53,6 +53,9 @@ interface NavigationContextType {
   // Deep-link to checklists filtered for a specific property
   checklistsForPropertyId: string | null;
   setChecklistsForPropertyId: (id: string | null) => void;
+  // Deep-link to open a specific maintenance issue drawer (one-shot, cleared after use)
+  pendingMaintenanceIssueId: string | null;
+  setPendingMaintenanceIssueId: (id: string | null) => void;
   // Back navigation
   canGoBack: boolean;
   goBack: () => void;
@@ -78,6 +81,8 @@ const NavigationContext = createContext<NavigationContextType>({
   careGuideDetailId: null,
   openCareGuideDetail: () => {},
   closeCareGuideDetail: () => {},
+  pendingMaintenanceIssueId: null,
+  setPendingMaintenanceIssueId: () => {},
   canGoBack: false,
   goBack: () => {},
 });
@@ -92,6 +97,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
+  const [pendingMaintenanceIssueId, setPendingMaintenanceIssueId] = useState<string | null>(null);
   // History stack for back navigation
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
@@ -214,6 +220,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setActivePropertyId,
         checklistsForPropertyId,
         setChecklistsForPropertyId,
+        pendingMaintenanceIssueId,
+        setPendingMaintenanceIssueId,
         canGoBack,
         goBack,
       }}
