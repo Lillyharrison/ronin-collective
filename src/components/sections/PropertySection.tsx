@@ -48,6 +48,7 @@ const PROPERTY_SUB_SECTIONS = [
   { key: "tasks",       label: "Tasks",       icon: <CheckCircle size={20} />,  description: "Open & assigned tasks" },
   { key: "maintenance", label: "Maintenance", icon: <Wrench size={20} />,       description: "Issues & requests" },
   { key: "staff",       label: "Users",       icon: <Users size={20} />,        description: "Assigned people" },
+  { key: "occupants",   label: "Occupants",   icon: <Home size={20} />,         description: "Who's staying here" },
   { key: "rooms",       label: "Rooms",       icon: <DoorOpen size={20} />,     description: "Manage property rooms" },
   { key: "checklists",  label: "Checklists",  icon: <BookOpen size={20} />,     description: "SOPs & procedures" },
   { key: "manuals",     label: "Manuals",     icon: <BookOpen size={20} />,     description: "Care guides & rules" },
