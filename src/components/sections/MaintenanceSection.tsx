@@ -229,13 +229,19 @@ export function MaintenanceSection() {
             <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
           ))}
         </div>
-        <IssueModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleCreate}
+        <IssueModal open={modalOpen} onClose={() => { setModalOpen(false); setEditIssue(null); }}
+          onSave={editIssue ? handleEdit : handleCreate}
+          initial={editIssue ?? undefined}
           categories={categories} onCategoryAdded={fetchIssues}
           properties={properties} profiles={profiles}
           existingIssues={issues.map(i => ({ id: i.id, title: i.title, created_at: i.created_at }))}
-          mode="create" />
+          mode={editIssue ? "edit" : "create"} />
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
+            // Allow reporter to edit their own reported issues before approval
+            onEdit={detailIssue.reported_by === userId && detailIssue.status === "reported"
+              ? (issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }
+              : undefined}
             categories={categories} />
         )}
       </div>
