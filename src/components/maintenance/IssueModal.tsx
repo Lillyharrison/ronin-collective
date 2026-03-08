@@ -209,7 +209,7 @@ function ModalContent({
               </button>
             )}
             <input ref={photoRef} type="file" accept="image/*" className="hidden"
-              onChange={e => { if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "main"); }} />
+              onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "main"); }} />
           </div>
 
           {/* Title */}
