@@ -798,11 +798,11 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
   const set = (key: keyof typeof emptyForm, val: string | boolean) => setForm({ ...form, [key]: val });
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col max-w-sm">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Property" : "Add Property"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
+        <div className="space-y-3 py-2 overflow-y-auto flex-1">
           <PropertyImageUploader value={form.image_url} onChange={url => set("image_url", url)} />
           <div className="space-y-1">
             <Label>Name *</Label>
@@ -834,14 +834,13 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
               </SelectContent>
             </Select>
           </div>
-          {/* Occupied by — only shown when status is occupied */}
+          {/* Occupant — profile-linked dropdown, only when occupied */}
           {form.status === "occupied" && (
             <div className="space-y-1">
               <Label>Occupied by</Label>
-              <Input
-                value={form.occupied_by}
-                onChange={e => set("occupied_by", e.target.value)}
-                placeholder="e.g. Family, John Smith, Guests…"
+              <OccupantSelect
+                value={form.occupied_by_profile_id}
+                onChange={profileId => setForm({ ...form, occupied_by_profile_id: profileId })}
               />
             </div>
           )}
@@ -873,6 +872,40 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Occupant Select ──────────────────────────────────────────────────────────
+function OccupantSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [profiles, setProfiles] = useState<OccupantProfile[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, level")
+      .in("level", ["principal", "staff", "admin", "master_admin"])
+      .order("full_name")
+      .then(({ data }) => setProfiles((data as OccupantProfile[]) ?? []));
+  }, []);
+
+  return (
+    <Select value={value || "__none__"} onValueChange={v => onChange(v === "__none__" ? "" : v)}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select person…">
+          {value
+            ? profiles.find(p => p.id === value)?.full_name ?? "Select person…"
+            : "Select person…"}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">— No specific occupant —</SelectItem>
+        {profiles.map(p => (
+          <SelectItem key={p.id} value={p.id}>
+            {p.full_name ?? p.id}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
