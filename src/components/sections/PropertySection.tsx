@@ -674,9 +674,9 @@ function PropertyDetail({ property: p, isMasterAdmin, allProfiles, onBack, onEdi
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${cfg.color}`}>
               {cfg.icon} {cfg.label}
             </span>
-            {p.status === "occupied" && p.occupied_by && (
+            {p.status === "occupied" && occupantNames && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-black/50 text-white border-white/20">
-                {p.occupied_by}
+                {occupantNames}
               </span>
             )}
           </div>
