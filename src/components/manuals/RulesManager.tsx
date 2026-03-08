@@ -145,7 +145,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
                 {rule.enacted_keywords.map(k => (
                   <span key={k} className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">"{k}"</span>
                 ))}
-                {((rule as any).enacted_occupant_ids ?? []).map((id: string) => (
+                {(rule.enacted_occupant_ids ?? []).map((id: string) => (
                   <span key={id} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">
                     <User size={9} /> {occupantNameMap[id] ?? id}
                   </span>
