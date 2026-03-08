@@ -629,8 +629,7 @@ export function CalendarSection() {
                 >
                   <div className={cn(
                     "w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium mb-1",
-                    todayDay && "bg-primary text-primary-foreground",
-                    isSelected && !todayDay && "bg-accent/20 text-accent",
+                    todayDay ? "bg-primary text-primary-foreground" : (isSelected ? "bg-accent/20 text-accent-foreground" : "text-foreground"),
                   )}>
                     {format(day, "d")}
                   </div>
