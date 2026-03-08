@@ -43,7 +43,7 @@ export function ThreadList({
   const [deleting, setDeleting] = useState(false);
   // Local optimistic pin state
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() =>
-    new Set(threads.filter(t => (t as any).is_pinned).map(t => t.id))
+    new Set(threads.filter(t => t.is_pinned).map(t => t.id))
   );
 
   const locale = language === "es" ? es : undefined;
