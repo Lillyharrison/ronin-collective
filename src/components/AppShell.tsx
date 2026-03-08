@@ -123,7 +123,7 @@ export function AppShell() {
       <Sidebar />
       <Header title={showDetail ? undefined : title} />
 
-      <main className="pt-14 pb-20 min-h-screen">
+      <main className={`pt-14 min-h-screen ${activeSection === "messages" ? "pb-0" : "pb-20"}`}>
         {showDetail ? (
           <ChecklistDetailPage
             template={detailTemplate!}
@@ -135,7 +135,7 @@ export function AppShell() {
         )}
       </main>
 
-      <BottomNav />
+      {activeSection !== "messages" && <BottomNav />}
     </div>
   );
 }

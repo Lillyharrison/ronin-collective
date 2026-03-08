@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMessages } from "@/hooks/useMessages";
-import { supabase } from "@/integrations/supabase/client"; // kept for media upload
+import { supabase } from "@/integrations/supabase/client";
 import { MessageBubble } from "./MessageBubble";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
-  Users, Bot, User, ImagePlus, ScanSearch, Smile,
+  Users, Bot, User, Plus, Image, ScanSearch, Smile,
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
@@ -32,36 +32,39 @@ export function ChatView({
   const [agentTyping, setAgentTyping] = useState(false);
   const [recording, setRecording] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [agentAnalyzing, setAgentAnalyzing] = useState(false);
   const visionInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  // Scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Mark as read when viewing
   useEffect(() => {
     if (currentUserId && messages.length > 0) {
       markAsRead(currentUserId);
     }
   }, [messages.length, currentUserId]);
 
-  // Close emoji picker when clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmoji(false);
       }
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
     };
-    if (showEmoji) document.addEventListener("mousedown", handler);
+    if (showEmoji || showAttachMenu) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showEmoji]);
+  }, [showEmoji, showAttachMenu]);
 
   const getAuthHeader = async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -77,17 +80,13 @@ export function ChatView({
     setSending(true);
 
     if (isAgentThread) {
-      // In a group chat (other humans present), only respond when @Ronin is explicitly mentioned
       const isGroupChat = participants.filter(p => p.id !== currentUserId).length > 0;
       const mentionsRonin = /@ronin/i.test(text);
-
       if (isGroupChat && !mentionsRonin) {
-        // Just save the message for the humans — Ronin stays silent
         await sendMessage(text, currentUserId);
         setSending(false);
         return;
       }
-      // Check if the last AI message has a pending tool call and this is a confirmation
       const lastAiMsg = [...messages].reverse().find(m => m.is_ai_generated);
       const pendingTool = (lastAiMsg?.reactions as Record<string, unknown> | null)?.__pending_tool as
         { name: string; args: Record<string, unknown> } | undefined;
@@ -95,28 +94,19 @@ export function ChatView({
       const isConfirmation = pendingTool && /^(yes|si|sí|proceed|confirm|do it|go ahead|adelante|hazlo|confirmar)/i.test(text);
       const isCancellation = pendingTool && /^(no|cancel|cancelar|stop|nevermind|don't)/i.test(text);
 
-      // Save user message to DB
       await sendMessage(text, currentUserId);
       setAgentTyping(true);
 
       try {
         const auth = await getAuthHeader();
-
         if (isConfirmation && pendingTool) {
-          // Execute the confirmed tool action
           const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: auth },
-            body: JSON.stringify({
-              action: "execute_tool",
-              tool_name: pendingTool.name,
-              tool_args: pendingTool.args,
-              thread_id: threadId,
-            }),
+            body: JSON.stringify({ action: "execute_tool", tool_name: pendingTool.name, tool_args: pendingTool.args, thread_id: threadId }),
           });
           if (!resp.ok) console.error("Tool execution failed:", await resp.text());
         } else if (isCancellation && pendingTool) {
-          // Post a cancellation message from AI
           await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: auth },
@@ -131,15 +121,10 @@ export function ChatView({
             }),
           });
         } else {
-          // Standard AI message — always include thread_id so Ronin uses the DB-persisted ReAct path
           const history = messages
             .filter(m => m.content_text && !m.content_text.startsWith("ACT:") && !m.content_text.startsWith("RESPOND:"))
-            .slice(-20) // keep last 20 messages to avoid prompt bloat
-            .map(m => ({
-              role: m.is_ai_generated ? "assistant" as const : "user" as const,
-              content: m.content_text!,
-            }));
-
+            .slice(-20)
+            .map(m => ({ role: m.is_ai_generated ? "assistant" as const : "user" as const, content: m.content_text! }));
           await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: auth },
@@ -157,7 +142,6 @@ export function ChatView({
     setSending(false);
   };
 
-  // Standard image/file upload (non-agent threads)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -170,74 +154,48 @@ export function ChatView({
     }
     setSending(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   };
 
-  // Vision upload — agent thread only: upload + trigger Gemini vision analysis
   const handleVisionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith("image")) return;
-
-    // Capture any text the user typed alongside the photo, then clear the input
     const captionText = input.trim();
     setInput("");
-
     setSending(true);
     const path = `${currentUserId}/${Date.now()}_vision_${file.name}`;
-    const { data: uploaded, error: uploadErr } = await supabase.storage
-      .from("chat-media")
-      .upload(path, file);
-
+    const { data: uploaded, error: uploadErr } = await supabase.storage.from("chat-media").upload(path, file);
     if (uploadErr || !uploaded) {
       setSending(false);
       if (visionInputRef.current) visionInputRef.current.value = "";
       return;
     }
-
     const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
     const publicUrl = urlData.publicUrl;
-
-    // 1. Save the image as a visible chat message (include caption if provided)
     await sendMediaMessage(publicUrl, "image", currentUserId);
     if (captionText) await sendMessage(captionText, currentUserId);
     setSending(false);
-
-    // 2. Trigger Gemini Vision analysis, passing the user's caption as context
     setAgentAnalyzing(true);
     try {
       const auth = await getAuthHeader();
-      const history = messages
-        .filter(m => m.content_text)
-        .map(m => ({
-          role: m.is_ai_generated ? "assistant" as const : "user" as const,
-          content: m.content_text!,
-        }));
-
-      // Use caption as the prompt if provided, otherwise fall back to default
-      const visionPrompt = captionText
-        ? captionText
-        : "Please analyse this image and help me log it to the estate inventory.";
-
+      const history = messages.filter(m => m.content_text).map(m => ({
+        role: m.is_ai_generated ? "assistant" as const : "user" as const,
+        content: m.content_text!,
+      }));
+      const visionPrompt = captionText || "Please analyse this image and help me log it to the estate inventory.";
       await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: auth },
-        body: JSON.stringify({
-          type: "message",
-          content: visionPrompt,
-          image_url: publicUrl,
-          messages: history,
-          thread_id: threadId,
-        }),
+        body: JSON.stringify({ type: "message", content: visionPrompt, image_url: publicUrl, messages: history, thread_id: threadId }),
       });
     } catch (err) {
       console.error("Vision analysis error:", err);
     } finally {
       setAgentAnalyzing(false);
     }
-
     if (visionInputRef.current) visionInputRef.current.value = "";
   };
 
-  // Voice recording
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -269,7 +227,6 @@ export function ChatView({
     setRecording(false);
   };
 
-  // Group messages by date
   const groupedMessages: { date: string; msgs: typeof messages }[] = [];
   let lastDateStr = "";
   for (const msg of messages) {
@@ -317,10 +274,12 @@ export function ChatView({
     );
   };
 
+  const hasText = input.trim().length > 0;
+
   return (
     <div className="flex flex-col h-full">
       {/* Chat header */}
-      <div className="px-3 py-2.5 border-b border-border bg-card flex items-center gap-3">
+      <div className="px-3 py-2.5 border-b border-border bg-card flex items-center gap-3 flex-shrink-0">
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors">
           <ArrowLeft size={20} className="text-foreground" />
         </button>
@@ -337,8 +296,11 @@ export function ChatView({
         </div>
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}>
+      {/* Messages area — fills all remaining space above input bar */}
+      <div
+        className="flex-1 overflow-y-auto px-3 py-3 space-y-1"
+        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
+      >
         {loading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 size={20} className="animate-spin text-muted-foreground" />
@@ -389,7 +351,6 @@ export function ChatView({
             ))}
           </div>
         ))}
-        {/* Agent typing / reasoning indicator */}
         {(agentTyping || agentAnalyzing) && (
           <div className="flex items-end gap-2 mb-1">
             <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
@@ -421,11 +382,11 @@ export function ChatView({
         <div ref={bottomRef} />
       </div>
 
-      {/* Input bar */}
-      <div className="px-3 py-2.5 border-t border-border bg-card relative">
-        {/* Emoji Picker overlay */}
+      {/* ── WhatsApp-style input bar ── */}
+      <div className="flex-shrink-0 bg-card border-t border-border px-2 py-2 relative">
+        {/* Emoji picker */}
         {showEmoji && (
-          <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-2 z-50">
+          <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-1 z-50">
             <EmojiPicker
               theme={"dark" as Theme}
               onEmojiClick={(data: EmojiClickData) => {
@@ -438,41 +399,54 @@ export function ChatView({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          {/* Attach button — regular for non-agent, vision for agent */}
-          {isAgentThread ? (
+        {/* Attach menu pop-up */}
+        {showAttachMenu && (
+          <div ref={attachMenuRef} className="absolute bottom-full left-2 mb-2 z-50 bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
             <button
-              onClick={() => visionInputRef.current?.click()}
-              disabled={agentAnalyzing || sending}
-              title={language === "es" ? "Enviar foto al inventario" : "Send photo to inventory"}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-accent hover:bg-accent/10 transition-colors disabled:opacity-40"
+              onClick={() => { fileInputRef.current?.click(); setShowAttachMenu(false); }}
+              className="flex items-center gap-3 w-full px-4 py-3 hover:bg-muted transition-colors text-sm text-foreground"
             >
-              <ScanSearch size={20} />
+              <Image size={18} className="text-accent" />
+              {language === "es" ? "Foto o video" : "Photo or video"}
             </button>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <Camera size={20} />
-            </button>
-          )}
+            {isAgentThread && (
+              <button
+                onClick={() => { visionInputRef.current?.click(); setShowAttachMenu(false); }}
+                className="flex items-center gap-3 w-full px-4 py-3 hover:bg-muted transition-colors text-sm text-foreground border-t border-border"
+              >
+                <ScanSearch size={18} className="text-accent" />
+                {language === "es" ? "Análisis de inventario" : "Inventory analysis"}
+              </button>
+            )}
+          </div>
+        )}
 
-          {/* Hidden file inputs */}
-          <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleImageUpload} />
-          <input ref={visionInputRef} type="file" accept="image/*" className="hidden" onChange={handleVisionUpload} />
+        {/* Hidden file inputs */}
+        <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleImageUpload} />
+        <input ref={visionInputRef} type="file" accept="image/*" className="hidden" onChange={handleVisionUpload} />
+        {/* Camera capture input */}
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
 
-          {/* Text input with emoji button inside */}
-          <div className="flex-1 flex items-center gap-1 bg-background border border-border rounded-full px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          {/* + attach button */}
+          <button
+            onClick={() => setShowAttachMenu(v => !v)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"
+          >
+            <Plus size={22} />
+          </button>
+
+          {/* Text input pill with emoji inside */}
+          <div className="flex-1 flex items-center gap-1 bg-background border border-border rounded-full px-3 py-2 min-w-0">
             <button
               onClick={() => setShowEmoji(v => !v)}
               className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-              title={language === "es" ? "Emoji" : "Emoji"}
             >
               <Smile size={18} />
             </button>
             <input
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none px-1"
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none px-1 min-w-0"
+              style={{ fontSize: "16px" }}
               placeholder={
                 isAgentThread
                   ? (language === "es" ? "Pregunta a Ronin..." : "Ask Ronin...")
@@ -485,24 +459,33 @@ export function ChatView({
             />
           </div>
 
-          {/* Send or Mic */}
-          {input.trim() ? (
+          {/* Camera button — always visible when no text */}
+          {!hasText && (
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"
+            >
+              <Camera size={20} />
+            </button>
+          )}
+
+          {/* Send (when text) or Mic (when no text) */}
+          {hasText ? (
             <button
               onClick={handleSend}
               disabled={sending || agentAnalyzing}
-              className="w-9 h-9 rounded-full bg-accent flex items-center justify-center disabled:opacity-50 transition-opacity"
+              className="w-9 h-9 rounded-full bg-accent flex items-center justify-center disabled:opacity-50 transition-opacity flex-shrink-0"
             >
-              {sending ? (
-                <Loader2 size={16} className="text-accent-foreground animate-spin" />
-              ) : (
-                <Send size={16} className="text-accent-foreground" />
-              )}
+              {sending
+                ? <Loader2 size={16} className="text-accent-foreground animate-spin" />
+                : <Send size={16} className="text-accent-foreground" />
+              }
             </button>
           ) : (
             <button
               onMouseDown={recording ? stopRecording : startRecording}
               disabled={agentAnalyzing}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 flex-shrink-0 ${
                 recording
                   ? "bg-destructive text-destructive-foreground animate-pulse"
                   : "bg-accent text-accent-foreground"
@@ -512,15 +495,6 @@ export function ChatView({
             </button>
           )}
         </div>
-
-        {/* Vision hint for agent thread */}
-        {isAgentThread && (
-          <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-            {language === "es"
-              ? "Toca 🔍 para enviar una foto y registrar un artículo en el inventario"
-              : "Tap 🔍 to send a photo and log an item to inventory"}
-          </p>
-        )}
       </div>
     </div>
   );
