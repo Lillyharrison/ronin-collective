@@ -25,7 +25,7 @@ export function MaintenanceSection() {
   const { t, language } = useLanguage();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
-  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId } = useNavigation();
+  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
   const [search,      setSearch]      = useState("");
   const [filterProp,  setFilterProp]  = useState("");
