@@ -25,6 +25,14 @@ interface Property {
   is_primary: boolean;
   sort_order: number;
   occupied_by: string | null;
+  occupied_by_profile_id: string | null;
+}
+
+interface OccupantProfile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  level: string | null;
 }
 
 const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon: React.ReactNode }> = {
@@ -48,6 +56,7 @@ const emptyForm = {
   name: "", address: "", city: "", country: "",
   timezone: "America/Los_Angeles", status: "vacant" as PropertyStatus,
   image_url: "", is_primary: false, occupied_by: "",
+  occupied_by_profile_id: "" as string,
 };
 
 export function PropertySection() {
@@ -125,6 +134,7 @@ export function PropertySection() {
       country: p.country || "", timezone: p.timezone, status: p.status,
       image_url: p.image_url || "", is_primary: p.is_primary,
       occupied_by: p.occupied_by || "",
+      occupied_by_profile_id: p.occupied_by_profile_id || "",
     });
     setEditingProperty(p);
     setShowForm(true);
@@ -132,11 +142,25 @@ export function PropertySection() {
 
   async function saveProperty() {
     setSaving(true);
+    // Resolve occupant name from profile for the legacy text field (used by AI)
+    let occupantName: string | null = null;
+    if (form.status === "occupied" && form.occupied_by_profile_id) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", form.occupied_by_profile_id)
+        .single();
+      occupantName = prof?.full_name ?? null;
+    } else if (form.status === "occupied" && form.occupied_by) {
+      occupantName = form.occupied_by; // fallback for free-text
+    }
     const payload = {
       name: form.name, address: form.address, city: form.city || null,
       country: form.country || null, timezone: form.timezone, status: form.status,
       image_url: form.image_url || null, is_primary: form.is_primary,
-      occupied_by: form.status === "occupied" && form.occupied_by ? form.occupied_by : null,
+      occupied_by: occupantName,
+      occupied_by_profile_id: form.status === "occupied" && form.occupied_by_profile_id
+        ? form.occupied_by_profile_id : null,
     };
     if (form.is_primary) {
       await supabase.from("properties").update({ is_primary: false }).neq("id", editingProperty?.id ?? "");
@@ -774,11 +798,11 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
   const set = (key: keyof typeof emptyForm, val: string | boolean) => setForm({ ...form, [key]: val });
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col max-w-sm">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit Property" : "Add Property"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
+        <div className="space-y-3 py-2 overflow-y-auto flex-1">
           <PropertyImageUploader value={form.image_url} onChange={url => set("image_url", url)} />
           <div className="space-y-1">
             <Label>Name *</Label>
@@ -810,14 +834,13 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
               </SelectContent>
             </Select>
           </div>
-          {/* Occupied by — only shown when status is occupied */}
+          {/* Occupant — profile-linked dropdown, only when occupied */}
           {form.status === "occupied" && (
             <div className="space-y-1">
               <Label>Occupied by</Label>
-              <Input
-                value={form.occupied_by}
-                onChange={e => set("occupied_by", e.target.value)}
-                placeholder="e.g. Family, John Smith, Guests…"
+              <OccupantSelect
+                value={form.occupied_by_profile_id}
+                onChange={profileId => setForm({ ...form, occupied_by_profile_id: profileId })}
               />
             </div>
           )}
@@ -849,6 +872,40 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Occupant Select ──────────────────────────────────────────────────────────
+function OccupantSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [profiles, setProfiles] = useState<OccupantProfile[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, level")
+      .in("level", ["principal", "staff", "admin", "master_admin"])
+      .order("full_name")
+      .then(({ data }) => setProfiles((data as OccupantProfile[]) ?? []));
+  }, []);
+
+  return (
+    <Select value={value || "__none__"} onValueChange={v => onChange(v === "__none__" ? "" : v)}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select person…">
+          {value
+            ? profiles.find(p => p.id === value)?.full_name ?? "Select person…"
+            : "Select person…"}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">— No specific occupant —</SelectItem>
+        {profiles.map(p => (
+          <SelectItem key={p.id} value={p.id}>
+            {p.full_name ?? p.id}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

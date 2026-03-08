@@ -929,6 +929,7 @@ export type Database = {
           is_primary: boolean
           name: string
           occupied_by: string | null
+          occupied_by_profile_id: string | null
           sort_order: number
           status: Database["public"]["Enums"]["property_status"]
           timezone: string
@@ -944,6 +945,7 @@ export type Database = {
           is_primary?: boolean
           name: string
           occupied_by?: string | null
+          occupied_by_profile_id?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
@@ -959,12 +961,21 @@ export type Database = {
           is_primary?: boolean
           name?: string
           occupied_by?: string | null
+          occupied_by_profile_id?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "properties_occupied_by_profile_id_fkey"
+            columns: ["occupied_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       property_rooms: {
         Row: {
@@ -1007,6 +1018,7 @@ export type Database = {
           description: string | null
           enacted_event_types: string[]
           enacted_keywords: string[]
+          enacted_occupant_ids: string[]
           icon: string
           id: string
           is_active: boolean
@@ -1029,6 +1041,7 @@ export type Database = {
           description?: string | null
           enacted_event_types?: string[]
           enacted_keywords?: string[]
+          enacted_occupant_ids?: string[]
           icon?: string
           id?: string
           is_active?: boolean
@@ -1051,6 +1064,7 @@ export type Database = {
           description?: string | null
           enacted_event_types?: string[]
           enacted_keywords?: string[]
+          enacted_occupant_ids?: string[]
           icon?: string
           id?: string
           is_active?: boolean

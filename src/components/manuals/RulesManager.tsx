@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PropertyRule } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
-import { Pencil, Trash2, Plus, Shield, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Pencil, Trash2, Plus, Shield, User } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   rules: PropertyRule[];
@@ -11,7 +12,11 @@ interface Props {
   onReload: () => void;
 }
 
-const ROLES = ["master_admin", "admin", "manager", "staff", "principal"];
+interface OccupantProfile {
+  id: string;
+  full_name: string | null;
+}
+
 const EVENT_TYPES = ["guest_stay", "owner_stay", "maintenance", "travel", "general", "private_event"];
 const COLORS = ["amber", "red", "blue", "green", "gold", "purple"];
 
@@ -30,6 +35,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
   const { isAdmin, userId } = usePermissions();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [occupantProfiles, setOccupantProfiles] = useState<OccupantProfile[]>([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -38,11 +44,25 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
     applies_to_roles: [] as string[],
     enacted_event_types: [] as string[],
     enacted_keywords: "",
+    enacted_occupant_ids: [] as string[],
     is_universal: false,
   });
   const [showIconPicker, setShowIconPicker] = useState(false);
 
-  const resetForm = () => setForm({ title: "", description: "", icon: "⚠️", color: "amber", applies_to_roles: [], enacted_event_types: [], enacted_keywords: "", is_universal: false });
+  // Load principal/family profiles for occupant picker
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .order("full_name")
+      .then(({ data }) => setOccupantProfiles((data as OccupantProfile[]) ?? []));
+  }, []);
+
+  const resetForm = () => setForm({
+    title: "", description: "", icon: "⚠️", color: "amber",
+    applies_to_roles: [], enacted_event_types: [], enacted_keywords: "",
+    enacted_occupant_ids: [], is_universal: false,
+  });
 
   const startEdit = (rule: PropertyRule) => {
     setForm({
@@ -53,6 +73,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
       applies_to_roles: rule.applies_to_roles,
       enacted_event_types: rule.enacted_event_types,
       enacted_keywords: rule.enacted_keywords.join(", "),
+      enacted_occupant_ids: (rule as any).enacted_occupant_ids ?? [],
       is_universal: rule.is_universal,
     });
     setEditingId(rule.id);
@@ -68,7 +89,10 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
       color: form.color,
       applies_to_roles: form.applies_to_roles,
       enacted_event_types: form.enacted_event_types,
-      enacted_keywords: form.enacted_keywords ? form.enacted_keywords.split(",").map(k => k.trim()).filter(Boolean) : [],
+      enacted_keywords: form.enacted_keywords
+        ? form.enacted_keywords.split(",").map(k => k.trim()).filter(Boolean)
+        : [],
+      enacted_occupant_ids: form.enacted_occupant_ids,
       property_id: form.is_universal ? null : (propertyId ?? null),
       is_universal: form.is_universal,
       created_by: userId,
@@ -93,6 +117,10 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
     setter(arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val]);
   };
 
+  const occupantNameMap = Object.fromEntries(
+    occupantProfiles.map(p => [p.id, p.full_name ?? p.id])
+  );
+
   return (
     <div className="space-y-3">
       {rules.length === 0 && !showForm && (
@@ -116,6 +144,11 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
                 ))}
                 {rule.enacted_keywords.map(k => (
                   <span key={k} className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">"{k}"</span>
+                ))}
+                {((rule as any).enacted_occupant_ids ?? []).map((id: string) => (
+                  <span key={id} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">
+                    <User size={9} /> {occupantNameMap[id] ?? id}
+                  </span>
                 ))}
                 {rule.is_universal && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">All properties</span>
@@ -178,6 +211,46 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
               </div>
             </div>
 
+            {/* Triggered by occupant */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Active when this person is at the property</p>
+              <Select
+                value="__placeholder__"
+                onValueChange={id => {
+                  if (!form.enacted_occupant_ids.includes(id)) {
+                    setForm(f => ({ ...f, enacted_occupant_ids: [...f.enacted_occupant_ids, id] }));
+                  }
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Add occupant…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {occupantProfiles
+                    .filter(p => !form.enacted_occupant_ids.includes(p.id))
+                    .map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.full_name ?? p.id}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {form.enacted_occupant_ids.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {form.enacted_occupant_ids.map(id => (
+                    <span key={id}
+                      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                      <User size={10} />
+                      {occupantNameMap[id] ?? id}
+                      <button
+                        onClick={() => setForm(f => ({ ...f, enacted_occupant_ids: f.enacted_occupant_ids.filter(i => i !== id) }))}
+                        className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Triggered by event type */}
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Triggered by calendar event type</p>
@@ -198,7 +271,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Triggered by keywords in event title (comma-separated)</p>
               <input value={form.enacted_keywords} onChange={e => setForm(f => ({ ...f, enacted_keywords: e.target.value }))}
-                placeholder="e.g. Behdad, Owner visit, School run"
+                placeholder="e.g. Owner visit, School run"
                 className="w-full text-sm bg-muted/50 border border-border rounded-lg px-3 py-2 outline-none focus:border-gold" />
             </div>
 
