@@ -53,14 +53,22 @@ export function MaintenanceSection() {
       }))));
   }, []);
 
+  // Deep-link: open specific issue from notification click
+  // Runs whenever the pending ID changes OR issues finish loading
   useEffect(() => {
-    if (!pendingMaintenanceIssueId || loading || issues.length === 0) return;
+    if (!pendingMaintenanceIssueId) return;
+    if (loading) return; // wait until loaded
     const issue = issues.find(i => i.id === pendingMaintenanceIssueId);
     if (issue) {
       setDetailIssue(issue);
       setPendingMaintenanceIssueId(null);
+    } else {
+      // Issue not in list yet (e.g. RLS filtered) — fetch fresh then retry once
+      fetchIssues().then(() => {
+        // effect will re-run after fetchIssues updates `issues`
+      });
     }
-  }, [pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
+  }, [pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, fetchIssues]);
 
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",    label: "Reported",     labelEs: "Reportado" },
