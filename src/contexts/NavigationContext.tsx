@@ -88,6 +88,8 @@ const NavigationContext = createContext<NavigationContextType>({
   setPendingMaintenanceIssueId: () => {},
   canGoBack: false,
   goBack: () => {},
+  isChatOpen: false,
+  setIsChatOpen: () => {},
 });
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
