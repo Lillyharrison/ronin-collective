@@ -350,9 +350,9 @@ function CalendarSettingsDialog({
             </Button>
           </div>
 
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex gap-2">
-            <AlertTriangle size={14} className="text-amber-400 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-300/90">
+          <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 flex gap-2">
+            <AlertTriangle size={14} className="text-warning mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-warning/90">
               <span className="font-medium">Agent Ronin</span> will automatically analyse estate-relevant synced events and post briefings + SOP links to the relevant staff chat threads.
             </p>
           </div>
