@@ -13,6 +13,7 @@ import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/I
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
 import { notifySection } from "@/lib/notifySection";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { format } from "date-fns";
 
 const STATUS_COLUMNS: { key: IssueStatus; label: string }[] = [
