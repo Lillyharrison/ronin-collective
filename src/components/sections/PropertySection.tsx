@@ -313,6 +313,7 @@ export function PropertySection() {
               <PropertyTile
                 property={p}
                 isMasterAdmin={isMasterAdmin}
+                allProfiles={allProfiles}
                 onClick={() => { setSelectedProperty(p); setActivePropertyId(p.id); }}
                 onEdit={(e) => { e.stopPropagation(); openEdit(p); }}
                 onDelete={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
@@ -349,11 +350,15 @@ export function PropertySection() {
 }
 
 // ─── Property Tile ────────────────────────────────────────────────────────────
-function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }: {
-  property: Property; isMasterAdmin: boolean;
+function PropertyTile({ property: p, isMasterAdmin, allProfiles, onClick, onEdit, onDelete }: {
+  property: Property; isMasterAdmin: boolean; allProfiles: OccupantProfile[];
   onClick: () => void; onEdit: (e: React.MouseEvent) => void; onDelete: (e: React.MouseEvent) => void;
 }) {
   const cfg = STATUS_CONFIG[p.status];
+  const occupantNames = (p.occupied_by_profile_ids ?? [])
+    .map(id => allProfiles.find(pr => pr.id === id)?.full_name)
+    .filter(Boolean)
+    .join(", ");
   return (
     <button
       onClick={onClick}
@@ -378,9 +383,9 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${cfg.color}`}>
           {cfg.icon} {cfg.label}
         </span>
-        {p.status === "occupied" && p.occupied_by && (
+        {p.status === "occupied" && occupantNames && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-black/50 text-white border-white/20">
-            {p.occupied_by}
+            {occupantNames}
           </span>
         )}
       </div>
