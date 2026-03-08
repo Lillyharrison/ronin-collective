@@ -240,8 +240,8 @@ export function MaintenanceSection() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={fetchIssues}
-              className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground", loading && "animate-spin text-gold")}>
-              <RefreshCw size={15} />
+              className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors", loading ? "text-gold" : "text-muted-foreground")}>
+              <RefreshCw size={15} className={cn(loading && "animate-spin")} />
             </button>
             <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
               className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">

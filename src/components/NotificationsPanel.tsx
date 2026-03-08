@@ -110,18 +110,22 @@ export function NotificationsPanel({ open, onClose }: Props) {
   };
 
   const handleNotificationClick = async (n: Notification) => {
-    if (!n.is_read) await markRead(n.id);
-
-    // Determine target section: prefer entity_type mapping, fall back to action_url
+    // Determine target section FIRST before closing
     const targetSection: ActiveSection | undefined =
       (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
       (n.action_url as ActiveSection | undefined);
 
-    if (targetSection) {
-      setActiveSection(targetSection);
+    // Close panel first, then navigate on next tick so the panel unmount
+    // doesn't interfere with the navigation state update
+    onClose();
+
+    if (!n.is_read) {
+      markRead(n.id); // fire-and-forget, don't await
     }
 
-    onClose();
+    if (targetSection) {
+      setTimeout(() => setActiveSection(targetSection), 50);
+    }
   };
 
   const isClickable = (n: Notification) =>
