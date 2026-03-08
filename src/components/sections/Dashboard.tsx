@@ -551,18 +551,30 @@ export function Dashboard() {
           <div className="divide-y divide-border">
             {dashNotifs.map(n => {
               const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
+              const isClickable = !!(n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
               return (
                 <div
                   key={n.id}
-                  className={cn("flex items-start gap-3 px-4 py-3 border-l-2", styles.border)}
+                  onClick={isClickable ? () => handleNotifClick(n) : undefined}
+                  role={isClickable ? "button" : undefined}
+                  className={cn(
+                    "flex items-start gap-3 px-4 py-3 border-l-2 group",
+                    styles.border,
+                    isClickable ? "cursor-pointer hover:bg-muted/40 active:scale-[0.99] transition-colors" : ""
+                  )}
                 >
                   <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", styles.dot)} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-foreground leading-snug">{n.title}</p>
                     {n.body && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{n.body}</p>}
+                    {isClickable && (
+                      <span className="text-[10px] text-gold/60 flex items-center gap-0.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ExternalLink size={9} /> Tap to view
+                      </span>
+                    )}
                   </div>
                   <button
-                    onClick={() => dismissNotif(n.id, n.user_id)}
+                    onClick={(e) => { e.stopPropagation(); dismissNotif(n.id, n.user_id); }}
                     className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 p-1"
                     aria-label="Dismiss"
                   >
