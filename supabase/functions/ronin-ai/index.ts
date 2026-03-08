@@ -892,6 +892,25 @@ serve(async (req) => {
         resultMessage = `🧠 **Memory saved.**`;
       } else if (tool_name === "add_shopping_list_item") {
         resultMessage = await addShoppingListItemsSilently(tool_args, callerUserId, adminClient);
+      } else if (tool_name === "log_vendor") {
+        const { data: vendor, error: vendorErr } = await adminClient.from("vendors").insert({
+          name: tool_args.name,
+          company: tool_args.company ?? null,
+          phone: tool_args.phone ?? null,
+          email: tool_args.email ?? null,
+          website: tool_args.website ?? null,
+          category: tool_args.category ?? "general",
+          description: tool_args.description ?? null,
+          notes: tool_args.notes ?? null,
+          address: tool_args.address ?? null,
+          is_active: true,
+          created_by: callerUserId,
+        }).select("id").single();
+
+        if (vendorErr) throw new Error(`Failed to log vendor: ${vendorErr.message}`);
+        await adminClient.from("system_events").insert({ event_type: "vendor_logged_by_ai", entity_type: "vendor", entity_id: vendor.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
+        const details = [tool_args.company, tool_args.phone, tool_args.email].filter(Boolean).join(" · ");
+        resultMessage = `✅ **Vendor saved.**\n\n**${tool_args.name}**${tool_args.company ? ` — ${tool_args.company}` : ""}\nCategory: ${tool_args.category ?? "general"}${details ? `\n${details}` : ""}${tool_args.description ? `\n\n_${tool_args.description}_` : ""}\n\nVisible in the **Vendors** section.`;
       } else {
         resultMessage = `⚠️ Unknown tool: ${tool_name}`;
       }
