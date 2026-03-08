@@ -1,6 +1,6 @@
+import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
-import { useChecklistSessions, useChecklistItems } from "@/hooks/useChecklists";
-import { ChecklistTemplate } from "@/hooks/useChecklists";
+import { useChecklistSessions, useChecklistItems, ChecklistTemplate } from "@/hooks/useChecklists";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff } from "lucide-react";
@@ -25,7 +25,8 @@ const RECURRENCE_LABELS: Record<string, string> = {
   monthly: "Monthly", annual: "Annual",
 };
 
-export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
+export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
+  function ChecklistCard({ template, propertyId, onOpenDetail }, ref) {
   const { completedIds } = useChecklistSessions(template.id, propertyId);
   const { items } = useChecklistItems(template.id);
   const { isMasterAdmin } = usePermissions();
@@ -53,10 +54,12 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
     : null;
 
   return (
-    <div className={cn(
-      "w-full bg-card border rounded-xl px-4 py-3 flex items-center gap-3 transition-all text-left",
-      isDraft ? "border-border opacity-60 grayscale-[40%]" : isAllComplete ? "border-[hsl(var(--status-done)/0.4)]" : "border-border"
-    )}>
+    <div
+      ref={ref}
+      className={cn(
+        "w-full bg-card border rounded-xl px-4 py-3 flex items-center gap-3 transition-all text-left",
+        isDraft ? "border-border opacity-60 grayscale-[40%]" : isAllComplete ? "border-[hsl(var(--status-done)/0.4)]" : "border-border"
+      )}>
       <button onClick={onOpenDetail} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 active:scale-[0.99] transition-all text-left">
       <span className={cn(
         "w-9 h-9 rounded-xl border flex items-center justify-center text-base flex-shrink-0",
@@ -98,7 +101,7 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
             </span>
           )}
           {recurrenceLabel && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] text-muted-foreground">
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
               <RefreshCw size={8} /> {recurrenceLabel}
             </span>
           )}
@@ -108,7 +111,6 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
             </span>
           )}
         </div>
-        {/* Progress bar — only shown when in progress */}
         {hasProgress && !isAllComplete && !isDraft && (
           <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden w-full">
             <div
@@ -117,7 +119,6 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
             />
           </div>
         )}
-        {/* Complete bar */}
         {isAllComplete && !isDraft && (
           <div className="mt-1.5 h-1 bg-[hsl(var(--status-done)/0.2)] rounded-full overflow-hidden w-full">
             <div className="h-full bg-[hsl(var(--status-done))] rounded-full w-full" />
@@ -146,4 +147,4 @@ export function ChecklistCard({ template, propertyId, onOpenDetail }: Props) {
       </div>
     </div>
   );
-}
+});
