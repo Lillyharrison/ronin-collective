@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
   Flag, Tag, Clock, CheckCircle2,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useMaintenanceIssues, MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues";
+import { useMaintenanceIssues, MaintenanceIssue, IssueStatus, MaintenanceFilters } from "@/hooks/useMaintenanceIssues";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IssueCard } from "@/components/maintenance/IssueCard";
