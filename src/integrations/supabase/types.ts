@@ -121,11 +121,13 @@ export type Database = {
       calendar_events: {
         Row: {
           assigned_staff_ids: string[] | null
+          calendar_source: string | null
           created_at: string
           created_by: string | null
           description: string | null
           end_date: string | null
           event_type: string
+          external_uid: string | null
           id: string
           is_private: boolean
           keywords: string[] | null
@@ -139,11 +141,13 @@ export type Database = {
         }
         Insert: {
           assigned_staff_ids?: string[] | null
+          calendar_source?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_date?: string | null
           event_type?: string
+          external_uid?: string | null
           id?: string
           is_private?: boolean
           keywords?: string[] | null
@@ -157,11 +161,13 @@ export type Database = {
         }
         Update: {
           assigned_staff_ids?: string[] | null
+          calendar_source?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_date?: string | null
           event_type?: string
+          external_uid?: string | null
           id?: string
           is_private?: boolean
           keywords?: string[] | null
