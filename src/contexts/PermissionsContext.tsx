@@ -158,9 +158,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       if (!user) { setLoading(false); return; }
       setUserId(user.id);
 
-      const [{ data: roleRow }, { data: profile }] = await Promise.all([
+      const [{ data: roleRow }, { data: profile }, { data: rowPerms }] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
         supabase.from("profiles").select("level, department, assigned_property_ids, full_name, avatar_url, section_permissions").eq("id", user.id).maybeSingle(),
+        // Read from the new relational table (preferred source)
+        supabase.from("user_section_permissions").select("section, can_view, can_edit, notifications").eq("user_id", user.id),
       ]);
 
       if (roleRow) setRole(roleRow.role as AppRole);
@@ -170,11 +172,20 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         setAssignedPropertyIds(profile.assigned_property_ids || []);
         setFullName(profile.full_name || null);
         setAvatarUrl(profile.avatar_url || null);
-        if (profile.section_permissions && typeof profile.section_permissions === "object") {
-          const perms = profile.section_permissions as Record<string, unknown>;
-          if (Object.keys(perms).length > 0) {
-            setSectionPermissions(perms as Record<string, { view: boolean; edit: boolean; notifications: boolean }>);
-          }
+      }
+
+      // Prefer the relational table; fall back to the JSON blob on profiles
+      // so existing users aren't broken while the migration propagates.
+      if (rowPerms && rowPerms.length > 0) {
+        const permsFromTable: Record<string, { view: boolean; edit: boolean; notifications: boolean }> = {};
+        for (const row of rowPerms) {
+          permsFromTable[row.section] = { view: row.can_view, edit: row.can_edit, notifications: row.notifications };
+        }
+        setSectionPermissions(permsFromTable);
+      } else if (profile?.section_permissions && typeof profile.section_permissions === "object") {
+        const perms = profile.section_permissions as Record<string, unknown>;
+        if (Object.keys(perms).length > 0) {
+          setSectionPermissions(perms as Record<string, { view: boolean; edit: boolean; notifications: boolean }>);
         }
       }
       setLoading(false);
