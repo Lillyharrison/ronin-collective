@@ -73,7 +73,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
       applies_to_roles: rule.applies_to_roles,
       enacted_event_types: rule.enacted_event_types,
       enacted_keywords: rule.enacted_keywords.join(", "),
-      enacted_occupant_ids: (rule as any).enacted_occupant_ids ?? [],
+      enacted_occupant_ids: rule.enacted_occupant_ids ?? [],
       is_universal: rule.is_universal,
     });
     setEditingId(rule.id);
@@ -145,7 +145,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
                 {rule.enacted_keywords.map(k => (
                   <span key={k} className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">"{k}"</span>
                 ))}
-                {((rule as any).enacted_occupant_ids ?? []).map((id: string) => (
+                {(rule.enacted_occupant_ids ?? []).map((id: string) => (
                   <span key={id} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">
                     <User size={9} /> {occupantNameMap[id] ?? id}
                   </span>

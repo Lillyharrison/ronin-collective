@@ -11,6 +11,7 @@ export interface PropertyRule {
   visible_to_user_ids: string[];
   enacted_event_types: string[];
   enacted_keywords: string[];
+  enacted_occupant_ids: string[];
   icon: string;
   color: string;
   is_active: boolean;
