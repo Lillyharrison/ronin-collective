@@ -31,6 +31,7 @@ export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
+  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId } = useNavigation();
 
   const [search,      setSearch]      = useState("");
   const [filterProp,  setFilterProp]  = useState("");
