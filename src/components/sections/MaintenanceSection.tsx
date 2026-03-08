@@ -110,6 +110,9 @@ export function MaintenanceSection() {
     if (!userId) return;
     const { data: newIssue } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
     if (newIssue) {
+      const key = `create-${newIssue.id}`;
+      if (notifyingRef.current.has(key)) return;
+      notifyingRef.current.add(key);
       await notifySection("maintenance", {
         title: `🔧 New issue reported: ${payload.title ?? "Maintenance issue"}`,
         body: payload.location_detail ? `Location: ${payload.location_detail}` : undefined,
@@ -119,6 +122,7 @@ export function MaintenanceSection() {
         entity_type: "maintenance_issue",
         property_id: payload.property_id ?? undefined,
       }, userId);
+      setTimeout(() => notifyingRef.current.delete(key), 5000);
     }
   };
 
@@ -135,6 +139,9 @@ export function MaintenanceSection() {
     if (newStatus === "resolved") patch.resolved_at = new Date().toISOString();
     await updateIssue(issue.id, patch);
     if (newStatus === "approved" && userId) {
+      const key = `approve-${issue.id}`;
+      if (notifyingRef.current.has(key)) return;
+      notifyingRef.current.add(key);
       const approverProfile = profiles.find(p => p.id === userId);
       const approverName = approverProfile?.name ?? "Admin";
       await notifySection("maintenance", {
@@ -146,6 +153,7 @@ export function MaintenanceSection() {
         entity_type: "maintenance_issue",
         property_id: issue.property_id ?? undefined,
       }, userId);
+      setTimeout(() => notifyingRef.current.delete(key), 5000);
     }
   };
 
