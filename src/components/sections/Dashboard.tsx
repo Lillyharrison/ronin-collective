@@ -245,6 +245,22 @@ export function Dashboard() {
       });
   }, []);
 
+  // Load user's quick action preferences from their profile
+  useEffect(() => {
+    if (!userId || permLoading) return;
+    supabase
+      .from("profiles")
+      .select("section_permissions")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data?.section_permissions) return;
+        const perms = data.section_permissions as Record<string, unknown>;
+        const qa = perms["_quick_actions"];
+        if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
+      });
+  }, [userId, permLoading]);
+
   // Load notifications for the dashboard widget — filtered per user via acknowledged_by
   // Each user sees notifications they haven't personally acknowledged yet
   useEffect(() => {
