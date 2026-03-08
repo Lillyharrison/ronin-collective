@@ -44,7 +44,13 @@ export interface MaintenanceCategory {
 // How many issues to load per page
 const PAGE_SIZE = 50;
 
-export function useMaintenanceIssues(filterPropertyIds?: string[]) {
+export interface MaintenanceFilters {
+  search?: string;
+  category?: string;
+  priority?: string;
+}
+
+export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: MaintenanceFilters) {
   const [issues, setIssues] = useState<MaintenanceIssue[]>([]);
   const [categories, setCategories] = useState<MaintenanceCategory[]>([]);
   const [loading, setLoading] = useState(true);
