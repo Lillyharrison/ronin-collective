@@ -59,6 +59,9 @@ interface NavigationContextType {
   // Back navigation
   canGoBack: boolean;
   goBack: () => void;
+  // Whether user is inside an active chat (hides bottom nav)
+  isChatOpen: boolean;
+  setIsChatOpen: (open: boolean) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({
@@ -85,6 +88,8 @@ const NavigationContext = createContext<NavigationContextType>({
   setPendingMaintenanceIssueId: () => {},
   canGoBack: false,
   goBack: () => {},
+  isChatOpen: false,
+  setIsChatOpen: () => {},
 });
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
@@ -98,6 +103,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
   const [pendingMaintenanceIssueId, setPendingMaintenanceIssueId] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   // History stack for back navigation
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
@@ -224,6 +230,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setPendingMaintenanceIssueId,
         canGoBack,
         goBack,
+        isChatOpen,
+        setIsChatOpen,
       }}
     >
       {children}

@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePresence } from "@/hooks/usePresence";
 import { useThreads } from "@/hooks/useThreads";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { ThreadList } from "@/components/messaging/ThreadList";
 import { ChatView } from "@/components/messaging/ChatView";
 import { AddressBook } from "@/components/messaging/AddressBook";
@@ -17,6 +18,7 @@ export function MessagesSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { level, userId, isMasterAdmin } = usePermissions();
+  const { setIsChatOpen } = useNavigation();
   const [view, setView] = useState<View>("threads");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -25,6 +27,12 @@ export function MessagesSection() {
   usePresence(currentUserId);
 
   const { threads, loading, createDM, createGroup, deleteThread } = useThreads(currentUserId);
+
+  // Sync isChatOpen with navigation context so AppShell can hide/show BottomNav
+  useEffect(() => {
+    setIsChatOpen(view === "chat");
+    return () => setIsChatOpen(false);
+  }, [view, setIsChatOpen]);
 
   // Auto-create the dedicated #Maintenance thread if it doesn't exist yet
   useEffect(() => {
@@ -129,7 +137,7 @@ export function MessagesSection() {
   };
 
   return (
-    <div className={view === "chat" ? "h-[calc(100dvh-3.5rem)] flex flex-col" : "h-[calc(100dvh-7.5rem)] animate-fade-in"}>
+    <div className={view === "chat" ? "h-[calc(100dvh-3.5rem)] flex flex-col" : "animate-fade-in"}>
       {view === "threads" && (
         <ThreadList
           threads={threads}

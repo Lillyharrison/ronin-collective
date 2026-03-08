@@ -94,7 +94,7 @@ function ActiveSection() {
 }
 
 export function AppShell() {
-  const { activeSection, checklistDetailId, checklistDetailPropId } = useNavigation();
+  const { activeSection, checklistDetailId, checklistDetailPropId, isChatOpen } = useNavigation();
   const { user } = useAuth();
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
   // Auto-register push subscription when user is logged in
@@ -135,7 +135,7 @@ export function AppShell() {
         )}
       </main>
 
-      {activeSection !== "messages" && <BottomNav />}
+      {!isChatOpen && <BottomNav />}
     </div>
   );
 }
