@@ -26,7 +26,26 @@ export function MaintenanceSection() {
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
   const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager) ? undefined : assignedPropertyIds;
-  const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds);
+
+  // Debounce search to avoid a DB query on every keystroke
+  const [search,      setSearch]      = useState("");
+  const [filterProp,  setFilterProp]  = useState("");
+  const [filterCat,   setFilterCat]   = useState("");
+  const [filterPri,   setFilterPri]   = useState("");
+  const [sortBy,      setSortBy]      = useState<"newest"|"oldest"|"priority"|"status">("newest");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const dbFilters = useMemo<MaintenanceFilters>(() => ({
+    search: debouncedSearch || undefined,
+    category: filterCat || undefined,
+    priority: filterPri || undefined,
+  }), [debouncedSearch, filterCat, filterPri]);
+
+  const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
   const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
   // Guard against double-firing notifications on rapid re-renders / StrictMode
