@@ -3,6 +3,39 @@ import { format } from "date-fns";
 import { Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
+/** Render **bold**, *italic*, and `code` markdown inline */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+  let last = 0;
+  let match;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    if (match[2]) parts.push(<strong key={key++} className="font-semibold">{match[2]}</strong>);
+    else if (match[3]) parts.push(<em key={key++}>{match[3]}</em>);
+    else if (match[4]) parts.push(<code key={key++} className="text-[11px] bg-muted px-1 py-0.5 rounded font-mono">{match[4]}</code>);
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+/** Render a full AI message with markdown line-by-line */
+function RenderAIText({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <span className="whitespace-pre-wrap">
+      {lines.map((line, i) => (
+        <span key={i}>
+          {renderMarkdown(line)}
+          {i < lines.length - 1 && "\n"}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 type Message = Tables<"messages"> & { sender_profile?: { full_name: string | null; avatar_url: string | null } };
 
 interface MessageBubbleProps {
@@ -130,7 +163,9 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
 
           {/* Text */}
           {message.content_text && (
-            <span className="whitespace-pre-wrap">{message.content_text}</span>
+            isAI
+              ? <RenderAIText text={message.content_text} />
+              : <span className="whitespace-pre-wrap">{message.content_text}</span>
           )}
 
           {/* Loading state for AI */}

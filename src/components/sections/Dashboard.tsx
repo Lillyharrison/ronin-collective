@@ -1,12 +1,13 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
+import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
   MapPin, Clock, ShoppingBag, TriangleAlert, CheckSquare,
   ChevronRight, Activity, Zap, Shield, ClipboardList, X, Bell,
-  Pencil, Check,
+  Pencil, Check, ExternalLink,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
@@ -42,8 +43,20 @@ interface DashNotification {
   type: string;
   created_at: string;
   action_url: string | null;
+  entity_id: string | null;
+  entity_type: string | null;
   user_id?: string;
 }
+
+const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
+  maintenance_issue: "maintenance",
+  task:              "tasks",
+  order:             "orders",
+  calendar_event:    "calendar",
+  message:           "messages",
+  property_rule:     "rules",
+  checklist:         "checklists",
+};
 
 const statusConfig: Record<string, { label: string; labelEs: string; className: string }> = {
   occupied:           { label: "Occupied",          labelEs: "Ocupado",           className: "status-done" },
@@ -136,7 +149,7 @@ function eventDotColor(eventType: string): string {
 
 export function Dashboard() {
   const { language, t } = useLanguage();
-  const { setActiveSection, setTargetPropertyId, setActivePropertyId } = useNavigation();
+  const { setActiveSection, setTargetPropertyId, setActivePropertyId, setPendingMaintenanceIssueId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
   const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
@@ -263,36 +276,59 @@ export function Dashboard() {
 
   // Load notifications for the dashboard widget — filtered per user via acknowledged_by
   // Each user sees notifications they haven't personally acknowledged yet
-  useEffect(() => {
+  const loadDashNotifs = useCallback(async () => {
     if (!userId || permLoading) return;
 
     let query = supabase
       .from("notifications")
-      .select("id, title, body, type, created_at, action_url, user_id")
+      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id")
+      .eq("user_id", userId)
       .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
-      .limit(isMasterAdmin ? 20 : 5);
+      .limit(10);
 
-    // Non-admins only see their own notifications
-    if (!isMasterAdmin) {
-      query = query.eq("user_id", userId);
-    }
-
-    query.then(({ data }) => setDashNotifs((data as DashNotification[]) ?? []));
+    const { data } = await query;
+    setDashNotifs((data as DashNotification[]) ?? []);
   }, [userId, isMasterAdmin, permLoading]);
+
+  useEffect(() => { loadDashNotifs(); }, [loadDashNotifs]);
+
+  // Realtime: refresh dashboard notifications when new ones arrive
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel("dash-notifs")
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      }, () => loadDashNotifs())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, loadDashNotifs]);
 
   const greeting = getGreeting(language);
   const dateStr = formatDate(language);
   const smartTagline = taglineOverride ? taglineOverride.text : getSmartTagline(language);
 
   const dismissNotif = async (id: string, notifUserId?: string) => {
-    // Call the security-definer function — appends current user to acknowledged_by only
     await supabase.rpc("acknowledge_notification", { _notif_id: id });
-    // If owner is dismissing, also mark is_read for bell panel unread count
     if (notifUserId === userId) {
       await supabase.from("notifications").update({ is_read: true }).eq("id", id);
     }
     setDashNotifs(prev => prev.filter(n => n.id !== id));
+  };
+
+  const handleNotifClick = async (n: DashNotification) => {
+    await dismissNotif(n.id, n.user_id);
+    const targetSection: ActiveSection | undefined =
+      (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
+      (n.action_url as ActiveSection | undefined);
+    if (n.entity_type === "maintenance_issue" && n.entity_id) {
+      setPendingMaintenanceIssueId(n.entity_id);
+    }
+    if (targetSection) setActiveSection(targetSection);
   };
 
   const saveTaglineOverride = async () => {
@@ -511,18 +547,30 @@ export function Dashboard() {
           <div className="divide-y divide-border">
             {dashNotifs.map(n => {
               const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
+              const isClickable = !!(n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
               return (
                 <div
                   key={n.id}
-                  className={cn("flex items-start gap-3 px-4 py-3 border-l-2", styles.border)}
+                  onClick={isClickable ? () => handleNotifClick(n) : undefined}
+                  role={isClickable ? "button" : undefined}
+                  className={cn(
+                    "flex items-start gap-3 px-4 py-3 border-l-2 group",
+                    styles.border,
+                    isClickable ? "cursor-pointer hover:bg-muted/40 active:scale-[0.99] transition-colors" : ""
+                  )}
                 >
                   <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", styles.dot)} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-foreground leading-snug">{n.title}</p>
                     {n.body && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{n.body}</p>}
+                    {isClickable && (
+                      <span className="text-[10px] text-gold/60 flex items-center gap-0.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ExternalLink size={9} /> Tap to view
+                      </span>
+                    )}
                   </div>
                   <button
-                    onClick={() => dismissNotif(n.id, n.user_id)}
+                    onClick={(e) => { e.stopPropagation(); dismissNotif(n.id, n.user_id); }}
                     className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 p-1"
                     aria-label="Dismiss"
                   >
