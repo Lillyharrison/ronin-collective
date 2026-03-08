@@ -142,11 +142,25 @@ export function PropertySection() {
 
   async function saveProperty() {
     setSaving(true);
+    // Resolve occupant name from profile for the legacy text field (used by AI)
+    let occupantName: string | null = null;
+    if (form.status === "occupied" && form.occupied_by_profile_id) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", form.occupied_by_profile_id)
+        .single();
+      occupantName = prof?.full_name ?? null;
+    } else if (form.status === "occupied" && form.occupied_by) {
+      occupantName = form.occupied_by; // fallback for free-text
+    }
     const payload = {
       name: form.name, address: form.address, city: form.city || null,
       country: form.country || null, timezone: form.timezone, status: form.status,
       image_url: form.image_url || null, is_primary: form.is_primary,
-      occupied_by: form.status === "occupied" && form.occupied_by ? form.occupied_by : null,
+      occupied_by: occupantName,
+      occupied_by_profile_id: form.status === "occupied" && form.occupied_by_profile_id
+        ? form.occupied_by_profile_id : null,
     };
     if (form.is_primary) {
       await supabase.from("properties").update({ is_primary: false }).neq("id", editingProperty?.id ?? "");
