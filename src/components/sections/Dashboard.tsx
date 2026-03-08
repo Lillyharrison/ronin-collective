@@ -1,12 +1,13 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
+import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
   MapPin, Clock, ShoppingBag, TriangleAlert, CheckSquare,
   ChevronRight, Activity, Zap, Shield, ClipboardList, X, Bell,
-  Pencil, Check,
+  Pencil, Check, ExternalLink,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
