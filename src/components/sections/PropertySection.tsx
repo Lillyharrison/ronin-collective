@@ -73,6 +73,7 @@ export function PropertySection() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [allProfiles, setAllProfiles] = useState<OccupantProfile[]>([]);
 
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -84,6 +85,11 @@ export function PropertySection() {
   const dragIndexRef = useRef<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+
+  useEffect(() => {
+    supabase.from("profiles").select("id, full_name, avatar_url, level").order("full_name")
+      .then(({ data }) => setAllProfiles((data as OccupantProfile[]) ?? []));
+  }, []);
 
   useEffect(() => {
     if (!permLoading) fetchProperties();
