@@ -53,6 +53,9 @@ interface NavigationContextType {
   // Deep-link to checklists filtered for a specific property
   checklistsForPropertyId: string | null;
   setChecklistsForPropertyId: (id: string | null) => void;
+  // Deep-link to open a specific maintenance issue drawer (one-shot, cleared after use)
+  pendingMaintenanceIssueId: string | null;
+  setPendingMaintenanceIssueId: (id: string | null) => void;
   // Back navigation
   canGoBack: boolean;
   goBack: () => void;
