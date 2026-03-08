@@ -188,6 +188,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_pinned: boolean
           last_message_at: string | null
           participant_ids: string[] | null
           property_id: string | null
@@ -199,6 +200,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_pinned?: boolean
           last_message_at?: string | null
           participant_ids?: string[] | null
           property_id?: string | null
@@ -210,6 +212,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_pinned?: boolean
           last_message_at?: string | null
           participant_ids?: string[] | null
           property_id?: string | null
