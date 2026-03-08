@@ -109,10 +109,10 @@ export function useEntryTranslation(language: string, texts: string[]): {
  * @param items     array of objects
  * @param fields    keys of string fields to translate (e.g. ["title", "description"])
  */
-export function useBatchTranslation<T extends Record<string, unknown>>(
+export function useBatchTranslation<T extends { [K in F]: string | null | undefined }, F extends keyof T>(
   language: string,
   items: T[],
-  fields: (keyof T)[],
+  fields: F[],
 ): { items: T[]; translating: boolean } {
   // Flatten all text values into one array for a single batch request
   const allTexts = items.flatMap(item =>
@@ -125,7 +125,7 @@ export function useBatchTranslation<T extends Record<string, unknown>>(
 
   // Re-assemble translated values back onto items
   const translatedItems = items.map((item, i) => {
-    const patch: Partial<T> = {};
+    const patch = {} as Partial<Pick<T, F>>;
     fields.forEach((f, j) => {
       const idx = i * fields.length + j;
       const orig = (item[f] as string | null | undefined) ?? "";
