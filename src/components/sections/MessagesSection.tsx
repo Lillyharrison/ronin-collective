@@ -18,7 +18,7 @@ export function MessagesSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { level, userId, isMasterAdmin } = usePermissions();
-  const { setIsChatOpen } = useNavigation();
+  const { setIsChatOpen, setTotalUnread } = useNavigation();
   const [view, setView] = useState<View>("threads");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +33,13 @@ export function MessagesSection() {
     setIsChatOpen(view === "chat");
     return () => setIsChatOpen(false);
   }, [view, setIsChatOpen]);
+
+  // Sync total unread into NavigationContext so BottomNav badge stays accurate
+  // without needing its own realtime subscription
+  useEffect(() => {
+    const total = threads.reduce((sum, t) => sum + t.unread_count, 0);
+    setTotalUnread(total);
+  }, [threads, setTotalUnread]);
 
   // Auto-create the dedicated #Maintenance thread if it doesn't exist yet
   useEffect(() => {

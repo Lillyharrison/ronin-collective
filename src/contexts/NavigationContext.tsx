@@ -100,6 +100,9 @@ interface NavigationContextType {
   goBack: () => void;
   isChatOpen: boolean;
   setIsChatOpen: (open: boolean) => void;
+  /** Total unread message count — set by MessagesSection from useThreads data */
+  totalUnread: number;
+  setTotalUnread: (count: number) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({
@@ -129,6 +132,8 @@ const NavigationContext = createContext<NavigationContextType>({
   goBack: () => {},
   isChatOpen: false,
   setIsChatOpen: () => {},
+  totalUnread: 0,
+  setTotalUnread: () => {},
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -157,6 +162,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [pendingMaintenanceIssueId, setPendingMaintenanceIssueIdState] = useState<string | null>(null);
   const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [totalUnread, setTotalUnread] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   // Keep URL hash in sync whenever the section changes
@@ -274,6 +280,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         goBack,
         isChatOpen,
         setIsChatOpen,
+        totalUnread,
+        setTotalUnread,
       }}
     >
       {children}

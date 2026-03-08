@@ -1,16 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-/** Returns total unread message count across all threads for the current user.
- *  Optimised: single query using the unread pattern, debounced realtime updates. */
+/**
+ * Returns total unread message count for the current user.
+ *
+ * Design: does ONE fetch on mount to seed the badge (e.g. before the
+ * MessagesSection has loaded its threads).  The real-time updates are owned
+ * exclusively by useThreads (chat_threads subscription) + useMessages
+ * (per-thread subscription).  We deliberately avoid adding a third concurrent
+ * subscription to the messages table here.
+ *
+ * Once MessagesSection mounts, it syncs the live count from useThreads into
+ * NavigationContext.totalUnread, which BottomNav reads directly.  This hook
+ * therefore only runs for the initial "cold" badge before messages loads.
+ */
 export function useUnreadCount(userId: string | null) {
   const [unreadCount, setUnreadCount] = useState(0);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+  const hasFetched = useRef(false);
 
   const fetchCount = useCallback(async () => {
     if (!userId) { setUnreadCount(0); return; }
 
-    // Get threads + unread messages in 2 parallel queries
     const [threadsRes] = await Promise.all([
       supabase
         .from("chat_threads")
@@ -32,27 +42,12 @@ export function useUnreadCount(userId: string | null) {
     setUnreadCount(count ?? 0);
   }, [userId]);
 
-  useEffect(() => { fetchCount(); }, [fetchCount]);
-
+  // Fetch once on mount; MessagesSection's useEffect keeps it live after that
   useEffect(() => {
-    if (!userId) return;
-
-    const debouncedFetch = () => {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(fetchCount, 500);
-    };
-
-    const channel = supabase
-      .channel("unread-count")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, debouncedFetch)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, debouncedFetch)
-      .subscribe();
-
-    return () => {
-      clearTimeout(debounceTimer.current);
-      supabase.removeChannel(channel);
-    };
-  }, [userId, fetchCount]);
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    fetchCount();
+  }, [fetchCount]);
 
   return unreadCount;
 }
