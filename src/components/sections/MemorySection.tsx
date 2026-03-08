@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { sortProperties } from "@/hooks/useScopedProperties";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Brain, Trash2, Star, Tag, Building2, User, Plus, Search, Filter } from "lucide-react";
