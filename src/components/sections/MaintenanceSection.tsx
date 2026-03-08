@@ -61,6 +61,16 @@ export function MaintenanceSection() {
       }))));
   }, []);
 
+  // Deep-link: when arriving from a notification, auto-open the specific issue drawer
+  useEffect(() => {
+    if (!pendingMaintenanceIssueId || loading || issues.length === 0) return;
+    const issue = issues.find(i => i.id === pendingMaintenanceIssueId);
+    if (issue) {
+      setDetailIssue(issue);
+      setPendingMaintenanceIssueId(null);
+    }
+  }, [pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
+
   const filtered = useCallback(() => {
     let list = [...issues];
 
