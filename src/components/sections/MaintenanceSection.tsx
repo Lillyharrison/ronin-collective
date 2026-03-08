@@ -408,6 +408,12 @@ export function MaintenanceSection() {
               compact
             />
           ))}
+          {hasMore && (
+            <button onClick={loadMore} disabled={loading}
+              className="w-full py-2.5 text-xs text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors">
+              {loading ? "Loading…" : "Load more"}
+            </button>
+          )}
         </div>
       ) : (
         /* Table view */
