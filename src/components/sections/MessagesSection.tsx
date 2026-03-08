@@ -18,6 +18,7 @@ export function MessagesSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { level, userId, isMasterAdmin } = usePermissions();
+  const { setIsChatOpen } = useNavigation();
   const [view, setView] = useState<View>("threads");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,6 +27,12 @@ export function MessagesSection() {
   usePresence(currentUserId);
 
   const { threads, loading, createDM, createGroup, deleteThread } = useThreads(currentUserId);
+
+  // Sync isChatOpen with navigation context so AppShell can hide/show BottomNav
+  useEffect(() => {
+    setIsChatOpen(view === "chat");
+    return () => setIsChatOpen(false);
+  }, [view, setIsChatOpen]);
 
   // Auto-create the dedicated #Maintenance thread if it doesn't exist yet
   useEffect(() => {
