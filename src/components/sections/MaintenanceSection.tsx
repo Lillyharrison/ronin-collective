@@ -360,8 +360,8 @@ export function MaintenanceSection() {
           <p className="text-sm text-muted-foreground">{isL ? "Sin problemas encontrados" : "No issues found"}</p>
         </div>
       ) : viewMode === "board" ? (
-        <div className="px-4 pb-4 overflow-x-auto">
-          <div className="flex gap-3 min-w-max pb-2">
+        <div className="px-4 pb-4">
+          <div className="grid grid-cols-2 gap-3">
             {STATUS_COLUMNS.map(col => {
               const colIssues = displayIssues.filter(i => i.status === col.key);
               return (
