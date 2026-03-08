@@ -365,7 +365,7 @@ export function MaintenanceSection() {
             {STATUS_COLUMNS.map(col => {
               const colIssues = displayIssues.filter(i => i.status === col.key);
               return (
-                <div key={col.key} className="w-[260px] flex-shrink-0">
+                <div key={col.key} className="min-w-0">
                   <div className="flex items-center justify-between px-3 py-2 bg-muted/40 rounded-t-xl border-b border-border">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-foreground">
