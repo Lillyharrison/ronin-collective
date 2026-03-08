@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useRef, useEffect, ReactNode } from "react";
 
 export type ActiveTab = "home" | "property" | "maintenance" | "messages" | "profile";
 export type ActiveSection =
@@ -23,6 +23,51 @@ export type ActiveSection =
   | "alerts"
   | "rules";
 
+// ── URL hash helpers ──────────────────────────────────────────────────────────
+const SECTION_TO_HASH: Record<ActiveSection, string> = {
+  dashboard:       "home",
+  property:        "property",
+  maintenance:     "maintenance",
+  messages:        "messages",
+  profile:         "profile",
+  manuals:         "manuals",
+  checklists:      "checklists",
+  tasks:           "tasks",
+  contacts:        "contacts",
+  inventory:       "inventory",
+  laundry:         "laundry",
+  orders:          "orders",
+  "meet-team":     "meet-team",
+  travel:          "travel",
+  calendar:        "calendar",
+  achievements:    "achievements",
+  "master-import": "master-import",
+  memory:          "memory",
+  alerts:          "alerts",
+  rules:           "rules",
+};
+
+const HASH_TO_SECTION: Record<string, ActiveSection> = Object.fromEntries(
+  Object.entries(SECTION_TO_HASH).map(([k, v]) => [v, k as ActiveSection])
+);
+
+function hashToSection(hash: string): ActiveSection | null {
+  return HASH_TO_SECTION[hash.replace(/^#/, "")] ?? null;
+}
+
+function sectionToHash(section: ActiveSection): string {
+  return "#" + (SECTION_TO_HASH[section] ?? "home");
+}
+
+const TAB_MAP: Partial<Record<ActiveSection, ActiveTab>> = {
+  dashboard: "home",
+  property: "property",
+  maintenance: "maintenance",
+  messages: "messages",
+  profile: "profile",
+};
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface HistoryEntry {
   section: ActiveSection;
   propertyId: string | null;
@@ -39,28 +84,20 @@ interface NavigationContextType {
   checklistDetailPropId: string | null;
   openChecklistDetail: (templateId: string, propertyId: string | null) => void;
   closeChecklistDetail: () => void;
-  // Care guide detail
   careGuideDetailId: string | null;
   openCareGuideDetail: (templateId: string) => void;
   closeCareGuideDetail: () => void;
-  // Deep-link to a specific property (one-shot, cleared after use)
   targetPropertyId: string | null;
   setTargetPropertyId: (id: string | null) => void;
-  // Persisted currently-selected property
   activePropertyId: string | null;
   setActivePropertyId: (id: string | null) => void;
-  // Deep-link to checklists filtered for a specific property
   checklistsForPropertyId: string | null;
   setChecklistsForPropertyId: (id: string | null) => void;
-  // Deep-link to open a specific maintenance issue drawer (one-shot, cleared after use)
   pendingMaintenanceIssueId: string | null;
   setPendingMaintenanceIssueId: (id: string | null) => void;
-  // Stable ref version — survives navigation state batching
   pendingMaintenanceIssueIdRef: React.MutableRefObject<string | null>;
-  // Back navigation
   canGoBack: boolean;
   goBack: () => void;
-  // Whether user is inside an active chat (hides bottom nav)
   isChatOpen: boolean;
   setIsChatOpen: (open: boolean) => void;
 }
@@ -94,9 +131,22 @@ const NavigationContext = createContext<NavigationContextType>({
   setIsChatOpen: () => {},
 });
 
+// ── Provider ──────────────────────────────────────────────────────────────────
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("home");
-  const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
+  // Initialise from URL hash so a refresh restores the correct section
+  const getInitialSection = (): ActiveSection => {
+    if (typeof window !== "undefined") {
+      const fromHash = hashToSection(window.location.hash);
+      if (fromHash) return fromHash;
+    }
+    return "dashboard";
+  };
+
+  const getInitialTab = (section: ActiveSection): ActiveTab =>
+    TAB_MAP[section] ?? "home";
+
+  const [activeSection, setActiveSectionState] = useState<ActiveSection>(getInitialSection);
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => getInitialTab(getInitialSection()));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checklistDetailId, setChecklistDetailId] = useState<string | null>(null);
   const [checklistDetailPropId, setChecklistDetailPropId] = useState<string | null>(null);
@@ -105,10 +155,30 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
   const [pendingMaintenanceIssueId, setPendingMaintenanceIssueIdState] = useState<string | null>(null);
-  // Ref mirrors the state — survives React batched render cycles
   const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  // Keep URL hash in sync whenever the section changes
+  useEffect(() => {
+    const hash = sectionToHash(activeSection);
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, "", hash);
+    }
+  }, [activeSection]);
+
+  // Handle browser back / forward buttons
+  useEffect(() => {
+    const onHashChange = () => {
+      const section = hashToSection(window.location.hash);
+      if (section) {
+        setActiveSectionState(section);
+        if (TAB_MAP[section]) setActiveTab(TAB_MAP[section]!);
+      }
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   const setPendingMaintenanceIssueId = (id: string | null) => {
     pendingMaintenanceIssueIdRef.current = id;
@@ -126,7 +196,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     };
     const newSection = sectionMap[tab];
     setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
-    setActiveSection(newSection);
+    setActiveSectionState(newSection);
     setSidebarOpen(false);
     if (tab !== "property") setActivePropertyId(null);
   };
@@ -136,16 +206,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
       setChecklistDetailId(null);
     }
-    setActiveSection(section);
+    setActiveSectionState(section);
     setSidebarOpen(false);
-    const tabMap: Partial<Record<ActiveSection, ActiveTab>> = {
-      dashboard: "home",
-      property: "property",
-      maintenance: "maintenance",
-      messages: "messages",
-      profile: "profile",
-    };
-    if (tabMap[section]) setActiveTab(tabMap[section]!);
+    if (TAB_MAP[section]) setActiveTab(TAB_MAP[section]!);
   };
 
   const openCareGuideDetail = (templateId: string) => {
@@ -164,19 +227,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     if (history.length === 0) return;
     const prev = history[history.length - 1];
     setHistory(h => h.slice(0, -1));
-    setActiveSection(prev.section);
+    setActiveSectionState(prev.section);
     if (prev.propertyId !== undefined) {
       setActivePropertyId(prev.propertyId);
       if (prev.propertyId) setTargetPropertyId(prev.propertyId);
     }
-    const tabMap: Partial<Record<ActiveSection, ActiveTab>> = {
-      dashboard: "home",
-      property: "property",
-      maintenance: "maintenance",
-      messages: "messages",
-      profile: "profile",
-    };
-    if (tabMap[prev.section]) setActiveTab(tabMap[prev.section]!);
+    if (TAB_MAP[prev.section]) setActiveTab(TAB_MAP[prev.section]!);
   };
 
   const openChecklistDetail = (templateId: string, propertyId: string | null) => {
