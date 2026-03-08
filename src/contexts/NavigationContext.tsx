@@ -59,6 +59,9 @@ interface NavigationContextType {
   // Back navigation
   canGoBack: boolean;
   goBack: () => void;
+  // Whether user is inside an active chat (hides bottom nav)
+  isChatOpen: boolean;
+  setIsChatOpen: (open: boolean) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({
