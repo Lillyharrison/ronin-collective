@@ -162,36 +162,40 @@ export function ChatView({
     if (!file || !file.type.startsWith("image")) return;
     const captionText = input.trim();
     setInput("");
-    setSending(true);
-    const path = `${currentUserId}/${Date.now()}_vision_${file.name}`;
-    const { data: uploaded, error: uploadErr } = await supabase.storage.from("chat-media").upload(path, file);
-    if (uploadErr || !uploaded) {
-      setSending(false);
-      if (visionInputRef.current) visionInputRef.current.value = "";
-      return;
-    }
-    const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
-    const publicUrl = urlData.publicUrl;
-    await sendMediaMessage(publicUrl, "image", currentUserId);
+
+    // 1. Show image immediately using a local blob URL so the UI feels instant
+    const localBlobUrl = URL.createObjectURL(file);
+    await sendMediaMessage(localBlobUrl, "image", currentUserId);
     if (captionText) await sendMessage(captionText, currentUserId);
-    setSending(false);
+
     setAgentAnalyzing(true);
+
+    // 2. Upload in background — don't block UI on storage round-trip
     try {
+      const path = `${currentUserId}/${Date.now()}_vision_${file.name}`;
+      const { data: uploaded, error: uploadErr } = await supabase.storage.from("chat-media").upload(path, file);
+      if (uploadErr || !uploaded) {
+        console.error("Vision upload error:", uploadErr);
+        setAgentAnalyzing(false);
+        if (visionInputRef.current) visionInputRef.current.value = "";
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
+      const publicUrl = urlData.publicUrl;
+
+      // 3. Call Ronin AI with the real public URL
       const auth = await getAuthHeader();
-      const history = messages.filter(m => m.content_text).map(m => ({
-        role: m.is_ai_generated ? "assistant" as const : "user" as const,
-        content: m.content_text!,
-      }));
       const visionPrompt = captionText || "Please analyse this image and help me log it to the estate inventory.";
       await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: auth },
-        body: JSON.stringify({ type: "message", content: visionPrompt, image_url: publicUrl, messages: history, thread_id: threadId }),
+        body: JSON.stringify({ type: "message", content: visionPrompt, image_url: publicUrl, thread_id: threadId }),
       });
     } catch (err) {
       console.error("Vision analysis error:", err);
     } finally {
       setAgentAnalyzing(false);
+      URL.revokeObjectURL(localBlobUrl);
     }
     if (visionInputRef.current) visionInputRef.current.value = "";
   };
