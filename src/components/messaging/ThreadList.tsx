@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { ThreadWithMeta } from "@/hooks/useThreads";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format, isToday, isYesterday, isThisWeek, isThisYear } from "date-fns";
@@ -24,7 +24,6 @@ interface ThreadListProps {
 
 const AGENT_RONIN_LABEL = "Agent Ronin";
 
-/** WhatsApp-style timestamp: time if today, day name if this week, DD/MM if this year, DD/MM/YY otherwise */
 function formatThreadTime(dateStr: string, locale?: Locale): string {
   const date = new Date(dateStr);
   if (isToday(date)) return format(date, "HH:mm");
@@ -34,6 +33,184 @@ function formatThreadTime(dateStr: string, locale?: Locale): string {
   return format(date, "dd/MM/yy");
 }
 
+const ACTION_WIDTH = 80; // px per action button
+
+interface SwipeRowProps {
+  thread: ThreadWithMeta;
+  isPinned: boolean;
+  isActive: boolean;
+  isAdmin?: boolean;
+  canDelete: boolean;
+  onSelect: () => void;
+  onPin: () => void;
+  onDeleteRequest: () => void;
+  getAvatar: (t: ThreadWithMeta) => React.ReactNode;
+  getThreadName: (t: ThreadWithMeta) => string;
+  language: string;
+  locale?: Locale;
+  openSwipeId: string | null;
+  setOpenSwipeId: (id: string | null) => void;
+}
+
+function SwipeRow({
+  thread, isPinned, isActive, isAdmin, canDelete,
+  onSelect, onPin, onDeleteRequest,
+  getAvatar, getThreadName, language, locale,
+  openSwipeId, setOpenSwipeId,
+}: SwipeRowProps) {
+  const totalActionWidth = canDelete ? ACTION_WIDTH * 2 : ACTION_WIDTH;
+  const isOpen = openSwipeId === thread.id;
+  const offsetX = isOpen ? -totalActionWidth : 0;
+
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+  const isDragging = useRef(false);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [draggingOffset, setDraggingOffset] = useState<number | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isDragging.current = false;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+
+    // Only hijack if horizontal movement dominates
+    if (!isDragging.current && Math.abs(dx) < Math.abs(dy) && Math.abs(dy) > 5) return;
+    if (Math.abs(dx) > 5) isDragging.current = true;
+    if (!isDragging.current) return;
+
+    e.preventDefault();
+    const base = isOpen ? -totalActionWidth : 0;
+    const raw = base + dx;
+    // Clamp: can only swipe left up to full action width, no right past 0
+    const clamped = Math.min(0, Math.max(-totalActionWidth, raw));
+    setDraggingOffset(clamped);
+  };
+
+  const onTouchEnd = () => {
+    if (!isDragging.current) return;
+    const current = draggingOffset ?? (isOpen ? -totalActionWidth : 0);
+    const threshold = totalActionWidth * 0.4;
+
+    if (!isOpen && current < -threshold) {
+      setOpenSwipeId(thread.id);
+    } else if (isOpen && current > -(totalActionWidth - threshold)) {
+      setOpenSwipeId(null);
+    } else if (isOpen) {
+      setOpenSwipeId(thread.id); // keep open
+    } else {
+      setOpenSwipeId(null);
+    }
+    setDraggingOffset(null);
+  };
+
+  const translateX = draggingOffset !== null ? draggingOffset : offsetX;
+
+  return (
+    <div className="relative overflow-hidden border-b border-border/50 flex-shrink-0">
+      {/* Action buttons behind the row */}
+      <div
+        className="absolute inset-y-0 right-0 flex"
+        style={{ width: totalActionWidth }}
+      >
+        {/* Pin button */}
+        <button
+          onClick={() => { onPin(); setOpenSwipeId(null); }}
+          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.5)]"
+          style={{ width: ACTION_WIDTH }}
+        >
+          {isPinned
+            ? <PinOff size={22} className="text-white" />
+            : <Pin size={22} className="text-white" />}
+          <span className="text-[11px] text-white font-medium">
+            {isPinned
+              ? (language === "es" ? "Desanclar" : "Unpin")
+              : (language === "es" ? "Anclar" : "Pin")}
+          </span>
+        </button>
+
+        {/* Delete button — admin only */}
+        {canDelete && (
+          <button
+            onClick={() => { onDeleteRequest(); setOpenSwipeId(null); }}
+            className="flex flex-col items-center justify-center gap-1 flex-1 bg-destructive"
+            style={{ width: ACTION_WIDTH }}
+          >
+            <Trash2 size={22} className="text-destructive-foreground" />
+            <span className="text-[11px] text-destructive-foreground font-medium">
+              {language === "es" ? "Eliminar" : "Delete"}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Swipeable row */}
+      <div
+        ref={rowRef}
+        className={`relative flex items-center transition-colors ${
+          isActive ? "bg-accent/10" : "bg-background"
+        } ${isPinned ? "bg-accent/5" : ""}`}
+        style={{
+          transform: `translateX(${translateX}px)`,
+          transition: draggingOffset !== null ? "none" : "transform 0.2s ease",
+          willChange: "transform",
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={() => {
+          if (isOpen) { setOpenSwipeId(null); return; }
+          onSelect();
+        }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3 w-full min-w-0 overflow-hidden">
+          {/* Avatar with pin indicator */}
+          <div className="relative flex-shrink-0">
+            {getAvatar(thread)}
+            {isPinned && (
+              <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
+                <Pin size={9} className="text-accent-foreground" />
+              </div>
+            )}
+          </div>
+
+          {/* Text */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-foreground truncate leading-tight">
+                {getThreadName(thread)}
+              </span>
+              {thread.last_message_at && (
+                <span className={`text-[11px] whitespace-nowrap flex-shrink-0 leading-tight ${
+                  thread.unread_count > 0 ? "text-accent font-medium" : "text-muted-foreground"
+                }`}>
+                  {formatThreadTime(thread.last_message_at, locale)}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2 mt-0.5">
+              <p className="text-xs text-muted-foreground truncate flex-1 min-w-0 leading-tight">
+                {thread.last_message
+                  ? thread.last_message.split("\n")[0]
+                  : (language === "es" ? "Sin mensajes" : "No messages yet")}
+              </p>
+              {thread.unread_count > 0 && (
+                <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                  {thread.unread_count > 99 ? "99+" : thread.unread_count}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ThreadList({
   threads, currentUserId, isAdmin, activeThreadId, onSelectThread, onNewChat,
   onDeleteThread, searchQuery, onSearchChange,
@@ -41,23 +218,23 @@ export function ThreadList({
   const { language } = useLanguage();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Local optimistic pin state
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() =>
     new Set(threads.filter(t => t.is_pinned).map(t => t.id))
   );
+  const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
 
   const locale = language === "es" ? es : undefined;
 
-  const getThreadName = (t: ThreadWithMeta) => {
+  const getThreadName = useCallback((t: ThreadWithMeta) => {
     if (t.title) return t.title;
     if (t.type === "private") {
       const other = t.participants.find(p => p.id !== currentUserId);
       return other?.full_name || (language === "es" ? "Chat privado" : "Private chat");
     }
     return t.participants.map(p => p.full_name || "?").join(", ");
-  };
+  }, [currentUserId, language]);
 
-  const getAvatar = (t: ThreadWithMeta) => {
+  const getAvatar = useCallback((t: ThreadWithMeta) => {
     if (t.type === "group" || t.type === "property") {
       return (
         <div className="w-12 h-12 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center flex-shrink-0">
@@ -82,12 +259,10 @@ export function ThreadList({
         <span className="text-sm font-semibold text-muted-foreground">{initials}</span>
       </div>
     );
-  };
+  }, [currentUserId]);
 
-  const handleTogglePin = async (e: React.MouseEvent, threadId: string) => {
-    e.stopPropagation();
+  const handleTogglePin = async (threadId: string) => {
     const nowPinned = !pinnedIds.has(threadId);
-    // Optimistic update
     setPinnedIds(prev => {
       const next = new Set(prev);
       if (nowPinned) next.add(threadId); else next.delete(threadId);
@@ -96,12 +271,10 @@ export function ThreadList({
     await supabase.from("chat_threads").update({ is_pinned: nowPinned } as never).eq("id", threadId);
   };
 
-  const filtered = threads.filter(t => {
-    if (!searchQuery) return true;
-    return getThreadName(t).toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filtered = threads.filter(t =>
+    !searchQuery || getThreadName(t).toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  // Pinned first, then by last_message_at desc
   const sorted = [...filtered].sort((a, b) => {
     const aPinned = pinnedIds.has(a.id) ? 1 : 0;
     const bPinned = pinnedIds.has(b.id) ? 1 : 0;
@@ -150,7 +323,10 @@ export function ThreadList({
       </div>
 
       {/* Thread list */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+        onClick={() => openSwipeId && setOpenSwipeId(null)}
+      >
         {sorted.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <MessageCircle size={40} className="text-muted-foreground/30" />
@@ -159,86 +335,25 @@ export function ThreadList({
             </p>
           </div>
         )}
-        {sorted.map((thread) => {
-          const isPinned = pinnedIds.has(thread.id);
-          return (
-            <div
-              key={thread.id}
-              className={`group relative flex items-center border-b border-border/50 transition-colors overflow-hidden ${
-                activeThreadId === thread.id ? "bg-accent/10" : "hover:bg-muted/50"
-              } ${isPinned ? "bg-accent/5" : ""}`}
-            >
-              <button
-                onClick={() => onSelectThread(thread.id)}
-                className="flex-1 flex items-center gap-3 px-4 py-3 text-left min-w-0 overflow-hidden"
-              >
-                {/* Avatar with optional pin indicator */}
-                <div className="relative flex-shrink-0">
-                  {getAvatar(thread)}
-                  {isPinned && (
-                    <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
-                      <Pin size={9} className="text-accent-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Text content */}
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  {/* Row 1: name + timestamp */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-foreground truncate leading-tight">
-                      {getThreadName(thread)}
-                    </span>
-                    {thread.last_message_at && (
-                      <span className={`text-[11px] whitespace-nowrap flex-shrink-0 leading-tight ${
-                        thread.unread_count > 0 ? "text-accent font-medium" : "text-muted-foreground"
-                      }`}>
-                        {formatThreadTime(thread.last_message_at, locale)}
-                      </span>
-                    )}
-                  </div>
-                  {/* Row 2: message preview + unread badge */}
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <p className="text-xs text-muted-foreground truncate flex-1 min-w-0 leading-tight">
-                      {thread.last_message
-                        ? thread.last_message.split("\n")[0]
-                        : (language === "es" ? "Sin mensajes" : "No messages yet")}
-                    </p>
-                    {thread.unread_count > 0 && (
-                      <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center px-1">
-                        {thread.unread_count > 99 ? "99+" : thread.unread_count}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
-
-              {/* Action buttons — show on hover */}
-              <div className="absolute right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {/* Pin / unpin */}
-                <button
-                  onClick={(e) => handleTogglePin(e, thread.id)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"
-                  title={isPinned
-                    ? (language === "es" ? "Desanclar" : "Unpin")
-                    : (language === "es" ? "Anclar" : "Pin")}
-                >
-                  {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
-                </button>
-                {/* Delete — admin only */}
-                {isAdmin && onDeleteThread && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(thread.id); }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
-                    title={language === "es" ? "Eliminar chat" : "Delete chat"}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {sorted.map((thread) => (
+          <SwipeRow
+            key={thread.id}
+            thread={thread}
+            isPinned={pinnedIds.has(thread.id)}
+            isActive={activeThreadId === thread.id}
+            isAdmin={isAdmin}
+            canDelete={!!isAdmin && !!onDeleteThread}
+            onSelect={() => onSelectThread(thread.id)}
+            onPin={() => handleTogglePin(thread.id)}
+            onDeleteRequest={() => setConfirmDeleteId(thread.id)}
+            getAvatar={getAvatar}
+            getThreadName={getThreadName}
+            language={language}
+            locale={locale}
+            openSwipeId={openSwipeId}
+            setOpenSwipeId={setOpenSwipeId}
+          />
+        ))}
       </div>
 
       {/* Confirm delete dialog */}
