@@ -25,7 +25,7 @@ export function MaintenanceSection() {
   const { t, language } = useLanguage();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   const { issues, categories, loading, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues();
-  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId } = useNavigation();
+  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
   const [search,      setSearch]      = useState("");
   const [filterProp,  setFilterProp]  = useState("");
@@ -53,22 +53,22 @@ export function MaintenanceSection() {
       }))));
   }, []);
 
-  // Deep-link: open specific issue from notification click
-  // Runs whenever the pending ID changes OR issues finish loading
+  // Deep-link: open specific issue when arriving from a notification click.
+  // Reads from the ref (always current) so we don't miss the value when
+  // the section first mounts in the same render cycle as navigation.
   useEffect(() => {
-    console.log("[MaintenanceSection] pendingId:", pendingMaintenanceIssueId, "loading:", loading, "issues count:", issues.length);
-    if (!pendingMaintenanceIssueId) return;
-    if (loading) return; // wait until loaded
-    const issue = issues.find(i => i.id === pendingMaintenanceIssueId);
-    console.log("[MaintenanceSection] found issue:", issue?.title ?? "NOT FOUND");
+    const pendingId = pendingMaintenanceIssueIdRef.current;
+    if (!pendingId) return;
+    if (loading) return;
+    const issue = issues.find(i => i.id === pendingId);
     if (issue) {
       setDetailIssue(issue);
       setPendingMaintenanceIssueId(null);
-    } else {
-      // Issue not in list yet — fetch fresh then retry once
-      fetchIssues();
+    } else if (issues.length > 0) {
+      // Issues loaded but this one isn't visible (RLS / property filter) — clear gracefully
+      setPendingMaintenanceIssueId(null);
     }
-  }, [pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, fetchIssues]);
+  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
 
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",    label: "Reported",     labelEs: "Reportado" },
