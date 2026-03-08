@@ -133,7 +133,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       supabase.from("checklist_templates").select("id, title, icon").eq("is_published", true).order("sort_order"),
     ]).then(([p, pr, cl]) => {
       setProfiles((p.data as Profile[]) ?? []);
-      setProperties((pr.data as Property[]) ?? []);
+      setProperties(sortProperties((pr.data as Property[]) ?? []));
       setChecklists((cl.data as ChecklistTemplate[]) ?? []);
     });
   }, []);
