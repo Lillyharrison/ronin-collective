@@ -58,16 +58,15 @@ export function NotificationsPanel({ open, onClose }: Props) {
     // Cleanup old notifications silently
     supabase.from("notifications").delete().eq("user_id", userId).lt("created_at", sevenDaysAgo);
 
-    let query = supabase
+    // Always filter by own user_id — prevents master_admin seeing duplicate rows
+    // sent to other admins (RLS allows master_admin to read all, but we only want their own)
+    const query = supabase
       .from("notifications")
       .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type")
+      .eq("user_id", userId)
       .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
-      .limit(isMasterAdmin ? 100 : 40);
-
-    if (!isMasterAdmin) {
-      query = query.eq("user_id", userId);
-    }
+      .limit(60);
 
     const { data } = await query;
     setNotifications((data as Notification[]) ?? []);
