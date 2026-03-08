@@ -282,14 +282,10 @@ export function Dashboard() {
     let query = supabase
       .from("notifications")
       .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id")
+      .eq("user_id", userId)
       .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
-      .limit(isMasterAdmin ? 20 : 5);
-
-    // Non-admins only see their own notifications
-    if (!isMasterAdmin) {
-      query = query.eq("user_id", userId);
-    }
+      .limit(10);
 
     const { data } = await query;
     setDashNotifs((data as DashNotification[]) ?? []);
