@@ -113,7 +113,15 @@ export function MaintenanceSection() {
     return list;
   }, [issues, filterProp, sortBy]);
 
-  const displayIssues = filtered();
+  const rawIssues = filtered();
+
+  // Translate issue titles + descriptions when language is Spanish
+  const { items: displayIssues } = useBatchTranslation(
+    language,
+    rawIssues,
+    ["title", "description"],
+  );
+
   const openCount = displayIssues.filter(i => i.status !== "resolved").length;
   const reportedCount = displayIssues.filter(i => i.status === "reported").length;
 
