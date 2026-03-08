@@ -120,13 +120,12 @@ export function NotificationsPanel({ open, onClose }: Props) {
     if (!n.is_read) markRead(n.id);
 
     if (targetSection) {
-      setTimeout(() => {
-        setActiveSection(targetSection);
-        // If it's a maintenance issue with an entity_id, deep-link to open that specific issue
-        if (n.entity_type === "maintenance_issue" && n.entity_id) {
-          setPendingMaintenanceIssueId(n.entity_id);
-        }
-      }, 50);
+      // Set the deep-link pending ID before navigating so the target section
+      // can open the specific entity as soon as it mounts / re-renders.
+      if (n.entity_type === "maintenance_issue" && n.entity_id) {
+        setPendingMaintenanceIssueId(n.entity_id);
+      }
+      setTimeout(() => setActiveSection(targetSection), 30);
     }
   };
 
