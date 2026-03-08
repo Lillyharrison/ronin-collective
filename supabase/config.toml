@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.notify-section]
 verify_jwt = false
+
+[functions.calendar-sync]
+verify_jwt = false
