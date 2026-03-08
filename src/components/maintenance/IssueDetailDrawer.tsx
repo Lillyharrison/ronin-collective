@@ -57,7 +57,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
         <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
           {issue.photo_url && (
           <div className="rounded-xl overflow-hidden bg-muted/20">
-              <img src={issue.photo_url} alt={issue.title} className="w-full h-auto object-contain" />
+              <img src={issue.photo_url} alt={issue.title} loading="lazy" className="w-full h-auto object-contain" />
             </div>
           )}
 
@@ -98,7 +98,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
                   {issue.assignee_avatar
-                    ? <img src={issue.assignee_avatar} alt={issue.assignee_name} className="w-5 h-5 rounded-full object-cover" />
+                    ? <img src={issue.assignee_avatar} alt={issue.assignee_name} loading="lazy" className="w-5 h-5 rounded-full object-cover" />
                     : <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
                         {issue.assignee_name.charAt(0)}
                       </div>
