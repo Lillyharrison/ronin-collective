@@ -101,7 +101,9 @@ const LEVEL_OPTIONS: { value: Level; label: string; labelEs: string }[] = [
   { value: "staff",           label: "Staff",            labelEs: "Personal" },
 ];
 
-const ROLE_MAP: Record<Level, AppRole> = {
+const ROLE_MAP: Record<string, AppRole> = {
+  master_admin:    "master_admin",
+  admin:           "admin",
   principal:       "principal",
   extended_family: "principal",
   manager:         "manager",
@@ -903,7 +905,9 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     if (!canEdit) return;
     setSaving(true);
     try {
-      const roleToSet: AppRole = level ? ROLE_MAP[level as Level] : (member.role || "staff");
+      // Never downgrade a master_admin — if the member's current role is master_admin, preserve it
+      const resolvedRole = level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff");
+      const roleToSet: AppRole = (member.role === "master_admin" ? "master_admin" : resolvedRole) as AppRole;
 
       // Merge quick actions into perms under a special key
       const finalPerms = {
