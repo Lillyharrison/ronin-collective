@@ -584,7 +584,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <div className="bg-charcoal rounded-t-2xl sm:rounded-2xl w-full max-w-lg h-[92vh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl border border-charcoal-light">
+      <div className="bg-charcoal rounded-t-2xl sm:rounded-2xl w-full max-w-lg flex flex-col shadow-2xl border border-charcoal-light" style={{ maxHeight: "90dvh" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-charcoal-light shrink-0">
