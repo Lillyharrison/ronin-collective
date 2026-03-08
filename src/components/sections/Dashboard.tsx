@@ -53,11 +53,15 @@ const statusConfig: Record<string, { label: string; labelEs: string; className: 
 };
 
 // Quick actions shown to all users, filtered by per-user canSee permissions
-const quickActions = [
-  { labelKey: "checklists" as const,   labelEs: "Listas",            icon: <ClipboardList size={26} />, section: "checklists" as const },
-  { labelKey: "orders" as const,       labelEs: "Pedidos",           icon: <ShoppingBag size={26} />,  section: "orders" as const },
-  { labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />,section: "maintenance" as const },
-  { labelKey: "calendar" as const,     labelEs: "Calendario",        icon: <Clock size={26} />,        section: "calendar" as const },
+const ALL_QUICK_ACTIONS_DASHBOARD = [
+  { key: "checklists",  labelKey: "checklists" as const,   labelEs: "Listas",            icon: <ClipboardList size={26} />, section: "checklists" as const },
+  { key: "orders",      labelKey: "orders" as const,       labelEs: "Pedidos",           icon: <ShoppingBag size={26} />,  section: "orders" as const },
+  { key: "reportIssue", labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />,section: "maintenance" as const },
+  { key: "calendar",    labelKey: "calendar" as const,     labelEs: "Calendario",        icon: <Clock size={26} />,        section: "calendar" as const },
+  { key: "tasks",       labelKey: "tasks" as const,        labelEs: "Tareas",            icon: <CheckSquare size={26} />,  section: "tasks" as const },
+  { key: "maintenance", labelKey: "maintenance" as const,  labelEs: "Mantenimiento",     icon: <Zap size={26} />,          section: "maintenance" as const },
+  { key: "messages",    labelKey: "messages" as const,     labelEs: "Mensajes",          icon: <Activity size={26} />,     section: "messages" as const },
+  { key: "inventory",   labelKey: "inventory" as const,    labelEs: "Inventario",        icon: <ShoppingBag size={26} />,  section: "inventory" as const },
 ];
 
 const TYPE_STYLES: Record<string, { dot: string; border: string }> = {
