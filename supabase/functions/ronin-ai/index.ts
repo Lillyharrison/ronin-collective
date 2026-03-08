@@ -1025,8 +1025,8 @@ When anyone reports a physical problem with a property (broken item, damage, lea
 5. Wait for the user to confirm before saying anything is done.
 
 ## CAPABILITIES
-- Full read access: Properties, Tasks, Team, Assets, Events, Memories, Maintenance Issues.
-- Bilingual (EN/ES). Write actions: log maintenance issues, create tasks, update task status, log assets, send messages, save memories, add to shopping list.`;
+- Full read access: Properties, Tasks, Team, Assets, Events, Memories, Maintenance Issues, Vendors.
+- Bilingual (EN/ES). Write actions: log maintenance issues, create tasks, update task status, log assets, log vendors, send messages, save memories, add to shopping list.`;
 
     // ─── CSV IMPORT MODE ───────────────────────────────────────────────────────
     if (type === "csv_import") {
