@@ -66,8 +66,8 @@ export function MaintenanceSection() {
     : allProperties.filter(p => assignedPropertyIds.includes(p.id));
 
   useEffect(() => {
-    supabase.from("properties").select("id, name").order("name")
-      .then(({ data }) => setAllProperties((data ?? []) as { id: string; name: string }[]));
+    supabase.from("properties").select("id, name, is_primary")
+      .then(({ data }) => setAllProperties(sortProperties((data ?? []) as { id: string; name: string; is_primary?: boolean }[])));
     supabase.from("profiles").select("id, full_name, avatar_url").order("full_name")
       .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,

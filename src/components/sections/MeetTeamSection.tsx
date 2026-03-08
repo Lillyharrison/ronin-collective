@@ -219,8 +219,8 @@ export function MeetTeamSection() {
   }
 
   async function loadProperties() {
-    const { data } = await supabase.from("properties").select("id, name").order("name");
-    if (data) setProperties(data);
+    const { data } = await supabase.from("properties").select("id, name, is_primary");
+    if (data) setProperties(sortProperties(data));
   }
 
   useEffect(() => {

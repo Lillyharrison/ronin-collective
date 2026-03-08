@@ -33,12 +33,12 @@ export function ManualsSection() {
   ];
 
   useEffect(() => {
-    let q = supabase.from("properties").select("id, name").order("sort_order");
+    let q = supabase.from("properties").select("id, name, is_primary");
     if (!isAdmin && assignedPropertyIds.length > 0) {
       q = q.in("id", assignedPropertyIds);
     }
     q.then(({ data }) => {
-      const props = (data as Property[]) ?? [];
+      const props = sortProperties((data as Property[]) ?? []);
       setProperties(props);
       if (props.length > 0) setSelectedPropId(props[0].id);
     });

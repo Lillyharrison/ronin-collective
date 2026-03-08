@@ -70,7 +70,7 @@ export default function MemorySection() {
     setLoading(true);
     const [memoriesRes, propsRes, profilesRes] = await Promise.all([
       supabase.from("ronin_memories").select("*").order("importance", { ascending: false }).order("created_at", { ascending: false }),
-      supabase.from("properties").select("id, name").order("sort_order"),
+      supabase.from("properties").select("id, name, is_primary"),
       supabase.from("profiles").select("id, full_name"),
     ]);
     setMemories((memoriesRes.data as RoninMemory[]) ?? []);
