@@ -154,13 +154,17 @@ export function TasksSection() {
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(0);
   const [showDrafts, setShowDrafts] = useState(false);
   const [draftCount, setDraftCount] = useState(0);
 
   const [modalTask, setModalTask]   = useState<FullTask | null | undefined>(undefined);
   const [newStatus, setNewStatus]   = useState<TaskStatus>("pending");
 
-  async function fetchTasks() {
+  const PAGE_SIZE = 100; // tasks shown in kanban — larger page is fine since they spread across 4 columns
+
+  async function fetchTasks(pageIndex = 0) {
     if (!userId) return;
     setLoading(true);
 
@@ -174,24 +178,24 @@ export function TasksSection() {
         linked_checklist:checklist_templates(title, icon)
       `)
       .order("priority", { ascending: true })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE - 1);
 
     if (isMasterAdmin || isAdmin) {
       // Master admin & admin: see everything (drafts included)
     } else if (isManager) {
-      // Managers: see tasks assigned to them, their department, or their properties
       const filters: string[] = [`assigned_to.eq.${userId}`];
       if (department) filters.push(`assigned_department.ilike.${department}`);
       if (assignedPropertyIds.length > 0) filters.push(`property_id.in.(${assignedPropertyIds.join(",")})`);
       query = query.or(filters.join(",")).eq("is_draft", false);
     } else {
-      // Staff: only their own assigned tasks (no drafts)
       query = query.eq("assigned_to", userId).eq("is_draft", false);
     }
 
     const { data, error } = await query;
     if (error) console.error("fetchTasks error", error);
     const all = (data as unknown as KanbanTask[]) ?? [];
+    setHasMore(all.length === PAGE_SIZE);
 
     // Enrich with assignee names (no FK exists, so we do a separate lookup)
     const assigneeIds = [...new Set(all.map(t => t.assigned_to).filter(Boolean))] as string[];
