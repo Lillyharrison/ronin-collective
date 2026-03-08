@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { notifySection } from "@/lib/notifySection";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { format } from "date-fns";
+import { useBatchTranslation } from "@/hooks/useEntryTranslation";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 type ViewMode = "board" | "list" | "table";
@@ -112,7 +113,15 @@ export function MaintenanceSection() {
     return list;
   }, [issues, filterProp, sortBy]);
 
-  const displayIssues = filtered();
+  const rawIssues = filtered();
+
+  // Translate issue titles + descriptions when language is Spanish
+  const { items: displayIssues } = useBatchTranslation(
+    language,
+    rawIssues,
+    ["title", "description"],
+  );
+
   const openCount = displayIssues.filter(i => i.status !== "resolved").length;
   const reportedCount = displayIssues.filter(i => i.status === "reported").length;
 
