@@ -91,7 +91,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-lg bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl z-10 flex flex-col" style={{ maxHeight: "90dvh" }}>
+      <div className="relative w-full sm:max-w-lg bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl z-10 flex flex-col h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0">

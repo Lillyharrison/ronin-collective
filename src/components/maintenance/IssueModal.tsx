@@ -151,7 +151,7 @@ function ModalContent({
 
   return (
     <div
-      className="fixed inset-x-0 top-0 bottom-16 sm:inset-0 z-[9999] flex items-end sm:items-center justify-center"
+      className="fixed inset-x-0 top-0 bottom-0 sm:inset-0 z-50 flex items-end sm:items-center justify-center"
       style={{ backgroundColor: "rgba(0,0,0,0.72)" }}
       onClick={e => {
         if (e.target === e.currentTarget && !pickerOpenRef.current) onClose();
