@@ -930,6 +930,7 @@ export type Database = {
           name: string
           occupied_by: string | null
           occupied_by_profile_id: string | null
+          occupied_by_profile_ids: string[]
           sort_order: number
           status: Database["public"]["Enums"]["property_status"]
           timezone: string
@@ -946,6 +947,7 @@ export type Database = {
           name: string
           occupied_by?: string | null
           occupied_by_profile_id?: string | null
+          occupied_by_profile_ids?: string[]
           sort_order?: number
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
@@ -962,6 +964,7 @@ export type Database = {
           name?: string
           occupied_by?: string | null
           occupied_by_profile_id?: string | null
+          occupied_by_profile_ids?: string[]
           sort_order?: number
           status?: Database["public"]["Enums"]["property_status"]
           timezone?: string
