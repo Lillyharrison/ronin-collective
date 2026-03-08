@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, Upload, Camera, AlertTriangle, Search, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,8 +69,9 @@ function ModalContent({
   const [newCatIcon, setNewCatIcon]   = useState("🔧");
   const [savingCat, setSavingCat]     = useState(false);
 
-  const photoRef    = useRef<HTMLInputElement>(null);
-  const closeOutRef = useRef<HTMLInputElement>(null);
+  const photoRef       = useRef<HTMLInputElement>(null);
+  const closeOutRef    = useRef<HTMLInputElement>(null);
+  const pickerOpenRef  = useRef(false); // iOS: prevent backdrop-close when photo picker returns
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -152,11 +153,12 @@ function ModalContent({
     <div
       className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
       style={{ backgroundColor: "rgba(0,0,0,0.72)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={e => {
+        if (e.target === e.currentTarget && !pickerOpenRef.current) onClose();
+      }}
     >
       <div
-        className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden"
-        style={{ height: "90dvh", maxHeight: "90dvh" }}
+        className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden h-[90dvh] sm:h-auto sm:max-h-[90dvh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Sticky header */}
@@ -193,7 +195,7 @@ function ModalContent({
                 </button>
               </div>
             ) : (
-              <button onClick={() => photoRef.current?.click()}
+              <button onClick={() => { pickerOpenRef.current = true; photoRef.current?.click(); }}
                 className="w-full h-40 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 hover:bg-gold/5 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 {uploading ? (
                   <div className="w-6 h-6 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
@@ -207,7 +209,7 @@ function ModalContent({
               </button>
             )}
             <input ref={photoRef} type="file" accept="image/*" className="hidden"
-              onChange={e => { if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "main"); }} />
+              onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "main"); }} />
           </div>
 
           {/* Title */}
@@ -437,7 +439,7 @@ function ModalContent({
                   </button>
                 </div>
               ) : (
-                <button onClick={() => closeOutRef.current?.click()}
+                <button onClick={() => { pickerOpenRef.current = true; closeOutRef.current?.click(); }}
                   className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground">
                   {closeUploading ? (
                     <div className="w-5 h-5 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
@@ -450,7 +452,7 @@ function ModalContent({
                 </button>
               )}
               <input ref={closeOutRef} type="file" accept="image/*" className="hidden"
-                onChange={e => { if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "closeout"); }} />
+                onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "closeout"); }} />
             </div>
           )}
         </div>
