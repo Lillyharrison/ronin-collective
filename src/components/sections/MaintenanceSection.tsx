@@ -29,6 +29,9 @@ export function MaintenanceSection() {
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds);
   const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
+  // Guard against double-firing notifications on rapid re-renders / StrictMode
+  const notifyingRef = useRef<Set<string>>(new Set());
+
   const [search,      setSearch]      = useState("");
   const [filterProp,  setFilterProp]  = useState("");
   const [filterCat,   setFilterCat]   = useState("");
