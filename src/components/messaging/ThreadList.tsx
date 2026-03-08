@@ -84,7 +84,7 @@ export function ThreadList({
   const threadToDelete = confirmDeleteId ? threads.find(t => t.id === confirmDeleteId) : null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border bg-card flex items-center justify-between">
         <h2 className="font-display text-xl text-foreground">
