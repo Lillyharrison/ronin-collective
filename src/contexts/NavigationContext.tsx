@@ -220,6 +220,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setActivePropertyId,
         checklistsForPropertyId,
         setChecklistsForPropertyId,
+        pendingMaintenanceIssueId,
+        setPendingMaintenanceIssueId,
         canGoBack,
         goBack,
       }}
