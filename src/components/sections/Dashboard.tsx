@@ -317,13 +317,22 @@ export function Dashboard() {
   const smartTagline = taglineOverride ? taglineOverride.text : getSmartTagline(language);
 
   const dismissNotif = async (id: string, notifUserId?: string) => {
-    // Call the security-definer function — appends current user to acknowledged_by only
     await supabase.rpc("acknowledge_notification", { _notif_id: id });
-    // If owner is dismissing, also mark is_read for bell panel unread count
     if (notifUserId === userId) {
       await supabase.from("notifications").update({ is_read: true }).eq("id", id);
     }
     setDashNotifs(prev => prev.filter(n => n.id !== id));
+  };
+
+  const handleNotifClick = async (n: DashNotification) => {
+    await dismissNotif(n.id, n.user_id);
+    const targetSection: ActiveSection | undefined =
+      (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
+      (n.action_url as ActiveSection | undefined);
+    if (n.entity_type === "maintenance_issue" && n.entity_id) {
+      setPendingMaintenanceIssueId(n.entity_id);
+    }
+    if (targetSection) setActiveSection(targetSection);
   };
 
   const saveTaglineOverride = async () => {
