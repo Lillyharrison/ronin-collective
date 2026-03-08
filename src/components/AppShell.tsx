@@ -26,7 +26,7 @@ import { MasterImportSection } from "@/components/sections/MasterImportSection";
 import MemorySection from "@/components/sections/MemorySection";
 import { AlertsSection } from "@/components/sections/AlertsSection";
 import { RulesSection } from "@/components/sections/RulesSection";
-import { PendingRulesWidget } from "@/components/PendingRulesWidget";
+
 import { ChecklistDetailPage } from "@/components/sections/ChecklistDetailPage";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
