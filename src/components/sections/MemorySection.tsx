@@ -75,7 +75,7 @@ export default function MemorySection() {
       supabase.from("profiles").select("id, full_name"),
     ]);
     setMemories((memoriesRes.data as RoninMemory[]) ?? []);
-    setProperties(propsRes.data ?? []);
+    setProperties(sortProperties((propsRes.data ?? []) as { id: string; name: string; is_primary?: boolean }[]));
     setProfiles(profilesRes.data ?? []);
     setLoading(false);
   };
