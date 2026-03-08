@@ -1,4 +1,41 @@
-import { createContext, useContext, useState, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useRef, useEffect, ReactNode } from "react";
+
+// Map section → hash and back
+const SECTION_TO_HASH: Record<ActiveSection, string> = {
+  dashboard:     "home",
+  property:      "property",
+  maintenance:   "maintenance",
+  messages:      "messages",
+  profile:       "profile",
+  manuals:       "manuals",
+  checklists:    "checklists",
+  tasks:         "tasks",
+  contacts:      "contacts",
+  inventory:     "inventory",
+  laundry:       "laundry",
+  orders:        "orders",
+  "meet-team":   "meet-team",
+  travel:        "travel",
+  calendar:      "calendar",
+  achievements:  "achievements",
+  "master-import":"master-import",
+  memory:        "memory",
+  alerts:        "alerts",
+  rules:         "rules",
+};
+
+const HASH_TO_SECTION: Record<string, ActiveSection> = Object.fromEntries(
+  Object.entries(SECTION_TO_HASH).map(([k, v]) => [v, k as ActiveSection])
+);
+
+function hashToSection(hash: string): ActiveSection | null {
+  const key = hash.replace(/^#/, "");
+  return HASH_TO_SECTION[key] ?? null;
+}
+
+function sectionToHash(section: ActiveSection): string {
+  return "#" + (SECTION_TO_HASH[section] ?? "home");
+}
 
 export type ActiveTab = "home" | "property" | "maintenance" | "messages" | "profile";
 export type ActiveSection =
