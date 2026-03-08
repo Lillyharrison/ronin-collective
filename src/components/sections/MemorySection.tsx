@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { sortProperties } from "@/hooks/useScopedProperties";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Brain, Trash2, Star, Tag, Building2, User, Plus, Search, Filter } from "lucide-react";
@@ -70,11 +71,11 @@ export default function MemorySection() {
     setLoading(true);
     const [memoriesRes, propsRes, profilesRes] = await Promise.all([
       supabase.from("ronin_memories").select("*").order("importance", { ascending: false }).order("created_at", { ascending: false }),
-      supabase.from("properties").select("id, name").order("sort_order"),
+      supabase.from("properties").select("id, name, is_primary"),
       supabase.from("profiles").select("id, full_name"),
     ]);
     setMemories((memoriesRes.data as RoninMemory[]) ?? []);
-    setProperties(propsRes.data ?? []);
+    setProperties(sortProperties((propsRes.data ?? []) as { id: string; name: string; is_primary?: boolean }[]));
     setProfiles(profilesRes.data ?? []);
     setLoading(false);
   };
