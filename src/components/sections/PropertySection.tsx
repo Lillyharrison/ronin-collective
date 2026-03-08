@@ -134,6 +134,7 @@ export function PropertySection() {
       country: p.country || "", timezone: p.timezone, status: p.status,
       image_url: p.image_url || "", is_primary: p.is_primary,
       occupied_by: p.occupied_by || "",
+      occupied_by_profile_id: p.occupied_by_profile_id || "",
     });
     setEditingProperty(p);
     setShowForm(true);
