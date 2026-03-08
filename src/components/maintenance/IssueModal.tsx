@@ -439,7 +439,7 @@ function ModalContent({
                   </button>
                 </div>
               ) : (
-                <button onClick={() => closeOutRef.current?.click()}
+                <button onClick={() => { pickerOpenRef.current = true; closeOutRef.current?.click(); }}
                   className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground">
                   {closeUploading ? (
                     <div className="w-5 h-5 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
@@ -452,7 +452,7 @@ function ModalContent({
                 </button>
               )}
               <input ref={closeOutRef} type="file" accept="image/*" className="hidden"
-                onChange={e => { if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "closeout"); }} />
+                onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "closeout"); }} />
             </div>
           )}
         </div>
