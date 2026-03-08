@@ -163,7 +163,9 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
 
           {/* Text */}
           {message.content_text && (
-            <span className="whitespace-pre-wrap">{message.content_text}</span>
+            isAI
+              ? <RenderAIText text={message.content_text} />
+              : <span className="whitespace-pre-wrap">{message.content_text}</span>
           )}
 
           {/* Loading state for AI */}

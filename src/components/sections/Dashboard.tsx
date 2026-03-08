@@ -43,8 +43,20 @@ interface DashNotification {
   type: string;
   created_at: string;
   action_url: string | null;
+  entity_id: string | null;
+  entity_type: string | null;
   user_id?: string;
 }
+
+const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
+  maintenance_issue: "maintenance",
+  task:              "tasks",
+  order:             "orders",
+  calendar_event:    "calendar",
+  message:           "messages",
+  property_rule:     "rules",
+  checklist:         "checklists",
+};
 
 const statusConfig: Record<string, { label: string; labelEs: string; className: string }> = {
   occupied:           { label: "Occupied",          labelEs: "Ocupado",           className: "status-done" },
