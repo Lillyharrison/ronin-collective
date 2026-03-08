@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical, DoorOpen } from "lucide-react";
+import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, ClipboardList, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical, DoorOpen, UserPlus, UserMinus } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { imageUrl } from "@/lib/imageUrl";
+import { toast } from "sonner";
 
 type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
 
@@ -26,6 +27,7 @@ interface Property {
   sort_order: number;
   occupied_by: string | null;
   occupied_by_profile_id: string | null;
+  occupied_by_profile_ids?: string[];
 }
 
 interface OccupantProfile {
@@ -55,8 +57,7 @@ const PROPERTY_SUB_SECTIONS = [
 const emptyForm = {
   name: "", address: "", city: "", country: "",
   timezone: "America/Los_Angeles", status: "vacant" as PropertyStatus,
-  image_url: "", is_primary: false, occupied_by: "",
-  occupied_by_profile_id: "" as string,
+  image_url: "", is_primary: false,
 };
 
 export function PropertySection() {
@@ -90,14 +91,12 @@ export function PropertySection() {
   // Auto-select property when navigated from Dashboard OR when back-nav restores activePropertyId
   useEffect(() => {
     if (properties.length === 0) return;
-    // targetPropertyId takes priority (deep-link / back-nav restore)
     const idToRestore = targetPropertyId ?? activePropertyId;
     if (idToRestore) {
       const found = properties.find(p => p.id === idToRestore);
       if (found) {
         setSelectedProperty(found);
         setTargetPropertyId(null);
-        // Don't clear activePropertyId here — keep it so further back-nav knows
       }
     }
   }, [targetPropertyId, activePropertyId, properties]);
@@ -119,6 +118,8 @@ export function PropertySection() {
       return (a.sort_order ?? 0) - (b.sort_order ?? 0);
     });
     setProperties(sorted);
+    // Refresh selected property if open
+    setSelectedProperty(prev => prev ? (sorted.find(p => p.id === prev.id) ?? prev) : null);
     setLoading(false);
   }
 
@@ -133,8 +134,6 @@ export function PropertySection() {
       name: p.name, address: p.address, city: p.city || "",
       country: p.country || "", timezone: p.timezone, status: p.status,
       image_url: p.image_url || "", is_primary: p.is_primary,
-      occupied_by: p.occupied_by || "",
-      occupied_by_profile_id: p.occupied_by_profile_id || "",
     });
     setEditingProperty(p);
     setShowForm(true);
@@ -142,25 +141,10 @@ export function PropertySection() {
 
   async function saveProperty() {
     setSaving(true);
-    // Resolve occupant name from profile for the legacy text field (used by AI)
-    let occupantName: string | null = null;
-    if (form.status === "occupied" && form.occupied_by_profile_id) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", form.occupied_by_profile_id)
-        .single();
-      occupantName = prof?.full_name ?? null;
-    } else if (form.status === "occupied" && form.occupied_by) {
-      occupantName = form.occupied_by; // fallback for free-text
-    }
     const payload = {
       name: form.name, address: form.address, city: form.city || null,
       country: form.country || null, timezone: form.timezone, status: form.status,
       image_url: form.image_url || null, is_primary: form.is_primary,
-      occupied_by: occupantName,
-      occupied_by_profile_id: form.status === "occupied" && form.occupied_by_profile_id
-        ? form.occupied_by_profile_id : null,
     };
     if (form.is_primary) {
       await supabase.from("properties").update({ is_primary: false }).neq("id", editingProperty?.id ?? "");
@@ -206,7 +190,6 @@ export function PropertySection() {
     reordered.splice(to, 0, moved);
     setProperties(reordered);
 
-    // Persist new sort_order
     const updates = reordered.map((p, i) =>
       supabase.from("properties").update({ sort_order: i }).eq("id", p.id)
     );
@@ -223,6 +206,7 @@ export function PropertySection() {
           onBack={() => { setSelectedProperty(null); setActivePropertyId(null); }}
           onEdit={() => openEdit(selectedProperty)}
           onDelete={() => setDeleteTarget(selectedProperty)}
+          onOccupantsChange={fetchProperties}
           onNavigate={(key) => {
             if (key === "checklists") {
               setChecklistsForPropertyId(selectedProperty.id);
@@ -246,7 +230,7 @@ export function PropertySection() {
               setSelectedProperty(null);
               setActiveSection("calendar");
             } else if (key === "staff") {
-              // Staff is shown inline — handled inside PropertyDetail via prop
+              // handled inside PropertyDetail
             } else {
               setSelectedProperty(null);
               setActiveSection(key as any);
@@ -254,7 +238,6 @@ export function PropertySection() {
           }}
         />
 
-        {/* Edit dialog rendered OUTSIDE the detail so it's not clipped */}
         <PropertyFormDialog
           open={showForm}
           editing={!!editingProperty}
@@ -405,7 +388,6 @@ function PropertyTile({ property: p, isMasterAdmin, onClick, onEdit, onDelete }:
         </div>
       )}
 
-      {/* Drag handle hint for admins */}
       {isMasterAdmin && (
         <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-60 transition-opacity">
           <GripVertical size={16} className="text-white" />
@@ -484,10 +466,153 @@ function PropertyStaffList({ propertyId, onBack }: { propertyId: string; onBack:
   );
 }
 
+// ─── Occupants Panel (inline on detail page) ─────────────────────────────────
+function OccupantsPanel({ property, isMasterAdmin, onChanged }: {
+  property: Property;
+  isMasterAdmin: boolean;
+  onChanged: () => void;
+}) {
+  const [profiles, setProfiles] = useState<OccupantProfile[]>([]);
+  const [occupants, setOccupants] = useState<OccupantProfile[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedId, setSelectedId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const currentIds: string[] = Array.isArray(property.occupied_by_profile_ids)
+    ? property.occupied_by_profile_ids
+    : property.occupied_by_profile_id ? [property.occupied_by_profile_id] : [];
+
+  useEffect(() => {
+    // Load all profiles for the add dropdown
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, level")
+      .order("full_name")
+      .then(({ data }) => setProfiles((data as OccupantProfile[]) ?? []));
+  }, []);
+
+  useEffect(() => {
+    if (currentIds.length === 0) { setOccupants([]); return; }
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, level")
+      .in("id", currentIds)
+      .then(({ data }) => setOccupants((data as OccupantProfile[]) ?? []));
+  }, [property.occupied_by_profile_ids, property.occupied_by_profile_id]);
+
+  async function addOccupant() {
+    if (!selectedId || currentIds.includes(selectedId)) return;
+    setSaving(true);
+    const newIds = [...currentIds, selectedId];
+    // Resolve display name for the legacy text field
+    const name = profiles.find(p => p.id === selectedId)?.full_name ?? null;
+    await supabase.from("properties").update({
+      occupied_by_profile_ids: newIds,
+      occupied_by_profile_id: newIds[0],
+      occupied_by: name,
+      status: "occupied",
+    } as any).eq("id", property.id);
+    setSelectedId("");
+    setShowAdd(false);
+    setSaving(false);
+    onChanged();
+    toast.success("Occupant added");
+  }
+
+  async function removeOccupant(id: string) {
+    setSaving(true);
+    const newIds = currentIds.filter(x => x !== id);
+    const firstName = newIds[0]
+      ? profiles.find(p => p.id === newIds[0])?.full_name ?? null
+      : null;
+    await supabase.from("properties").update({
+      occupied_by_profile_ids: newIds,
+      occupied_by_profile_id: newIds[0] ?? null,
+      occupied_by: firstName,
+      status: newIds.length > 0 ? "occupied" : property.status === "occupied" ? "vacant" : property.status,
+    } as any).eq("id", property.id);
+    setSaving(false);
+    onChanged();
+    toast.success("Occupant removed");
+  }
+
+  const availableToAdd = profiles.filter(p => !currentIds.includes(p.id));
+
+  return (
+    <div className="px-4 pb-2">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Occupants</p>
+        {isMasterAdmin && (
+          <button
+            onClick={() => setShowAdd(v => !v)}
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+          >
+            <UserPlus size={13} />
+            Add
+          </button>
+        )}
+      </div>
+
+      {/* Add occupant row */}
+      {showAdd && isMasterAdmin && (
+        <div className="flex gap-2 mb-3">
+          <Select value={selectedId} onValueChange={setSelectedId}>
+            <SelectTrigger className="flex-1 h-9 text-xs">
+              <SelectValue placeholder="Select person…" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableToAdd.length === 0 ? (
+                <SelectItem value="__none__" disabled>All profiles already added</SelectItem>
+              ) : (
+                availableToAdd.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.full_name ?? p.id}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={addOccupant} disabled={!selectedId || saving} className="h-9 px-3 text-xs">
+            Add
+          </Button>
+        </div>
+      )}
+
+      {occupants.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">No occupants set</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {occupants.map(occ => (
+            <div key={occ.id} className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {occ.avatar_url
+                  ? <img src={imageUrl(occ.avatar_url, 56, 56)} alt={occ.full_name ?? ""} className="w-full h-full object-cover" />
+                  : <span className="text-xs font-semibold text-primary">{(occ.full_name ?? "?")[0]}</span>
+                }
+              </div>
+              <span className="text-sm font-medium text-foreground">{occ.full_name ?? "Unknown"}</span>
+              {isMasterAdmin && (
+                <button
+                  onClick={() => removeOccupant(occ.id)}
+                  disabled={saving}
+                  className="ml-1 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Property Detail ──────────────────────────────────────────────────────────
-function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, onNavigate }: {
+function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, onOccupantsChange, onNavigate }: {
   property: Property; isMasterAdmin: boolean;
   onBack: () => void; onEdit: () => void; onDelete: () => void;
+  onOccupantsChange: () => void;
   onNavigate: (key: string) => void;
 }) {
   const [showStaff, setShowStaff] = useState(false);
@@ -555,7 +680,12 @@ function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, 
         </div>
       </div>
 
-      <div className="p-4 flex-1">
+      {/* Occupants inline panel */}
+      <div className="pt-4 pb-1">
+        <OccupantsPanel property={p} isMasterAdmin={isMasterAdmin} onChanged={onOccupantsChange} />
+      </div>
+
+      <div className="px-4 pb-4 flex-1">
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">Sections</p>
         <div className="grid grid-cols-2 gap-3">
           {PROPERTY_SUB_SECTIONS.map(s => (
@@ -834,16 +964,6 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
               </SelectContent>
             </Select>
           </div>
-          {/* Occupant — profile-linked dropdown, only when occupied */}
-          {form.status === "occupied" && (
-            <div className="space-y-1">
-              <Label>Occupied by</Label>
-              <OccupantSelect
-                value={form.occupied_by_profile_id}
-                onChange={profileId => setForm({ ...form, occupied_by_profile_id: profileId })}
-              />
-            </div>
-          )}
           <div className="space-y-1">
             <Label>Timezone</Label>
             <TimezoneSelect value={form.timezone} onChange={v => set("timezone", v)} />
@@ -872,40 +992,6 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ─── Occupant Select ──────────────────────────────────────────────────────────
-function OccupantSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  const [profiles, setProfiles] = useState<OccupantProfile[]>([]);
-
-  useEffect(() => {
-    supabase
-      .from("profiles")
-      .select("id, full_name, avatar_url, level")
-      .in("level", ["principal", "staff", "admin", "master_admin"])
-      .order("full_name")
-      .then(({ data }) => setProfiles((data as OccupantProfile[]) ?? []));
-  }, []);
-
-  return (
-    <Select value={value || "__none__"} onValueChange={v => onChange(v === "__none__" ? "" : v)}>
-      <SelectTrigger>
-        <SelectValue placeholder="Select person…">
-          {value
-            ? profiles.find(p => p.id === value)?.full_name ?? "Select person…"
-            : "Select person…"}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="__none__">— No specific occupant —</SelectItem>
-        {profiles.map(p => (
-          <SelectItem key={p.id} value={p.id}>
-            {p.full_name ?? p.id}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }
 
@@ -951,7 +1037,6 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-7rem)]">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
         <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors">
           <ArrowLeft size={18} />
@@ -963,7 +1048,6 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
       </div>
 
       <div className="p-4 space-y-4 flex-1">
-        {/* Add room */}
         <div className="flex gap-2">
           <input
             value={newRoom}
@@ -982,7 +1066,6 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
           </button>
         </div>
 
-        {/* Room list */}
         {loading ? (
           <div className="space-y-2">
             {[1,2,3].map(i => <div key={i} className="h-12 bg-muted rounded-xl animate-pulse" />)}
@@ -1011,7 +1094,6 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
         )}
       </div>
 
-      {/* Delete confirm */}
       <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1031,4 +1113,3 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
     </div>
   );
 }
-
