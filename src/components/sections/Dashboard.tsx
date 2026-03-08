@@ -276,12 +276,12 @@ export function Dashboard() {
 
   // Load notifications for the dashboard widget — filtered per user via acknowledged_by
   // Each user sees notifications they haven't personally acknowledged yet
-  useEffect(() => {
+  const loadDashNotifs = useCallback(async () => {
     if (!userId || permLoading) return;
 
     let query = supabase
       .from("notifications")
-      .select("id, title, body, type, created_at, action_url, user_id")
+      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id")
       .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
       .limit(isMasterAdmin ? 20 : 5);
@@ -291,8 +291,26 @@ export function Dashboard() {
       query = query.eq("user_id", userId);
     }
 
-    query.then(({ data }) => setDashNotifs((data as DashNotification[]) ?? []));
+    const { data } = await query;
+    setDashNotifs((data as DashNotification[]) ?? []);
   }, [userId, isMasterAdmin, permLoading]);
+
+  useEffect(() => { loadDashNotifs(); }, [loadDashNotifs]);
+
+  // Realtime: refresh dashboard notifications when new ones arrive
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel("dash-notifs")
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      }, () => loadDashNotifs())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, loadDashNotifs]);
 
   const greeting = getGreeting(language);
   const dateStr = formatDate(language);
