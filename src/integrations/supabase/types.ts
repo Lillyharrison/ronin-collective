@@ -1411,6 +1411,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_section_permissions: {
+        Row: {
+          can_edit: boolean
+          can_view: boolean
+          id: string
+          notifications: boolean
+          section: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_edit?: boolean
+          can_view?: boolean
+          id?: string
+          notifications?: boolean
+          section: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_edit?: boolean
+          can_view?: boolean
+          id?: string
+          notifications?: boolean
+          section?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_stats: {
         Row: {
           badges_earned: string[] | null
