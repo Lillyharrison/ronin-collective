@@ -56,8 +56,8 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
 
         <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
           {issue.photo_url && (
-            <div className="rounded-xl overflow-hidden">
-              <img src={issue.photo_url} alt={issue.title} className="w-full h-52 object-cover" />
+          <div className="rounded-xl overflow-hidden bg-muted/20">
+              <img src={issue.photo_url} alt={issue.title} className="w-full h-auto object-contain" />
             </div>
           )}
 
