@@ -18,19 +18,19 @@ interface Property {
 
 type ManualTab = "care_guides" | "rules";
 
-const TABS: { id: ManualTab; icon: React.ReactNode; label: string; labelEs: string }[] = [
-  { id: "care_guides", icon: <BookOpen size={14} />, label: "Care Guides", labelEs: "Cuidados" },
-  { id: "rules",       icon: <Shield size={14} />,   label: "Rules",       labelEs: "Reglas" },
-];
-
 export function ManualsSection() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { isAdmin, assignedPropertyIds } = usePermissions();
   const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail } = useNavigation();
   const [tab, setTab] = useState<ManualTab>("care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
   const [showPropPicker, setShowPropPicker] = useState(false);
+
+  const TABS: { id: ManualTab; icon: React.ReactNode; label: string; labelEs: string }[] = [
+    { id: "care_guides", icon: <BookOpen size={14} />, label: "Care Guides", labelEs: t("careGuides") },
+    { id: "rules",       icon: <Shield size={14} />,   label: "Rules",       labelEs: t("rules") },
+  ];
 
   useEffect(() => {
     let q = supabase.from("properties").select("id, name").order("sort_order");
@@ -55,7 +55,6 @@ export function ManualsSection() {
     tab === "rules" ? selectedPropId : undefined
   );
 
-  // Full-page detail view
   if (careGuideDetailId) {
     const tpl = careTemplates.find(t => t.id === careGuideDetailId);
     if (tpl) {
@@ -74,29 +73,29 @@ export function ManualsSection() {
       {/* Header */}
       <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light">
         <h1 className="font-display text-3xl text-cream leading-tight">
-          {language === "es" ? "Manuales" : "Manuals"} <span className="text-gold">&</span>{" "}
-          {language === "es" ? "Guías" : "Guides"}
+          {t("manualsTitle")} <span className="text-gold">&</span>{" "}
+          {t("guidesTitle")}
         </h1>
         <p className="text-cream/40 text-xs mt-1 tracking-wide">
-          {language === "es" ? "Guías de cuidado y reglas de propiedad" : "Surface care guides & property rules"}
+          {t("careGuidesAndRules")}
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-border bg-card">
-        {TABS.map(t => (
+        {TABS.map(tab_ => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tab_.id}
+            onClick={() => setTab(tab_.id)}
             className={cn(
               "flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-medium tracking-wide transition-all border-b-2",
-              tab === t.id
+              tab === tab_.id
                 ? "border-[hsl(var(--gold))] text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
-            <span className={tab === t.id ? "text-[hsl(var(--gold))]" : ""}>{t.icon}</span>
-            {language === "es" ? t.labelEs : t.label}
+            <span className={tab === tab_.id ? "text-[hsl(var(--gold))]" : ""}>{tab_.icon}</span>
+            {language === "es" ? tab_.labelEs : tab_.label}
           </button>
         ))}
       </div>
@@ -110,7 +109,9 @@ export function ManualsSection() {
               className="w-full flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-3 text-left"
             >
               <MapPin size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
-              <span className="flex-1 text-sm font-medium text-foreground truncate">{selectedProp?.name ?? "Select property"}</span>
+              <span className="flex-1 text-sm font-medium text-foreground truncate">
+                {selectedProp?.name ?? t("selectPropertyAbove")}
+              </span>
               <ChevronDown size={14} className={cn("text-muted-foreground transition-transform", showPropPicker && "rotate-180")} />
             </button>
             {showPropPicker && (
@@ -150,7 +151,7 @@ export function ManualsSection() {
             ) : careTemplates.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <BookOpen size={28} className="mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No care guides yet.</p>
+                <p className="text-sm text-muted-foreground">{t("noCareGuides")}</p>
               </div>
             ) : (
               careTemplates.map(tpl => (
@@ -165,7 +166,7 @@ export function ManualsSection() {
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    const title = window.prompt("Care guide title:");
+                    const title = window.prompt(language === "es" ? "Título de la guía:" : "Care guide title:");
                     if (!title?.trim()) return;
                     await supabase.from("checklist_templates").insert({
                       title: title.trim(), category: "care_guide", icon: "📖", color: "gold", is_universal: true,
@@ -174,7 +175,7 @@ export function ManualsSection() {
                   }}
                   className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-foreground transition-all"
                 >
-                  <Plus size={14} /> Add care guide
+                  <Plus size={14} /> {t("addCareGuide")}
                 </button>
                 {careTemplates.some(t => !t.is_published) && (
                   <button
@@ -187,7 +188,7 @@ export function ManualsSection() {
                     }}
                     className="flex items-center gap-1.5 px-4 py-3 border border-dashed border-[hsl(var(--status-done)/0.4)] rounded-xl text-sm text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.08)] transition-all whitespace-nowrap"
                   >
-                    <CheckCheck size={14} /> Publish all drafts
+                    <CheckCheck size={14} /> {t("publishAllDrafts")}
                   </button>
                 )}
               </div>
@@ -199,9 +200,7 @@ export function ManualsSection() {
         {tab === "rules" && (
           <>
             <p className="text-xs text-muted-foreground px-1">
-              {language === "es"
-                ? "Reglas activadas automáticamente cuando hay un evento de calendario coincidente."
-                : "Rules surface automatically on the Dashboard when a matching calendar event is active."}
+              {t("rulesAutoSurface")}
             </p>
             {rulesLoading ? (
               <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-card border border-border rounded-xl animate-pulse" />)}</div>

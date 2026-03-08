@@ -24,7 +24,7 @@ const ACTIVITY_GROUPS = [
 ];
 
 export function ChecklistsSection() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { isAdmin, assignedPropertyIds, canEdit } = usePermissions();
   const canManageChecklists = isAdmin || canEdit("checklists");
   const { openChecklistDetail, checklistsForPropertyId, setChecklistsForPropertyId } = useNavigation();
@@ -33,18 +33,21 @@ export function ChecklistsSection() {
   const [selectedPropId, setSelectedPropId] = useState<string | null>(checklistsForPropertyId ?? null);
   const [showPropPicker, setShowPropPicker] = useState(false);
 
+  const TABS = [
+    { id: "cleaning" as Tab,  icon: <ClipboardList size={14} />, label: "Checklists",   labelEs: t("checklists") },
+    { id: "activity" as Tab,  icon: <Backpack size={14} />,      label: "Activities",   labelEs: t("activitiesTitle") },
+  ];
+
   useEffect(() => {
     let q = supabase.from("properties").select("id, name").order("sort_order");
     if (!isAdmin && assignedPropertyIds.length > 0) q = q.in("id", assignedPropertyIds);
     q.then(({ data }) => {
       const props = (data as Property[]) ?? [];
       setProperties(props);
-      // If we have a deep-link property, use it; else NO default — force user to select
       if (checklistsForPropertyId) {
         setSelectedPropId(checklistsForPropertyId);
-        setChecklistsForPropertyId(null); // clear after use
+        setChecklistsForPropertyId(null);
       }
-      // Do NOT auto-select first property
     });
   }, [isAdmin, assignedPropertyIds]);
 
@@ -60,39 +63,34 @@ export function ChecklistsSection() {
     tab === "activity" ? null : undefined
   );
 
-  const TABS = [
-    { id: "cleaning" as Tab,  icon: <ClipboardList size={14} />, label: "Checklists",   labelEs: "Listas" },
-    { id: "activity" as Tab,  icon: <Backpack size={14} />,      label: "Activities",   labelEs: "Actividades" },
-  ];
-
   return (
     <div className="animate-fade-in pb-4">
       {/* Header */}
       <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light">
         <h1 className="font-display text-3xl text-cream leading-tight">
-          {language === "es" ? "Listas de" : "Checklists"} <span className="text-gold">&</span>{" "}
-          {language === "es" ? "Actividades" : "Activities"}
+          {t("checklistsTitle")} <span className="text-gold">&</span>{" "}
+          {t("activitiesTitle")}
         </h1>
         <p className="text-cream/40 text-xs mt-1 tracking-wide">
-          {language === "es" ? "Listas operacionales y de actividades" : "Operational checklists and activity lists"}
+          {t("operationalChecklists")}
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-border bg-card">
-        {TABS.map(t => (
+        {TABS.map(tab_ => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tab_.id}
+            onClick={() => setTab(tab_.id)}
             className={cn(
               "flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-medium tracking-wide transition-all border-b-2",
-              tab === t.id
+              tab === tab_.id
                 ? "border-[hsl(var(--gold))] text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
-            <span className={tab === t.id ? "text-[hsl(var(--gold))]" : ""}>{t.icon}</span>
-            {language === "es" ? t.labelEs : t.label}
+            <span className={tab === tab_.id ? "text-[hsl(var(--gold))]" : ""}>{tab_.icon}</span>
+            {language === "es" ? tab_.labelEs : tab_.label}
           </button>
         ))}
       </div>
@@ -106,7 +104,9 @@ export function ChecklistsSection() {
               className="w-full flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-3 text-left"
             >
               <MapPin size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
-              <span className="flex-1 text-sm font-medium text-foreground truncate">{selectedProp?.name ?? "Select a property…"}</span>
+              <span className="flex-1 text-sm font-medium text-foreground truncate">
+                {selectedProp?.name ?? (language === "es" ? "Selecciona una propiedad…" : "Select a property…")}
+              </span>
               <ChevronDown size={14} className={cn("text-muted-foreground transition-transform", showPropPicker && "rotate-180")} />
             </button>
             {showPropPicker && (
@@ -137,8 +137,8 @@ export function ChecklistsSection() {
             {!selectedPropId ? (
               <div className="bg-card border border-dashed border-border rounded-xl p-8 text-center">
                 <MapPin size={28} className="mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm font-medium text-foreground">Select a property</p>
-                <p className="text-xs text-muted-foreground mt-1">Choose a property above to view its checklists.</p>
+                <p className="text-sm font-medium text-foreground">{t("selectPropertyPrompt")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("choosePropertyAbove")}</p>
               </div>
             ) : cleaningLoading ? (
               <div className="space-y-3">
@@ -147,7 +147,7 @@ export function ChecklistsSection() {
             ) : cleaningTemplates.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <ClipboardList size={28} className="mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No checklists for this property.</p>
+                <p className="text-sm text-muted-foreground">{t("noChecklistsForProperty")}</p>
               </div>
             ) : (
               cleaningTemplates.map(tpl => (
@@ -162,7 +162,7 @@ export function ChecklistsSection() {
             {canManageChecklists && (
               <button
                 onClick={async () => {
-                  const title = window.prompt("Checklist title:");
+                  const title = window.prompt(language === "es" ? "Título de la lista:" : "Checklist title:");
                   if (!title?.trim()) return;
                   await supabase.from("checklist_templates").insert({
                     title: title.trim(), category: "cleaning", icon: "✅", color: "green",
@@ -172,7 +172,7 @@ export function ChecklistsSection() {
                 }}
                 className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
               >
-                <Plus size={14} /> Add checklist
+                <Plus size={14} /> {t("addChecklist")}
               </button>
             )}
           </>
@@ -209,7 +209,7 @@ export function ChecklistsSection() {
             {canManageChecklists && (
               <button
                 onClick={async () => {
-                  const title = window.prompt("Activity list title:");
+                  const title = window.prompt(language === "es" ? "Título de la lista de actividad:" : "Activity list title:");
                   if (!title?.trim()) return;
                   await supabase.from("checklist_templates").insert({
                     title: title.trim(), category: "activity",
@@ -220,7 +220,7 @@ export function ChecklistsSection() {
                 }}
                 className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
               >
-                <Plus size={14} /> Add activity list
+                <Plus size={14} /> {t("addActivityList")}
               </button>
             )}
           </>

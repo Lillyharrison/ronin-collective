@@ -17,11 +17,7 @@ function getStyle(color: string) {
   return COLOR_STYLES[color] ?? COLOR_STYLES.amber;
 }
 
-interface RuleCardProps {
-  rule: PropertyRule & { propertyName?: string };
-}
-
-function RuleCard({ rule }: RuleCardProps) {
+function RuleCard({ rule }: { rule: PropertyRule & { propertyName?: string } }) {
   const s = getStyle(rule.color);
   return (
     <div className={cn("rounded-xl border p-4", s.bg, s.border)}>
@@ -61,7 +57,7 @@ function RuleCard({ rule }: RuleCardProps) {
 
 export function AlertsSection() {
   const { assignedPropertyIds, isMasterAdmin } = usePermissions();
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
 
   const urgentRules = activeRules.filter(r => ["red", "orange"].includes(r.color));
@@ -69,20 +65,19 @@ export function AlertsSection() {
 
   return (
     <div className="animate-fade-in pb-8">
-      {/* Header banner */}
       <div className="bg-[hsl(var(--status-urgent)/0.08)] border-b border-[hsl(var(--status-urgent)/0.2)] px-5 py-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[hsl(var(--status-urgent)/0.15)] border border-[hsl(var(--status-urgent)/0.3)] flex items-center justify-center">
             <Shield size={18} className="text-[hsl(var(--status-urgent))]" />
           </div>
           <div>
-            <h2 className="font-display text-xl text-foreground">
-              {language === "es" ? "Alertas Activas" : "Active Alerts"}
-            </h2>
+            <h2 className="font-display text-xl text-foreground">{t("activeAlerts")}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {activeRules.length === 0
-                ? (language === "es" ? "Sin alertas activas" : "No active alerts")
-                : `${activeRules.length} ${language === "es" ? "regla(s) activa(s)" : `active rule${activeRules.length !== 1 ? "s" : ""}`}`}
+                ? t("noActiveAlertsShort")
+                : `${activeRules.length} ${language === "es"
+                    ? `regla${activeRules.length !== 1 ? "s" : ""} activa${activeRules.length !== 1 ? "s" : ""}`
+                    : `active rule${activeRules.length !== 1 ? "s" : ""}`}`}
             </p>
           </div>
         </div>
@@ -92,14 +87,8 @@ export function AlertsSection() {
         {activeRules.length === 0 ? (
           <div className="rounded-xl bg-card border border-border p-8 text-center">
             <Info size={32} className="text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">
-              {language === "es" ? "No hay alertas activas en este momento" : "No active alerts right now"}
-            </p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              {language === "es"
-                ? "Las reglas activas de las propiedades aparecerán aquí"
-                : "Active property rules will appear here"}
-            </p>
+            <p className="text-sm font-medium text-muted-foreground">{t("noActiveAlerts")}</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">{t("activeRulesAppear")}</p>
           </div>
         ) : (
           <>
@@ -108,7 +97,7 @@ export function AlertsSection() {
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle size={13} className="text-[hsl(var(--status-urgent))]" />
                   <p className="text-xs font-semibold tracking-widest uppercase text-[hsl(var(--status-urgent))]">
-                    {language === "es" ? "Urgente" : "Urgent"}
+                    {t("urgent")}
                   </p>
                 </div>
                 <div className="space-y-3">
