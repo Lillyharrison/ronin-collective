@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   UsersRound, Plus, Search, ChevronRight,
   User, Briefcase, Building2, Calendar, X, Check, ChevronDown,
-  Eye, Pencil, Bell, Save, Loader2, Trash2, Mail,
+  Eye, Pencil, Bell, Save, Loader2, Trash2, Mail, Zap,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,6 +82,18 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "profile",      label: "Profile",      labelEs: "Perfil",       hasEdit: true  },
 ];
 
+// ─── Quick actions available on the dashboard ─────────────────────────────────
+const ALL_QUICK_ACTIONS: { key: string; label: string; labelEs: string; icon: string }[] = [
+  { key: "checklists",  label: "Checklists",     labelEs: "Listas",            icon: "📋" },
+  { key: "orders",      label: "Orders",         labelEs: "Pedidos",           icon: "🛍️" },
+  { key: "reportIssue", label: "Report Issue",   labelEs: "Reportar Problema", icon: "⚠️" },
+  { key: "calendar",    label: "Calendar",       labelEs: "Calendario",        icon: "🕐" },
+  { key: "tasks",       label: "Tasks",          labelEs: "Tareas",            icon: "✅" },
+  { key: "maintenance", label: "Maintenance",    labelEs: "Mantenimiento",     icon: "🔧" },
+  { key: "messages",    label: "Messages",       labelEs: "Mensajes",          icon: "💬" },
+  { key: "inventory",   label: "Inventory",      labelEs: "Inventario",        icon: "📦" },
+];
+
 const LEVEL_OPTIONS: { value: Level; label: string; labelEs: string }[] = [
   { value: "principal",       label: "Main Family",      labelEs: "Familia Principal" },
   { value: "extended_family", label: "Extended Family",  labelEs: "Familia Extendida" },
@@ -140,6 +151,17 @@ function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
     };
   });
   return perms;
+}
+
+// Default quick actions per level
+function defaultQuickActionsForLevel(level: Level | string): string[] {
+  const base: Record<string, string[]> = {
+    principal:       ["calendar", "reportIssue"],
+    extended_family: ["calendar", "messages"],
+    manager:         ["checklists", "orders", "reportIssue", "calendar"],
+    staff:           ["checklists", "reportIssue", "tasks", "calendar"],
+  };
+  return base[level] || base["staff"];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -403,6 +425,77 @@ export function MeetTeamSection() {
   );
 }
 
+// ─── Property Toggle Pills ─────────────────────────────────────────────────────
+function PropertyToggles({ properties, assignedProps, onChange, disabled = false }: {
+  properties: Property[];
+  assignedProps: string[];
+  onChange: (ids: string[]) => void;
+  disabled?: boolean;
+}) {
+  if (properties.length === 0) return <p className="text-muted-foreground text-xs">No properties yet</p>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {properties.map(p => {
+        const on = assignedProps.includes(p.id);
+        return (
+          <button
+            key={p.id}
+            disabled={disabled}
+            onClick={() => onChange(on ? assignedProps.filter(id => id !== p.id) : [...assignedProps, p.id])}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              on
+                ? "bg-green-500/20 border-green-500/60 text-green-400"
+                : "bg-charcoal-light border-charcoal-light text-cream/40 hover:border-cream/30 hover:text-cream/60"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {on && <Check size={11} />}
+            {p.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Quick Action Toggles ──────────────────────────────────────────────────────
+function QuickActionToggles({ isEN, enabledKeys, onChange, disabled = false }: {
+  isEN: boolean;
+  enabledKeys: string[];
+  onChange: (keys: string[]) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-muted-foreground text-xs mb-3">
+        {isEN
+          ? "Choose which shortcuts appear on this user's dashboard."
+          : "Elige qué accesos directos aparecen en el panel de este usuario."}
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {ALL_QUICK_ACTIONS.map(qa => {
+          const on = enabledKeys.includes(qa.key);
+          return (
+            <button
+              key={qa.key}
+              disabled={disabled}
+              onClick={() => onChange(on ? enabledKeys.filter(k => k !== qa.key) : [...enabledKeys, qa.key])}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-xs font-medium transition-all ${
+                on
+                  ? "bg-gold/15 border-gold/50 text-gold"
+                  : "bg-charcoal-light border-charcoal-light text-cream/40 hover:border-cream/30 hover:text-cream/60"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <span className="text-base leading-none">{qa.icon}</span>
+              <span className="flex-1">{isEN ? qa.label : qa.labelEs}</span>
+              {on && <Check size={11} className="shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Add User Modal ────────────────────────────────────────────────────────────
 function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   isEN: boolean;
@@ -411,7 +504,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [tab, setTab] = useState<"details" | "access">("details");
+  const [tab, setTab] = useState<"details" | "access" | "quickactions">("details");
   const [form, setForm] = useState<AddUserForm>({
     full_name: "", email: "", job_title: "", level: "",
     department: "", role: "", start_date: "", birthday: "", notes: "",
@@ -419,6 +512,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   const [phone, setPhone] = useState("");
   const [assignedProps, setAssignedProps] = useState<string[]>([]);
   const [perms, setPerms] = useState<SectionPermissions>({});
+  const [quickActions, setQuickActions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
   const [showTitleDropdown, setShowTitleDropdown] = useState(false);
@@ -436,7 +530,10 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
       role: level ? ROLE_MAP[level] : "",
       department: (level === "staff" || level === "manager") ? f.department : "",
     }));
-    if (level) setPerms(defaultPermissionsForLevel(level));
+    if (level) {
+      setPerms(defaultPermissionsForLevel(level));
+      setQuickActions(defaultQuickActionsForLevel(level));
+    }
   }
 
   function togglePerm(sectionKey: string, field: keyof SectionPerm) {
@@ -454,6 +551,9 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     if (!form.full_name || !form.email || !form.level || !form.role) return;
     setSaving(true);
     try {
+      const finalPerms = Object.keys(perms).length > 0
+        ? { ...perms, _quick_actions: quickActions as unknown as SectionPerm }
+        : null;
       await supabase.functions.invoke("ronin-ai", {
         body: {
           action: "invite_user",
@@ -468,13 +568,19 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
           notes: form.notes || null,
           phone: phone || null,
           assigned_property_ids: assignedProps,
-          section_permissions: Object.keys(perms).length > 0 ? perms : null,
+          section_permissions: finalPerms,
         },
       });
       onSaved();
     } catch (e) { console.error(e); }
     setSaving(false);
   }
+
+  const TABS = [
+    { key: "details",      label: isEN ? "Details" : "Detalles" },
+    { key: "access",       label: isEN ? "Access & Alerts" : "Acceso" },
+    { key: "quickactions", label: isEN ? "Quick Actions" : "Acciones" },
+  ] as const;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
@@ -491,10 +597,10 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
 
         {/* Tabs */}
         <div className="flex border-b border-charcoal-light shrink-0">
-          {(["details", "access"] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-3 text-xs font-semibold tracking-widest uppercase transition-colors ${tab === t ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
-              {t === "details" ? (isEN ? "Details" : "Detalles") : (isEN ? "Access & Alerts" : "Acceso y Alertas")}
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`flex-1 py-3 text-[11px] font-semibold tracking-widest uppercase transition-colors ${tab === t.key ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
+              {t.label}
             </button>
           ))}
         </div>
@@ -568,18 +674,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
 
               <div>
                 <FieldLabel label={isEN ? "Assigned Properties" : "Propiedades Asignadas"} />
-                <div className="space-y-2">
-                  {properties.map(p => (
-                    <label key={p.id} className="flex items-center gap-3 cursor-pointer">
-                      <Switch
-                        checked={assignedProps.includes(p.id)}
-                        onCheckedChange={v => setAssignedProps(prev => v ? [...prev, p.id] : prev.filter(id => id !== p.id))}
-                      />
-                      <span className="text-cream text-sm">{p.name}</span>
-                    </label>
-                  ))}
-                  {properties.length === 0 && <p className="text-muted-foreground text-xs">{isEN ? "No properties yet" : "Sin propiedades"}</p>}
-                </div>
+                <PropertyToggles properties={properties} assignedProps={assignedProps} onChange={setAssignedProps} />
               </div>
 
               <div>
@@ -671,6 +766,30 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
               </div>
             </div>
           )}
+
+          {tab === "quickactions" && (
+            <div className="px-5 py-4">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} className="text-gold" />
+                  <p className="text-cream text-sm font-semibold">{isEN ? "Dashboard Shortcuts" : "Accesos del Panel"}</p>
+                </div>
+                {form.level && (
+                  <button
+                    onClick={() => setQuickActions(defaultQuickActionsForLevel(form.level as Level))}
+                    className="text-[10px] text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-1 transition-colors"
+                  >
+                    {isEN ? "Reset to defaults" : "Valores por defecto"}
+                  </button>
+                )}
+              </div>
+              <QuickActionToggles
+                isEN={isEN}
+                enabledKeys={quickActions}
+                onChange={setQuickActions}
+              />
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -698,7 +817,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   onSaved: (updated: TeamMember) => void;
   onDeleted: () => void;
 }) {
-  const [tab, setTab] = useState<"details" | "access">("details");
+  const [tab, setTab] = useState<"details" | "access" | "quickactions">("details");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [resending, setResending] = useState(false);
@@ -717,11 +836,20 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   // Section permissions — seed from DB or derive from level defaults
   const [perms, setPerms] = useState<SectionPermissions>(() => {
     if (member.section_permissions && Object.keys(member.section_permissions).length > 0) {
-      // Ensure all current sections exist (new sections added later)
       const base = defaultPermissionsForLevel(member.level || "staff");
       return { ...base, ...member.section_permissions };
     }
     return defaultPermissionsForLevel(member.level || "staff");
+  });
+
+  // Quick actions — read from _quick_actions key in section_permissions
+  const [quickActions, setQuickActions] = useState<string[]>(() => {
+    const stored = member.section_permissions?.["_quick_actions"];
+    if (Array.isArray(stored)) return stored;
+    // Cast as any since it's stored as SectionPerm type in the map
+    const asAny = stored as unknown;
+    if (Array.isArray(asAny)) return asAny as string[];
+    return defaultQuickActionsForLevel(member.level || "staff");
   });
 
   function togglePerm(sectionKey: string, field: keyof SectionPerm) {
@@ -737,7 +865,10 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   }
 
   function applyLevelDefaults() {
-    if (level) setPerms(defaultPermissionsForLevel(level));
+    if (level) {
+      setPerms(defaultPermissionsForLevel(level));
+      setQuickActions(defaultQuickActionsForLevel(level));
+    }
   }
 
   async function handleDelete() {
@@ -747,7 +878,6 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         body: { action: "delete_user", target_user_id: member.id },
       });
       if (error) {
-        // Parse the actual error message from the response body
         let msg = "Failed to delete user.";
         try {
           const parsed = typeof error.message === "string" && error.message.startsWith("{")
@@ -775,6 +905,12 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     try {
       const roleToSet: AppRole = level ? ROLE_MAP[level as Level] : (member.role || "staff");
 
+      // Merge quick actions into perms under a special key
+      const finalPerms = {
+        ...perms,
+        _quick_actions: quickActions as unknown as SectionPerm,
+      };
+
       // Update profile
       await supabase.from("profiles").update({
         full_name: fullName,
@@ -786,7 +922,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         birthday: birthday || null,
         notes: notes || null,
         assigned_property_ids: assignedProps,
-        section_permissions: perms as unknown as import("@/integrations/supabase/types").Json,
+        section_permissions: finalPerms as unknown as import("@/integrations/supabase/types").Json,
       }).eq("id", member.id);
 
       // Update role if changed
@@ -794,7 +930,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
       }
 
-      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: perms, role: roleToSet });
+      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: finalPerms, role: roleToSet });
     } catch (e) { console.error(e); }
     setSaving(false);
   }
@@ -817,6 +953,12 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     }
     setResending(false);
   }
+
+  const TABS = [
+    { key: "details",      label: isEN ? "Details" : "Detalles" },
+    { key: "access",       label: isEN ? "Access & Alerts" : "Acceso" },
+    { key: "quickactions", label: isEN ? "Quick Actions" : "Acciones" },
+  ] as const;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
@@ -841,10 +983,10 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
 
         {/* Tabs */}
         <div className="flex border-b border-charcoal-light shrink-0">
-          {(["details", "access"] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-3 text-xs font-semibold tracking-widest uppercase transition-colors ${tab === t ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
-              {t === "details" ? (isEN ? "Details" : "Detalles") : (isEN ? "Access & Alerts" : "Acceso y Alertas")}
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`flex-1 py-3 text-[11px] font-semibold tracking-widest uppercase transition-colors ${tab === t.key ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
+              {t.label}
             </button>
           ))}
         </div>
@@ -891,18 +1033,11 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
               {canEdit && (
                 <>
                   <FieldLabel label={isEN ? "Assigned Properties" : "Propiedades Asignadas"} />
-                  <div className="space-y-2">
-                    {properties.map(p => (
-                      <label key={p.id} className="flex items-center gap-3 cursor-pointer">
-                        <Switch
-                          checked={assignedProps.includes(p.id)}
-                          onCheckedChange={v => setAssignedProps(prev => v ? [...prev, p.id] : prev.filter(id => id !== p.id))}
-                        />
-                        <span className="text-cream text-sm">{p.name}</span>
-                      </label>
-                    ))}
-                    {properties.length === 0 && <p className="text-muted-foreground text-xs">{isEN ? "No properties yet" : "Sin propiedades"}</p>}
-                  </div>
+                  <PropertyToggles
+                    properties={properties}
+                    assignedProps={assignedProps}
+                    onChange={setAssignedProps}
+                  />
                 </>
               )}
 
@@ -990,6 +1125,31 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {tab === "quickactions" && (
+            <div className="px-5 py-4">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} className="text-gold" />
+                  <p className="text-cream text-sm font-semibold">{isEN ? "Dashboard Shortcuts" : "Accesos del Panel"}</p>
+                </div>
+                {canEdit && level && (
+                  <button
+                    onClick={applyLevelDefaults}
+                    className="text-[10px] text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-1 transition-colors"
+                  >
+                    {isEN ? "Reset to defaults" : "Valores por defecto"}
+                  </button>
+                )}
+              </div>
+              <QuickActionToggles
+                isEN={isEN}
+                enabledKeys={quickActions}
+                onChange={canEdit ? setQuickActions : () => {}}
+                disabled={!canEdit}
+              />
             </div>
           )}
         </div>

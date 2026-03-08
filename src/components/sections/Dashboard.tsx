@@ -53,11 +53,15 @@ const statusConfig: Record<string, { label: string; labelEs: string; className: 
 };
 
 // Quick actions shown to all users, filtered by per-user canSee permissions
-const quickActions = [
-  { labelKey: "checklists" as const,   labelEs: "Listas",            icon: <ClipboardList size={26} />, section: "checklists" as const },
-  { labelKey: "orders" as const,       labelEs: "Pedidos",           icon: <ShoppingBag size={26} />,  section: "orders" as const },
-  { labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />,section: "maintenance" as const },
-  { labelKey: "calendar" as const,     labelEs: "Calendario",        icon: <Clock size={26} />,        section: "calendar" as const },
+const ALL_QUICK_ACTIONS_DASHBOARD = [
+  { key: "checklists",  labelKey: "checklists" as const,   labelEs: "Listas",            icon: <ClipboardList size={26} />, section: "checklists" as const },
+  { key: "orders",      labelKey: "orders" as const,       labelEs: "Pedidos",           icon: <ShoppingBag size={26} />,  section: "orders" as const },
+  { key: "reportIssue", labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />,section: "maintenance" as const },
+  { key: "calendar",    labelKey: "calendar" as const,     labelEs: "Calendario",        icon: <Clock size={26} />,        section: "calendar" as const },
+  { key: "tasks",       labelKey: "tasks" as const,        labelEs: "Tareas",            icon: <CheckSquare size={26} />,  section: "tasks" as const },
+  { key: "maintenance", labelKey: "maintenance" as const,  labelEs: "Mantenimiento",     icon: <Zap size={26} />,          section: "maintenance" as const },
+  { key: "messages",    labelKey: "messages" as const,     labelEs: "Mensajes",          icon: <Activity size={26} />,     section: "messages" as const },
+  { key: "inventory",   labelKey: "inventory" as const,    labelEs: "Inventario",        icon: <ShoppingBag size={26} />,  section: "inventory" as const },
 ];
 
 const TYPE_STYLES: Record<string, { dot: string; border: string }> = {
@@ -143,6 +147,7 @@ export function Dashboard() {
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [reportIssueOpen, setReportIssueOpen] = useState(false);
+  const [userQuickActions, setUserQuickActions] = useState<string[] | null>(null);
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
@@ -239,6 +244,22 @@ export function Dashboard() {
         setTaglineOverride(v);
       });
   }, []);
+
+  // Load user's quick action preferences from their profile
+  useEffect(() => {
+    if (!userId || permLoading) return;
+    supabase
+      .from("profiles")
+      .select("section_permissions")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data?.section_permissions) return;
+        const perms = data.section_permissions as Record<string, unknown>;
+        const qa = perms["_quick_actions"];
+        if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
+      });
+  }, [userId, permLoading]);
 
   // Load notifications for the dashboard widget — filtered per user via acknowledged_by
   // Each user sees notifications they haven't personally acknowledged yet
@@ -520,11 +541,18 @@ export function Dashboard() {
           {language === "es" ? "Acciones Rápidas" : "Quick Actions"}
         </p>
         <div className="grid grid-cols-2 gap-3">
-          {quickActions.filter(a => isMasterAdmin || canSee(a.section)).map((action) => (
+          {ALL_QUICK_ACTIONS_DASHBOARD
+            .filter(a => {
+              // If user has saved prefs, respect them; otherwise show defaults filtered by canSee
+              if (userQuickActions !== null) return userQuickActions.includes(a.key);
+              // Default: show first 4 that user can see
+              return isMasterAdmin || canSee(a.section);
+            })
+            .map((action) => (
             <button
-              key={action.labelKey}
+              key={action.key}
               onClick={() => {
-                if (action.labelKey === "reportIssue") {
+                if (action.key === "reportIssue") {
                   setReportIssueOpen(true);
                 } else {
                   setActiveSection(action.section);
