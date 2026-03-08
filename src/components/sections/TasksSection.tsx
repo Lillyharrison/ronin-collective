@@ -210,14 +210,17 @@ export function TasksSection() {
       ...t,
       assignee: t.assigned_to ? { full_name: nameMap[t.assigned_to] ?? null } : null,
     }));
-    setTasks(enriched);
-    setDraftCount(enriched.filter(t => t.is_draft).length);
+    setTasks(prev => pageIndex === 0 ? enriched : [...prev, ...enriched]);
+    setDraftCount((pageIndex === 0 ? enriched : [...(tasks), ...enriched]).filter(t => t.is_draft).length);
+    setPage(pageIndex);
     setLoading(false);
   }
 
+  const loadMore = () => { if (!loading && hasMore) fetchTasks(page + 1); };
+
   useEffect(() => {
-    if (!permLoading) fetchTasks();
-  }, [permLoading, userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds]);
+    if (!permLoading) fetchTasks(0);
+  }, [permLoading, userId, isAdmin, isManager, isMasterAdmin, department, JSON.stringify(assignedPropertyIds)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const liveTasks = tasks.filter(t => !t.is_draft);
   const draftTasks = tasks.filter(t => t.is_draft);
