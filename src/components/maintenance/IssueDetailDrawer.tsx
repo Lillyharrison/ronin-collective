@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon, ChevronRight } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
 import type { MaintenanceIssue, IssueStatus, MaintenanceCategory } from "@/hooks/useMaintenanceIssues";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -151,32 +151,18 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
           {/* Status progression */}
           {onStatusChange && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{t("moveToStatus")}</p>
-              <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                {STATUSES.map((s, idx) => {
-                  const isActive = issue.status === s.value;
-                  const isPast = STATUSES.findIndex(x => x.value === issue.status) > idx;
-                  const cfg = STATUS_CONFIG[s.value];
-                  return (
-                    <div key={s.value} className="flex items-center flex-shrink-0">
-                      <button
-                        onClick={() => !isActive && onStatusChange(issue, s.value)}
-                        disabled={isActive}
-                        className={cn(
-                          "text-[10px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all",
-                          isActive ? cn(cfg.className, "scale-105 shadow-sm") :
-                          isPast ? "border-border text-muted-foreground/40 bg-muted/20" :
-                          "border-border text-muted-foreground hover:border-gold/40 hover:text-foreground cursor-pointer"
-                        )}>
-                        {isL ? s.labelEs : s.label}
-                      </button>
-                      {idx < STATUSES.length - 1 && (
-                        <ChevronRight size={10} className="mx-0.5 text-muted-foreground/30 flex-shrink-0" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t("moveToStatus")}</p>
+              <select
+                value={issue.status}
+                onChange={e => onStatusChange(issue, e.target.value as IssueStatus)}
+                className="w-full rounded-xl border border-border bg-muted/40 text-sm text-foreground px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-gold/40 cursor-pointer"
+              >
+                {STATUSES.map(s => (
+                  <option key={s.value} value={s.value}>
+                    {isL ? s.labelEs : s.label}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
         </div>
