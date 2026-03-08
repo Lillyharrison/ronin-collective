@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { X, Bell, CheckCheck, Trash2 } from "lucide-react";
+import { X, Bell, CheckCheck, Trash2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ActiveSection } from "@/contexts/NavigationContext";
 
 interface Notification {
   id: string;
@@ -13,16 +14,29 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   action_url: string | null;
+  entity_id: string | null;
+  entity_type: string | null;
 }
 
 const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
-  success: { dot: "bg-[hsl(var(--status-done))]", bg: "border-l-[hsl(var(--status-done))]" },
+  success: { dot: "bg-[hsl(var(--status-done))]",   bg: "border-l-[hsl(var(--status-done))]" },
   warning: { dot: "bg-[hsl(var(--status-urgent))]", bg: "border-l-[hsl(var(--status-urgent))]" },
   alert:   { dot: "bg-[hsl(var(--status-urgent))]", bg: "border-l-[hsl(var(--status-urgent))]" },
-  task:    { dot: "bg-[hsl(var(--gold))]", bg: "border-l-[hsl(var(--gold))]" },
-  message: { dot: "bg-accent", bg: "border-l-accent" },
-  ai:      { dot: "bg-purple-400", bg: "border-l-purple-400" },
-  info:    { dot: "bg-muted-foreground", bg: "border-l-muted-foreground" },
+  task:    { dot: "bg-[hsl(var(--gold))]",          bg: "border-l-[hsl(var(--gold))]" },
+  message: { dot: "bg-accent",                      bg: "border-l-accent" },
+  ai:      { dot: "bg-purple-400",                  bg: "border-l-purple-400" },
+  info:    { dot: "bg-muted-foreground",             bg: "border-l-muted-foreground" },
+};
+
+/** Sections that can be deep-linked by entity_id stored in NavigationContext */
+const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
+  maintenance_issue: "maintenance",
+  task:              "tasks",
+  order:             "orders",
+  calendar_event:    "calendar",
+  message:           "messages",
+  property_rule:     "rules",
+  checklist:         "checklists",
 };
 
 interface Props {
@@ -31,29 +45,25 @@ interface Props {
 }
 
 export function NotificationsPanel({ open, onClose }: Props) {
-  const { userId } = usePermissions();
+  const { userId, isMasterAdmin } = usePermissions();
   const { setActiveSection } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const { isMasterAdmin } = usePermissions();
-
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
-    // Rolling 7-day history — show all (read + unread), clean up anything older
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    // Cleanup old notifications silently (own notifications only)
+    // Cleanup old notifications silently
     supabase.from("notifications").delete().eq("user_id", userId).lt("created_at", sevenDaysAgo);
 
     let query = supabase
       .from("notifications")
-      .select("id, title, body, type, is_read, created_at, action_url")
+      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type")
       .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
       .limit(isMasterAdmin ? 100 : 40);
 
-    // Non-admins only see their own
     if (!isMasterAdmin) {
       query = query.eq("user_id", userId);
     }
@@ -101,12 +111,21 @@ export function NotificationsPanel({ open, onClose }: Props) {
 
   const handleNotificationClick = async (n: Notification) => {
     if (!n.is_read) await markRead(n.id);
-    if (n.action_url) {
-      // Navigate to the section indicated by action_url
-      setActiveSection(n.action_url as any);
+
+    // Determine target section: prefer entity_type mapping, fall back to action_url
+    const targetSection: ActiveSection | undefined =
+      (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
+      (n.action_url as ActiveSection | undefined);
+
+    if (targetSection) {
+      setActiveSection(targetSection);
     }
+
     onClose();
   };
+
+  const isClickable = (n: Notification) =>
+    !!(n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -121,7 +140,8 @@ export function NotificationsPanel({ open, onClose }: Props) {
       />
 
       {/* Panel */}
-      <div className="fixed top-14 right-0 z-50 w-full max-w-sm bg-card border-l border-b border-border shadow-2xl animate-slide-in-right"
+      <div
+        className="fixed top-14 right-0 z-50 w-full max-w-sm bg-card border-l border-b border-border shadow-2xl animate-slide-in-right"
         style={{ maxHeight: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}
       >
         {/* Header */}
@@ -158,7 +178,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
         <div className="overflow-y-auto flex-1">
           {loading ? (
             <div className="p-4 space-y-2">
-              {[1,2,3].map(i => (
+              {[1, 2, 3].map(i => (
                 <div key={i} className="h-16 bg-muted animate-pulse rounded-xl" />
               ))}
             </div>
@@ -172,14 +192,16 @@ export function NotificationsPanel({ open, onClose }: Props) {
             <div className="divide-y divide-border">
               {notifications.map(n => {
                 const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
+                const clickable = isClickable(n);
                 return (
                   <button
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
                     className={cn(
-                      "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-l-2 group",
+                      "w-full flex items-start gap-3 px-4 py-3 text-left border-l-2 group transition-colors",
                       styles.bg,
-                      !n.is_read && "bg-muted/30"
+                      !n.is_read && "bg-muted/30",
+                      clickable ? "hover:bg-muted/50 cursor-pointer" : "cursor-default"
                     )}
                   >
                     {/* Status dot */}
@@ -199,17 +221,24 @@ export function NotificationsPanel({ open, onClose }: Props) {
                           {n.body}
                         </p>
                       )}
-                      <p className="text-[10px] text-muted-foreground/50 mt-1">
-                        {new Date(n.created_at).toLocaleString("en-US", {
-                          month: "short", day: "numeric",
-                          hour: "numeric", minute: "2-digit",
-                        })}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-[10px] text-muted-foreground/50">
+                          {new Date(n.created_at).toLocaleString("en-US", {
+                            month: "short", day: "numeric",
+                            hour: "numeric", minute: "2-digit",
+                          })}
+                        </p>
+                        {clickable && (
+                          <span className="text-[10px] text-[hsl(var(--gold)/0.7)] flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ExternalLink size={9} /> View
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <button
                       onClick={(e) => deleteNotification(n.id, e)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-foreground flex-shrink-0"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-foreground flex-shrink-0 mt-0.5"
                     >
                       <Trash2 size={12} />
                     </button>
