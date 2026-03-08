@@ -257,23 +257,32 @@ export function OrdersSection() {
   const { language } = useLanguage();
   const isL = language === "es";
 
+  const PAGE_SIZE = 50;
   const [orders, setOrders]         = useState<Order[]>([]);
   const [loading, setLoading]       = useState(true);
+  const [hasMore, setHasMore]       = useState(false);
+  const [page, setPage]             = useState(0);
   const [modalOrder, setModalOrder] = useState<Order | null>(null);
   const [activeTab, setActiveTab]   = useState<MainTab>("pending");
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (pageIndex = 0) => {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
       .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, property:properties(name)")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE - 1);
     if (error) console.error(error);
-    setOrders((data as any[]) ?? []);
+    const rows = (data as any[]) ?? [];
+    setHasMore(rows.length === PAGE_SIZE);
+    setOrders(prev => pageIndex === 0 ? rows : [...prev, ...rows]);
+    setPage(pageIndex);
     setLoading(false);
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  const loadMore = () => { if (!loading && hasMore) fetchOrders(page + 1); };
+
+  useEffect(() => { fetchOrders(0); }, []);
 
   // pending = not_placed + placed + pending_delivery (legacy)
   const pending   = orders.filter(o => o.status !== "delivered");
@@ -408,6 +417,17 @@ export function OrdersSection() {
                 }
               </tbody>
             </table>
+          )}
+          {/* Load more */}
+          {hasMore && !loading && (
+            <div className="flex justify-center py-4">
+              <button
+                onClick={loadMore}
+                className="text-xs font-semibold px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors"
+              >
+                {isL ? "Cargar más" : "Load more"}
+              </button>
+            </div>
           )}
         </div>
       )}
