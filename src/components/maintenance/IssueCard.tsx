@@ -35,10 +35,9 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
         "hover:border-gold/30 hover:shadow-sm transition-all active:scale-[0.99] group",
         issue.priority === "urgent" && "border-l-4 border-l-[hsl(var(--status-urgent))]",
         issue.priority === "high" && "border-l-4 border-l-orange-400",
-        compact ? "p-3" : ""
       )}
     >
-      {/* Photo strip — only for full card */}
+      {/* Photo strip — full height for non-compact, compact thumb via row layout */}
       {!compact && issue.photo_url && (
         <div className="relative h-32 bg-muted overflow-hidden">
           <img
@@ -58,21 +57,57 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
         </div>
       )}
 
-      <div className={cn("p-3 space-y-2", !compact && issue.photo_url ? "" : "")}>
-        {/* Header row */}
-        <div className="flex items-start gap-2">
-          <span className="text-lg flex-shrink-0 mt-0.5">{icon}</span>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground text-sm leading-snug truncate pr-1">{issue.title}</p>
-            {issue.description && !compact && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{issue.description}</p>
-            )}
+      {/* Compact card: thumbnail on the left, content on the right */}
+      {compact ? (
+        <div className="flex gap-3 p-3">
+          {issue.photo_url ? (
+            <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+              <img
+                src={issue.photo_url}
+                alt={issue.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+          ) : (
+            <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-2xl">
+              {icon}
+            </div>
+          )}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold text-foreground text-sm leading-snug line-clamp-2">{issue.title}</p>
+              <IssueStatusBadge status={issue.status} size="xs" />
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
+              {issue.property_name && (
+                <span className="flex items-center gap-1"><MapPin size={9} /> {issue.property_name}</span>
+              )}
+              {issue.location_detail && (
+                <span className="text-muted-foreground/60">· {issue.location_detail}</span>
+              )}
+              <span className="flex items-center gap-1 ml-auto">
+                <Clock size={9} />
+                {daysOpen === 0
+                  ? formatDistanceToNow(new Date(issue.created_at), { addSuffix: true })
+                  : `${daysOpen}d open`}
+              </span>
+            </div>
           </div>
-          {compact && <IssueStatusBadge status={issue.status} size="xs" />}
         </div>
+      ) : (
+        <div className="p-3 space-y-2">
+          {/* Header row */}
+          <div className="flex items-start gap-2">
+            <span className="text-lg flex-shrink-0 mt-0.5">{icon}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground text-sm leading-snug truncate pr-1">{issue.title}</p>
+              {issue.description && (
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{issue.description}</p>
+              )}
+            </div>
+          </div>
 
-        {/* Badges */}
-        {!compact && (
+          {/* Badges */}
           <div className="flex flex-wrap items-center gap-1.5">
             <IssueStatusBadge status={issue.status} />
             <IssuePriorityBadge priority={issue.priority} />
@@ -80,37 +115,35 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
               {issue.category}
             </span>
           </div>
-        )}
 
-        {/* Meta row */}
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
-          {issue.property_name && (
-            <span className="flex items-center gap-1">
-              <MapPin size={9} /> {issue.property_name}
+          {/* Meta row */}
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+            {issue.property_name && (
+              <span className="flex items-center gap-1"><MapPin size={9} /> {issue.property_name}</span>
+            )}
+            {issue.location_detail && (
+              <span className="flex items-center gap-1 text-muted-foreground/70">· {issue.location_detail}</span>
+            )}
+            <span className="flex items-center gap-1 ml-auto">
+              <Clock size={9} />
+              {daysOpen === 0
+                ? formatDistanceToNow(new Date(issue.created_at), { addSuffix: true })
+                : `${daysOpen}d open`}
             </span>
-          )}
-          {issue.location_detail && (
-            <span className="flex items-center gap-1 text-muted-foreground/70">· {issue.location_detail}</span>
-          )}
-          <span className="flex items-center gap-1 ml-auto">
-            <Clock size={9} />
-            {daysOpen === 0
-              ? formatDistanceToNow(new Date(issue.created_at), { addSuffix: true })
-              : `${daysOpen}d open`}
-          </span>
-        </div>
-
-        {/* Assignee */}
-        {issue.assignee_name && (
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            {issue.assignee_avatar
-              ? <img src={issue.assignee_avatar} alt={issue.assignee_name} className="w-4 h-4 rounded-full object-cover" />
-              : <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center"><User size={8} /></div>
-            }
-            <span>{issue.assignee_name}</span>
           </div>
-        )}
-      </div>
+
+          {/* Assignee */}
+          {issue.assignee_name && (
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              {issue.assignee_avatar
+                ? <img src={issue.assignee_avatar} alt={issue.assignee_name} className="w-4 h-4 rounded-full object-cover" />
+                : <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center"><User size={8} /></div>
+              }
+              <span>{issue.assignee_name}</span>
+            </div>
+          )}
+        </div>
+      )}
     </button>
   );
 }
