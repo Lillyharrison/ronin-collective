@@ -84,7 +84,7 @@ export function ThreadList({
   const threadToDelete = confirmDeleteId ? threads.find(t => t.id === confirmDeleteId) : null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border bg-card flex items-center justify-between">
         <h2 className="font-display text-xl text-foreground">
@@ -130,14 +130,14 @@ export function ThreadList({
           >
             <button
               onClick={() => onSelectThread(thread.id)}
-              className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
+              className="flex-1 flex items-center gap-3 px-4 py-3 text-left min-w-0 overflow-hidden"
             >
               {getAvatar(thread)}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-foreground truncate">{getThreadName(thread)}</span>
                   {thread.last_message_at && (
-                    <span className="text-[10px] text-muted-foreground ml-2 flex-shrink-0">
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">
                       {formatDistanceToNow(new Date(thread.last_message_at), {
                         addSuffix: false,
                         locale: language === "es" ? es : undefined,
@@ -145,14 +145,14 @@ export function ThreadList({
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-xs text-muted-foreground truncate max-w-[calc(100%-2rem)]">
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <p className="text-xs text-muted-foreground truncate flex-1 min-w-0">
                     {thread.last_message
                       ? thread.last_message.split("\n")[0]
                       : (language === "es" ? "Sin mensajes" : "No messages yet")}
                   </p>
                   {thread.unread_count > 0 && (
-                    <span className="ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
                       {thread.unread_count}
                     </span>
                   )}
