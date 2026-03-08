@@ -161,8 +161,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       const [{ data: roleRow }, { data: profile }, { data: rowPerms }] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
         supabase.from("profiles").select("level, department, assigned_property_ids, full_name, avatar_url, section_permissions").eq("id", user.id).maybeSingle(),
-        // Read from the new relational table (preferred source)
-        supabase.from("user_section_permissions").select("section, can_view, can_edit, notifications").eq("user_id", user.id),
+        // Read from the new relational table (preferred source).
+        // Cast to `any` because types.ts auto-generates after migration confirmation.
+        (supabase.from("user_section_permissions" as never).select("section, can_view, can_edit, notifications").eq("user_id", user.id) as unknown as Promise<{ data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean }[] | null }>),
       ]);
 
       if (roleRow) setRole(roleRow.role as AppRole);
