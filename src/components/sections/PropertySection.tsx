@@ -467,12 +467,239 @@ function PropertyStaffList({ propertyId, onBack }: { propertyId: string; onBack:
   );
 }
 
-// ─── Occupants Panel (inline on detail page) ─────────────────────────────────
-function OccupantsPanel({ property, isMasterAdmin, onChanged }: {
+// ─── Occupants Manager (multi-select, full-panel) ────────────────────────────
+function PropertyOccupantsManager({ property, isMasterAdmin, onBack, onChanged }: {
   property: Property;
   isMasterAdmin: boolean;
+  onBack: () => void;
   onChanged: () => void;
 }) {
+  const [profiles, setProfiles] = useState<OccupantProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const currentIds: string[] = Array.isArray(property.occupied_by_profile_ids)
+    ? property.occupied_by_profile_ids
+    : property.occupied_by_profile_id ? [property.occupied_by_profile_id] : [];
+
+  const [selected, setSelected] = useState<Set<string>>(new Set(currentIds));
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, level")
+      .order("full_name")
+      .then(({ data }) => { setProfiles((data as OccupantProfile[]) ?? []); setLoading(false); });
+  }, []);
+
+  function toggle(id: string) {
+    if (!isMasterAdmin) return;
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function save() {
+    setSaving(true);
+    const newIds = Array.from(selected);
+    const names = newIds
+      .map(id => profiles.find(p => p.id === id)?.full_name)
+      .filter(Boolean)
+      .join(", ");
+    await supabase.from("properties").update({
+      occupied_by_profile_ids: newIds,
+      occupied_by_profile_id: newIds[0] ?? null,
+      occupied_by: names || null,
+      status: newIds.length > 0 ? "occupied" : property.status === "occupied" ? "vacant" : property.status,
+    } as any).eq("id", property.id);
+    setSaving(false);
+    onChanged();
+    onBack();
+    toast.success("Occupants updated");
+  }
+
+  const hasChanges = (() => {
+    const cur = new Set(currentIds);
+    if (cur.size !== selected.size) return true;
+    for (const id of selected) if (!cur.has(id)) return true;
+    return false;
+  })();
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-7rem)]">
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors">
+          <ArrowLeft size={18} />
+        </button>
+        <div className="flex-1">
+          <h2 className="font-display text-lg text-foreground">Occupants</h2>
+          <p className="text-xs text-muted-foreground">{property.name}</p>
+        </div>
+        {isMasterAdmin && (
+          <Button size="sm" onClick={save} disabled={!hasChanges || saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        )}
+      </div>
+
+      <div className="p-4 space-y-2 flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="space-y-2">{[1,2,3,4].map(i => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)}</div>
+        ) : profiles.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground text-sm">No profiles found.</div>
+        ) : (
+          profiles.map(profile => {
+            const isSelected = selected.has(profile.id);
+            return (
+              <button
+                key={profile.id}
+                onClick={() => toggle(profile.id)}
+                disabled={!isMasterAdmin}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
+                  isSelected
+                    ? "bg-primary/10 border-primary/40"
+                    : "bg-card border-border hover:border-primary/20 hover:bg-accent"
+                } ${!isMasterAdmin ? "cursor-default" : "cursor-pointer"}`}
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {profile.avatar_url
+                    ? <img src={imageUrl(profile.avatar_url, 80, 80)} alt={profile.full_name ?? ""} className="w-full h-full object-cover" />
+                    : <span className="text-sm font-semibold text-primary">{(profile.full_name ?? "?")[0]}</span>
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{profile.full_name ?? "Unknown"}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{profile.level ?? "staff"}</p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"
+                }`}>
+                  {isSelected && <CheckCircle size={12} className="text-primary-foreground" />}
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Property Detail ──────────────────────────────────────────────────────────
+function PropertyDetail({ property: p, isMasterAdmin, onBack, onEdit, onDelete, onOccupantsChange, onNavigate }: {
+  property: Property; isMasterAdmin: boolean;
+  onBack: () => void; onEdit: () => void; onDelete: () => void;
+  onOccupantsChange: () => void;
+  onNavigate: (key: string) => void;
+}) {
+  const [showStaff, setShowStaff] = useState(false);
+  const [showRooms, setShowRooms] = useState(false);
+  const [showOccupants, setShowOccupants] = useState(false);
+  const cfg = STATUS_CONFIG[p.status];
+
+  if (showStaff) {
+    return <PropertyStaffList propertyId={p.id} onBack={() => setShowStaff(false)} />;
+  }
+
+  if (showRooms) {
+    return <PropertyRoomsManager property={p} onBack={() => setShowRooms(false)} />;
+  }
+
+  if (showOccupants) {
+    return (
+      <PropertyOccupantsManager
+        property={p}
+        isMasterAdmin={isMasterAdmin}
+        onBack={() => setShowOccupants(false)}
+        onChanged={onOccupantsChange}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-7rem)]">
+      <div className="relative h-64 shrink-0">
+        {p.image_url ? (
+          <img src={imageUrl(p.image_url, 800, 512)} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center">
+            <Building2 size={56} className="text-muted-foreground/30" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+        <button onClick={onBack} className="absolute top-3 left-3 p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white">
+          <ArrowLeft size={18} />
+        </button>
+
+        {isMasterAdmin && (
+          <div className="absolute top-3 right-3 flex gap-2">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white hover:bg-destructive"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        )}
+
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${cfg.color}`}>
+              {cfg.icon} {cfg.label}
+            </span>
+            {p.status === "occupied" && p.occupied_by && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm bg-black/50 text-white border-white/20">
+                {p.occupied_by}
+              </span>
+            )}
+          </div>
+          <h2 className="text-white text-2xl font-bold">{p.name}</h2>
+          <p className="text-white/70 text-sm flex items-center gap-1 mt-0.5">
+            <MapPin size={12} /> {[p.address, p.city, p.country].filter(Boolean).join(", ")}
+          </p>
+        </div>
+      </div>
+
+      <div className="px-4 pt-4 pb-4 flex-1">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">Sections</p>
+        <div className="grid grid-cols-2 gap-3">
+          {PROPERTY_SUB_SECTIONS.map(s => (
+            <button
+              key={s.key}
+              onClick={() => {
+                if (s.key === "staff") setShowStaff(true);
+                else if (s.key === "rooms") setShowRooms(true);
+                else if (s.key === "occupants") setShowOccupants(true);
+                else onNavigate(s.key);
+              }}
+              className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-card border border-border hover:border-primary/40 hover:bg-accent transition-all text-left group"
+            >
+              <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                {s.icon}
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-foreground">{s.label}</p>
+                <p className="text-xs text-muted-foreground">{s.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
   const [profiles, setProfiles] = useState<OccupantProfile[]>([]);
   const [occupants, setOccupants] = useState<OccupantProfile[]>([]);
   const [showAdd, setShowAdd] = useState(false);
