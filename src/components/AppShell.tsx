@@ -136,7 +136,6 @@ export function AppShell() {
       </main>
 
       <BottomNav />
-      <PendingRulesWidget />
     </div>
   );
 }
