@@ -34,6 +34,16 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// All section paths that map to the main AppShell.
+// The AppShell reads the current path via NavigationContext (useLocation) to
+// decide which section to render — so we only need one wildcard catch-all here.
+const SECTION_PATHS = [
+  "/", "/property", "/maintenance", "/messages", "/profile",
+  "/manuals", "/checklists", "/tasks", "/contacts", "/inventory",
+  "/laundry", "/orders", "/meet-team", "/travel", "/calendar",
+  "/achievements", "/master-import", "/memory", "/alerts", "/rules",
+];
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -41,14 +51,21 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          {/* PermissionsProvider inside AuthProvider so it can react to auth state.
-              Runs ONE set of DB queries and shares results via context —
-              replaces N independent usePermissions() hook fetches. */}
+          {/* PermissionsProvider inside AuthProvider — runs ONE set of DB queries
+              and shares results via context to all 30+ consuming components. */}
           <PermissionsProvider>
             <Routes>
               <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              {/* All app sections share a single AppShell; the active section is
+                  derived from the URL path inside NavigationContext. */}
+              {SECTION_PATHS.map(path => (
+                <Route
+                  key={path}
+                  path={path}
+                  element={<ProtectedRoute><Index /></ProtectedRoute>}
+                />
+              ))}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </PermissionsProvider>

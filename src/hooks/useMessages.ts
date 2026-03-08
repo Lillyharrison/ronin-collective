@@ -145,7 +145,7 @@ export function useMessages(threadId: string | null) {
           recipientUserIds: recipientIds,
           title: `💬 ${senderName}`,
           body: text.length > 80 ? text.slice(0, 80) + "…" : text,
-          url: "/?section=messages",
+          url: "/messages",
         }),
       }).catch(() => {/* non-critical */});
     } catch {/* non-critical */}
