@@ -68,7 +68,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   const fetchIssues = useCallback(async (pageIndex = 0) => {
     setLoading(true);
 
-    // Build query with server-side property filter when scoped
+    // Build query with server-side property + filter params
     let query = supabase
       .from("maintenance_issues")
       .select("*")
@@ -77,6 +77,16 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
 
     if (filterPropertyIds && filterPropertyIds.length > 0) {
       query = query.in("property_id", filterPropertyIds);
+    }
+    // Server-side text search (title only — DB ilike is fast with index)
+    if (filters?.search) {
+      query = query.ilike("title", `%${filters.search}%`);
+    }
+    if (filters?.category) {
+      query = query.eq("category", filters.category);
+    }
+    if (filters?.priority) {
+      query = query.eq("priority", filters.priority);
     }
 
     const { data, error } = await query;
@@ -121,7 +131,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     setIssues(prev => pageIndex === 0 ? enriched : [...prev, ...enriched]);
     setPage(pageIndex);
     setLoading(false);
-  }, [filterPropertyIds?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filterPropertyIds?.join(","), filters?.search, filters?.category, filters?.priority]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) fetchIssues(page + 1);
