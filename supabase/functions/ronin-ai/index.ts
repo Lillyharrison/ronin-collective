@@ -426,6 +426,27 @@ async function executeObservationTool(
     };
   }
 
+  if (name === "search_vendors") {
+    let q = adminClient.from("vendors")
+      .select("id, name, company, category, phone, email, website, description, is_active");
+    if (args.keyword) {
+      const kw = `%${args.keyword}%`;
+      q = q.or(`name.ilike.${kw},company.ilike.${kw},description.ilike.${kw}`);
+    }
+    if (args.category) q = q.eq("category", args.category as string);
+    q = q.order("name").limit(20);
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+    return {
+      total: data?.length ?? 0,
+      vendors: data?.map((v: Record<string, unknown>) => ({
+        name: v.name, company: v.company ?? "—", category: v.category,
+        phone: v.phone ?? "—", email: v.email ?? "—", website: v.website ?? "—",
+        description: v.description ?? "—", is_active: v.is_active,
+      })),
+    };
+  }
+
   return { error: `Unknown observation tool: ${name}` };
 }
 
