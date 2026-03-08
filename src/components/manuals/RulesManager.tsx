@@ -73,7 +73,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
       applies_to_roles: rule.applies_to_roles,
       enacted_event_types: rule.enacted_event_types,
       enacted_keywords: rule.enacted_keywords.join(", "),
-      enacted_occupant_ids: (rule as any).enacted_occupant_ids ?? [],
+      enacted_occupant_ids: rule.enacted_occupant_ids ?? [],
       is_universal: rule.is_universal,
     });
     setEditingId(rule.id);
