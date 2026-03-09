@@ -1376,12 +1376,13 @@ export function StaffCalendarTab({
         )}
       </div>
 
-      {/* ── Leave Requests Panel ──────────────────────────────────────────── */}
-      <LeaveReviewPanel
+      {/* ── Leave Panel ──────────────────────────────────────────── */}
+      <LeavePanel
         leaveRequests={leaveRequests}
         profiles={profiles}
         onReview={reviewLeaveRequest}
         onDelete={deleteLeaveRequest}
+        onNew={() => setShowLeaveModal(true)}
         userId={userId}
         canEdit={canEdit}
       />
