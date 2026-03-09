@@ -273,10 +273,15 @@ export function ChatView({
 
   const hasText = input.trim().length > 0;
 
+  // Heights: app header = 3.5rem (56px), chat sub-header ≈ 3.25rem (52px), input bar ≈ 3.5rem (56px)
+  const CHAT_HEADER_TOP = "top-14"; // sits directly below the fixed app header
+  const CHAT_HEADER_H = "h-[52px]";
+  const INPUT_BAR_H = "h-[60px]";
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat header */}
-      <div className="px-3 py-2.5 border-b border-border bg-card flex items-center gap-3 flex-shrink-0">
+    <div className="relative h-full">
+      {/* ── Fixed chat sub-header — always visible below app header ── */}
+      <div className={`fixed left-0 right-0 ${CHAT_HEADER_TOP} ${CHAT_HEADER_H} z-40 px-3 border-b border-border bg-card flex items-center gap-3`}>
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors">
           <ArrowLeft size={20} className="text-foreground" />
         </button>
