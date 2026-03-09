@@ -215,6 +215,7 @@ function DayCell({
   isSelected,
   isRoninMode,
   activeTab,
+  canDrag,
   onSelect,
   onEventClick,
   onDragStart,
@@ -226,6 +227,7 @@ function DayCell({
   isSelected: boolean;
   isRoninMode: boolean;
   activeTab: RoninTab;
+  canDrag: boolean;
   onSelect: () => void;
   onEventClick: (ev: CalEvent, e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
@@ -249,7 +251,7 @@ function DayCell({
         "hover:bg-muted/40",
         !isCurrentMonth && "opacity-30",
         isSelected && "bg-accent/10",
-        isDragOver && "bg-primary/10 ring-1 ring-inset ring-primary/40",
+        isDragOver && canDrag && "bg-primary/10 ring-1 ring-inset ring-primary/40",
       )}
     >
       <div className={cn(
@@ -264,6 +266,7 @@ function DayCell({
             key={ev.id}
             ev={ev}
             isRoninMode={isRoninMode}
+            canDrag={canDrag}
             onClick={(e) => onEventClick(ev, e)}
             onDragStart={onDragStart}
           />
