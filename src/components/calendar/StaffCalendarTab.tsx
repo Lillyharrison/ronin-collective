@@ -1224,13 +1224,14 @@ export function StaffCalendarTab({
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Visible to ALL users — primary CTA for staff */}
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5 text-xs h-8"
+            className="gap-1.5 text-xs h-8 border-primary/40 text-primary hover:bg-primary/10"
             onClick={() => { setShowLeaveModal(true); }}
           >
-            <CalendarOff size={13} /> Leave
+            <PlaneTakeoff size={13} /> Request Time Off
           </Button>
           {canEdit && (
             <>
