@@ -1245,6 +1245,13 @@ export function CalendarSection() {
         </div>
       )}
 
+      {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
+      {mode === "ronin" && roninTab === "staff" && (
+        <StaffCalendarTab canEdit={canEdit} userId={userId} />
+      )}
+
+      {/* ── Calendar grid (hidden when staff tab active) ─────────────────── */}
+      {(mode !== "ronin" || roninTab !== "staff") && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Calendar grid */}
         <div className="lg:col-span-2 rounded-2xl border border-border bg-card overflow-hidden">
