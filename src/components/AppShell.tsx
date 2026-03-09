@@ -138,7 +138,7 @@ export function AppShell() {
       <Sidebar />
       <Header title={showDetail ? undefined : title} />
 
-      <main className={activeSection === "messages" ? "pt-14 h-[100dvh] overflow-hidden" : `pt-14 min-h-screen pb-20`}>
+      <main className={activeSection === "messages" ? "pt-14 overflow-hidden" : `pt-14 min-h-screen pb-20`}>
         <Suspense fallback={<SectionSkeleton />}>
           {showDetail ? (
             <ChecklistDetailPage
