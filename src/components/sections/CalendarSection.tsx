@@ -170,29 +170,37 @@ function EventChip({
   onClick,
   onDragStart,
   isRoninMode,
+  canDrag,
 }: {
   ev: CalEvent;
   onClick: (e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
   isRoninMode: boolean;
+  canDrag: boolean;
 }) {
   const tab = getRoninTabForEvent(ev);
   const cfg = isRoninMode
     ? (RONIN_TAB_CONFIG[tab] ?? RONIN_TAB_CONFIG.all)
     : getFamilyTypeConfig(ev.event_type);
 
+  const isDraggable = canDrag && ev._is_draggable !== false;
+
   return (
     <div
-      draggable={ev._is_draggable !== false}
-      onDragStart={(e) => onDragStart(e, ev)}
+      draggable={isDraggable}
+      onDragStart={(e) => isDraggable && onDragStart(e, ev)}
       onClick={onClick}
+      title={ev.calendar_source === "ical" ? "Synced from iCal · read-only" : undefined}
       className={cn(
-        "text-[10px] font-medium px-1 py-0.5 rounded truncate flex items-center gap-0.5 border cursor-pointer hover:opacity-80 transition-opacity select-none",
+        "text-[10px] font-medium px-1 py-0.5 rounded truncate flex items-center gap-0.5 border transition-opacity select-none",
+        isDraggable ? "cursor-grab active:cursor-grabbing hover:opacity-80" : "cursor-pointer hover:opacity-80",
+        ev.calendar_source === "ical" && "opacity-90",
         isRoninMode ? `${cfg.bg} ${cfg.color}` : `${cfg.bg} ${cfg.color}`
       )}
     >
       <span className="flex-shrink-0">{cfg.icon}</span>
       {ev.is_private && <Lock size={7} className="flex-shrink-0" />}
+      {ev.calendar_source === "ical" && <Globe size={7} className="flex-shrink-0 opacity-60" />}
       <span className="truncate">{ev.title}</span>
     </div>
   );
@@ -207,6 +215,7 @@ function DayCell({
   isSelected,
   isRoninMode,
   activeTab,
+  canDrag,
   onSelect,
   onEventClick,
   onDragStart,
@@ -218,6 +227,7 @@ function DayCell({
   isSelected: boolean;
   isRoninMode: boolean;
   activeTab: RoninTab;
+  canDrag: boolean;
   onSelect: () => void;
   onEventClick: (ev: CalEvent, e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
@@ -241,7 +251,7 @@ function DayCell({
         "hover:bg-muted/40",
         !isCurrentMonth && "opacity-30",
         isSelected && "bg-accent/10",
-        isDragOver && "bg-primary/10 ring-1 ring-inset ring-primary/40",
+        isDragOver && canDrag && "bg-primary/10 ring-1 ring-inset ring-primary/40",
       )}
     >
       <div className={cn(
@@ -256,6 +266,7 @@ function DayCell({
             key={ev.id}
             ev={ev}
             isRoninMode={isRoninMode}
+            canDrag={canDrag}
             onClick={(e) => onEventClick(ev, e)}
             onDragStart={onDragStart}
           />
@@ -832,12 +843,14 @@ export function CalendarSection() {
     return () => { supabase.removeChannel(ch); };
   }, [refresh]);
 
-  // ── Drag handlers ─────────────────────────────────────────────────────────
+  // ── Drag handlers — only admins can drag; iCal events are always locked ──
   const handleDragStart = (_e: React.DragEvent, ev: CalEvent) => {
+    if (!isMasterAdmin) return;
     dragRef.current = ev;
   };
 
   const handleDrop = async (day: Date) => {
+    if (!isMasterAdmin) return;
     const ev = dragRef.current;
     dragRef.current = null;
     if (!ev || !ev._is_draggable) return;
@@ -878,7 +891,7 @@ export function CalendarSection() {
               <Settings size={18} />
             </Button>
           )}
-          {mode === "ronin" && isMasterAdmin && (
+          {isMasterAdmin && (
             <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
               <Plus size={14} /> Add
             </Button>
@@ -984,6 +997,7 @@ export function CalendarSection() {
                     isSelected={selectedDay ? isSameDay(day, selectedDay) : false}
                     isRoninMode={mode === "ronin"}
                     activeTab={roninTab}
+                    canDrag={isMasterAdmin}
                     onSelect={() => setSelectedDay(isSameDay(day, selectedDay ?? new Date(-1)) ? null : day)}
                     onEventClick={(ev, e) => { e.stopPropagation(); setSelectedEvent(ev); }}
                     onDragStart={handleDragStart}
