@@ -649,7 +649,7 @@ function RightPanel({
                       </Badge>
                     ) : (
                       <Badge variant="outline" className={cn("text-[10px] border px-1 py-0", familyCfg.bg, familyCfg.color)}>
-                        {ev.event_type.replace("_", " ")}
+                        {familyCfg.label}
                       </Badge>
                     )}
                     {ev.is_private && <Lock size={10} className="text-muted-foreground" />}
