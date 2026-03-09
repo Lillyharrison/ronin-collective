@@ -172,7 +172,7 @@ export function ChecklistsSection() {
                     title: title.trim(), category: "cleaning", icon: "✅", color: "green",
                     property_id: selectedPropId,
                   });
-                  window.location.reload();
+                  reloadCleaning();
                 }}
                 className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
               >
