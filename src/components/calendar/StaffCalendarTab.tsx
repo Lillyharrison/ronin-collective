@@ -805,8 +805,8 @@ function StaffDayCell({
   properties: Property[];
   canEdit: boolean;
   onCellClick: () => void;
-  onDragStart: (e: React.DragEvent, shift: DisplayShift) => void;
-  onDrop: (e: React.DragEvent, targetDateStr: string) => void;
+  onDragStart: (shift: DisplayShift) => void;
+  onDrop: (targetDateStr: string) => void;
   onDeleteShift: (id: string) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
