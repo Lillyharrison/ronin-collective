@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRoninAI } from "@/hooks/useRoninAI";
@@ -22,11 +22,11 @@ export function MasterImportSection() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Load properties once
-  useState(() => {
+  useEffect(() => {
     supabase.from("properties").select("id, name").then(({ data }) => {
       if (data) setProperties(data);
     });
-  });
+  }, []);
 
   function readFile(file: File) {
     if (!file.name.endsWith(".csv")) {

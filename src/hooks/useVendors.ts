@@ -51,6 +51,11 @@ export const VENDOR_CATEGORIES = [
 export function useVendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
 
   const fetchVendors = useCallback(async () => {
     setLoading(true);
@@ -85,7 +90,8 @@ export function useVendors() {
   }, [fetchVendors]);
 
   const createVendor = async (data: Omit<Vendor, "id" | "created_at" | "updated_at" | "contacts">) => {
-    const { data: v, error } = await supabase.from("vendors").insert(data).select().single();
+    const payload = { ...data, created_by: data.created_by ?? currentUserId };
+    const { data: v, error } = await supabase.from("vendors").insert(payload).select().single();
     if (error) { toast.error("Failed to create vendor"); return null; }
     toast.success("Vendor added");
     await fetchVendors();

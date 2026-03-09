@@ -54,7 +54,7 @@ export function ChecklistsSection() {
 
   const selectedProp = properties.find(p => p.id === selectedPropId);
 
-  const { templates: cleaningTemplates, loading: cleaningLoading } = useChecklistTemplates(
+  const { templates: cleaningTemplates, loading: cleaningLoading, reload: reloadCleaning } = useChecklistTemplates(
     tab === "cleaning" ? "cleaning" : undefined,
     tab === "cleaning" ? selectedPropId : undefined
   );
@@ -172,7 +172,7 @@ export function ChecklistsSection() {
                     title: title.trim(), category: "cleaning", icon: "✅", color: "green",
                     property_id: selectedPropId,
                   });
-                  window.location.reload();
+                  reloadCleaning();
                 }}
                 className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
               >
