@@ -22,11 +22,11 @@ export function MasterImportSection() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Load properties once
-  useState(() => {
+  useEffect(() => {
     supabase.from("properties").select("id, name").then(({ data }) => {
       if (data) setProperties(data);
     });
-  });
+  }, []);
 
   function readFile(file: File) {
     if (!file.name.endsWith(".csv")) {
