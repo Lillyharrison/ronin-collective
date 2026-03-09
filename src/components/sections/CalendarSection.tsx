@@ -329,6 +329,11 @@ function EventDetailSheet({
                 {event.is_private && <Badge variant="outline" className="text-xs"><Lock size={10} className="mr-1" />Private</Badge>}
                 {event.calendar_source === "ical" && <Badge variant="outline" className="text-xs"><Globe size={10} className="mr-1" />Synced</Badge>}
                 {event._is_draggable !== false && <Badge variant="outline" className="text-xs text-muted-foreground">Draggable</Badge>}
+                {event.keywords?.some((k) => k.startsWith("recurrence:")) && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    🔁 {event.keywords.find((k) => k.startsWith("recurrence:"))?.split(":")[1]}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
