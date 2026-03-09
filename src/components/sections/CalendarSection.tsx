@@ -11,13 +11,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   ChevronLeft, ChevronRight, Settings, RefreshCw, Plus, CalendarDays,
   MapPin, Clock, Tag, Globe, Lock, Plane, Users, Wrench, PartyPopper,
-  Calendar, X, Check, AlertTriangle, Cake, Package, UserCheck, ChevronDown
+  Calendar, X, Check, AlertTriangle, Cake, Package, UserCheck,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths,
   subMonths, parseISO, isWithinInterval, addDays, setYear, setMonth,
-  setDate as setDayFn, getYear, getMonth, getDate
+  setDate as setDayFn, getYear, getMonth, getDate, startOfDay, endOfDay,
+  isBefore, isAfter,
 } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -96,6 +97,19 @@ const FAMILY_TYPE_CONFIG: Record<string, { label: string; color: string; bg: str
   general:     { label: "General",      color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
 };
 
+// Solid background colors for multi-day bars (inline style, richer look)
+const EVENT_SOLID_COLORS: Record<string, string> = {
+  travel:      "hsl(217 91% 60%)",
+  guest_stay:  "hsl(271 91% 65%)",
+  event:       "hsl(330 85% 60%)",
+  maintenance: "hsl(38 92% 50%)",
+  general:     "hsl(var(--accent))",
+  // ronin types
+  birthdays:   "hsl(330 85% 60%)",
+  delivery:    "hsl(142 71% 45%)",
+  birthday:    "hsl(330 85% 60%)",
+};
+
 function getFamilyTypeConfig(type: string) {
   return FAMILY_TYPE_CONFIG[type] ?? FAMILY_TYPE_CONFIG.general;
 }
@@ -108,12 +122,32 @@ function getRoninTabForEvent(ev: CalEvent): RoninTab {
   return "all";
 }
 
+/** Returns true if an event spans more than one calendar day */
+function isMultiDay(ev: CalEvent): boolean {
+  if (!ev.end_date) return false;
+  try {
+    const s = startOfDay(parseISO(ev.start_date));
+    const e = startOfDay(parseISO(ev.end_date));
+    return e > s;
+  } catch { return false; }
+}
+
 function eventsForDay(events: CalEvent[], day: Date): CalEvent[] {
   return events.filter((ev) => {
     try {
       const start = parseISO(ev.start_date);
-      const end = ev.end_date ? addDays(parseISO(ev.end_date), -1) : start;
-      return isWithinInterval(day, { start, end }) || isSameDay(start, day);
+      const end = ev.end_date ? parseISO(ev.end_date) : start;
+      return isWithinInterval(startOfDay(day), { start: startOfDay(start), end: startOfDay(end) });
+    } catch { return false; }
+  });
+}
+
+/** Returns only single-day events that start on this exact day */
+function singleDayEventsForDay(events: CalEvent[], day: Date): CalEvent[] {
+  return events.filter((ev) => {
+    if (isMultiDay(ev)) return false;
+    try {
+      return isSameDay(parseISO(ev.start_date), day);
     } catch { return false; }
   });
 }
@@ -163,7 +197,7 @@ async function rescheduleEvent(ev: CalEvent, newDate: Date) {
   return false;
 }
 
-// ─── Event chip (draggable) ───────────────────────────────────────────────────
+// ─── Event chip (single-day, draggable) ───────────────────────────────────────
 
 function EventChip({
   ev,
@@ -190,11 +224,10 @@ function EventChip({
       draggable={isDraggable}
       onDragStart={(e) => isDraggable && onDragStart(e, ev)}
       onClick={onClick}
-      title={ev.calendar_source === "ical" ? "Synced from iCal · read-only" : undefined}
+      title={ev.calendar_source === "ical" ? "Synced from iCal · read-only" : ev.title}
       className={cn(
         "text-[10px] font-medium px-1 py-0.5 rounded truncate flex items-center gap-0.5 border transition-opacity select-none",
         isDraggable ? "cursor-grab active:cursor-grabbing hover:opacity-80" : "cursor-pointer hover:opacity-80",
-        ev.calendar_source === "ical" && "opacity-90",
         isRoninMode ? `${cfg.bg} ${cfg.color}` : `${cfg.bg} ${cfg.color}`
       )}
     >
@@ -206,11 +239,72 @@ function EventChip({
   );
 }
 
+// ─── Multi-day bar spanning across the week row ───────────────────────────────
+
+/**
+ * For each week row, we compute multi-day event bars.
+ * Each bar knows its colStart (0–6) and span (number of columns).
+ */
+interface MultiDayBar {
+  ev: CalEvent;
+  colStart: number; // 0-indexed column in this week row
+  span: number;     // how many columns this bar spans
+  isStart: boolean; // true if the event actually starts this week
+  isEnd: boolean;   // true if the event actually ends this week
+}
+
+function getMultiDayBarsForWeek(events: CalEvent[], weekDays: Date[], isRoninMode: boolean, activeTab: RoninTab): MultiDayBar[] {
+  const multiDay = events.filter((ev) => {
+    if (!isMultiDay(ev)) return false;
+    if (isRoninMode && activeTab !== "all" && getRoninTabForEvent(ev) !== activeTab) return false;
+    try {
+      const evStart = startOfDay(parseISO(ev.start_date));
+      const evEnd = startOfDay(parseISO(ev.end_date!));
+      const weekStart = startOfDay(weekDays[0]);
+      const weekEnd = startOfDay(weekDays[6]);
+      // overlaps this week?
+      return !isAfter(evStart, weekEnd) && !isBefore(evEnd, weekStart);
+    } catch { return false; }
+  });
+
+  return multiDay.map((ev) => {
+    const evStart = startOfDay(parseISO(ev.start_date));
+    const evEnd = startOfDay(parseISO(ev.end_date!));
+    const weekStart = startOfDay(weekDays[0]);
+    const weekEnd = startOfDay(weekDays[6]);
+
+    const barStart = isAfter(evStart, weekStart) ? evStart : weekStart;
+    const barEnd = isBefore(evEnd, weekEnd) ? evEnd : weekEnd;
+
+    const colStart = weekDays.findIndex((d) => isSameDay(d, barStart));
+    const colEnd = weekDays.findIndex((d) => isSameDay(d, barEnd));
+
+    return {
+      ev,
+      colStart: colStart >= 0 ? colStart : 0,
+      span: (colEnd >= 0 ? colEnd : 6) - (colStart >= 0 ? colStart : 0) + 1,
+      isStart: !isBefore(evStart, weekStart),
+      isEnd: !isAfter(evEnd, weekEnd),
+    };
+  });
+}
+
+function getEventBarColor(ev: CalEvent, isRoninMode: boolean): string {
+  if (isRoninMode) {
+    const tab = getRoninTabForEvent(ev);
+    if (tab === "birthdays") return EVENT_SOLID_COLORS.birthdays;
+    if (tab === "maintenance") return EVENT_SOLID_COLORS.maintenance;
+    if (tab === "deliveries") return EVENT_SOLID_COLORS.delivery;
+    return "hsl(var(--accent))";
+  }
+  return EVENT_SOLID_COLORS[ev.event_type] ?? EVENT_SOLID_COLORS.general;
+}
+
 // ─── Day Cell ─────────────────────────────────────────────────────────────────
 
 function DayCell({
   day,
-  events,
+  singleDayEvents,
   isCurrentMonth,
   isSelected,
   isRoninMode,
@@ -222,7 +316,7 @@ function DayCell({
   onDrop,
 }: {
   day: Date;
-  events: CalEvent[];
+  singleDayEvents: CalEvent[];
   isCurrentMonth: boolean;
   isSelected: boolean;
   isRoninMode: boolean;
@@ -237,8 +331,8 @@ function DayCell({
   const todayDay = isToday(day);
 
   const filtered = isRoninMode && activeTab !== "all"
-    ? events.filter((ev) => getRoninTabForEvent(ev) === activeTab)
-    : events;
+    ? singleDayEvents.filter((ev) => getRoninTabForEvent(ev) === activeTab)
+    : singleDayEvents;
 
   return (
     <div
@@ -247,7 +341,7 @@ function DayCell({
       onDragLeave={() => setIsDragOver(false)}
       onDrop={(e) => { e.preventDefault(); setIsDragOver(false); onDrop(day); }}
       className={cn(
-        "min-h-[72px] p-1 border-b border-r border-border text-left transition-colors cursor-pointer",
+        "min-h-[80px] p-1 border-b border-r border-border text-left transition-colors cursor-pointer",
         "hover:bg-muted/40",
         !isCurrentMonth && "opacity-30",
         isSelected && "bg-accent/10",
@@ -260,8 +354,9 @@ function DayCell({
       )}>
         {format(day, "d")}
       </div>
-      <div className="space-y-0.5">
-        {filtered.slice(0, 3).map((ev) => (
+      {/* Reserve space for multi-day bars (rendered at week-row level) */}
+      <div className="space-y-0.5 mt-5">
+        {filtered.slice(0, 2).map((ev) => (
           <EventChip
             key={ev.id}
             ev={ev}
@@ -271,9 +366,109 @@ function DayCell({
             onDragStart={onDragStart}
           />
         ))}
-        {filtered.length > 3 && (
-          <div className="text-[10px] text-muted-foreground px-1">+{filtered.length - 3}</div>
+        {filtered.length > 2 && (
+          <div className="text-[10px] text-muted-foreground px-1">+{filtered.length - 2}</div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Calendar Week Row (contains DayCells + overlaid multi-day bars) ──────────
+
+function WeekRow({
+  weekDays,
+  allEvents,
+  isRoninMode,
+  activeTab,
+  canDrag,
+  selectedDay,
+  currentMonth,
+  onDaySelect,
+  onEventClick,
+  onDragStart,
+  onDrop,
+}: {
+  weekDays: Date[];
+  allEvents: CalEvent[];
+  isRoninMode: boolean;
+  activeTab: RoninTab;
+  canDrag: boolean;
+  selectedDay: Date | null;
+  currentMonth: Date;
+  onDaySelect: (day: Date) => void;
+  onEventClick: (ev: CalEvent, e: React.MouseEvent) => void;
+  onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
+  onDrop: (day: Date) => void;
+}) {
+  const multiDayBars = getMultiDayBarsForWeek(allEvents, weekDays, isRoninMode, activeTab);
+
+  return (
+    <div className="relative grid grid-cols-7">
+      {weekDays.map((day, i) => (
+        <DayCell
+          key={i}
+          day={day}
+          singleDayEvents={singleDayEventsForDay(allEvents, day)}
+          isCurrentMonth={isSameMonth(day, currentMonth)}
+          isSelected={selectedDay ? isSameDay(day, selectedDay) : false}
+          isRoninMode={isRoninMode}
+          activeTab={activeTab}
+          canDrag={canDrag}
+          onSelect={() => onDaySelect(day)}
+          onEventClick={onEventClick}
+          onDragStart={onDragStart}
+          onDrop={onDrop}
+        />
+      ))}
+
+      {/* Multi-day event bars — absolutely positioned over the row */}
+      <div className="absolute inset-0 pointer-events-none" style={{ top: "28px" }}>
+        {multiDayBars.map((bar, idx) => {
+          const color = getEventBarColor(bar.ev, isRoninMode);
+          const isDraggable = canDrag && bar.ev._is_draggable !== false;
+
+          // Position: left = colStart/7 * 100%, width = span/7 * 100%
+          // Small inner padding so bars don't bleed to cell edges
+          const leftPct = (bar.colStart / 7) * 100;
+          const widthPct = (bar.span / 7) * 100;
+          const INSET = 2; // px
+
+          return (
+            <div
+              key={`${bar.ev.id}-${idx}`}
+              className="absolute pointer-events-auto"
+              style={{
+                left: `calc(${leftPct}% + ${bar.isStart ? INSET : 0}px)`,
+                width: `calc(${widthPct}% - ${(bar.isStart ? INSET : 0) + (bar.isEnd ? INSET : 0)}px)`,
+                top: `${idx * 18}px`,
+                height: "16px",
+                zIndex: 10 + idx,
+              }}
+            >
+              <div
+                onClick={(e) => { e.stopPropagation(); onEventClick(bar.ev, e); }}
+                title={bar.ev.title}
+                className={cn(
+                  "h-full flex items-center px-1.5 text-white text-[10px] font-medium overflow-hidden select-none",
+                  bar.isStart ? "rounded-l-full" : "",
+                  bar.isEnd ? "rounded-r-full" : "",
+                  isDraggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+                  "hover:brightness-90 transition-all"
+                )}
+                style={{ background: color }}
+              >
+                {bar.isStart && (
+                  <span className="flex items-center gap-1 truncate">
+                    {bar.ev.calendar_source === "ical" && <Globe size={8} className="flex-shrink-0 opacity-80" />}
+                    {bar.ev.is_private && <Lock size={8} className="flex-shrink-0" />}
+                    <span className="truncate">{bar.ev.title}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -325,10 +520,9 @@ function EventDetailSheet({
                 {event._source === "birthday" && <Badge variant="outline" className={cn("text-xs border", roninCfg.bg, roninCfg.color)}>Birthday</Badge>}
                 {event._source === "maintenance" && <Badge variant="outline" className={cn("text-xs border", roninCfg.bg, roninCfg.color)}>Maintenance</Badge>}
                 {event._source === "orders" && <Badge variant="outline" className={cn("text-xs border", roninCfg.bg, roninCfg.color)}>Delivery</Badge>}
-                {!event._source && <Badge variant="outline" className={cn("text-xs border", familyCfg.bg, familyCfg.color)}>{getFamilyTypeConfig(event.event_type) && event.event_type}</Badge>}
+                {!event._source && <Badge variant="outline" className={cn("text-xs border", familyCfg.bg, familyCfg.color)}>{getFamilyTypeConfig(event.event_type).label}</Badge>}
                 {event.is_private && <Badge variant="outline" className="text-xs"><Lock size={10} className="mr-1" />Private</Badge>}
                 {event.calendar_source === "ical" && <Badge variant="outline" className="text-xs"><Globe size={10} className="mr-1" />Synced</Badge>}
-                {event._is_draggable !== false && <Badge variant="outline" className="text-xs text-muted-foreground">Draggable</Badge>}
                 {event.keywords?.some((k) => k.startsWith("recurrence:")) && (
                   <Badge variant="outline" className="text-xs text-muted-foreground">
                     🔁 {event.keywords.find((k) => k.startsWith("recurrence:"))?.split(":")[1]}
@@ -541,11 +735,9 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
     if (!form.title.trim() || !userId) return;
     setSaving(true);
 
-    // Build keywords array to encode recurrence for display purposes
     const keywords: string[] = [];
     if (form.recurrence !== "none") keywords.push(`recurrence:${form.recurrence}`);
 
-    // For recurring events, notes field stores recurrence metadata
     const notes = form.recurrence !== "none"
       ? `Recurs ${form.recurrence}${form.recurrence_end ? ` until ${format(new Date(form.recurrence_end), "MMM d, yyyy")}` : ""}`
       : null;
@@ -570,7 +762,6 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
     if (error) { toast.error("Failed to save"); return; }
     toast.success("Event added");
 
-    // Reset form
     setForm({ title: "", description: "", location: "", start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), end_date: "", event_type: "general", property_id: "", is_private: false, recurrence: "none", recurrence_end: "" });
     onSave(); onClose();
   };
@@ -582,26 +773,18 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
       <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col w-full max-w-lg">
         <DialogHeader className="flex-shrink-0"><DialogTitle>New Event</DialogTitle></DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
-
-          {/* Title */}
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input value={form.title} onChange={(e) => f("title", e.target.value)} placeholder="Event title" />
           </div>
-
-          {/* Start — full width */}
           <div className="space-y-1.5">
             <Label>Start</Label>
             <Input type="datetime-local" value={form.start_date} onChange={(e) => f("start_date", e.target.value)} className="w-full" />
           </div>
-
-          {/* End — full width */}
           <div className="space-y-1.5">
             <Label>End <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Input type="datetime-local" value={form.end_date} onChange={(e) => f("end_date", e.target.value)} className="w-full" />
           </div>
-
-          {/* Recurrence */}
           <div className="space-y-1.5">
             <Label>Repeat</Label>
             <Select value={form.recurrence} onValueChange={(v) => f("recurrence", v)}>
@@ -613,16 +796,12 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Recurrence end date — only when recurrence is set */}
           {form.recurrence !== "none" && (
             <div className="space-y-1.5">
               <Label>Repeat until <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Input type="date" value={form.recurrence_end} onChange={(e) => f("recurrence_end", e.target.value)} className="w-full" />
             </div>
           )}
-
-          {/* Type */}
           <div className="space-y-1.5">
             <Label>Type</Label>
             <Select value={form.event_type} onValueChange={(v) => f("event_type", v)}>
@@ -639,14 +818,10 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Location */}
           <div className="space-y-1.5">
             <Label>Location</Label>
             <Input value={form.location} onChange={(e) => f("location", e.target.value)} placeholder="Optional" />
           </div>
-
-          {/* Property */}
           <div className="space-y-1.5">
             <Label>Property</Label>
             <Select value={form.property_id || "__none__"} onValueChange={(v) => f("property_id", v === "__none__" ? "" : v)}>
@@ -657,8 +832,6 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Notes */}
           <div className="space-y-1.5">
             <Label>Notes</Label>
             <textarea
@@ -668,8 +841,6 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[72px] resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-
-          {/* Private toggle */}
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={form.is_private} onChange={(e) => f("is_private", e.target.checked)} className="w-4 h-4 accent-primary" />
             <div>
@@ -678,7 +849,6 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
             </div>
           </label>
         </div>
-
         <DialogFooter className="flex-shrink-0 pt-3 border-t border-border gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" onClick={save} disabled={saving || !form.title.trim()}>
@@ -690,7 +860,7 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
   );
 }
 
-// ─── Right Panel List ──────────────────────────────────────────────────────────
+// ─── Right Panel ──────────────────────────────────────────────────────────────
 
 function RightPanel({
   mode,
@@ -709,19 +879,23 @@ function RightPanel({
   selectedDay: Date | null;
   currentMonth: Date;
 }) {
+  // Combine both sources for the right panel — show everything
   const source = mode === "family" ? familyEvents : events;
 
   const filtered = (() => {
     if (selectedDay) {
       return eventsForDay(source, selectedDay);
     }
-    // Upcoming for current month
-    const now = new Date();
+    // Upcoming: any event that hasn't fully ended yet, within current month view
+    const now = startOfDay(new Date());
+    const monthEnd = endOfMonth(currentMonth);
     return source
       .filter((e) => {
         try {
-          const d = parseISO(e.start_date);
-          return d >= now && isSameMonth(d, currentMonth);
+          const start = parseISO(e.start_date);
+          const end = e.end_date ? parseISO(e.end_date) : start;
+          // Include if event ends on or after today AND starts before month end
+          return !isBefore(end, now) && !isAfter(start, monthEnd);
         } catch { return false; }
       })
       .sort((a, b) => parseISO(a.start_date).getTime() - parseISO(b.start_date).getTime())
@@ -749,6 +923,7 @@ function RightPanel({
           const familyCfg = getFamilyTypeConfig(ev.event_type);
           let start: Date;
           try { start = parseISO(ev.start_date); } catch { return null; }
+          const end = ev.end_date ? parseISO(ev.end_date) : null;
 
           return (
             <button
@@ -757,6 +932,10 @@ function RightPanel({
               className="w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-start gap-3">
+                <div
+                  className="w-1.5 self-stretch rounded-full flex-shrink-0 mt-0.5"
+                  style={{ background: getEventBarColor(ev, mode === "ronin") }}
+                />
                 <div className="text-center w-9 flex-shrink-0">
                   <p className="text-[10px] text-muted-foreground uppercase font-medium">{format(start, "MMM")}</p>
                   <p className="text-lg font-bold leading-none text-foreground">{format(start, "d")}</p>
@@ -772,6 +951,11 @@ function RightPanel({
                       <Badge variant="outline" className={cn("text-[10px] border px-1 py-0", familyCfg.bg, familyCfg.color)}>
                         {familyCfg.label}
                       </Badge>
+                    )}
+                    {end && !isSameDay(start, end) && (
+                      <span className="text-[10px] text-muted-foreground">
+                        → {format(end, "MMM d")}
+                      </span>
                     )}
                     {ev.is_private && <Lock size={10} className="text-muted-foreground" />}
                     {ev.calendar_source === "ical" && <Globe size={10} className="text-muted-foreground" />}
@@ -806,13 +990,13 @@ export function CalendarSection() {
 
   // ── Fetch family (iCal synced) events ──────────────────────────────────────
   const fetchFamilyEvents = useCallback(async () => {
-    const start = startOfMonth(subMonths(currentMonth, 0));
+    const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     const { data } = await supabase
       .from("calendar_events")
       .select("*")
       .eq("calendar_source", "ical")
-      .gte("start_date", start.toISOString())
+      .or(`start_date.gte.${start.toISOString()},end_date.gte.${start.toISOString()}`)
       .lte("start_date", end.toISOString())
       .order("start_date");
     return (data ?? []).map((ev) => ({ ...ev, _source: "calendar_events" as const, _is_draggable: false }));
@@ -824,20 +1008,17 @@ export function CalendarSection() {
     const monthEnd = endOfMonth(currentMonth);
 
     const [{ data: manualData }, { data: profiles }, { data: maintenance }, { data: orders }] = await Promise.all([
-      // Manual calendar events (non-ical)
+      // Manual calendar events (non-ical) — fetch broader range for multi-day events that start before but overlap
       supabase.from("calendar_events").select("*")
         .neq("calendar_source", "ical")
-        .gte("start_date", monthStart.toISOString())
+        .or(`start_date.gte.${monthStart.toISOString()},end_date.gte.${monthStart.toISOString()}`)
         .lte("start_date", monthEnd.toISOString())
         .order("start_date"),
-      // All profiles (for birthdays - show current year's birthday)
       supabase.from("profiles").select("id, full_name, birthday, avatar_url, job_title"),
-      // Maintenance issues with scheduled dates
       supabase.from("maintenance_issues").select("id, title, scheduled_date, status, priority, property_id")
         .not("scheduled_date", "is", null)
         .gte("scheduled_date", monthStart.toISOString())
         .lte("scheduled_date", monthEnd.toISOString()),
-      // Orders with expected delivery in month
       supabase.from("orders").select("id, title, expected_delivery, status, property_id")
         .not("expected_delivery", "is", null)
         .gte("expected_delivery", format(monthStart, "yyyy-MM-dd"))
@@ -847,12 +1028,10 @@ export function CalendarSection() {
 
     const events: CalEvent[] = [];
 
-    // Manual calendar events
     for (const ev of manualData ?? []) {
       events.push({ ...ev, _source: "calendar_events", _is_draggable: true, _tab: "all" });
     }
 
-    // Birthdays — map birthday to current year
     for (const p of profiles ?? []) {
       if (!p.birthday || !p.full_name) continue;
       try {
@@ -880,7 +1059,6 @@ export function CalendarSection() {
       } catch { /* skip */ }
     }
 
-    // Maintenance issues
     for (const issue of maintenance ?? []) {
       if (!issue.scheduled_date) continue;
       events.push({
@@ -903,7 +1081,6 @@ export function CalendarSection() {
       });
     }
 
-    // Orders / Deliveries
     for (const order of orders ?? []) {
       if (!order.expected_delivery) continue;
       events.push({
@@ -953,7 +1130,7 @@ export function CalendarSection() {
     return () => { supabase.removeChannel(ch); };
   }, [refresh]);
 
-  // ── Drag handlers — only admins can drag; iCal events are always locked ──
+  // ── Drag handlers ─────────────────────────────────────────────────────────
   const handleDragStart = (_e: React.DragEvent, ev: CalEvent) => {
     if (!isMasterAdmin) return;
     dragRef.current = ev;
@@ -974,6 +1151,12 @@ export function CalendarSection() {
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
+
+  // Split days into week rows
+  const weeks: Date[][] = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
+  }
 
   const activeEvents = mode === "family" ? familyEvents : roninEvents;
 
@@ -1089,32 +1272,29 @@ export function CalendarSection() {
             ))}
           </div>
 
-          {/* Grid */}
+          {/* Grid — week rows with multi-day bar overlay */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-7">
-              {days.map((day, i) => {
-                const dayEvs = eventsForDay(activeEvents, day);
-                return (
-                  <DayCell
-                    key={i}
-                    day={day}
-                    events={dayEvs}
-                    isCurrentMonth={isSameMonth(day, currentMonth)}
-                    isSelected={selectedDay ? isSameDay(day, selectedDay) : false}
-                    isRoninMode={mode === "ronin"}
-                    activeTab={roninTab}
-                    canDrag={isMasterAdmin}
-                    onSelect={() => setSelectedDay(isSameDay(day, selectedDay ?? new Date(-1)) ? null : day)}
-                    onEventClick={(ev, e) => { e.stopPropagation(); setSelectedEvent(ev); }}
-                    onDragStart={handleDragStart}
-                    onDrop={handleDrop}
-                  />
-                );
-              })}
+            <div>
+              {weeks.map((weekDays, wi) => (
+                <WeekRow
+                  key={wi}
+                  weekDays={weekDays}
+                  allEvents={activeEvents}
+                  isRoninMode={mode === "ronin"}
+                  activeTab={roninTab}
+                  canDrag={isMasterAdmin}
+                  selectedDay={selectedDay}
+                  currentMonth={currentMonth}
+                  onDaySelect={(day) => setSelectedDay(isSameDay(day, selectedDay ?? new Date(-1)) ? null : day)}
+                  onEventClick={(ev, e) => { e.stopPropagation(); setSelectedEvent(ev); }}
+                  onDragStart={handleDragStart}
+                  onDrop={handleDrop}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -1138,8 +1318,8 @@ export function CalendarSection() {
               {mode === "family" ? (
                 Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-2">
-                    <div className={cn("w-2.5 h-2.5 rounded-full border", v.bg)} />
-                    <span className="text-xs text-muted-foreground capitalize">{k.replace("_", " ")}</span>
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: EVENT_SOLID_COLORS[k] ?? "hsl(var(--accent))" }} />
+                    <span className="text-xs text-muted-foreground">{v.label}</span>
                   </div>
                 ))
               ) : (
