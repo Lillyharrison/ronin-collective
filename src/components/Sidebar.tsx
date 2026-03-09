@@ -7,13 +7,13 @@ import {
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
   Building2, FileSpreadsheet, Calendar, Brain,
-  ClipboardList, Shield, Bell,
+  ClipboardList, Shield, Bell, Store,
 } from "lucide-react";
 
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "vendors" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
@@ -35,6 +35,7 @@ const ALL_ITEMS: SidebarItem[] = [
   { section: "laundry",      labelKey: "laundry",      icon: <Shirt size={20} /> },
   { section: "meet-team",    labelKey: "meetTeam",     icon: <UsersRound size={20} />, dividerBefore: true },
   { section: "contacts",     labelKey: "contacts",     icon: <Users size={20} /> },
+  { section: "vendors",      labelKey: "vendors",      icon: <Store size={20} /> },
   { section: "rules",        labelKey: "rules",        icon: <Shield size={20} /> },
   { section: "master-import",labelKey: "masterImport", icon: <FileSpreadsheet size={20} /> },
   { section: "memory",       labelKey: "memory",       icon: <Brain size={20} /> },

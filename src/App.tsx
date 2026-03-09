@@ -39,7 +39,7 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 // decide which section to render — so we only need one wildcard catch-all here.
 const SECTION_PATHS = [
   "/", "/property", "/maintenance", "/messages", "/profile",
-  "/manuals", "/checklists", "/tasks", "/contacts", "/inventory",
+  "/manuals", "/checklists", "/tasks", "/contacts", "/vendors", "/inventory",
   "/laundry", "/orders", "/meet-team", "/travel", "/calendar",
   "/achievements", "/master-import", "/memory", "/alerts", "/rules",
 ];
