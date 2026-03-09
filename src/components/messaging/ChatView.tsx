@@ -273,10 +273,15 @@ export function ChatView({
 
   const hasText = input.trim().length > 0;
 
+  // Heights: app header = 3.5rem (56px), chat sub-header ≈ 3.25rem (52px), input bar ≈ 3.5rem (56px)
+  const CHAT_HEADER_TOP = "top-14"; // sits directly below the fixed app header
+  const CHAT_HEADER_H = "h-[52px]";
+  const INPUT_BAR_H = "h-[60px]";
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat header */}
-      <div className="px-3 py-2.5 border-b border-border bg-card flex items-center gap-3 flex-shrink-0">
+    <div className="relative h-full">
+      {/* ── Fixed chat sub-header — always visible below app header ── */}
+      <div className={`fixed left-0 right-0 ${CHAT_HEADER_TOP} ${CHAT_HEADER_H} z-40 px-3 border-b border-border bg-card flex items-center gap-3`}>
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors">
           <ArrowLeft size={20} className="text-foreground" />
         </button>
@@ -293,10 +298,14 @@ export function ChatView({
         </div>
       </div>
 
-      {/* Messages area — fills all remaining space above input bar */}
+      {/* Messages area — padded top for fixed sub-header + bottom for fixed input bar */}
       <div
-        className="flex-1 overflow-y-auto px-3 py-3 space-y-1"
-        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
+        className="absolute inset-0 overflow-y-auto px-3 py-3 space-y-1"
+        style={{
+          paddingTop: "calc(3.5rem + 52px)",   /* app header + chat sub-header */
+          paddingBottom: "76px",               /* input bar */
+          backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
+        }}
       >
         {loading && (
           <div className="flex items-center justify-center py-8">
@@ -379,8 +388,8 @@ export function ChatView({
         <div ref={bottomRef} />
       </div>
 
-      {/* ── WhatsApp-style input bar ── */}
-      <div className="flex-shrink-0 bg-card border-t border-border px-2 py-2 relative">
+      {/* ── Fixed input bar — always pinned to bottom of viewport ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border px-2 py-2 safe-area-pb" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
         {/* Emoji picker */}
         {showEmoji && (
           <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-1 z-50">

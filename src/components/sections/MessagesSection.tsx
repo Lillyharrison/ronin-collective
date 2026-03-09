@@ -144,7 +144,7 @@ export function MessagesSection() {
   };
 
   return (
-    <div className={view === "chat" ? "h-[calc(100dvh-3.5rem)] flex flex-col overflow-hidden" : "animate-fade-in"}>
+    <div className="animate-fade-in">
       {view === "threads" && (
         <ThreadList
           threads={threads}
