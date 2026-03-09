@@ -786,6 +786,74 @@ function LeaveReviewPanel({
   );
 }
 
+// ── Staff Day Cell ────────────────────────────────────────────────────────────
+
+function StaffDayCell({
+  dateStr,
+  day,
+  shifts,
+  properties,
+  canEdit,
+  onCellClick,
+  onDragStart,
+  onDrop,
+  onDeleteShift,
+}: {
+  dateStr: string;
+  day: Date;
+  shifts: DisplayShift[];
+  properties: Property[];
+  canEdit: boolean;
+  onCellClick: () => void;
+  onDragStart: (e: React.DragEvent, shift: DisplayShift) => void;
+  onDrop: (e: React.DragEvent, targetDateStr: string) => void;
+  onDeleteShift: (id: string) => void;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+
+  return (
+    <div
+      className={cn(
+        "border-r border-border p-1 min-h-[52px] transition-colors relative",
+        isToday(day) && "bg-primary/5",
+        dragOver && "bg-primary/10 ring-1 ring-inset ring-primary/40"
+      )}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => { setDragOver(false); onDrop(e, dateStr); }}
+    >
+      <div className="flex flex-wrap gap-0.5">
+        {shifts.map((shift) => (
+          <div key={shift.key} className="relative group">
+            <ShiftChip
+              shift={shift}
+              properties={properties}
+              onDragStart={(e) => onDragStart(e, shift)}
+              onClick={(e) => { e.stopPropagation(); }}
+            />
+            {canEdit && shift.concrete_id && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteShift(shift.concrete_id!); }}
+                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-3.5 h-3.5 items-center justify-center text-[8px] hidden group-hover:flex z-10"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        {canEdit && (
+          <button
+            onClick={onCellClick}
+            className="rounded px-1 py-0.5 text-[10px] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <Plus size={9} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main StaffCalendarTab ─────────────────────────────────────────────────────
 
 export function StaffCalendarTab({
