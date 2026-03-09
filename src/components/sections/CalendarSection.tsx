@@ -451,7 +451,7 @@ function CalendarSettingsDialog({ open, onClose, properties }: { open: boolean; 
           </div>
           <div className="space-y-2">
             <Label>Default Property</Label>
-            <Select value={propertyId} onValueChange={setPropertyId}>
+            <Select value={propertyId || "__none__"} onValueChange={(v) => setPropertyId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">None</SelectItem>
