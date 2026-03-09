@@ -272,11 +272,7 @@ export function ChatView({
   };
 
   const hasText = input.trim().length > 0;
-
-  // Heights: app header = 3.5rem (56px), chat sub-header ≈ 3.25rem (52px), input bar ≈ 3.5rem (56px)
-  const CHAT_HEADER_TOP = "top-14"; // sits directly below the fixed app header
   const CHAT_HEADER_H = "h-[52px]";
-  const INPUT_BAR_H = "h-[60px]";
 
   return (
     <div className="flex flex-col h-full">
