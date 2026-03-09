@@ -144,7 +144,7 @@ export function MessagesSection() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <div className={view === "chat" ? "h-[calc(100dvh-3.5rem)] overflow-hidden" : "animate-fade-in"}>
       {view === "threads" && (
         <ThreadList
           threads={threads}
