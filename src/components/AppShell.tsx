@@ -56,7 +56,8 @@ const sectionTitles: Record<string, string> = {
   manuals:         "Manuals",
   checklists:      "Checklists",
   tasks:           "Tasks",
-  contacts:        "Contacts & Vendors",
+  contacts:        "Contacts",
+  vendors:         "Vendors",
   inventory:       "Inventory & Assets",
   laundry:         "Laundry",
   orders:          "Orders",
@@ -93,6 +94,7 @@ function ActiveSection() {
     case "checklists":    return gated("checklists",    <ChecklistsSection />);
     case "tasks":         return gated("tasks",         <TasksSection />);
     case "contacts":      return gated("contacts",      <ContactsSection />);
+    case "vendors":       return gated("vendors",       <VendorsSection />);
     case "inventory":     return gated("inventory",     <InventorySection />);
     case "laundry":       return gated("laundry",       <LaundrySection />);
     case "orders":        return gated("orders",        <OrdersSection />);
