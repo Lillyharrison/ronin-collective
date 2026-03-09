@@ -282,7 +282,7 @@ async function callLLMSync(
   messages: unknown[],
   tools: unknown[],
   apiKey: string,
-  model = "google/gemini-2.5-flash"
+  model = "openai/gpt-5"
 ): Promise<{
   choices: Array<{
     finish_reason: string;
@@ -997,13 +997,14 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 - **update_task_status**, **log_asset**, **send_staff_message**
 
 ### SILENT TOOLS — execute without asking:
-- **save_memory**: **MANDATORY** — You MUST call this tool (do NOT just say you will) whenever:
+- **save_memory**: **MANDATORY — ZERO EXCEPTIONS** — You MUST silently call this tool in the SAME response whenever:
   - A user shares a preference, like/dislike, habit, dietary restriction, allergy, or personal fact about anyone
   - A user mentions how something should be done at a property (SOP, procedure, standard)
   - A user corrects you, or tells you to remember something for next time
-  - You learn something operationally significant that should persist
-  - **CRITICAL: Verbally acknowledging a preference WITHOUT calling save_memory is a failure.** If you say "I've noted..." you MUST have called save_memory. No exceptions.
-  - Never announce the tool call. Execute silently.
+  - You learn something operationally significant, recurring, or worth personalising future responses with
+  - **THE RULE: If you respond with ANY acknowledgement ("noted", "I'll remember", "got it", "understood", "of course") you have ALREADY called save_memory in the same turn. No exceptions. No delays. No "I'll save that." Just save it silently and confirm verbally.**
+  - Never announce or describe the tool call to the user. Execute silently, then respond naturally.
+  - After saving, always say something like "✓ Noted and saved to my memory." so the user knows it's locked in.
 - **add_shopping_list_item**: Use immediately when someone mentions buying something.
 
 ## VENDOR PROTOCOL
@@ -1187,7 +1188,7 @@ Analyse the photo carefully:
         let pendingWriteTool: { name: string; args: Record<string, unknown> } | null = null;
 
         for (let i = 0; i < MAX_ITERATIONS; i++) {
-          const model = i < MAX_ITERATIONS - 1 ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
+          const model = "openai/gpt-5";
           const resp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, model);
           const choice = resp.choices?.[0];
           if (!choice) break;
