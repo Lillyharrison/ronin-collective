@@ -54,7 +54,7 @@ export function ChecklistsSection() {
 
   const selectedProp = properties.find(p => p.id === selectedPropId);
 
-  const { templates: cleaningTemplates, loading: cleaningLoading } = useChecklistTemplates(
+  const { templates: cleaningTemplates, loading: cleaningLoading, reload: reloadCleaning } = useChecklistTemplates(
     tab === "cleaning" ? "cleaning" : undefined,
     tab === "cleaning" ? selectedPropId : undefined
   );
