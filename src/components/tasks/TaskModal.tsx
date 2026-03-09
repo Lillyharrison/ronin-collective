@@ -249,10 +249,19 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       completed_at: new Date().toISOString(),
     } as any).eq("id", task.id);
 
+    // Notify task completion
+    await notifySection("tasks", {
+      title: `✅ Task completed: ${task.title_en}`,
+      type: "success",
+      action_url: "tasks",
+      entity_id: task.id,
+      entity_type: "task",
+      property_id: task.property_id ?? undefined,
+    }, userId ?? undefined);
+
     if (isOrderTask) {
       const linked = await findLinkedOrder(task.id);
       if (linked) {
-        // Update existing order: status → placed, add tracking, decouple (keep source_task_id for history but order is now standalone)
         await supabase.from("orders").update({
           status: "placed",
           carrier: carrier || null,
@@ -262,7 +271,6 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           expected_delivery: expectedDelivery || null,
         } as any).eq("id", linked.id);
       } else {
-        // No linked order yet — create one at "placed" status
         await supabase.from("orders").insert({
           title: task.title_en,
           description: task.description_en ?? null,
@@ -275,6 +283,37 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           packing_list: packingList || null,
           expected_delivery: expectedDelivery || null,
           created_by: userId,
+        } as any);
+      }
+
+      // Notify order placed
+      await notifySection("orders", {
+        title: `📦 Order placed: ${task.title_en}`,
+        body: expectedDelivery
+          ? `Est. delivery: ${new Date(expectedDelivery).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+          : carrier ? `Via ${carrier}` : undefined,
+        type: "success",
+        action_url: "orders",
+        entity_type: "order",
+        property_id: task.property_id ?? undefined,
+      }, userId ?? undefined);
+
+      // Auto-create a delivery calendar event if expected_delivery is set
+      if (expectedDelivery) {
+        const deliveryStart = new Date(expectedDelivery);
+        deliveryStart.setHours(9, 0, 0, 0);
+        await supabase.from("calendar_events").insert({
+          title: `📦 Delivery: ${task.title_en}`,
+          description: [
+            carrier ? `Carrier: ${carrier}` : null,
+            trackingNumber ? `Tracking: ${trackingNumber}` : null,
+            packingList ? `Items: ${packingList}` : null,
+          ].filter(Boolean).join(" · ") || null,
+          event_type: "delivery",
+          start_date: deliveryStart.toISOString(),
+          property_id: task.property_id ?? null,
+          created_by: userId,
+          calendar_source: "manual",
         } as any);
       }
     }
