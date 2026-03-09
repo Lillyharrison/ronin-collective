@@ -997,6 +997,7 @@ export function CalendarSection() {
                     isSelected={selectedDay ? isSameDay(day, selectedDay) : false}
                     isRoninMode={mode === "ronin"}
                     activeTab={roninTab}
+                    canDrag={isMasterAdmin}
                     onSelect={() => setSelectedDay(isSameDay(day, selectedDay ?? new Date(-1)) ? null : day)}
                     onEventClick={(ev, e) => { e.stopPropagation(); setSelectedEvent(ev); }}
                     onDragStart={handleDragStart}
