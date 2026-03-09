@@ -1072,46 +1072,19 @@ export function StaffCalendarTab({
                   {weekDays.map((day) => {
                     const dateStr = format(day, "yyyy-MM-dd");
                     const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
-                    const [dragOver, setDragOver] = useState(false);
-
                     return (
-                      <div
+                      <StaffDayCell
                         key={dateStr}
-                        onClick={() => dayShifts.length === 0 && handleCellClick(dateStr, person.id)}
-                        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                        onDragLeave={() => setDragOver(false)}
-                        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleDrop(dateStr); }}
-                        className={cn(
-                          "px-1 py-1.5 border-r border-border last:border-r-0 min-h-[52px] transition-colors",
-                          isToday(day) && "bg-primary/5",
-                          dragOver && "bg-primary/10 ring-1 ring-inset ring-primary/40",
-                          dayShifts.length === 0 && canEdit && "cursor-pointer hover:bg-muted/30 group"
-                        )}
-                      >
-                        <div className="space-y-0.5">
-                          {dayShifts.map((shift) => (
-                            <ShiftChip
-                              key={shift.key}
-                              shift={shift}
-                              properties={properties}
-                              onDragStart={(e) => { e.stopPropagation(); handleDragStart(shift); }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!shift.is_leave && canEdit) {
-                                  if (shift.concrete_id) {
-                                    deleteShift(shift.concrete_id);
-                                  }
-                                }
-                              }}
-                            />
-                          ))}
-                          {dayShifts.length === 0 && canEdit && (
-                            <div className="flex items-center justify-center h-full opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Plus size={12} className="text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        dateStr={dateStr}
+                        day={day}
+                        shifts={dayShifts}
+                        properties={properties}
+                        canEdit={canEdit}
+                        onCellClick={() => handleCellClick(dateStr, person.id)}
+                        onDragStart={handleDragStart}
+                        onDrop={handleDrop}
+                        onDeleteShift={(id) => deleteShift(id)}
+                      />
                     );
                   })}
                 </div>
