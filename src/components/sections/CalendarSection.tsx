@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { StaffCalendarTab } from "@/components/calendar/StaffCalendarTab";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
@@ -1244,6 +1245,13 @@ export function CalendarSection() {
         </div>
       )}
 
+      {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
+      {mode === "ronin" && roninTab === "staff" && (
+        <StaffCalendarTab canEdit={isMasterAdmin} userId={userId} />
+      )}
+
+      {/* ── Calendar grid (hidden when staff tab active) ─────────────────── */}
+      {(mode !== "ronin" || roninTab !== "staff") && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Calendar grid */}
         <div className="lg:col-span-2 rounded-2xl border border-border bg-card overflow-hidden">
@@ -1351,6 +1359,7 @@ export function CalendarSection() {
           )}
         </div>
       </div>
+      )}
 
       {/* Modals */}
       <EventDetailSheet
