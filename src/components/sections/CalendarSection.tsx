@@ -1359,6 +1359,7 @@ export function CalendarSection() {
           )}
         </div>
       </div>
+      )}
 
       {/* Modals */}
       <EventDetailSheet
