@@ -51,6 +51,11 @@ export const VENDOR_CATEGORIES = [
 export function useVendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
 
   const fetchVendors = useCallback(async () => {
     setLoading(true);

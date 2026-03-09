@@ -46,7 +46,7 @@ export function ProfileSection() {
   const initials = displayName.charAt(0).toUpperCase();
 
   // ─── load profile on mount ────────────────────────────────────────────
-  useState(() => {
+  useEffect(() => {
     if (!user) return;
     supabase.from("profiles")
       .select("full_name, phone, birthday, avatar_url")
@@ -59,7 +59,7 @@ export function ProfileSection() {
         setLocalBirthday(data.birthday ?? "");
         setLocalAvatar(data.avatar_url ?? null);
       });
-  });
+  }, [user?.id]);
 
   // ─── open edit ────────────────────────────────────────────────────────
   const startEdit = (field: EditField) => {
