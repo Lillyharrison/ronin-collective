@@ -832,12 +832,14 @@ export function CalendarSection() {
     return () => { supabase.removeChannel(ch); };
   }, [refresh]);
 
-  // ── Drag handlers ─────────────────────────────────────────────────────────
+  // ── Drag handlers — only admins can drag; iCal events are always locked ──
   const handleDragStart = (_e: React.DragEvent, ev: CalEvent) => {
+    if (!isMasterAdmin) return;
     dragRef.current = ev;
   };
 
   const handleDrop = async (day: Date) => {
+    if (!isMasterAdmin) return;
     const ev = dragRef.current;
     dragRef.current = null;
     if (!ev || !ev._is_draggable) return;
