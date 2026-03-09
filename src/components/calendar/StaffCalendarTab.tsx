@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   format, startOfWeek, endOfWeek, eachDayOfInterval,
-  addWeeks, subWeeks, isToday, getDay, parseISO, isSameDay,
+  addWeeks, subWeeks, isToday, getDay, isSameDay,
+  differenceInCalendarDays, parseISO, isWeekend,
 } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,13 +10,12 @@ import { useStaffSchedules, StaffSchedule, StaffShift, StaffLeaveRequest } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Settings2,
-  CalendarOff, UserCheck, X, Check, Clock, Building2,
-  Pencil, ChevronDown, ChevronUp
+  CalendarOff, UserCheck, X, Check, Clock, Pencil,
+  PlaneTakeoff, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -366,6 +366,20 @@ function ShiftModal({
 
 // ── Leave Request Modal ───────────────────────────────────────────────────────
 
+const LEAVE_TYPE_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
+  vacation:       { label: "Vacation",        emoji: "🌴", color: "text-blue-400" },
+  sick:           { label: "Sick Leave",       emoji: "🤒", color: "text-red-400" },
+  personal:       { label: "Personal Day",     emoji: "🧘", color: "text-purple-400" },
+  public_holiday: { label: "Public Holiday",   emoji: "🎉", color: "text-amber-400" },
+  other:          { label: "Other",            emoji: "📋", color: "text-muted-foreground" },
+};
+
+function calcWorkdays(start: string, end: string): number {
+  if (!start || !end) return 0;
+  const days = eachDayOfInterval({ start: parseISO(start), end: parseISO(end) });
+  return days.filter((d) => !isWeekend(d)).length;
+}
+
 function LeaveModal({
   open,
   onClose,
@@ -373,6 +387,7 @@ function LeaveModal({
   profiles,
   userId,
   canEdit,
+  prefillStart,
 }: {
   open: boolean;
   onClose: () => void;
@@ -380,24 +395,43 @@ function LeaveModal({
   profiles: Profile[];
   userId: string | null;
   canEdit: boolean;
+  prefillStart?: string;
 }) {
+  const today = format(new Date(), "yyyy-MM-dd");
   const [form, setForm] = useState({
     staff_id: userId ?? "",
-    start_date: format(new Date(), "yyyy-MM-dd"),
-    end_date: format(new Date(), "yyyy-MM-dd"),
+    start_date: prefillStart ?? today,
+    end_date: prefillStart ?? today,
     leave_type: "vacation",
     reason: "",
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) setForm((f) => ({ ...f, staff_id: userId ?? "" }));
-  }, [open, userId]);
+    if (open) {
+      setForm({
+        staff_id: userId ?? "",
+        start_date: prefillStart ?? today,
+        end_date: prefillStart ?? today,
+        leave_type: "vacation",
+        reason: "",
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId, prefillStart]);
 
   if (!open) return null;
 
+  const workdays = calcWorkdays(form.start_date, form.end_date);
+  const totalDays = form.start_date && form.end_date
+    ? differenceInCalendarDays(parseISO(form.end_date), parseISO(form.start_date)) + 1
+    : 0;
+  const typeConfig = LEAVE_TYPE_CONFIG[form.leave_type] ?? LEAVE_TYPE_CONFIG.other;
+  const endMin = form.start_date;
+  const isValid = !!form.staff_id && !!form.start_date && !!form.end_date && form.end_date >= form.start_date;
+
   const handleSave = async () => {
-    if (!form.staff_id) return;
+    if (!isValid) return;
     setSaving(true);
     const ok = await onSave({
       staff_id: form.staff_id,
@@ -418,16 +452,29 @@ function LeaveModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 w-full sm:max-w-md bg-background rounded-t-2xl sm:rounded-2xl h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col shadow-xl">
+        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border flex-shrink-0">
-          <h2 className="text-base font-semibold">Request Leave</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-base">
+              <PlaneTakeoff size={16} className="text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold leading-none">Request Time Off</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Submit a leave request for review</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X size={18} />
+          </button>
         </div>
+
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Admin: staff picker */}
           {canEdit && (
             <div className="space-y-1.5">
               <Label>Staff Member</Label>
               <Select value={form.staff_id} onValueChange={(v) => setForm((f) => ({ ...f, staff_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select staff member…" /></SelectTrigger>
                 <SelectContent>
                   {profiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.full_name ?? p.id}</SelectItem>
@@ -436,36 +483,115 @@ function LeaveModal({
               </Select>
             </div>
           )}
+
+          {/* Leave type grid */}
           <div className="space-y-1.5">
             <Label>Leave Type</Label>
-            <Select value={form.leave_type} onValueChange={(v) => setForm((f) => ({ ...f, leave_type: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {LEAVE_TYPES.map((t) => (
-                  <SelectItem key={t} value={t} className="capitalize">{t.replace("_", " ")}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>From</Label>
-              <Input type="date" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} />
+            <div className="grid grid-cols-2 gap-2">
+              {LEAVE_TYPES.map((t) => {
+                const cfg = LEAVE_TYPE_CONFIG[t];
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setForm((f) => ({ ...f, leave_type: t }))}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all text-left",
+                      form.leave_type === t
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border bg-muted/30 text-muted-foreground hover:border-border/80 hover:bg-muted/50"
+                    )}
+                  >
+                    <span className="text-base">{cfg.emoji}</span>
+                    <span className="truncate">{cfg.label}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="space-y-1.5">
-              <Label>To</Label>
-              <Input type="date" value={form.end_date} min={form.start_date} onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))} />
-            </div>
           </div>
+
+          {/* Date range */}
           <div className="space-y-1.5">
-            <Label>Reason (optional)</Label>
-            <Textarea rows={3} className="resize-none" value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
+            <Label>Date Range</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">From</p>
+                <Input
+                  type="date"
+                  value={form.start_date}
+                  min={today}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm((f) => ({
+                      ...f,
+                      start_date: v,
+                      end_date: f.end_date < v ? v : f.end_date,
+                    }));
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">To</p>
+                <Input
+                  type="date"
+                  value={form.end_date}
+                  min={endMin}
+                  onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Duration summary */}
+          {totalDays > 0 && (
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-muted-foreground" />
+                <span className="text-sm text-foreground font-medium">
+                  {totalDays === 1 ? "1 day" : `${totalDays} days`}
+                </span>
+                {workdays !== totalDays && (
+                  <span className="text-xs text-muted-foreground">({workdays} working)</span>
+                )}
+              </div>
+              <span className={cn("text-sm", typeConfig.color)}>
+                {typeConfig.emoji} {typeConfig.label}
+              </span>
+            </div>
+          )}
+
+          {/* Reason */}
+          <div className="space-y-1.5">
+            <Label>
+              Reason <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Textarea
+              rows={3}
+              className="resize-none"
+              placeholder="Any details you'd like to share with your manager…"
+              value={form.reason}
+              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+            />
+          </div>
+
+          {/* Info notice */}
+          <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5">
+            <AlertCircle size={13} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              Your request will be sent to management for review. You'll see the status update in the leave panel below the schedule.
+            </p>
           </div>
         </div>
+
+        {/* Footer */}
         <div className="flex-shrink-0 flex gap-3 px-5 py-4 border-t border-border">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button className="flex-1" disabled={saving || !form.staff_id} onClick={handleSave}>
-            {saving ? "Submitting…" : "Submit Request"}
+          <Button className="flex-1 gap-2" disabled={saving || !isValid} onClick={handleSave}>
+            {saving ? "Submitting…" : (
+              <>
+                <PlaneTakeoff size={14} />
+                Submit Request
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -702,13 +828,109 @@ function ScheduleManagerDrawer({
   );
 }
 
-// ── Leave Review Panel ────────────────────────────────────────────────────────
+// ── Leave Card ────────────────────────────────────────────────────────────────
 
-function LeaveReviewPanel({
+function LeaveCard({
+  req,
+  profiles,
+  userId,
+  canEdit,
+  onReview,
+  onDelete,
+}: {
+  req: StaffLeaveRequest;
+  profiles: Profile[];
+  userId: string | null;
+  canEdit: boolean;
+  onReview: (id: string, status: "approved" | "rejected", reviewerId: string) => Promise<boolean>;
+  onDelete: (id: string) => Promise<boolean>;
+}) {
+  const person = profiles.find((p) => p.id === req.staff_id);
+  const typeConfig = LEAVE_TYPE_CONFIG[req.leave_type] ?? LEAVE_TYPE_CONFIG.other;
+  const workdays = calcWorkdays(req.start_date, req.end_date);
+  const totalDays = differenceInCalendarDays(parseISO(req.end_date), parseISO(req.start_date)) + 1;
+
+  const statusStyle = {
+    pending:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    approved: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    rejected: "text-red-400 bg-red-500/10 border-red-500/20",
+  }[req.status] ?? "";
+
+  const statusIcon = {
+    pending:  <Clock size={10} />,
+    approved: <Check size={10} />,
+    rejected: <X size={10} />,
+  }[req.status];
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2.5">
+      <div className="flex items-start gap-2.5 justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-xl flex-shrink-0">{typeConfig.emoji}</span>
+          <div className="min-w-0">
+            {canEdit && (
+              <p className="text-xs font-semibold truncate text-foreground">{person?.full_name ?? "Staff"}</p>
+            )}
+            <p className={cn("text-sm font-medium capitalize", typeConfig.color)}>{typeConfig.label}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {req.start_date === req.end_date
+                ? req.start_date
+                : `${req.start_date} – ${req.end_date}`}
+              {" · "}
+              {totalDays === 1 ? "1 day" : `${workdays} working days`}
+            </p>
+            {req.reason && (
+              <p className="text-xs text-muted-foreground italic mt-0.5">"{req.reason}"</p>
+            )}
+          </div>
+        </div>
+        <span className={cn("flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize flex-shrink-0", statusStyle)}>
+          {statusIcon}
+          {req.status}
+        </span>
+      </div>
+
+      {canEdit && req.status === "pending" && (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 h-7 text-xs gap-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+            onClick={() => userId && onReview(req.id, "approved", userId)}
+          >
+            <Check size={12} /> Approve
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 h-7 text-xs gap-1 text-red-400 border-red-500/30 hover:bg-red-500/10"
+            onClick={() => userId && onReview(req.id, "rejected", userId)}
+          >
+            <X size={12} /> Reject
+          </Button>
+        </div>
+      )}
+
+      {(req.staff_id === userId || canEdit) && req.status !== "approved" && (
+        <button
+          onClick={() => onDelete(req.id)}
+          className="text-[10px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+        >
+          <Trash2 size={9} /> Withdraw request
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Leave Panels ──────────────────────────────────────────────────────────────
+
+function LeavePanel({
   leaveRequests,
   profiles,
   onReview,
   onDelete,
+  onNew,
   userId,
   canEdit,
 }: {
@@ -716,72 +938,64 @@ function LeaveReviewPanel({
   profiles: Profile[];
   onReview: (id: string, status: "approved" | "rejected", reviewerId: string) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  onNew: () => void;
   userId: string | null;
   canEdit: boolean;
 }) {
   const pending = leaveRequests.filter((r) => r.status === "pending");
-  const mine = leaveRequests.filter((r) => r.staff_id === userId);
-  const shown = canEdit ? leaveRequests : mine;
-
-  if (shown.length === 0) return null;
+  const myRequests = leaveRequests.filter((r) => r.staff_id === userId);
+  // Admin sees all; staff only sees their own
+  const adminList = canEdit ? leaveRequests : [];
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Leave Requests {pending.length > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px]">{pending.length} pending</span>}
-      </p>
-      {shown.map((req) => {
-        const person = profiles.find((p) => p.id === req.staff_id);
-        const statusColors = {
-          pending: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-          approved: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-          rejected: "text-red-400 bg-red-500/10 border-red-500/20",
-        };
-        return (
-          <div key={req.id} className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-            <div className="flex items-start gap-2 justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{person?.full_name ?? req.staff_id}</p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {req.leave_type.replace("_", " ")} · {req.start_date === req.end_date ? req.start_date : `${req.start_date} – ${req.end_date}`}
-                </p>
-                {req.reason && <p className="text-xs text-muted-foreground mt-0.5 italic">"{req.reason}"</p>}
-              </div>
-              <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize flex-shrink-0", statusColors[req.status as keyof typeof statusColors] ?? "")}>
-                {req.status}
-              </span>
-            </div>
-            {canEdit && req.status === "pending" && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-7 text-xs gap-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
-                  onClick={() => userId && onReview(req.id, "approved", userId)}
-                >
-                  <Check size={12} /> Approve
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-7 text-xs gap-1 text-red-400 border-red-500/30 hover:bg-red-500/10"
-                  onClick={() => userId && onReview(req.id, "rejected", userId)}
-                >
-                  <X size={12} /> Reject
-                </Button>
-              </div>
-            )}
-            {(req.staff_id === userId || canEdit) && req.status !== "approved" && (
-              <button
-                onClick={() => onDelete(req.id)}
-                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
-              >
-                Remove
-              </button>
-            )}
+    <div className="space-y-3">
+      {/* My Requests panel — visible to everyone */}
+      {myRequests.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Leave Requests</p>
+            <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 text-muted-foreground" onClick={onNew}>
+              <Plus size={11} /> New
+            </Button>
           </div>
-        );
-      })}
+          {myRequests.map((req) => (
+            <LeaveCard
+              key={req.id}
+              req={req}
+              profiles={profiles}
+              userId={userId}
+              canEdit={false}
+              onReview={onReview}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Admin review panel */}
+      {canEdit && adminList.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            All Leave Requests
+            {pending.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px]">
+                {pending.length} pending
+              </span>
+            )}
+          </p>
+          {adminList.map((req) => (
+            <LeaveCard
+              key={req.id}
+              req={req}
+              profiles={profiles}
+              userId={userId}
+              canEdit={canEdit}
+              onReview={onReview}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1010,13 +1224,14 @@ export function StaffCalendarTab({
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Visible to ALL users — primary CTA for staff */}
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5 text-xs h-8"
+            className="gap-1.5 text-xs h-8 border-primary/40 text-primary hover:bg-primary/10"
             onClick={() => { setShowLeaveModal(true); }}
           >
-            <CalendarOff size={13} /> Leave
+            <PlaneTakeoff size={13} /> Request Time Off
           </Button>
           {canEdit && (
             <>
@@ -1162,12 +1377,13 @@ export function StaffCalendarTab({
         )}
       </div>
 
-      {/* ── Leave Requests Panel ──────────────────────────────────────────── */}
-      <LeaveReviewPanel
+      {/* ── Leave Panel ──────────────────────────────────────────── */}
+      <LeavePanel
         leaveRequests={leaveRequests}
         profiles={profiles}
         onReview={reviewLeaveRequest}
         onDelete={deleteLeaveRequest}
+        onNew={() => setShowLeaveModal(true)}
         userId={userId}
         canEdit={canEdit}
       />
