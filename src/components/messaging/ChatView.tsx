@@ -386,8 +386,8 @@ export function ChatView({
         <div ref={bottomRef} />
       </div>
 
-      {/* ── Fixed input bar — always pinned to bottom of viewport ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border px-2 py-2 safe-area-pb" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
+      {/* ── Input bar — flex-shrink-0 so it always stays at bottom of column ── */}
+      <div className="flex-shrink-0 relative z-40 bg-card border-t border-border px-2 py-2" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
         {/* Emoji picker */}
         {showEmoji && (
           <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-1 z-50">
