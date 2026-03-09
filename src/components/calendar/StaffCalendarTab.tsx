@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   format, startOfWeek, endOfWeek, eachDayOfInterval,
-  addWeeks, subWeeks, isToday, getDay, parseISO, isSameDay,
+  addWeeks, subWeeks, isToday, getDay, isSameDay,
+  differenceInCalendarDays, parseISO, isWeekend,
 } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,13 +10,12 @@ import { useStaffSchedules, StaffSchedule, StaffShift, StaffLeaveRequest } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Settings2,
-  CalendarOff, UserCheck, X, Check, Clock, Building2,
-  Pencil, ChevronDown, ChevronUp
+  CalendarOff, UserCheck, X, Check, Clock, Pencil,
+  PlaneTakeoff, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
