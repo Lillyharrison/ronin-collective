@@ -88,12 +88,12 @@ const RONIN_TAB_CONFIG: Record<RoninTab, { label: string; icon: React.ReactNode;
   staff:        { label: "Staff",       icon: <UserCheck size={12} />,   color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
 };
 
-const FAMILY_TYPE_CONFIG: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
-  travel:      { color: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30",    icon: <Plane size={10} /> },
-  guest_stay:  { color: "text-purple-400", bg: "bg-purple-500/15 border-purple-500/30", icon: <Users size={10} /> },
-  event:       { color: "text-pink-400",   bg: "bg-pink-500/15 border-pink-500/30",    icon: <PartyPopper size={10} /> },
-  maintenance: { color: "text-amber-400",  bg: "bg-amber-500/15 border-amber-500/30",  icon: <Wrench size={10} /> },
-  general:     { color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
+const FAMILY_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  travel:      { label: "Travel",       color: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30",    icon: <Plane size={10} /> },
+  guest_stay:  { label: "Guest Stay",   color: "text-purple-400", bg: "bg-purple-500/15 border-purple-500/30", icon: <Users size={10} /> },
+  event:       { label: "Event / Party",color: "text-pink-400",   bg: "bg-pink-500/15 border-pink-500/30",    icon: <PartyPopper size={10} /> },
+  maintenance: { label: "Maintenance",  color: "text-amber-400",  bg: "bg-amber-500/15 border-amber-500/30",  icon: <Wrench size={10} /> },
+  general:     { label: "General",      color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
 };
 
 function getFamilyTypeConfig(type: string) {
@@ -532,7 +532,14 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
             <Select value={form.event_type} onValueChange={(v) => setForm((f) => ({ ...f, event_type: v }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(FAMILY_TYPE_CONFIG).map(([k]) => <SelectItem key={k} value={k} className="capitalize">{k.replace("_", " ")}</SelectItem>)}
+                {Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    <span className="flex items-center gap-2">
+                      <span className={v.color}>{v.icon}</span>
+                      {v.label}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -642,7 +649,7 @@ function RightPanel({
                       </Badge>
                     ) : (
                       <Badge variant="outline" className={cn("text-[10px] border px-1 py-0", familyCfg.bg, familyCfg.color)}>
-                        {ev.event_type.replace("_", " ")}
+                        {familyCfg.label}
                       </Badge>
                     )}
                     {ev.is_private && <Lock size={10} className="text-muted-foreground" />}
