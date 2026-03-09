@@ -451,10 +451,10 @@ function CalendarSettingsDialog({ open, onClose, properties }: { open: boolean; 
           </div>
           <div className="space-y-2">
             <Label>Default Property</Label>
-            <Select value={propertyId} onValueChange={setPropertyId}>
+            <Select value={propertyId || "__none__"} onValueChange={(v) => setPropertyId(v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -539,9 +539,9 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
           <div className="space-y-1.5"><Label>Location</Label><Input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="Optional" /></div>
           <div className="space-y-1.5">
             <Label>Property</Label>
-            <Select value={form.property_id} onValueChange={(v) => setForm((f) => ({ ...f, property_id: v }))}>
+            <Select value={form.property_id || "__none__"} onValueChange={(v) => setForm((f) => ({ ...f, property_id: v === "__none__" ? "" : v }))}>
               <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
-              <SelectContent><SelectItem value="">None</SelectItem>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+              <SelectContent><SelectItem value="__none__">None</SelectItem>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
