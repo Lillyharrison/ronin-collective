@@ -80,13 +80,6 @@ export function ChatView({
     setSending(true);
 
     if (isAgentThread) {
-      const isGroupChat = participants.filter(p => p.id !== currentUserId).length > 0;
-      const mentionsRonin = /@ronin/i.test(text);
-      if (isGroupChat && !mentionsRonin) {
-        await sendMessage(text, currentUserId);
-        setSending(false);
-        return;
-      }
       const lastAiMsg = [...messages].reverse().find(m => m.is_ai_generated);
       const pendingTool = (lastAiMsg?.reactions as Record<string, unknown> | null)?.__pending_tool as
         { name: string; args: Record<string, unknown> } | undefined;
