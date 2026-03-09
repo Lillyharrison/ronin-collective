@@ -454,7 +454,7 @@ function CalendarSettingsDialog({ open, onClose, properties }: { open: boolean; 
             <Select value={propertyId} onValueChange={setPropertyId}>
               <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
