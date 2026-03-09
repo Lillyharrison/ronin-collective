@@ -12,6 +12,7 @@ export type ActiveSection =
   | "checklists"
   | "tasks"
   | "contacts"
+  | "vendors"
   | "inventory"
   | "laundry"
   | "orders"
