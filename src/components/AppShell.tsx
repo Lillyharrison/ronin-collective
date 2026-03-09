@@ -20,6 +20,7 @@ const ManualsSection     = lazy(() => import("@/components/sections/ManualsSecti
 const ChecklistsSection  = lazy(() => import("@/components/sections/ChecklistsSection").then(m => ({ default: m.ChecklistsSection })));
 const TasksSection       = lazy(() => import("@/components/sections/TasksSection").then(m => ({ default: m.TasksSection })));
 const ContactsSection    = lazy(() => import("@/components/sections/ContactsSection").then(m => ({ default: m.ContactsSection })));
+const VendorsSection     = lazy(() => import("@/components/sections/VendorsSection").then(m => ({ default: m.VendorsSection })));
 const InventorySection   = lazy(() => import("@/components/sections/InventorySection").then(m => ({ default: m.InventorySection })));
 const LaundrySection     = lazy(() => import("@/components/sections/LaundrySection").then(m => ({ default: m.LaundrySection })));
 const OrdersSection      = lazy(() => import("@/components/sections/OrdersSection").then(m => ({ default: m.OrdersSection })));
