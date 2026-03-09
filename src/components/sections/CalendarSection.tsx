@@ -856,7 +856,7 @@ export function CalendarSection() {
   };
 
   return (
-    <div className="animate-fade-in space-y-4">
+    <div className="animate-fade-in space-y-4 px-4 py-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
