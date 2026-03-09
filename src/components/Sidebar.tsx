@@ -7,7 +7,7 @@ import {
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
   Building2, FileSpreadsheet, Calendar, Brain,
-  ClipboardList, Shield, Bell, Store,
+  ClipboardList, Shield, Bell,
 } from "lucide-react";
 
 
