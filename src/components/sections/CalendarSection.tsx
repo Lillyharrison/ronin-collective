@@ -170,29 +170,37 @@ function EventChip({
   onClick,
   onDragStart,
   isRoninMode,
+  canDrag,
 }: {
   ev: CalEvent;
   onClick: (e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent, ev: CalEvent) => void;
   isRoninMode: boolean;
+  canDrag: boolean;
 }) {
   const tab = getRoninTabForEvent(ev);
   const cfg = isRoninMode
     ? (RONIN_TAB_CONFIG[tab] ?? RONIN_TAB_CONFIG.all)
     : getFamilyTypeConfig(ev.event_type);
 
+  const isDraggable = canDrag && ev._is_draggable !== false;
+
   return (
     <div
-      draggable={ev._is_draggable !== false}
-      onDragStart={(e) => onDragStart(e, ev)}
+      draggable={isDraggable}
+      onDragStart={(e) => isDraggable && onDragStart(e, ev)}
       onClick={onClick}
+      title={ev.calendar_source === "ical" ? "Synced from iCal · read-only" : undefined}
       className={cn(
-        "text-[10px] font-medium px-1 py-0.5 rounded truncate flex items-center gap-0.5 border cursor-pointer hover:opacity-80 transition-opacity select-none",
+        "text-[10px] font-medium px-1 py-0.5 rounded truncate flex items-center gap-0.5 border transition-opacity select-none",
+        isDraggable ? "cursor-grab active:cursor-grabbing hover:opacity-80" : "cursor-pointer hover:opacity-80",
+        ev.calendar_source === "ical" && "opacity-90",
         isRoninMode ? `${cfg.bg} ${cfg.color}` : `${cfg.bg} ${cfg.color}`
       )}
     >
       <span className="flex-shrink-0">{cfg.icon}</span>
       {ev.is_private && <Lock size={7} className="flex-shrink-0" />}
+      {ev.calendar_source === "ical" && <Globe size={7} className="flex-shrink-0 opacity-60" />}
       <span className="truncate">{ev.title}</span>
     </div>
   );
