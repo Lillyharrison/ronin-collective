@@ -532,7 +532,14 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
             <Select value={form.event_type} onValueChange={(v) => setForm((f) => ({ ...f, event_type: v }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(FAMILY_TYPE_CONFIG).map(([k]) => <SelectItem key={k} value={k} className="capitalize">{k.replace("_", " ")}</SelectItem>)}
+                {Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    <span className="flex items-center gap-2">
+                      <span className={v.color}>{v.icon}</span>
+                      {v.label}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
