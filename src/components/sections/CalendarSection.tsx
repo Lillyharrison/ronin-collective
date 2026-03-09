@@ -507,40 +507,120 @@ function CalendarSettingsDialog({ open, onClose, properties }: { open: boolean; 
 
 // ─── New Event Dialog ─────────────────────────────────────────────────────────
 
+const RECURRENCE_OPTIONS = [
+  { value: "none",    label: "Does not repeat" },
+  { value: "daily",   label: "Daily" },
+  { value: "weekly",  label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly",  label: "Yearly" },
+];
+
 function NewEventDialog({ open, onClose, onSave, properties, userId }: {
   open: boolean; onClose: () => void; onSave: () => void; properties: Property[]; userId: string | null;
 }) {
-  const [form, setForm] = useState({ title: "", description: "", location: "", start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), end_date: "", event_type: "general", property_id: "", is_private: false });
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    location: "",
+    start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+    end_date: "",
+    event_type: "general",
+    property_id: "",
+    is_private: false,
+    recurrence: "none",
+    recurrence_end: "",
+  });
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     if (!form.title.trim() || !userId) return;
     setSaving(true);
+
+    // Build keywords array to encode recurrence for display purposes
+    const keywords: string[] = [];
+    if (form.recurrence !== "none") keywords.push(`recurrence:${form.recurrence}`);
+
+    // For recurring events, notes field stores recurrence metadata
+    const notes = form.recurrence !== "none"
+      ? `Recurs ${form.recurrence}${form.recurrence_end ? ` until ${format(new Date(form.recurrence_end), "MMM d, yyyy")}` : ""}`
+      : null;
+
     const { error } = await supabase.from("calendar_events").insert({
-      title: form.title.trim(), description: form.description || null, location: form.location || null,
-      start_date: form.start_date, end_date: form.end_date || null, event_type: form.event_type,
-      is_private: form.is_private, property_id: form.property_id || null, created_by: userId,
-      calendar_source: "manual", status: "upcoming",
+      title: form.title.trim(),
+      description: form.description || null,
+      location: form.location || null,
+      start_date: form.start_date,
+      end_date: form.end_date || null,
+      event_type: form.event_type,
+      is_private: form.is_private,
+      property_id: form.property_id || null,
+      created_by: userId,
+      calendar_source: "manual",
+      status: "upcoming",
+      keywords: keywords.length ? keywords : null,
+      notes,
     });
+
     setSaving(false);
     if (error) { toast.error("Failed to save"); return; }
     toast.success("Event added");
+
+    // Reset form
+    setForm({ title: "", description: "", location: "", start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), end_date: "", event_type: "general", property_id: "", is_private: false, recurrence: "none", recurrence_end: "" });
     onSave(); onClose();
   };
 
+  const f = (key: string, val: string | boolean) => setForm((prev) => ({ ...prev, [key]: val }));
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col">
+      <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col w-full max-w-lg">
         <DialogHeader className="flex-shrink-0"><DialogTitle>New Event</DialogTitle></DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-4 py-2">
-          <div className="space-y-1.5"><Label>Title</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Event title" /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label>Start</Label><Input type="datetime-local" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>End</Label><Input type="datetime-local" value={form.end_date} onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))} /></div>
+        <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
+
+          {/* Title */}
+          <div className="space-y-1.5">
+            <Label>Title</Label>
+            <Input value={form.title} onChange={(e) => f("title", e.target.value)} placeholder="Event title" />
           </div>
+
+          {/* Start — full width */}
+          <div className="space-y-1.5">
+            <Label>Start</Label>
+            <Input type="datetime-local" value={form.start_date} onChange={(e) => f("start_date", e.target.value)} className="w-full" />
+          </div>
+
+          {/* End — full width */}
+          <div className="space-y-1.5">
+            <Label>End <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input type="datetime-local" value={form.end_date} onChange={(e) => f("end_date", e.target.value)} className="w-full" />
+          </div>
+
+          {/* Recurrence */}
+          <div className="space-y-1.5">
+            <Label>Repeat</Label>
+            <Select value={form.recurrence} onValueChange={(v) => f("recurrence", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {RECURRENCE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Recurrence end date — only when recurrence is set */}
+          {form.recurrence !== "none" && (
+            <div className="space-y-1.5">
+              <Label>Repeat until <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input type="date" value={form.recurrence_end} onChange={(e) => f("recurrence_end", e.target.value)} className="w-full" />
+            </div>
+          )}
+
+          {/* Type */}
           <div className="space-y-1.5">
             <Label>Type</Label>
-            <Select value={form.event_type} onValueChange={(v) => setForm((f) => ({ ...f, event_type: v }))}>
+            <Select value={form.event_type} onValueChange={(v) => f("event_type", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
@@ -554,26 +634,51 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Location</Label><Input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="Optional" /></div>
+
+          {/* Location */}
+          <div className="space-y-1.5">
+            <Label>Location</Label>
+            <Input value={form.location} onChange={(e) => f("location", e.target.value)} placeholder="Optional" />
+          </div>
+
+          {/* Property */}
           <div className="space-y-1.5">
             <Label>Property</Label>
-            <Select value={form.property_id || "__none__"} onValueChange={(v) => setForm((f) => ({ ...f, property_id: v === "__none__" ? "" : v }))}>
+            <Select value={form.property_id || "__none__"} onValueChange={(v) => f("property_id", v === "__none__" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
-              <SelectContent><SelectItem value="__none__">None</SelectItem>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
             </Select>
           </div>
+
+          {/* Notes */}
           <div className="space-y-1.5">
             <Label>Notes</Label>
-            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optional notes…" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            <textarea
+              value={form.description}
+              onChange={(e) => f("description", e.target.value)}
+              placeholder="Optional notes…"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[72px] resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
           </div>
+
+          {/* Private toggle */}
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" checked={form.is_private} onChange={(e) => setForm((f) => ({ ...f, is_private: e.target.checked }))} className="w-4 h-4 accent-primary" />
-            <div><p className="text-sm font-medium">Private</p><p className="text-xs text-muted-foreground">Admins only</p></div>
+            <input type="checkbox" checked={form.is_private} onChange={(e) => f("is_private", e.target.checked)} className="w-4 h-4 accent-primary" />
+            <div>
+              <p className="text-sm font-medium">Private</p>
+              <p className="text-xs text-muted-foreground">Admins only</p>
+            </div>
           </label>
         </div>
+
         <DialogFooter className="flex-shrink-0 pt-3 border-t border-border gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={save} disabled={saving || !form.title.trim()}>{saving ? "Saving…" : "Add Event"}</Button>
+          <Button size="sm" onClick={save} disabled={saving || !form.title.trim()}>
+            {saving ? "Saving…" : "Add Event"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
