@@ -820,7 +820,7 @@ function StaffDayCell({
       )}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => { setDragOver(false); onDrop(e, dateStr); }}
+      onDrop={(e) => { setDragOver(false); onDrop(dateStr); }}
     >
       <div className="flex flex-wrap gap-0.5">
         {shifts.map((shift) => (
@@ -828,7 +828,7 @@ function StaffDayCell({
             <ShiftChip
               shift={shift}
               properties={properties}
-              onDragStart={(e) => onDragStart(e, shift)}
+              onDragStart={(_e) => onDragStart(shift)}
               onClick={(e) => { e.stopPropagation(); }}
             />
             {canEdit && shift.concrete_id && (
