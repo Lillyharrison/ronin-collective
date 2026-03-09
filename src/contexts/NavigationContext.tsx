@@ -36,6 +36,7 @@ const SECTION_TO_PATH: Record<ActiveSection, string> = {
   checklists:      "/checklists",
   tasks:           "/tasks",
   contacts:        "/contacts",
+  vendors:         "/vendors",
   inventory:       "/inventory",
   laundry:         "/laundry",
   orders:          "/orders",
