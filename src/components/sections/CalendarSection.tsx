@@ -974,9 +974,10 @@ function RightPanel({
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
 export function CalendarSection() {
-  const { isMasterAdmin, userId } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, userId } = usePermissions();
+  const isStaff = !isMasterAdmin && !isAdmin && !isManager;
 
-  const [mode, setMode] = useState<CalendarMode>("family");
+  const [mode, setMode] = useState<CalendarMode>(isStaff ? "ronin" : "family");
   const [roninTab, setRoninTab] = useState<RoninTab>("all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [familyEvents, setFamilyEvents] = useState<CalEvent[]>([]);

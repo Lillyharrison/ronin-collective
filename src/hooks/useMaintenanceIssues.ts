@@ -155,6 +155,11 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   };
 
   const deleteIssue = async (id: string) => {
+    // Also delete any linked calendar events and draft tasks referencing this issue
+    await Promise.all([
+      supabase.from("calendar_events").delete().eq("external_uid", `maintenance-${id}`),
+      supabase.from("tasks").delete().eq("is_draft", true).contains("description_en", id),
+    ]);
     const { error } = await supabase.from("maintenance_issues").delete().eq("id", id);
     if (!error) setIssues(prev => prev.filter(i => i.id !== id));
     return { error };
