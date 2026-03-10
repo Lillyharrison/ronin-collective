@@ -155,11 +155,25 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   };
 
   const deleteIssue = async (id: string) => {
-    // Also delete any linked calendar events and draft tasks referencing this issue
+    // Find the issue title so we can clean up related records
+    const issueTitle = issues.find(i => i.id === id)?.title ?? "";
+
+    // Clean up: calendar events (auto-generated from this maintenance issue)
+    // and AI-suggested draft tasks referencing this issue's title
     await Promise.all([
-      supabase.from("calendar_events").delete().eq("external_uid", `maintenance-${id}`),
-      supabase.from("tasks").delete().eq("is_draft", true).contains("description_en", id),
+      supabase.from("calendar_events")
+        .delete()
+        .eq("calendar_source", "auto")
+        .ilike("title", `%${issueTitle}%`),
+      issueTitle
+        ? supabase.from("tasks")
+            .delete()
+            .eq("is_draft", true)
+            .eq("ai_suggested", true)
+            .ilike("title_en", `%${issueTitle}%`)
+        : Promise.resolve(),
     ]);
+
     const { error } = await supabase.from("maintenance_issues").delete().eq("id", id);
     if (!error) setIssues(prev => prev.filter(i => i.id !== id));
     return { error };
