@@ -141,6 +141,7 @@ export function Dashboard() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [reportIssueOpen, setReportIssueOpen] = useState(false);
   const [userQuickActions, setUserQuickActions] = useState<string[] | null>(null);
+  const [qaLoading, setQaLoading] = useState(true);
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
