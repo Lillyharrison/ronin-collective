@@ -33,8 +33,11 @@ export function BottomNav() {
   });
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-charcoal border-t border-charcoal-light">
-      <div className="flex items-center justify-around h-16 px-2" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 bg-charcoal border-t border-charcoal-light"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      <div className="flex items-center justify-around h-16 px-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
 
@@ -43,10 +46,10 @@ export function BottomNav() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab("home")}
-                className="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-2"
+                className="flex flex-col items-center justify-center gap-0.5 w-11 h-full px-2"
                 aria-label="Home"
               >
-                <RoninR size={30} className={isActive ? "ring-2 ring-gold ring-offset-1 ring-offset-charcoal rounded-sm" : "opacity-70"} />
+                <RoninR size={26} className={isActive ? "ring-2 ring-gold ring-offset-1 ring-offset-charcoal rounded-sm" : "opacity-70"} />
               </button>
             );
           }
@@ -56,16 +59,16 @@ export function BottomNav() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-2 -mt-3"
+                className="flex flex-col items-center justify-center gap-0.5 w-11 h-full px-2"
                 aria-label={tab.label}
               >
-                <div className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                <div className={`relative w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all ${
                   isActive ? "bg-[#25D366] text-white scale-105" : "bg-[#128C7E] text-white"
                 }`}>
-                  <MessageCircle size={26} fill="white" strokeWidth={0} />
+                  <MessageCircle size={22} fill="white" strokeWidth={0} />
                   {/* Unread badge */}
                   {unreadCount > 0 && !isActive && (
-                    <span className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1 shadow-md border-2 border-charcoal animate-bounce">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1 shadow-md border-2 border-charcoal animate-bounce">
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                   )}
