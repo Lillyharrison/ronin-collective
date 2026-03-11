@@ -10,9 +10,16 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL      = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY       = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const VAPID_PUBLIC_KEY  = Deno.env.get("VAPID_PUBLIC_KEY")!;
-const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const VAPID_SUBJECT     = Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com";
+
+// Strip surrounding JSON quotes/spaces/commas that may have been introduced
+// when these secrets were originally saved from a JSON object.
+function cleanSecret(s: string): string {
+  return s.trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
+}
+
+const VAPID_PUBLIC_KEY  = cleanSecret(Deno.env.get("VAPID_PUBLIC_KEY") ?? "");
+const VAPID_PRIVATE_KEY = cleanSecret(Deno.env.get("VAPID_PRIVATE_KEY") ?? "");
+const VAPID_SUBJECT     = cleanSecret(Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com");
 
 // ─── Safe base64url → standard base64 → bytes ─────────────────────────────────
 // Handles both base64url and standard base64 input
