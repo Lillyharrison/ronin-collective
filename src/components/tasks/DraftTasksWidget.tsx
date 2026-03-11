@@ -38,21 +38,34 @@ export function DraftTasksWidget() {
 
   useEffect(() => {
     if (permLoading || (!isMasterAdmin && !isAdmin)) { setLoading(false); return; }
-    supabase
-      .from("tasks")
-      .select(`
-        id, title_en, description_en, due_date, priority, status, property_id,
-        assigned_to, assigned_department, assigned_role, linked_checklist_id,
-        is_draft, ai_suggested, attachments, created_at,
-        property:properties(name),
-        linked_checklist:checklist_templates(title, icon)
-      `)
-      .eq("is_draft", true)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setDrafts((data as unknown as DraftTask[]) ?? []);
-        setLoading(false);
-      });
+
+    function fetchDrafts() {
+      supabase
+        .from("tasks")
+        .select(`
+          id, title_en, description_en, due_date, priority, status, property_id,
+          assigned_to, assigned_department, assigned_role, linked_checklist_id,
+          is_draft, ai_suggested, attachments, created_at,
+          property:properties(name),
+          linked_checklist:checklist_templates(title, icon)
+        `)
+        .eq("is_draft", true)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          setDrafts((data as unknown as DraftTask[]) ?? []);
+          setLoading(false);
+        });
+    }
+
+    fetchDrafts();
+
+    // Subscribe to realtime so widget disappears immediately when drafts are deleted
+    const channel = supabase
+      .channel("draft_tasks_widget")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, fetchDrafts)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [permLoading, isMasterAdmin, isAdmin]);
 
   if (!isMasterAdmin && !isAdmin) return null;
