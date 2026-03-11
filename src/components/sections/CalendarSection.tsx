@@ -1448,29 +1448,47 @@ export function CalendarSection() {
         </div>
       </div>
 
-      {/* Mode toggle */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit">
-        <button
-          onClick={() => setMode("family")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-            mode === "family" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Globe size={14} /> Family
-        </button>
-        <button
-          onClick={() => setMode("ronin")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-            mode === "ronin" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <CalendarDays size={14} /> Ronin
-        </button>
+      {/* Mode toggle + property filter on the same row */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit">
+          <button
+            onClick={() => setMode("family")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+              mode === "family" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Globe size={14} /> Family
+          </button>
+          <button
+            onClick={() => setMode("ronin")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+              mode === "ronin" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <CalendarDays size={14} /> Ronin
+          </button>
+        </div>
+
+        {/* Property filter — next to Ronin toggle, only when Maintenance tab is active */}
+        {mode === "ronin" && roninTab === "maintenance" && maintenanceProperties.length > 1 && (
+          <Select value={maintenancePropertyFilter} onValueChange={setMaintenancePropertyFilter}>
+            <SelectTrigger className="h-8 text-xs w-[150px] border-amber-500/30 bg-amber-500/10 text-amber-400">
+              <SelectValue placeholder="All properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All properties</SelectItem>
+              {maintenanceProperties.map((pid) => {
+                const prop = properties.find(p => p.id === pid);
+                return prop ? <SelectItem key={pid} value={pid}>{prop.name}</SelectItem> : null;
+              })}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
-      {/* Ronin category tabs + inline maintenance property filter */}
+      {/* Ronin category tabs */}
       {mode === "ronin" && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][]).map(([key, cfg]) => {
@@ -1497,22 +1515,6 @@ export function CalendarSection() {
               </button>
             );
           })}
-
-          {/* Property filter — inline, only when Maintenance tab is active */}
-          {roninTab === "maintenance" && maintenanceProperties.length > 1 && (
-            <Select value={maintenancePropertyFilter} onValueChange={setMaintenancePropertyFilter}>
-              <SelectTrigger className="h-7 text-xs w-[140px] flex-shrink-0 ml-1 border-amber-500/30 bg-amber-500/10 text-amber-400">
-                <SelectValue placeholder="All properties" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All properties</SelectItem>
-                {maintenanceProperties.map((pid) => {
-                  const prop = properties.find(p => p.id === pid);
-                  return prop ? <SelectItem key={pid} value={pid}>{prop.name}</SelectItem> : null;
-                })}
-              </SelectContent>
-            </Select>
-          )}
         </div>
       )}
 
