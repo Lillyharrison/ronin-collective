@@ -54,10 +54,11 @@ self.addEventListener("fetch", (event) => {
   // Never cache auth / edge function calls
   if (NEVER_CACHE.some(p => p.test(url.href))) return;
 
-  // HTML navigation — stale-while-revalidate so the app opens instantly
-  // from cache, then silently refreshes for next visit
+  // HTML navigation — cache-first so iPhone PWA opens instantly with no re-render.
+  // The shell is versioned via CACHE_VERSION so updates still propagate on next
+  // service worker activation.
   if (request.headers.get("accept")?.includes("text/html")) {
-    event.respondWith(staleWhileRevalidate(request, SHELL_CACHE));
+    event.respondWith(cacheFirst(request, SHELL_CACHE));
     return;
   }
 
