@@ -517,6 +517,38 @@ export function Dashboard() {
           </button>
         </div>
 
+        {/* Principal location tile — full width below the 2-col grid */}
+        {principalLocation !== undefined && (
+          <div className="mt-3">
+            {principalLocation === null ? (
+              <div className="rounded-lg bg-muted/30 border border-border px-3 py-2.5 flex items-center gap-2">
+                <MapPin size={13} className="text-muted-foreground flex-shrink-0" />
+                <span className="text-xs text-muted-foreground">
+                  {language === "es" ? "Ubicación del principal no disponible" : "Principal location unknown"}
+                </span>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-[hsl(var(--gold)/0.08)] border border-[hsl(var(--gold)/0.25)] px-3 py-2.5 flex items-center gap-2.5">
+                <MapPin size={14} className="text-gold flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    <span className="text-gold">{principalLocation.name}</span>
+                    {" "}
+                    <span className="text-muted-foreground font-normal">
+                      {language === "es" ? "está en" : "is at"}
+                    </span>
+                    {" "}
+                    {principalLocation.propertyName}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {principalLocation === undefined && (
+          <div className="mt-3 rounded-lg bg-muted/20 border border-border h-9 animate-pulse" />
+        )}
+
       </div>
 
       {/* Draft Tasks widget — Ronin AI suggested tasks awaiting approval */}
