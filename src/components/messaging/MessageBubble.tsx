@@ -164,12 +164,10 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
             </p>
           )}
 
-          {/* Image */}
+          {/* Image — with skeleton until loaded */}
           {message.media_type === "image" && message.content_media_url && (
-            <img
+            <ImageWithSkeleton
               src={message.content_media_url}
-              alt=""
-              className="rounded-lg max-w-full mb-1 cursor-pointer"
               onClick={() => window.open(message.content_media_url!, "_blank")}
             />
           )}
