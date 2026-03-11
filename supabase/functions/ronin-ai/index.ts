@@ -450,23 +450,31 @@ async function executeObservationTool(
   return { error: `Unknown observation tool: ${name}` };
 }
 
-/** Silently save a memory to the knowledge base */
+/** Silently save a memory to the knowledge base.
+ *  Accepts optional pre-loaded props/staff arrays to avoid redundant DB fetches. */
 async function saveMemorySilently(
   args: Record<string, unknown>,
-  adminClient: ReturnType<typeof createClient>
+  adminClient: ReturnType<typeof createClient>,
+  ctxProps?: Array<Record<string, unknown>>,
+  ctxStaff?: Array<Record<string, unknown>>,
 ): Promise<void> {
   try {
-    const [pRes, sRes] = await Promise.all([
-      adminClient.from("properties").select("id, name"),
-      adminClient.from("profiles").select("id, full_name"),
-    ]);
+    // Only fetch if no context was passed in
+    let props = ctxProps;
+    let staff = ctxStaff;
+    if (!props || !staff) {
+      const [pRes, sRes] = await Promise.all([
+        adminClient.from("properties").select("id, name"),
+        adminClient.from("profiles").select("id, full_name"),
+      ]);
+      props = pRes.data ?? [];
+      staff = sRes.data ?? [];
+    }
     const memPropId = args.property_hint
-      ? (pRes.data ?? []).find((p: { id: string; name: string }) =>
-          p.name.toLowerCase().includes((args.property_hint as string).toLowerCase()))?.id ?? null
+      ? (props).find((p) => (p.name as string).toLowerCase().includes((args.property_hint as string).toLowerCase()))?.id as string ?? null
       : null;
     const memSubjectId = args.subject_name
-      ? (sRes.data ?? []).find((s: { id: string; full_name: string | null }) =>
-          (s.full_name ?? "").toLowerCase().includes((args.subject_name as string).toLowerCase()))?.id ?? null
+      ? (staff).find((s) => ((s.full_name as string) ?? "").toLowerCase().includes((args.subject_name as string).toLowerCase()))?.id as string ?? null
       : null;
     await adminClient.from("ronin_memories").insert({
       content: args.content, summary: args.summary,
