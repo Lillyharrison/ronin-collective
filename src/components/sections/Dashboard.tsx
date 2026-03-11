@@ -618,57 +618,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Properties */}
-      <div className="px-4 mt-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-            {language === "es" ? "Propiedades" : "Properties"}
-          </p>
-          <button onClick={() => setActiveSection("property")} className="flex items-center gap-1 text-gold text-xs">
-            {language === "es" ? "Ver todo" : "View all"} <ChevronRight size={12} />
-          </button>
-        </div>
-
-        {propLoading ? (
-          <div className="grid grid-cols-1 gap-3">
-            {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />)}
-          </div>
-        ) : properties.length === 0 ? (
-          <div className="rounded-xl bg-card border border-border p-6 text-center">
-            <p className="text-muted-foreground text-sm">{language === "es" ? "Sin propiedades aún" : "No properties yet"}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {properties.map((prop) => {
-              const cfg = statusConfig[prop.status];
-              return (
-                <button
-                  key={prop.id}
-                  onClick={() => { setTargetPropertyId(prop.id); setActivePropertyId(prop.id); setActiveSection("property"); }}
-                  className="w-full flex items-center gap-4 bg-card border border-border rounded-xl p-4 hover:border-gold/30 transition-all active:scale-[0.99] text-left"
-                >
-                  <div className="w-14 h-14 rounded-lg bg-charcoal flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {prop.image_url
-                      ? <img src={imageUrl(prop.image_url, 112)} alt={prop.name} loading="lazy" className="w-full h-full object-cover" />
-                      : <span className="font-display text-gold text-xl">{prop.name.charAt(0)}</span>
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground text-sm truncate">{prop.name}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <MapPin size={11} className="text-muted-foreground flex-shrink-0" />
-                      <p className="text-xs text-muted-foreground truncate">{prop.city}, {prop.country}</p>
-                    </div>
-                  </div>
-                  <span className={`text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap ${cfg.className}`}>
-                    {language === "es" ? cfg.labelEs : cfg.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       {/* Global Feed — admin only */}
       {isAdmin && (
