@@ -480,14 +480,17 @@ function WeekRow({
 function EventDetailSheet({
   event,
   onClose,
-  isMasterAdmin,
+  canDelete,
+  isAdmin,
   onDelete,
 }: {
   event: CalEvent | null;
   onClose: () => void;
-  isMasterAdmin: boolean;
+  canDelete: boolean;
+  isAdmin: boolean;
   onDelete: (ev: CalEvent) => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   if (!event) return null;
   const tab = getRoninTabForEvent(event);
   const familyCfg = getFamilyTypeConfig(event.event_type);
@@ -495,8 +498,15 @@ function EventDetailSheet({
   const start = parseISO(event.start_date);
   const end = event.end_date ? parseISO(event.end_date) : null;
 
+  // Birthdays are auto-generated from profiles — cannot be deleted from here
+  const isDeletable = canDelete && event._source !== "birthday" && event.calendar_source !== "ical";
+  // Source label for linked events
+  const sourceLabel = event._source === "maintenance" ? "maintenance issue"
+    : event._source === "orders" ? "delivery order"
+    : "event";
+
   return (
-    <Sheet open={!!event} onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={!!event} onOpenChange={(o) => { if (!o) { setConfirmDelete(false); onClose(); } }}>
       <SheetContent
         side="bottom"
         className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col rounded-t-2xl sm:rounded-2xl"
@@ -577,15 +587,32 @@ function EventDetailSheet({
           )}
         </div>
 
-        {isMasterAdmin && !event._source && (
+        {isDeletable && (
           <div className="flex-shrink-0 pt-3 border-t border-border">
-            <Button
-              variant="ghost" size="sm"
-              className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => { onDelete(event); onClose(); }}
-            >
-              Delete Event
-            </Button>
+            {confirmDelete ? (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmDelete(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive" size="sm" className="flex-1"
+                  onClick={() => { setConfirmDelete(false); onDelete(event); onClose(); }}
+                >
+                  {event._source ? `Delete ${sourceLabel}` : "Delete event"}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost" size="sm"
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <X size={14} className="mr-1" />
+                {event._source === "maintenance" ? "Delete maintenance issue" :
+                 event._source === "orders" ? "Delete delivery order" :
+                 "Delete event"}
+              </Button>
+            )}
           </div>
         )}
       </SheetContent>
