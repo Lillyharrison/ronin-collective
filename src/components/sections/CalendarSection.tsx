@@ -1363,6 +1363,16 @@ export function CalendarSection() {
 
   const activeEvents = mode === "family" ? familyEvents : roninEvents;
 
+  // Properties with scheduled maintenance this month (auto-scoped via RLS)
+  const maintenanceProperties = [...new Set(
+    roninEvents.filter(e => e._tab === "maintenance" && e.property_id).map(e => e.property_id as string)
+  )];
+
+  // Apply property filter when on maintenance tab
+  const filteredActiveEvents = (mode === "ronin" && roninTab === "maintenance" && maintenancePropertyFilter !== "all")
+    ? activeEvents.filter(ev => ev._tab !== "maintenance" || ev.property_id === maintenancePropertyFilter)
+    : activeEvents;
+
   const deleteEvent = async (ev: CalEvent) => {
     if (ev._source === "maintenance" && ev._source_id) {
       // Delete the maintenance issue itself — cascade also removes any auto calendar_events entries
