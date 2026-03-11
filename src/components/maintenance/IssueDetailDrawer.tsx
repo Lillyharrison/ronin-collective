@@ -29,6 +29,10 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
   const { t, language } = useLanguage();
   const isL = language === "es";
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<IssueStatus>(issue.status);
+
+  // Keep pendingStatus in sync if the parent refreshes the issue (e.g. after save)
+  useEffect(() => { setPendingStatus(issue.status); }, [issue.status]);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/70"
