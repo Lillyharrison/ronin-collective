@@ -543,6 +543,14 @@ export function Dashboard() {
         <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
           {language === "es" ? "Acciones Rápidas" : "Quick Actions"}
         </p>
+        {/* Wait until user prefs are loaded to avoid flashing unfiltered actions */}
+        {(userQuickActions === null && !permLoading) ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-xl p-4 min-h-[88px] animate-pulse" />
+            ))}
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-3">
           {ALL_QUICK_ACTIONS_DASHBOARD
             .filter(a => {
