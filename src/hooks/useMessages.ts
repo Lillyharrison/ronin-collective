@@ -96,8 +96,8 @@ export function useMessages(threadId: string | null) {
     if (msg) triggerPushForThread(threadId, senderId, content);
   };
 
-  const sendMediaMessage = async (mediaUrl: string, mediaType: string, senderId: string, caption?: string) => {
-    if (!threadId) return;
+  const sendMediaMessage = async (mediaUrl: string, mediaType: string, senderId: string, caption?: string): Promise<string | null> => {
+    if (!threadId) return null;
     const { data: msg } = await supabase.from("messages").insert({
       thread_id: threadId,
       content_media_url: mediaUrl,
@@ -108,6 +108,7 @@ export function useMessages(threadId: string | null) {
     }).select("id").single();
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
     if (msg) triggerPushForThread(threadId, senderId, caption ?? "📎 Media");
+    return msg?.id ?? null;
   };
 
   /** Fire-and-forget: fetch thread participants and call the push edge function */
