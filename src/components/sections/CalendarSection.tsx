@@ -1188,6 +1188,7 @@ export function CalendarSection() {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showNewEvent, setShowNewEvent] = useState(false);
+  const [maintenancePropertyFilter, setMaintenancePropertyFilter] = useState<string>("all");
   const dragRef = useRef<CalEvent | null>(null);
 
   // ── Fetch family (iCal synced) events ──────────────────────────────────────
@@ -1362,6 +1363,16 @@ export function CalendarSection() {
 
   const activeEvents = mode === "family" ? familyEvents : roninEvents;
 
+  // Properties with scheduled maintenance this month (auto-scoped via RLS)
+  const maintenanceProperties = [...new Set(
+    roninEvents.filter(e => e._tab === "maintenance" && e.property_id).map(e => e.property_id as string)
+  )];
+
+  // Apply property filter when on maintenance tab
+  const filteredActiveEvents = (mode === "ronin" && roninTab === "maintenance" && maintenancePropertyFilter !== "all")
+    ? activeEvents.filter(ev => ev._tab !== "maintenance" || ev.property_id === maintenancePropertyFilter)
+    : activeEvents;
+
   const deleteEvent = async (ev: CalEvent) => {
     if (ev._source === "maintenance" && ev._source_id) {
       // Delete the maintenance issue itself — cascade also removes any auto calendar_events entries
@@ -1391,24 +1402,49 @@ export function CalendarSection() {
   return (
     <div className="animate-fade-in space-y-4 px-4 py-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Calendar</h1>
           <p className="text-sm text-muted-foreground">
             {mode === "family" ? "Family calendar · synced from iCal" : "Ronin calendar · smart & operational"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {isMasterAdmin && (
-            <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
-              <Settings size={18} />
-            </Button>
-          )}
-          {(isMasterAdmin || isAdmin) && (
-            <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
-              <Plus size={14} /> Add
-            </Button>
-          )}
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {isMasterAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
+                <Settings size={18} />
+              </Button>
+            )}
+            {(isMasterAdmin || isAdmin) && (
+              <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
+                <Plus size={14} /> Add
+              </Button>
+            )}
+          </div>
+          {/* Compact legend box — top right */}
+          <div className="rounded-xl border border-border bg-card px-3 py-2 flex flex-col gap-1.5">
+            {mode === "family"
+              ? Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: EVENT_SOLID_COLORS[k] ?? "hsl(var(--accent))" }} />
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{v.label}</span>
+                  </div>
+                ))
+              : Object.entries(RONIN_TAB_CONFIG).filter(([k]) => k !== "all" && k !== "staff").map(([k, v]) => {
+                  const dotColor = k === "birthdays" ? EVENT_SOLID_COLORS.birthdays
+                    : k === "maintenance" ? EVENT_SOLID_COLORS.maintenance
+                    : k === "deliveries" ? EVENT_SOLID_COLORS.delivery
+                    : "hsl(var(--accent))";
+                  return (
+                    <div key={k} className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+                      <span className={cn("text-[10px] whitespace-nowrap", v.color)}>{v.label}</span>
+                    </div>
+                  );
+                })
+            }
+          </div>
         </div>
       </div>
 
@@ -1464,6 +1500,25 @@ export function CalendarSection() {
         </div>
       )}
 
+      {/* Maintenance property filter dropdown */}
+      {mode === "ronin" && roninTab === "maintenance" && maintenanceProperties.length > 1 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground flex-shrink-0">Property:</span>
+          <Select value={maintenancePropertyFilter} onValueChange={(v) => { setMaintenancePropertyFilter(v); }}>
+            <SelectTrigger className="h-8 text-xs w-[200px]">
+              <SelectValue placeholder="All properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All properties</SelectItem>
+              {maintenanceProperties.map((pid) => {
+                const prop = properties.find(p => p.id === pid);
+                return prop ? <SelectItem key={pid} value={pid}>{prop.name}</SelectItem> : null;
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
       {mode === "ronin" && roninTab === "staff" && (
         <StaffCalendarTab canEdit={isMasterAdmin || isAdmin} userId={userId} />
@@ -1510,7 +1565,7 @@ export function CalendarSection() {
                 <WeekRow
                   key={wi}
                   weekDays={weekDays}
-                  allEvents={activeEvents}
+                  allEvents={filteredActiveEvents}
                   isRoninMode={mode === "ronin"}
                   activeTab={roninTab}
                   canDrag={isMasterAdmin}
@@ -1531,39 +1586,12 @@ export function CalendarSection() {
           <RightPanel
             mode={mode}
             roninTab={roninTab}
-            events={roninEvents}
+            events={filteredActiveEvents}
             familyEvents={familyEvents}
             onEventClick={setSelectedEvent}
             selectedDay={selectedDay}
             currentMonth={currentMonth}
           />
-
-          {/* Legend */}
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-xs font-medium text-muted-foreground mb-3">Legend</p>
-            <div className="space-y-2">
-              {mode === "family" ? (
-                Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
-                  <div key={k} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: EVENT_SOLID_COLORS[k] ?? "hsl(var(--accent))" }} />
-                    <span className="text-xs text-muted-foreground">{v.label}</span>
-                  </div>
-                ))
-              ) : (
-                Object.entries(RONIN_TAB_CONFIG).filter(([k]) => k !== "all").map(([k, v]) => (
-                  <div key={k} className="flex items-center gap-2">
-                    <div className={cn("w-2.5 h-2.5 rounded-full border", v.bg)} />
-                    <span className={cn("text-xs", v.color)}>{v.label}</span>
-                  </div>
-                ))
-              )}
-            </div>
-            {mode === "ronin" && (
-              <p className="text-[10px] text-muted-foreground mt-3 border-t border-border pt-2">
-                Drag events to reschedule · updates source record automatically
-              </p>
-            )}
-          </div>
 
           {isMasterAdmin && mode === "family" && (
             <div
