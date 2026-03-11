@@ -1466,7 +1466,7 @@ export function CalendarSection() {
 
       {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
       {mode === "ronin" && roninTab === "staff" && (
-        <StaffCalendarTab canEdit={isMasterAdmin} userId={userId} />
+        <StaffCalendarTab canEdit={isMasterAdmin || isAdmin} userId={userId} />
       )}
 
       {/* ── Calendar grid (hidden when staff tab active) ─────────────────── */}
