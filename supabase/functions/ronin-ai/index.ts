@@ -102,7 +102,7 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "log_maintenance_issue",
-      description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. The issue enters the workflow as 'reported' and awaits admin approval. If the user attached a photo in this conversation, include its URL in photo_url.",
+      description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. If an admin/master_admin is approving the issue (not just reporting it), the issue should be logged as 'approved' immediately. If the user attached a photo in this conversation, include its URL in photo_url. IMPORTANT: If the issue was originally reported by someone else in the conversation (not the person clicking approve), pass their name in reported_by_name so they get proper credit.",
       parameters: {
         type: "object",
         properties: {
@@ -113,6 +113,7 @@ const RONIN_TOOLS = [
           property_name: { type: "string", description: "Property where the issue is located" },
           location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
           photo_url: { type: "string", description: "Public URL of the photo attached in the conversation (from content_media_url). Include whenever the user shared an image related to this issue." },
+          reported_by_name: { type: "string", description: "Full name of the person who originally reported/described the issue in the conversation. Only set if different from the person executing the approval (e.g. Lynn reported it, Lilly approved it → set this to 'Lynn')." },
         },
         required: ["title", "category", "priority"],
       },
@@ -751,14 +752,26 @@ serve(async (req) => {
             .single();
           if (recentMedia?.content_media_url) resolvedPhotoUrl = recentMedia.content_media_url;
         }
+
+        // Resolve the original reporter — could be someone else in the thread
+        let reportedById: string = callerUserId!;
+        if (tool_args.reported_by_name) {
+          const resolvedId = resolveStaffId(tool_args.reported_by_name);
+          if (resolvedId) reportedById = resolvedId;
+        }
+
+        // If the person approving is admin/master_admin, log straight to 'approved'
+        const isCallerAdmin = callerRole === "master_admin" || callerRole === "admin";
+        const issueStatus = isCallerAdmin ? "approved" : "reported";
+
         const { data: issue, error: issueErr } = await adminClient.from("maintenance_issues").insert({
           title: tool_args.title,
           description: tool_args.description ?? null,
           category: tool_args.category,
           priority: tool_args.priority,
-          status: "reported",
+          status: issueStatus,
           source: "ai_chat",
-          reported_by: callerUserId,
+          reported_by: reportedById,
           property_id: propId,
           location_detail: tool_args.location_detail ?? null,
           photo_url: resolvedPhotoUrl,
@@ -780,19 +793,27 @@ serve(async (req) => {
         const priorityEmoji: Record<string, string> = { urgent: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
         const propLabel = tool_args.property_name ? ` @ ${tool_args.property_name}` : "";
         const locationLabel = tool_args.location_detail ? ` — ${tool_args.location_detail}` : "";
-        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nPriority: ${priorityEmoji[tool_args.priority as string] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: **Reported** — awaiting admin approval. Visible in the Maintenance section.`;
+        const reporterName = tool_args.reported_by_name ?? callerName;
+        const statusLabel = issueStatus === "approved" ? "**Approved** — now visible in the active workflow." : "**Reported** — awaiting admin approval. Visible in the Maintenance section.";
+        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nReported by: ${reporterName} | Priority: ${priorityEmoji[tool_args.priority as string] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: ${statusLabel}`;
 
         // Notify all admins + managers with maintenance permissions
+        const notifTitle = issueStatus === "approved"
+          ? `🔧 Maintenance issue approved: "${tool_args.title}"`
+          : `🔧 New maintenance issue reported`;
+        const notifBody = issueStatus === "approved"
+          ? `${reporterName} reported via Ronin AI and ${callerName} approved: "${tool_args.title}"${propLabel}. Now active in the workflow.`
+          : `${reporterName} reported via Ronin AI: "${tool_args.title}"${propLabel}. Awaiting your approval.`;
         await notifyAdminsOfAIAction(
           adminClient,
-          `🔧 New maintenance issue reported`,
-          `${callerName} reported via Ronin AI: "${tool_args.title}"${propLabel}. Awaiting your approval.`,
-          "warning",
+          notifTitle,
+          notifBody,
+          issueStatus === "approved" ? "success" : "warning",
           "maintenance",
           issue.id,
           "maintenance_issue",
-          null, // notify all admins including caller's own admin
-          "maintenance", // also notify managers with maintenance section access
+          null,
+          "maintenance",
         );
 
       // ── create_task ───────────────────────────────────────────────────────
@@ -1016,6 +1037,8 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
 ### WRITE TOOLS — present confirmation before executing:
 - **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order. Category must be one of: Plumbing, Electrical / Tech, Climate / HVAC, Outdoor / Grounds, Appliances, Structural, Security, General. Priority: urgent/high/medium/low.
+  - **REPORTER CREDIT**: If the issue was described by someone else in the conversation (e.g. Lynn said "the curtain rail is broken" and Lilly is approving it), set reported_by_name to the original reporter's name (e.g. "Lynn"). Do NOT credit the approver as the reporter.
+  - **AUTO-APPROVE**: If the caller is a master_admin or admin, the issue is logged as 'approved' immediately — no second approval step needed. State this clearly in your confirmation message.
 - **create_task**: Use for operational work orders that are NOT physical maintenance issues.
 - **log_vendor**: Use when the user shares contact details for a vendor, contractor, service provider, or any business contact. Even from a phone screenshot, pasted vCard, or described verbally. Extract all available fields.
 - **update_task_status**, **log_asset**, **send_staff_message**
