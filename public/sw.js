@@ -1,17 +1,19 @@
 // Ronin Estates Service Worker
 // Strategy:
-//   - App shell (HTML/JS/CSS/fonts) → Cache-first (versioned cache)
-//   - Supabase REST/realtime requests → Network-first with stale fallback
-//   - Everything else → Network-first, no cache
+//   - index.html (navigation) → Cache-first + background revalidate (stale-while-revalidate)
+//   - App shell (JS/CSS/fonts/images) → Cache-first (versioned cache)
+//   - Supabase REST/storage → Network-first with stale fallback
+//   - Auth / edge functions → Always network, never cache
 //
-// This ensures staff on poor WiFi still see stale data rather than a blank screen.
+// The key goal: the app shell (index.html + assets) is served instantly from cache
+// on every open, eliminating the "reload" feeling on iPhone PWA.
 
-const CACHE_VERSION = "ronin-v2";
+const CACHE_VERSION = "ronin-v3";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const DATA_CACHE    = `${CACHE_VERSION}-data`;
 
 // Assets that form the app shell — cached aggressively
-const SHELL_PATTERNS = [/\.js$/, /\.css$/, /\.woff2?$/, /\.png$/, /\.ico$/];
+const SHELL_PATTERNS = [/\.js$/, /\.css$/, /\.woff2?$/, /\.png$/, /\.ico$/, /\.svg$/];
 
 // Supabase REST patterns — cached with stale-while-revalidate
 const DATA_PATTERNS = [/supabase\.co\/rest\/v1\//, /supabase\.co\/storage\/v1\//];
@@ -21,7 +23,11 @@ const NEVER_CACHE = [/\/~oauth/, /functions\/v1\//, /auth\/v1\//];
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 self.addEventListener("install", (event) => {
-  self.skipWaiting();
+  // Pre-cache index.html so it's available instantly on first open
+  event.waitUntil(
+    caches.open(SHELL_CACHE).then(cache => cache.addAll(["/"]))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -48,7 +54,14 @@ self.addEventListener("fetch", (event) => {
   // Never cache auth / edge function calls
   if (NEVER_CACHE.some(p => p.test(url.href))) return;
 
-  // App shell assets — cache-first
+  // HTML navigation — stale-while-revalidate so the app opens instantly
+  // from cache, then silently refreshes for next visit
+  if (request.headers.get("accept")?.includes("text/html")) {
+    event.respondWith(staleWhileRevalidate(request, SHELL_CACHE));
+    return;
+  }
+
+  // App shell assets (JS/CSS/fonts/images) — cache-first
   if (SHELL_PATTERNS.some(p => p.test(url.pathname))) {
     event.respondWith(cacheFirst(request, SHELL_CACHE));
     return;
@@ -59,15 +72,24 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirstWithStale(request, DATA_CACHE));
     return;
   }
-
-  // HTML navigation — network-first, cache index.html as offline fallback
-  if (request.headers.get("accept")?.includes("text/html")) {
-    event.respondWith(networkFirstWithStale(request, SHELL_CACHE));
-    return;
-  }
 });
 
 // ── Strategies ────────────────────────────────────────────────────────────────
+
+// Serve from cache immediately; update cache in background for next visit
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+
+  // Always kick off a background revalidation
+  const networkPromise = fetch(request).then(response => {
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  }).catch(() => null);
+
+  // Return cached instantly if available, otherwise wait for network
+  return cached ?? networkPromise;
+}
 
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
