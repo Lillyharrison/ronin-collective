@@ -827,7 +827,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
         {/* Footer */}
         <div className="border-t border-border px-5 py-4 flex gap-2 flex-shrink-0">
-          {isEditing && (isAdmin || isMasterAdmin) && (
+          {isEditing && (isAdmin || isMasterAdmin || isManager) && (
             <button
               onClick={handleDelete}
               className="p-2.5 rounded-xl border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive transition-colors"
