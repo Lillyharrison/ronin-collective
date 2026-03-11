@@ -45,6 +45,57 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   rules:           ["master_admin", "admin", "manager", "staff"],
 };
 
+// ── localStorage cache helpers ────────────────────────────────────────────────
+// WhatsApp-style: serve cached data immediately, revalidate in background.
+// The cache is keyed by userId so switching accounts works correctly.
+const CACHE_VERSION = "v2";
+const CACHE_TTL_MS  = 5 * 60 * 1000; // 5 min — fresh enough, avoids stale role issues
+
+interface PermissionsCache {
+  version: string;
+  userId: string;
+  role: AppRole | null;
+  level: UserLevel | null;
+  department: UserDepartment;
+  assignedPropertyIds: string[];
+  fullName: string | null;
+  avatarUrl: string | null;
+  sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null;
+  cachedAt: number;
+}
+
+function readCache(userId: string): PermissionsCache | null {
+  try {
+    const raw = localStorage.getItem(`ronin_perms_${userId}`);
+    if (!raw) return null;
+    const parsed: PermissionsCache = JSON.parse(raw);
+    if (parsed.version !== CACHE_VERSION) return null;
+    if (Date.now() - parsed.cachedAt > CACHE_TTL_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function writeCache(data: Omit<PermissionsCache, "version" | "cachedAt">) {
+  try {
+    localStorage.setItem(
+      `ronin_perms_${data.userId}`,
+      JSON.stringify({ ...data, version: CACHE_VERSION, cachedAt: Date.now() })
+    );
+  } catch { /* quota exceeded — silently skip */ }
+}
+
+function clearCache(userId?: string) {
+  if (userId) {
+    localStorage.removeItem(`ronin_perms_${userId}`);
+  } else {
+    // Clear any ronin_perms_* keys
+    Object.keys(localStorage)
+      .filter(k => k.startsWith("ronin_perms_"))
+      .forEach(k => localStorage.removeItem(k));
+  }
+}
+
+// ── Permission builder ────────────────────────────────────────────────────────
 const defaultPermissions: UserPermissions = {
   userId: null,
   role: null,
@@ -137,89 +188,103 @@ function buildPermissions(
 }
 
 /**
- * PermissionsProvider — fetches role + profile ONCE at the app root.
- * All components that call usePermissions() read from this shared context
- * instead of each triggering their own DB queries.
+ * PermissionsProvider — stale-while-revalidate strategy.
+ *
+ * 1. On mount: immediately serve cached permissions (loading = false instantly)
+ *    so the rest of the app can render without waiting for DB.
+ * 2. In parallel: fetch fresh data from DB and update cache + context.
+ *
+ * This is exactly how WhatsApp / Telegram show their UI instantly — they paint
+ * from local state while network data rehydrates silently behind the scenes.
  */
 export function PermissionsProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [role, setRole] = useState<AppRole | null>(null);
-  const [level, setLevel] = useState<UserLevel | null>(null);
-  const [department, setDepartment] = useState<UserDepartment>(null);
-  const [assignedPropertyIds, setAssignedPropertyIds] = useState<string[]>([]);
-  const [fullName, setFullName] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [sectionPermissions, setSectionPermissions] = useState<Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [perms, setPerms] = useState<UserPermissions>(defaultPermissions);
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-      setUserId(user.id);
+    let cancelled = false;
 
-      const [{ data: roleRow }, { data: profile }, { data: rowPerms }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
-        supabase.from("profiles").select("level, department, assigned_property_ids, full_name, avatar_url, section_permissions").eq("id", user.id).maybeSingle(),
-        // Read from the new relational table (preferred source).
-        // Cast to `any` because types.ts auto-generates after migration confirmation.
-        (supabase.from("user_section_permissions" as never).select("section, can_view, can_edit, notifications").eq("user_id", user.id) as unknown as Promise<{ data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean }[] | null }>),
+    async function load(userId: string) {
+      // ── 1. Serve from cache immediately (zero network latency) ───────────
+      const cached = readCache(userId);
+      if (cached && !cancelled) {
+        setPerms(buildPermissions(
+          cached.userId, cached.role, cached.level, cached.department,
+          cached.assignedPropertyIds, cached.fullName, cached.avatarUrl,
+          cached.sectionPermissions, false, // loading = false — use cache now
+        ));
+      }
+
+      // ── 2. Fetch fresh from DB (3 queries in one round-trip) ─────────────
+      const [{ data: roleRow }, { data: profile }, rowPermsResult] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+        supabase.from("profiles")
+          .select("level, department, assigned_property_ids, full_name, avatar_url, section_permissions")
+          .eq("id", userId).maybeSingle(),
+        (supabase.from("user_section_permissions" as never)
+          .select("section, can_view, can_edit, notifications")
+          .eq("user_id", userId)) as unknown as Promise<{
+            data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean }[] | null
+          }>,
       ]);
 
-      if (roleRow) setRole(roleRow.role as AppRole);
-      if (profile) {
-        setLevel((profile.level as UserLevel) || null);
-        setDepartment((profile.department as UserDepartment) || null);
-        setAssignedPropertyIds(profile.assigned_property_ids || []);
-        setFullName(profile.full_name || null);
-        setAvatarUrl(profile.avatar_url || null);
+      if (cancelled) return;
+
+      const role = (roleRow?.role as AppRole) ?? null;
+      const level = (profile?.level as UserLevel) ?? null;
+      const department = (profile?.department as UserDepartment) ?? null;
+      const assignedPropertyIds = profile?.assigned_property_ids ?? [];
+      const fullName = profile?.full_name ?? null;
+      const avatarUrl = profile?.avatar_url ?? null;
+
+      let sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null = null;
+      const rowPerms = rowPermsResult.data;
+      if (rowPerms && rowPerms.length > 0) {
+        sectionPermissions = {};
+        for (const row of rowPerms) {
+          sectionPermissions[row.section] = { view: row.can_view, edit: row.can_edit, notifications: row.notifications };
+        }
+      } else if (profile?.section_permissions && typeof profile.section_permissions === "object") {
+        const permsBlob = profile.section_permissions as Record<string, unknown>;
+        if (Object.keys(permsBlob).length > 0) {
+          sectionPermissions = permsBlob as Record<string, { view: boolean; edit: boolean; notifications: boolean }>;
+        }
       }
 
-      // Prefer the relational table; fall back to the JSON blob on profiles
-      // so existing users aren't broken while the migration propagates.
-      if (rowPerms && rowPerms.length > 0) {
-        const permsFromTable: Record<string, { view: boolean; edit: boolean; notifications: boolean }> = {};
-        for (const row of rowPerms) {
-          permsFromTable[row.section] = { view: row.can_view, edit: row.can_edit, notifications: row.notifications };
-        }
-        setSectionPermissions(permsFromTable);
-      } else if (profile?.section_permissions && typeof profile.section_permissions === "object") {
-        const perms = profile.section_permissions as Record<string, unknown>;
-        if (Object.keys(perms).length > 0) {
-          setSectionPermissions(perms as Record<string, { view: boolean; edit: boolean; notifications: boolean }>);
-        }
-      }
-      setLoading(false);
+      // ── 3. Write back to cache ─────────────────────────────────────────────
+      writeCache({ userId, role, level, department, assignedPropertyIds, fullName, avatarUrl, sectionPermissions });
+
+      // ── 4. Update context with fresh data ─────────────────────────────────
+      setPerms(buildPermissions(
+        userId, role, level, department, assignedPropertyIds,
+        fullName, avatarUrl, sectionPermissions, false,
+      ));
     }
 
-    load();
+    // Wire up auth — use onAuthStateChange as single source of truth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        // Signed out — reset all
-        setUserId(null);
-        setRole(null);
-        setLevel(null);
-        setDepartment(null);
-        setAssignedPropertyIds([]);
-        setFullName(null);
-        setAvatarUrl(null);
-        setSectionPermissions(null);
-        setLoading(false);
+        if (cancelled) return;
+        clearCache();
+        setPerms({ ...defaultPermissions, loading: false });
       } else {
-        setLoading(true);
-        load();
+        load(session.user.id);
       }
     });
-    return () => subscription.unsubscribe();
+
+    // Also trigger on mount for users already signed in (getSession is local/cached)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && !cancelled) load(session.user.id);
+      else if (!session && !cancelled) setPerms({ ...defaultPermissions, loading: false });
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const value = buildPermissions(
-    userId, role, level, department, assignedPropertyIds,
-    fullName, avatarUrl, sectionPermissions, loading,
-  );
-
   return (
-    <PermissionsContext.Provider value={value}>
+    <PermissionsContext.Provider value={perms}>
       {children}
     </PermissionsContext.Provider>
   );
