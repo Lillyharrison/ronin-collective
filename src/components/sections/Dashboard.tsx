@@ -217,16 +217,19 @@ export function Dashboard() {
   // Load user's quick action preferences from their profile
   useEffect(() => {
     if (!userId || permLoading) return;
+    setQaLoading(true);
     supabase
       .from("profiles")
       .select("section_permissions")
       .eq("id", userId)
       .maybeSingle()
       .then(({ data }) => {
-        if (!data?.section_permissions) return;
-        const perms = data.section_permissions as Record<string, unknown>;
-        const qa = perms["_quick_actions"];
-        if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
+        if (data?.section_permissions) {
+          const perms = data.section_permissions as Record<string, unknown>;
+          const qa = perms["_quick_actions"];
+          if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
+        }
+        setQaLoading(false);
       });
   }, [userId, permLoading]);
 
