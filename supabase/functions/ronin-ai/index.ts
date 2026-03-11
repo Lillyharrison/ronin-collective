@@ -740,7 +740,8 @@ serve(async (req) => {
         const propId = resolvePropertyId(tool_args.property_name);
         // Find the most recent image sent in this thread (before this message) to attach
         let resolvedPhotoUrl: string | null = tool_args.photo_url ?? null;
-        if (!resolvedPhotoUrl && ctx.threadId) {
+        const execThreadId: string | null = body.thread_id ?? null;
+        if (!resolvedPhotoUrl && execThreadId) {
           const { data: recentMedia } = await adminClient
             .from("messages")
             .select("content_media_url")
