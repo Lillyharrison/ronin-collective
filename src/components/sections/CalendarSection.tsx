@@ -1500,6 +1500,25 @@ export function CalendarSection() {
         </div>
       )}
 
+      {/* Maintenance property filter dropdown */}
+      {mode === "ronin" && roninTab === "maintenance" && maintenanceProperties.length > 1 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground flex-shrink-0">Property:</span>
+          <Select value={maintenancePropertyFilter} onValueChange={(v) => { setMaintenancePropertyFilter(v); }}>
+            <SelectTrigger className="h-8 text-xs w-[200px]">
+              <SelectValue placeholder="All properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All properties</SelectItem>
+              {maintenanceProperties.map((pid) => {
+                const prop = properties.find(p => p.id === pid);
+                return prop ? <SelectItem key={pid} value={pid}>{prop.name}</SelectItem> : null;
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
       {mode === "ronin" && roninTab === "staff" && (
         <StaffCalendarTab canEdit={isMasterAdmin || isAdmin} userId={userId} />
