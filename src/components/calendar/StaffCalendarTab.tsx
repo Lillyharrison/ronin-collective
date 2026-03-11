@@ -1102,15 +1102,15 @@ export function StaffCalendarTab({
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
   } = useStaffSchedules(weekStart);
 
-  // Load profiles (staff/manager/admin only — exclude principal/extended_family) and properties once
+  // Load profiles (admin + staff only — exclude principal/extended_family) and properties once
   useEffect(() => {
     setProfilesLoading(true);
     Promise.all([
-      // Join with user_roles to get only operational staff roles
+      // Exclude family roles: only admin, manager, staff shown on schedule
       supabase
         .from("user_roles")
         .select("user_id, role")
-        .in("role", ["master_admin", "admin", "manager", "staff"]),
+        .in("role", ["admin", "manager", "staff"]),
       supabase.from("properties").select("id, name").order("sort_order"),
     ]).then(async ([rolesRes, propRes]) => {
       const staffUserIds = (rolesRes.data ?? []).map((r) => r.user_id);
