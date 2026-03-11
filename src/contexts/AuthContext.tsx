@@ -18,20 +18,20 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen FIRST, then get session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // onAuthStateChange is the single source of truth — fires immediately
+    // with the current session on mount (no extra getSession round-trip needed).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
       setLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // getSession reads from local storage synchronously — resolves instantly
+    // and handles the case where onAuthStateChange fires slightly later.
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
       setLoading(false);
     });
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
