@@ -102,7 +102,7 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "log_maintenance_issue",
-      description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. The issue enters the workflow as 'reported' and awaits admin approval. If the user attached a photo in this conversation, include its URL in photo_url.",
+      description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. If an admin/master_admin is approving the issue (not just reporting it), the issue should be logged as 'approved' immediately. If the user attached a photo in this conversation, include its URL in photo_url. IMPORTANT: If the issue was originally reported by someone else in the conversation (not the person clicking approve), pass their name in reported_by_name so they get proper credit.",
       parameters: {
         type: "object",
         properties: {
@@ -113,6 +113,7 @@ const RONIN_TOOLS = [
           property_name: { type: "string", description: "Property where the issue is located" },
           location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
           photo_url: { type: "string", description: "Public URL of the photo attached in the conversation (from content_media_url). Include whenever the user shared an image related to this issue." },
+          reported_by_name: { type: "string", description: "Full name of the person who originally reported/described the issue in the conversation. Only set if different from the person executing the approval (e.g. Lynn reported it, Lilly approved it → set this to 'Lynn')." },
         },
         required: ["title", "category", "priority"],
       },
