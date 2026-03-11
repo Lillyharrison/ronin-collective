@@ -793,19 +793,27 @@ serve(async (req) => {
         const priorityEmoji: Record<string, string> = { urgent: "🔴", high: "🟠", medium: "🟡", low: "🟢" };
         const propLabel = tool_args.property_name ? ` @ ${tool_args.property_name}` : "";
         const locationLabel = tool_args.location_detail ? ` — ${tool_args.location_detail}` : "";
-        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nPriority: ${priorityEmoji[tool_args.priority as string] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: **Reported** — awaiting admin approval. Visible in the Maintenance section.`;
+        const reporterName = tool_args.reported_by_name ?? callerName;
+        const statusLabel = issueStatus === "approved" ? "**Approved** — now visible in the active workflow." : "**Reported** — awaiting admin approval. Visible in the Maintenance section.";
+        resultMessage = `✅ **Maintenance issue logged.**\n\n**${tool_args.title}**${propLabel}${locationLabel}\nReported by: ${reporterName} | Priority: ${priorityEmoji[tool_args.priority as string] ?? "🟡"} ${tool_args.priority} | Category: ${tool_args.category}\n\nStatus: ${statusLabel}`;
 
         // Notify all admins + managers with maintenance permissions
+        const notifTitle = issueStatus === "approved"
+          ? `🔧 Maintenance issue approved: "${tool_args.title}"`
+          : `🔧 New maintenance issue reported`;
+        const notifBody = issueStatus === "approved"
+          ? `${reporterName} reported via Ronin AI and ${callerName} approved: "${tool_args.title}"${propLabel}. Now active in the workflow.`
+          : `${reporterName} reported via Ronin AI: "${tool_args.title}"${propLabel}. Awaiting your approval.`;
         await notifyAdminsOfAIAction(
           adminClient,
-          `🔧 New maintenance issue reported`,
-          `${callerName} reported via Ronin AI: "${tool_args.title}"${propLabel}. Awaiting your approval.`,
-          "warning",
+          notifTitle,
+          notifBody,
+          issueStatus === "approved" ? "success" : "warning",
           "maintenance",
           issue.id,
           "maintenance_issue",
-          null, // notify all admins including caller's own admin
-          "maintenance", // also notify managers with maintenance section access
+          null,
+          "maintenance",
         );
 
       // ── create_task ───────────────────────────────────────────────────────
