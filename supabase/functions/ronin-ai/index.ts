@@ -752,14 +752,26 @@ serve(async (req) => {
             .single();
           if (recentMedia?.content_media_url) resolvedPhotoUrl = recentMedia.content_media_url;
         }
+
+        // Resolve the original reporter — could be someone else in the thread
+        let reportedById: string = callerUserId!;
+        if (tool_args.reported_by_name) {
+          const resolvedId = resolveStaffId(tool_args.reported_by_name);
+          if (resolvedId) reportedById = resolvedId;
+        }
+
+        // If the person approving is admin/master_admin, log straight to 'approved'
+        const isCallerAdmin = callerRole === "master_admin" || callerRole === "admin";
+        const issueStatus = isCallerAdmin ? "approved" : "reported";
+
         const { data: issue, error: issueErr } = await adminClient.from("maintenance_issues").insert({
           title: tool_args.title,
           description: tool_args.description ?? null,
           category: tool_args.category,
           priority: tool_args.priority,
-          status: "reported",
+          status: issueStatus,
           source: "ai_chat",
-          reported_by: callerUserId,
+          reported_by: reportedById,
           property_id: propId,
           location_detail: tool_args.location_detail ?? null,
           photo_url: resolvedPhotoUrl,
