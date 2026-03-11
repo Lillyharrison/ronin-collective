@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { imageUrl } from "@/lib/imageUrl";
 import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
