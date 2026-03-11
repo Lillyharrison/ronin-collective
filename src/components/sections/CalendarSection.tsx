@@ -566,12 +566,12 @@ function EventDetailSheet({
             </div>
           )}
           {event._source === "maintenance" && event._source_id && (
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-400">
+            <div className="rounded-xl border border-amber-500/20 bg-[hsl(38_92%_50%/0.05)] p-3 text-xs text-amber-400">
               ↗ Linked to Maintenance section — drag to reschedule
             </div>
           )}
           {event._source === "orders" && event._source_id && (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs text-emerald-400">
+            <div className="rounded-xl border border-emerald-500/20 bg-[hsl(142_71%_45%/0.05)] p-3 text-xs text-emerald-400">
               ↗ Linked to Orders section — drag to update delivery date
             </div>
           )}
