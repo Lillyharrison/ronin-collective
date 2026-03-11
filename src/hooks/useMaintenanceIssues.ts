@@ -156,10 +156,12 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
 
   const deleteIssue = async (id: string) => {
     // Find the issue title so we can clean up related records
-    const issueTitle = issues.find(i => i.id === id)?.title ?? "";
+    const issue = issues.find(i => i.id === id);
+    const issueTitle = issue?.title ?? "";
 
-    // Clean up: calendar events (auto-generated from this maintenance issue)
-    // and AI-suggested draft tasks referencing this issue's title
+    // Cascade cleanup:
+    // 1. calendar_events auto-generated from this issue (matched by title)
+    // 2. AI-suggested draft tasks referencing this issue
     await Promise.all([
       supabase.from("calendar_events")
         .delete()
