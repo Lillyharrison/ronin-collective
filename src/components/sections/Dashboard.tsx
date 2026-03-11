@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ActiveSection } from "@/contexts/NavigationContext";
 import { imageUrl } from "@/lib/imageUrl";
 import {
-  MapPin, Clock, ShoppingBag, TriangleAlert, CheckSquare,
-  ChevronRight, Activity, Zap, Shield, ClipboardList, X, Bell,
+  Clock, ShoppingBag, TriangleAlert, CheckSquare,
+  Activity, Zap, Shield, ClipboardList, X, Bell,
   Pencil, Check, ExternalLink,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
