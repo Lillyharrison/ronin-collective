@@ -13,8 +13,14 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const VAPID_SUBJECT = (Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com")
-  .trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
+// Clean VAPID subject: strip quotes, angle brackets, and spaces after "mailto:"
+// Apple APNs requires a valid URI like "mailto:user@example.com" — NO spaces, NO angle brackets
+const rawSubject = (Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com")
+  .trim().replace(/^["']/, "").replace(/["',;>]+$/, "").trim();
+const VAPID_SUBJECT = rawSubject
+  .replace(/<([^>]+)>/, "$1")       // <email@example.com> → email@example.com
+  .replace(/^mailto:\s+/, "mailto:") // mailto: email → mailto:email (remove space after colon)
+  .trim();
 
 // ─── Base64url helpers ───────────────────────────────────────────────────────
 
