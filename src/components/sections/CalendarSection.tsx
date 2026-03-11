@@ -1402,24 +1402,49 @@ export function CalendarSection() {
   return (
     <div className="animate-fade-in space-y-4 px-4 py-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Calendar</h1>
           <p className="text-sm text-muted-foreground">
             {mode === "family" ? "Family calendar · synced from iCal" : "Ronin calendar · smart & operational"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {isMasterAdmin && (
-            <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
-              <Settings size={18} />
-            </Button>
-          )}
-          {(isMasterAdmin || isAdmin) && (
-            <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
-              <Plus size={14} /> Add
-            </Button>
-          )}
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {isMasterAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
+                <Settings size={18} />
+              </Button>
+            )}
+            {(isMasterAdmin || isAdmin) && (
+              <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
+                <Plus size={14} /> Add
+              </Button>
+            )}
+          </div>
+          {/* Compact legend box — top right */}
+          <div className="rounded-xl border border-border bg-card px-3 py-2 flex flex-col gap-1.5">
+            {mode === "family"
+              ? Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: EVENT_SOLID_COLORS[k] ?? "hsl(var(--accent))" }} />
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{v.label}</span>
+                  </div>
+                ))
+              : Object.entries(RONIN_TAB_CONFIG).filter(([k]) => k !== "all" && k !== "staff").map(([k, v]) => {
+                  const dotColor = k === "birthdays" ? EVENT_SOLID_COLORS.birthdays
+                    : k === "maintenance" ? EVENT_SOLID_COLORS.maintenance
+                    : k === "deliveries" ? EVENT_SOLID_COLORS.delivery
+                    : "hsl(var(--accent))";
+                  return (
+                    <div key={k} className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+                      <span className={cn("text-[10px] whitespace-nowrap", v.color)}>{v.label}</span>
+                    </div>
+                  );
+                })
+            }
+          </div>
         </div>
       </div>
 
