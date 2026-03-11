@@ -1,8 +1,8 @@
-import { MapPin, Clock, User, Link as LinkIcon } from "lucide-react";
+import { MapPin, Clock, User, Link as LinkIcon, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IssueStatusBadge, IssuePriorityBadge } from "./IssueStatusBadge";
 import type { MaintenanceIssue } from "@/hooks/useMaintenanceIssues";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 interface Props {
   issue: MaintenanceIssue;
@@ -117,6 +117,16 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
               {issue.category}
             </span>
           </div>
+
+          {/* Scheduled date pill — prominently shown when set */}
+          {issue.scheduled_date && (
+            <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1.5 w-fit">
+              <CalendarClock size={11} className="text-blue-400 flex-shrink-0" />
+              <span className="text-[11px] font-medium text-blue-400">
+                {format(new Date(issue.scheduled_date), "MMM d, yyyy")}
+              </span>
+            </div>
+          )}
 
           {/* Meta row */}
           <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
