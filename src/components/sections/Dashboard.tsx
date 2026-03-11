@@ -175,7 +175,39 @@ export function Dashboard() {
       .then(({ count }) => setPendingCount(count ?? 0));
   }, [userId, permLoading]);
 
-  // Load global feed (admin only)
+  // Load principal family member's current location
+  useEffect(() => {
+    (async () => {
+      // Find the profile with role = principal
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "principal")
+        .limit(1)
+        .maybeSingle();
+      if (!roleData?.user_id) { setPrincipalLocation(null); return; }
+
+      // Get their name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", roleData.user_id)
+        .maybeSingle();
+      const firstName = profile?.full_name?.split(" ")[0] ?? "Principal";
+
+      // Find which property they're occupying
+      const { data: props } = await supabase
+        .from("properties")
+        .select("id, name, occupied_by_profile_ids")
+        .contains("occupied_by_profile_ids", [roleData.user_id]);
+      
+      if (!props || props.length === 0) { setPrincipalLocation(null); return; }
+      const prop = props[0];
+      setPrincipalLocation({ name: firstName, propertyName: prop.name, propertyId: prop.id });
+    })();
+  }, []);
+
+
   useEffect(() => {
     if (permLoading) return;
     if (!isAdmin) { setFeedLoading(false); return; }
