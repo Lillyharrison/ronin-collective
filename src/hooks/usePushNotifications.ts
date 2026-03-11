@@ -51,13 +51,15 @@ export function usePushNotifications(userId: string | null) {
         if (result !== "granted") return false;
       }
 
-      let sub = await registration.pushManager.getSubscription();
-      if (!sub) {
-        sub = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-        });
-      }
+      // Always unsubscribe first to ensure subscription uses the current VAPID key.
+      // Reusing an old subscription tied to a different key causes 403 BadJwtToken.
+      const existingSub = await registration.pushManager.getSubscription();
+      if (existingSub) await existingSub.unsubscribe();
+
+      const sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
 
       const subJson = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
 
