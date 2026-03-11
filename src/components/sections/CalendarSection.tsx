@@ -1586,39 +1586,12 @@ export function CalendarSection() {
           <RightPanel
             mode={mode}
             roninTab={roninTab}
-            events={roninEvents}
+            events={filteredActiveEvents}
             familyEvents={familyEvents}
             onEventClick={setSelectedEvent}
             selectedDay={selectedDay}
             currentMonth={currentMonth}
           />
-
-          {/* Legend */}
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-xs font-medium text-muted-foreground mb-3">Legend</p>
-            <div className="space-y-2">
-              {mode === "family" ? (
-                Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
-                  <div key={k} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: EVENT_SOLID_COLORS[k] ?? "hsl(var(--accent))" }} />
-                    <span className="text-xs text-muted-foreground">{v.label}</span>
-                  </div>
-                ))
-              ) : (
-                Object.entries(RONIN_TAB_CONFIG).filter(([k]) => k !== "all").map(([k, v]) => (
-                  <div key={k} className="flex items-center gap-2">
-                    <div className={cn("w-2.5 h-2.5 rounded-full border", v.bg)} />
-                    <span className={cn("text-xs", v.color)}>{v.label}</span>
-                  </div>
-                ))
-              )}
-            </div>
-            {mode === "ronin" && (
-              <p className="text-[10px] text-muted-foreground mt-3 border-t border-border pt-2">
-                Drag events to reschedule · updates source record automatically
-              </p>
-            )}
-          </div>
 
           {isMasterAdmin && mode === "family" && (
             <div
