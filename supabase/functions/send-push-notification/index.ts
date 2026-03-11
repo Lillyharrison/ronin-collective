@@ -1,11 +1,8 @@
 /**
  * send-push-notification
  *
- * Uses jsr:@negrel/webpush — a battle-tested Deno-native library that correctly
- * implements RFC 8291 (aes128gcm) and RFC 8292 (VAPID) for ALL push services
- * including Apple's web.push.apple.com (APNs).
- *
- * Called by: DB trigger on messages INSERT, or directly from client code.
+ * Uses jsr:@negrel/webpush — battle-tested RFC 8291/8292 implementation
+ * for all push services including Apple APNs.
  */
 import { ApplicationServer, importVapidKeys } from "jsr:@negrel/webpush@0.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -13,16 +10,21 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL      = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY       = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const VAPID_PUBLIC_KEY  = Deno.env.get("VAPID_PUBLIC_KEY")!;   // raw base64url uncompressed P-256 point
-const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;  // raw base64url P-256 private scalar
+const VAPID_PUBLIC_KEY  = Deno.env.get("VAPID_PUBLIC_KEY")!;
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const VAPID_SUBJECT     = Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com";
 
-// ─── Convert raw base64url VAPID keys → JWK format expected by importVapidKeys
+// ─── Safe base64url → standard base64 → bytes ─────────────────────────────────
+// Handles both base64url and standard base64 input
 
-function b64uToBytes(b64url: string): Uint8Array {
-  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
-  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
-  return Uint8Array.from(atob(b64 + pad), c => c.charCodeAt(0));
+function b64ToBytes(input: string): Uint8Array {
+  // Normalise: base64url → standard base64
+  let b64 = input.trim().replace(/-/g, "+").replace(/_/g, "/");
+  // Add padding if needed
+  const mod4 = b64.length % 4;
+  if (mod4 === 2) b64 += "==";
+  else if (mod4 === 3) b64 += "=";
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
 }
 
 function bytesToB64u(buf: Uint8Array): string {
@@ -30,19 +32,46 @@ function bytesToB64u(buf: Uint8Array): string {
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+// ─── Build JWK from stored raw base64url VAPID keys ───────────────────────────
+
 function buildVapidJwk() {
-  // Public key is 65-byte uncompressed point: 0x04 || x(32) || y(32)
-  const pubBytes = b64uToBytes(VAPID_PUBLIC_KEY);
-  const x = bytesToB64u(pubBytes.slice(1, 33));
-  const y = bytesToB64u(pubBytes.slice(33, 65));
+  let pubBytes: Uint8Array;
+  let x: string;
+  let y: string;
+
+  try {
+    pubBytes = b64ToBytes(VAPID_PUBLIC_KEY);
+    // Public key should be 65-byte uncompressed EC point: 0x04 | x(32) | y(32)
+    if (pubBytes.length === 65 && pubBytes[0] === 0x04) {
+      x = bytesToB64u(pubBytes.slice(1, 33));
+      y = bytesToB64u(pubBytes.slice(33, 65));
+    } else if (pubBytes.length === 64) {
+      // Some VAPID generators omit the 0x04 prefix
+      x = bytesToB64u(pubBytes.slice(0, 32));
+      y = bytesToB64u(pubBytes.slice(32, 64));
+    } else {
+      throw new Error(`Unexpected public key length: ${pubBytes.length}`);
+    }
+  } catch (e) {
+    throw new Error(`Failed to parse VAPID_PUBLIC_KEY: ${e}`);
+  }
+
+  let d: string;
+  try {
+    // Private key: should be 32 bytes (P-256 scalar), stored as raw base64url
+    const privBytes = b64ToBytes(VAPID_PRIVATE_KEY);
+    d = bytesToB64u(privBytes);
+  } catch (e) {
+    throw new Error(`Failed to parse VAPID_PRIVATE_KEY: ${e}`);
+  }
 
   return {
-    publicKey: { kty: "EC", crv: "P-256", x, y },
-    privateKey: { kty: "EC", crv: "P-256", x, y, d: VAPID_PRIVATE_KEY },
+    publicKey:  { kty: "EC", crv: "P-256", x, y },
+    privateKey: { kty: "EC", crv: "P-256", x, y, d },
   };
 }
 
-// ─── Lazy-initialise the ApplicationServer once per cold-start ─────────────────
+// ─── Lazy-init ApplicationServer once per cold-start ─────────────────────────
 
 let _appServer: ApplicationServer | null = null;
 
@@ -50,8 +79,9 @@ async function getAppServer(): Promise<ApplicationServer> {
   if (_appServer) return _appServer;
 
   const jwk = buildVapidJwk();
-  const vapidKeys = await importVapidKeys(jwk as any);
+  console.log("Built JWK — x length:", jwk.publicKey.x.length, "y length:", jwk.publicKey.y.length, "d length:", jwk.privateKey.d.length);
 
+  const vapidKeys = await importVapidKeys(jwk as any);
   _appServer = await ApplicationServer.new({
     contactInformation: VAPID_SUBJECT,
     vapidKeys,
@@ -60,7 +90,7 @@ async function getAppServer(): Promise<ApplicationServer> {
   return _appServer;
 }
 
-// ─── Main handler ──────────────────────────────────────────────────────────────
+// ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -95,7 +125,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Sending push to ${subs.length} subscription(s) for users:`, recipientUserIds);
+    console.log(`Sending to ${subs.length} subscription(s) for users:`, recipientUserIds);
 
     const appServer = await getAppServer();
 
@@ -117,21 +147,15 @@ Deno.serve(async (req) => {
             endpoint: s.endpoint,
             keys: { p256dh: s.p256dh, auth: s.auth },
           });
-
           await subscriber.pushTextMessage(payload, { urgency: "high", ttl: 86400 });
           sent++;
-          console.log(`✓ Push delivered to ${s.endpoint.slice(0, 50)}…`);
+          console.log(`✓ Delivered → ${s.endpoint.slice(0, 60)}…`);
         } catch (err: any) {
           const status = err?.response?.status ?? err?.status ?? "?";
-          const errBody = typeof err?.response?.text === "function"
-            ? await err.response.text().catch(() => "")
-            : String(err);
-          console.error(`✗ Push failed [${status}] ${s.endpoint.slice(0, 50)}… — ${errBody}`);
-
-          // 410 Gone or 404 = subscription no longer valid
-          if (status === 410 || status === 404) {
-            expiredEndpoints.push(s.endpoint);
-          }
+          let errText = "";
+          try { errText = await err?.response?.text?.() ?? String(err); } catch { errText = String(err); }
+          console.error(`✗ Failed [${status}] ${s.endpoint.slice(0, 60)}… — ${errText}`);
+          if (status === 410 || status === 404) expiredEndpoints.push(s.endpoint);
         }
       })
     );
@@ -141,13 +165,13 @@ Deno.serve(async (req) => {
       console.log(`Cleaned ${expiredEndpoints.length} expired subscription(s)`);
     }
 
-    console.log(`Push result: ${sent}/${subs.length} delivered`);
+    console.log(`Result: ${sent}/${subs.length} delivered`);
 
     return new Response(JSON.stringify({ ok: true, sent, total: subs.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("send-push-notification error:", e);
+    console.error("Error:", String(e));
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
