@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
+import { Bell, X } from "lucide-react";
 
 // ── Lazy-loaded section components ───────────────────────────────────────────
 // Only the active section's bundle is downloaded — everything else is deferred.
@@ -110,11 +111,49 @@ function ActiveSection() {
   }
 }
 
+// ── Push notification prompt banner ──────────────────────────────────────────
+function PushPromptBanner({ userId }: { userId: string }) {
+  const { supported, permission, subscribed, requestAndSubscribe } = usePushNotifications(userId);
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem("push-prompt-dismissed") === "1");
+  const [requesting, setRequesting] = useState(false);
+
+  // Show only if: supported, not yet granted/denied, not subscribed, not dismissed
+  if (!supported || permission === "denied" || subscribed || dismissed) return null;
+  // Don't re-prompt if they already granted permission (auto-subscribe handles it)
+  if (permission === "granted") return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[60] flex items-center gap-3 px-4 py-2.5 bg-gold/95 text-charcoal"
+      style={{ paddingTop: "calc(0.625rem + env(safe-area-inset-top, 0px))" }}>
+      <Bell size={16} className="shrink-0" />
+      <p className="flex-1 text-xs font-medium leading-snug">
+        Enable notifications to get alerts for new messages even when the app is closed.
+      </p>
+      <button
+        onClick={async () => {
+          setRequesting(true);
+          await requestAndSubscribe();
+          setRequesting(false);
+          setDismissed(true);
+          localStorage.setItem("push-prompt-dismissed", "1");
+        }}
+        disabled={requesting}
+        className="shrink-0 text-xs font-bold underline underline-offset-2"
+      >
+        {requesting ? "…" : "Enable"}
+      </button>
+      <button onClick={() => { setDismissed(true); localStorage.setItem("push-prompt-dismissed", "1"); }}
+        className="shrink-0 p-0.5">
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 export function AppShell() {
   const { activeSection, checklistDetailId, checklistDetailPropId, isChatOpen } = useNavigation();
   const { user } = useAuth();
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
-  usePushNotifications(user?.id ?? null);
 
   const [detailTemplate, setDetailTemplate] = useState<ChecklistTemplate | null>(null);
   const [detailPropName, setDetailPropName] = useState<string | undefined>(undefined);
@@ -137,6 +176,7 @@ export function AppShell() {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <Header title={showDetail ? undefined : title} />
+      {user?.id && <PushPromptBanner userId={user.id} />}
 
       <main
         className={activeSection === "messages" ? "h-[100dvh] overflow-hidden" : "min-h-screen pb-20"}
