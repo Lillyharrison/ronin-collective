@@ -10,7 +10,19 @@ import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't refetch just because the user switched tabs — reduces background noise
+      refetchOnWindowFocus: false,
+      // 2-minute stale time: data is considered fresh and won't be re-requested
+      // unless the cache key changes or 2 min elapses
+      staleTime: 2 * 60 * 1000,
+      // Keep unused query results in cache for 5 min before GC
+      gcTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
