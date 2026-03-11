@@ -1231,7 +1231,7 @@ export function CalendarSection() {
               <Settings size={18} />
             </Button>
           )}
-          {isMasterAdmin && (
+          {(isMasterAdmin || isAdmin) && (
             <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
               <Plus size={14} /> Add
             </Button>
