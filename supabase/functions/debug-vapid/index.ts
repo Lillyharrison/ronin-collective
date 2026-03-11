@@ -3,40 +3,42 @@
  */
 import { corsHeaders } from "../_shared/cors.ts";
 
+function cleanSecret(s: string): string {
+  return s.trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const pub = Deno.env.get("VAPID_PUBLIC_KEY") ?? "NOT_SET";
-  const priv = Deno.env.get("VAPID_PRIVATE_KEY") ?? "NOT_SET";
-  const subj = Deno.env.get("VAPID_SUBJECT") ?? "NOT_SET";
+  const rawPub  = Deno.env.get("VAPID_PUBLIC_KEY") ?? "NOT_SET";
+  const rawPriv = Deno.env.get("VAPID_PRIVATE_KEY") ?? "NOT_SET";
+  const rawSubj = Deno.env.get("VAPID_SUBJECT") ?? "NOT_SET";
 
-  // Check each character
-  const pubValid = /^[A-Za-z0-9+/=\-_]+$/.test(pub);
-  const privValid = /^[A-Za-z0-9+/=\-_]+$/.test(priv);
+  const cleanPub  = cleanSecret(rawPub);
+  const cleanPriv = cleanSecret(rawPriv);
+  const cleanSubj = cleanSecret(rawSubj);
 
-  // Try to decode
-  let pubDecodeError = "";
-  let pubLength = 0;
+  function bytesToB64u(buf: Uint8Array): string {
+    return btoa(String.fromCharCode(...buf)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  let pubDecodeResult = "";
+  let pubBytes = 0;
   try {
-    const b64 = pub.trim().replace(/-/g, "+").replace(/_/g, "/");
+    const b64 = cleanPub.replace(/-/g, "+").replace(/_/g, "/");
     const mod4 = b64.length % 4;
     const padded = b64 + (mod4 === 2 ? "==" : mod4 === 3 ? "=" : "");
-    const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
-    pubLength = bytes.length;
+    const decoded = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+    pubBytes = decoded.length;
+    pubDecodeResult = `✓ Decoded to ${pubBytes} bytes. First byte: 0x${decoded[0].toString(16).toUpperCase()} (should be 0x04 for uncompressed point)`;
   } catch (e) {
-    pubDecodeError = String(e);
+    pubDecodeResult = `✗ FAILED: ${e}`;
   }
 
   return new Response(JSON.stringify({
-    pub_length: pub.length,
-    pub_first10: pub.slice(0, 10),
-    pub_last10: pub.slice(-10),
-    pub_valid_chars: pubValid,
-    pub_decode_error: pubDecodeError,
-    pub_decoded_bytes: pubLength,
-    priv_length: priv.length,
-    priv_valid_chars: privValid,
-    subject: subj,
+    raw: { pub: rawPub, pub_len: rawPub.length, priv_len: rawPriv.length },
+    clean: { pub: cleanPub, priv_len: cleanPriv.length, subject: cleanSubj },
+    decode_test: pubDecodeResult,
   }, null, 2), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
