@@ -1,33 +1,25 @@
 /**
  * send-push-notification
  *
- * Uses jsr:@negrel/webpush — battle-tested RFC 8291/8292 implementation
- * for all push services including Apple APNs.
+ * Fully native VAPID + RFC 8291 (aes128gcm) implementation.
+ * No external libraries — uses only Deno built-in crypto.subtle.
+ *
+ * Key fix: Apple APNs requires JWT aud = "https://web.push.apple.com"
+ * (the origin only). Most VAPID libraries incorrectly use the full
+ * endpoint URL which causes BadJwtToken 403 rejections.
  */
-import { ApplicationServer, importVapidKeys } from "jsr:@negrel/webpush@0.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const SUPABASE_URL      = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY       = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const VAPID_SUBJECT = (Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com")
+  .trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
 
-// Strip surrounding JSON quotes/spaces/commas that may have been introduced
-// when these secrets were originally saved from a JSON object.
-function cleanSecret(s: string): string {
-  return s.trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
-}
-
-const VAPID_PUBLIC_KEY  = cleanSecret(Deno.env.get("VAPID_PUBLIC_KEY") ?? "");
-const VAPID_PRIVATE_KEY = cleanSecret(Deno.env.get("VAPID_PRIVATE_KEY") ?? "");
-const VAPID_SUBJECT     = cleanSecret(Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com");
-
-// ─── Safe base64url → standard base64 → bytes ─────────────────────────────────
-// Handles both base64url and standard base64 input
+// ─── Base64url helpers ───────────────────────────────────────────────────────
 
 function b64ToBytes(input: string): Uint8Array {
-  // Normalise: base64url → standard base64
   let b64 = input.trim().replace(/-/g, "+").replace(/_/g, "/");
-  // Add padding if needed
   const mod4 = b64.length % 4;
   if (mod4 === 2) b64 += "==";
   else if (mod4 === 3) b64 += "=";
@@ -39,65 +31,187 @@ function bytesToB64u(buf: Uint8Array): string {
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-// ─── Build JWK from stored raw base64url VAPID keys ───────────────────────────
+function concat(...arrays: Uint8Array[]): Uint8Array {
+  const total = arrays.reduce((s, a) => s + a.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const a of arrays) { out.set(a, offset); offset += a.length; }
+  return out;
+}
 
-function buildVapidJwk() {
-  let pubBytes: Uint8Array;
-  let x: string;
-  let y: string;
+// ─── VAPID JWT ───────────────────────────────────────────────────────────────
+// Apple APNs requires aud = origin (https://web.push.apple.com), NOT the full URL.
 
-  try {
-    pubBytes = b64ToBytes(VAPID_PUBLIC_KEY);
-    // Public key should be 65-byte uncompressed EC point: 0x04 | x(32) | y(32)
-    if (pubBytes.length === 65 && pubBytes[0] === 0x04) {
-      x = bytesToB64u(pubBytes.slice(1, 33));
-      y = bytesToB64u(pubBytes.slice(33, 65));
-    } else if (pubBytes.length === 64) {
-      // Some VAPID generators omit the 0x04 prefix
-      x = bytesToB64u(pubBytes.slice(0, 32));
-      y = bytesToB64u(pubBytes.slice(32, 64));
-    } else {
-      throw new Error(`Unexpected public key length: ${pubBytes.length}`);
-    }
-  } catch (e) {
-    throw new Error(`Failed to parse VAPID_PUBLIC_KEY: ${e}`);
+async function buildVapidToken(endpoint: string): Promise<{ token: string; pubKeyB64u: string }> {
+  const rawPub  = (Deno.env.get("VAPID_PUBLIC_KEY")  ?? "").trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
+  const rawPriv = (Deno.env.get("VAPID_PRIVATE_KEY") ?? "").trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
+
+  const pubBytes  = b64ToBytes(rawPub);
+  const privBytes = b64ToBytes(rawPriv);
+
+  // Uncompressed EC public key: 0x04 | x(32) | y(32)
+  if (pubBytes.length !== 65 || pubBytes[0] !== 0x04) {
+    throw new Error(`Unexpected VAPID public key length: ${pubBytes.length}`);
   }
 
-  let d: string;
-  try {
-    // Private key: should be 32 bytes (P-256 scalar), stored as raw base64url
-    const privBytes = b64ToBytes(VAPID_PRIVATE_KEY);
-    d = bytesToB64u(privBytes);
-  } catch (e) {
-    throw new Error(`Failed to parse VAPID_PRIVATE_KEY: ${e}`);
-  }
+  const x = bytesToB64u(pubBytes.slice(1, 33));
+  const y = bytesToB64u(pubBytes.slice(33, 65));
+  const d = bytesToB64u(privBytes);
+
+  const signingKey = await crypto.subtle.importKey(
+    "jwk",
+    { kty: "EC", crv: "P-256", x, y, d, key_ops: ["sign"] },
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+
+  // aud MUST be the origin only — this is what Apple validates
+  const aud = new URL(endpoint).origin;
+
+  const headerB64  = bytesToB64u(new TextEncoder().encode(JSON.stringify({ typ: "JWT", alg: "ES256" })));
+  const payloadB64 = bytesToB64u(new TextEncoder().encode(JSON.stringify({
+    aud,
+    exp: Math.floor(Date.now() / 1000) + 43200, // 12 hours
+    sub: VAPID_SUBJECT,
+  })));
+
+  const unsigned = `${headerB64}.${payloadB64}`;
+  const sig = new Uint8Array(
+    await crypto.subtle.sign(
+      { name: "ECDSA", hash: "SHA-256" },
+      signingKey,
+      new TextEncoder().encode(unsigned)
+    )
+  );
 
   return {
-    publicKey:  { kty: "EC", crv: "P-256", x, y },
-    privateKey: { kty: "EC", crv: "P-256", x, y, d },
+    token:      `${unsigned}.${bytesToB64u(sig)}`,
+    pubKeyB64u: bytesToB64u(pubBytes),
   };
 }
 
-// ─── Lazy-init ApplicationServer once per cold-start ─────────────────────────
+// ─── RFC 8291 aes128gcm Encryption ──────────────────────────────────────────
 
-let _appServer: ApplicationServer | null = null;
+async function encryptPayload(
+  plaintext: string,
+  p256dh: string,
+  auth: string
+): Promise<Uint8Array> {
+  const plaintextBytes = new TextEncoder().encode(plaintext);
+  const recipientPub   = b64ToBytes(p256dh);
+  const authSecret     = b64ToBytes(auth);
 
-async function getAppServer(): Promise<ApplicationServer> {
-  if (_appServer) return _appServer;
+  // Ephemeral sender key pair
+  const ephemeral = await crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true,
+    ["deriveBits"]
+  );
+  const senderPub = new Uint8Array(
+    await crypto.subtle.exportKey("raw", ephemeral.publicKey)
+  ); // 65 bytes uncompressed
 
-  const jwk = buildVapidJwk();
-  console.log("Built JWK — x length:", jwk.publicKey.x.length, "y length:", jwk.publicKey.y.length, "d length:", jwk.privateKey.d.length);
+  // Import recipient public key
+  const recipientKey = await crypto.subtle.importKey(
+    "raw",
+    recipientPub,
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    []
+  );
 
-  const vapidKeys = await importVapidKeys(jwk as any);
-  _appServer = await ApplicationServer.new({
-    contactInformation: VAPID_SUBJECT,
-    vapidKeys,
-  });
+  // ECDH shared secret
+  const sharedBits = await crypto.subtle.deriveBits(
+    { name: "ECDH", public: recipientKey },
+    ephemeral.privateKey,
+    256
+  );
 
-  return _appServer;
+  // Random 16-byte salt
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // Step 1 — IKM derivation (RFC 8291 §3.1)
+  // IKM = HKDF(IKM=sharedSecret, salt=authSecret, info="WebPush: info\x00"+ua_pub+as_pub, 32)
+  const sharedKey = await crypto.subtle.importKey("raw", sharedBits, "HKDF", false, ["deriveBits"]);
+  const authInfo  = concat(
+    new TextEncoder().encode("WebPush: info\x00"),
+    recipientPub, // ua_public (65 bytes)
+    senderPub     // as_public (65 bytes)
+  );
+  const ikmBits = await crypto.subtle.deriveBits(
+    { name: "HKDF", hash: "SHA-256", salt: authSecret, info: authInfo },
+    sharedKey,
+    256
+  );
+  const ikm = new Uint8Array(ikmBits);
+
+  // Step 2 — CEK = HKDF(IKM=ikm, salt=salt, info="Content-Encoding: aes128gcm\x00", 16)
+  const ikmKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  const cekBits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF", hash: "SHA-256", salt,
+      info: new TextEncoder().encode("Content-Encoding: aes128gcm\x00")
+    },
+    ikmKey,
+    128
+  );
+
+  // Step 3 — NONCE = HKDF(IKM=ikm, salt=salt, info="Content-Encoding: nonce\x00", 12)
+  const ikmKey2 = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  const nonceBits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF", hash: "SHA-256", salt,
+      info: new TextEncoder().encode("Content-Encoding: nonce\x00")
+    },
+    ikmKey2,
+    96
+  );
+
+  // AES-128-GCM encrypt (pad with \x02 record delimiter — no extra padding)
+  const cek   = await crypto.subtle.importKey("raw", new Uint8Array(cekBits), "AES-GCM", false, ["encrypt"]);
+  const nonce = new Uint8Array(nonceBits);
+  const padded = concat(plaintextBytes, new Uint8Array([2]));
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, tagLength: 128 }, cek, padded)
+  );
+
+  // RFC 8291 binary structure:
+  // salt(16) | rs(4 BE = 4096) | keyid_len(1 = 65) | senderPub(65) | ciphertext
+  const rs = new Uint8Array(4);
+  new DataView(rs.buffer).setUint32(0, 4096, false);
+
+  return concat(salt, rs, new Uint8Array([65]), senderPub, ciphertext);
 }
 
-// ─── Main handler ─────────────────────────────────────────────────────────────
+// ─── Send a single push ──────────────────────────────────────────────────────
+
+async function sendPush(
+  endpoint: string,
+  p256dh: string,
+  auth: string,
+  payload: string
+): Promise<{ ok: boolean; status: number; body: string }> {
+  const { token, pubKeyB64u } = await buildVapidToken(endpoint);
+  const encrypted = await encryptPayload(payload, p256dh, auth);
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization":     `vapid t=${token},k=${pubKeyB64u}`,
+      "Content-Type":      "application/octet-stream",
+      "Content-Encoding":  "aes128gcm",
+      "TTL":               "86400",
+      "Urgency":           "high",
+    },
+    body: encrypted,
+  });
+
+  const body = await res.text().catch(() => "");
+  return { ok: res.ok, status: res.status, body };
+}
+
+// ─── Main handler ────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -134,13 +248,11 @@ Deno.serve(async (req) => {
 
     console.log(`Sending to ${subs.length} subscription(s) for users:`, recipientUserIds);
 
-    const appServer = await getAppServer();
-
     const payload = JSON.stringify({
       title,
       body,
       url: url ?? "/",
-      icon: "/icons/icon-192.png",
+      icon:  "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
     });
 
@@ -150,19 +262,18 @@ Deno.serve(async (req) => {
     await Promise.allSettled(
       subs.map(async (s) => {
         try {
-          const subscriber = appServer.subscribe({
-            endpoint: s.endpoint,
-            keys: { p256dh: s.p256dh, auth: s.auth },
-          });
-          await subscriber.pushTextMessage(payload, { urgency: "high", ttl: 86400 });
-          sent++;
-          console.log(`✓ Delivered → ${s.endpoint.slice(0, 60)}…`);
-        } catch (err: any) {
-          const status = err?.response?.status ?? err?.status ?? "?";
-          let errText = "";
-          try { errText = await err?.response?.text?.() ?? String(err); } catch { errText = String(err); }
-          console.error(`✗ Failed [${status}] ${s.endpoint.slice(0, 60)}… — ${errText}`);
-          if (status === 410 || status === 404) expiredEndpoints.push(s.endpoint);
+          const result = await sendPush(s.endpoint, s.p256dh, s.auth, payload);
+          if (result.ok || result.status === 201) {
+            sent++;
+            console.log(`✓ Delivered → ${s.endpoint.slice(0, 60)}…`);
+          } else {
+            console.error(`✗ Failed [${result.status}] ${s.endpoint.slice(0, 60)}… — ${result.body}`);
+            if (result.status === 410 || result.status === 404) {
+              expiredEndpoints.push(s.endpoint);
+            }
+          }
+        } catch (err) {
+          console.error(`✗ Error → ${s.endpoint.slice(0, 60)}… — ${String(err)}`);
         }
       })
     );
