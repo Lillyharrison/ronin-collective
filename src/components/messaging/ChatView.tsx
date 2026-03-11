@@ -210,7 +210,7 @@ export function ChatView({
     const file = e.target.files?.[0];
     if (!file) return;
     const captionText = input.trim();
-    setInput("");
+    clearDraft();
     setSending(true);
     await handleMediaSend(file, captionText, false);
     setSending(false);
