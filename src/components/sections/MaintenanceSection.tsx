@@ -423,7 +423,7 @@ export function MaintenanceSection() {
                         {col.key === "reported" && (isMasterAdmin || isAdmin) && (
                           <button
                             onClick={e => { e.stopPropagation(); handleApprove(issue); }}
-                            className="absolute bottom-2 right-2 opacity-0 group-hover/card:opacity-100 flex items-center gap-1 bg-green-600/90 hover:bg-green-600 text-white text-[10px] font-semibold px-2 py-1 rounded-full transition-all shadow-lg"
+                            className="absolute bottom-2 right-2 opacity-0 group-hover/card:opacity-100 flex items-center gap-1 bg-[hsl(var(--status-done)/0.9)] hover:bg-[hsl(var(--status-done))] text-white text-[10px] font-semibold px-2 py-1 rounded-full transition-all shadow-lg"
                             title="Quick approve"
                           >
                             <CheckCircle2 size={10} /> {isL ? "Aprobar" : "Approve"}
