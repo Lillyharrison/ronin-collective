@@ -1585,8 +1585,18 @@ export function CalendarSection() {
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
         canDelete={isMasterAdmin || isAdmin}
-        isAdmin={isAdmin}
+        canEdit={isMasterAdmin || isAdmin || (selectedEvent?.calendar_source === "manual")}
+        userId={userId}
         onDelete={deleteEvent}
+        onEdit={(ev) => { setSelectedEvent(null); setEditingEvent(ev); }}
+      />
+      <EditEventDialog
+        event={editingEvent}
+        open={!!editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onSave={refresh}
+        properties={properties}
+        userId={userId}
       />
       <CalendarSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} properties={properties} />
       <NewEventDialog open={showNewEvent} onClose={() => setShowNewEvent(false)} onSave={refresh} properties={properties} userId={userId} />
