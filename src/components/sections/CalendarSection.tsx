@@ -746,31 +746,43 @@ function EventDetailSheet({
           )}
         </div>
 
-        {isDeletable && (
-          <div className="flex-shrink-0 pt-3 border-t border-border">
-            {confirmDelete ? (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmDelete(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive" size="sm" className="flex-1"
-                  onClick={() => { setConfirmDelete(false); onDelete(event); onClose(); }}
-                >
-                  {event._source ? `Delete ${sourceLabel}` : "Delete event"}
-                </Button>
-              </div>
-            ) : (
+        {(isDeletable || (canEdit && isEditableEvent)) && (
+          <div className="flex-shrink-0 pt-3 border-t border-border space-y-2">
+            {canEdit && isEditableEvent && !confirmDelete && (
               <Button
-                variant="ghost" size="sm"
-                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => setConfirmDelete(true)}
+                variant="outline" size="sm"
+                className="w-full gap-1"
+                onClick={() => { onEdit(event); onClose(); }}
               >
-                <X size={14} className="mr-1" />
-                {event._source === "maintenance" ? "Delete maintenance issue" :
-                 event._source === "orders" ? "Delete delivery order" :
-                 "Delete event"}
+                <Settings size={14} className="mr-1" />
+                Edit event
               </Button>
+            )}
+            {isDeletable && (
+              confirmDelete ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmDelete(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive" size="sm" className="flex-1"
+                    onClick={() => { setConfirmDelete(false); onDelete(event); onClose(); }}
+                  >
+                    {event._source ? `Delete ${sourceLabel}` : "Delete event"}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost" size="sm"
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <X size={14} className="mr-1" />
+                  {event._source === "maintenance" ? "Delete maintenance issue" :
+                   event._source === "orders" ? "Delete delivery order" :
+                   "Delete event"}
+                </Button>
+              )
             )}
           </div>
         )}
