@@ -148,7 +148,7 @@ export function Dashboard() {
   const [reportIssueOpen, setReportIssueOpen] = useState(false);
   const [userQuickActions, setUserQuickActions] = useState<string[] | null>(null);
   const [qaLoading, setQaLoading] = useState(true);
-  const [principalLocation, setPrincipalLocation] = useState<PrincipalLocation | null | undefined>(undefined); // undefined = loading
+  const [principalLocation, setPrincipalLocation] = useState<PrincipalLocation | null | undefined>(undefined);
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
@@ -161,151 +161,141 @@ export function Dashboard() {
   const [taglineEndDate, setTaglineEndDate] = useState("");
   const taglineInputRef = useRef<HTMLInputElement>(null);
 
-
-
-  // Load pending task count — always scoped to current user only
-  useEffect(() => {
-    if (!userId || permLoading) return;
-    supabase
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .in("status", ["pending", "in_progress", "urgent"])
-      .eq("is_draft", false)
-      .eq("assigned_to", userId)
-      .then(({ count }) => setPendingCount(count ?? 0));
-  }, [userId, permLoading]);
-
-  // Load principal family member's current location
-  // Prefers the explicit principal_user_id from system_settings (set via Meet the People toggle),
-  // falls back to the first user with role = 'principal'.
-  useEffect(() => {
-    (async () => {
-      // 1. Check system_settings for an explicit principal designation
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: setting } = await (supabase as any)
-        .from("system_settings")
-        .select("value")
-        .eq("key", "principal_user_id")
-        .maybeSingle();
-
-      let principalUserId: string | null = (setting?.value as string) ?? null;
-
-      // 2. Fall back: first user with role = principal
-      if (!principalUserId) {
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("role", "principal")
-          .limit(1)
-          .maybeSingle();
-        principalUserId = roleData?.user_id ?? null;
-      }
-
-      if (!principalUserId) { setPrincipalLocation(null); return; }
-
-      // 3. Get their display name
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", principalUserId)
-        .maybeSingle();
-      const firstName = profile?.full_name?.split(" ")[0] ?? "Principal";
-
-      // 4. Find which property they're occupying
-      const { data: props } = await supabase
-        .from("properties")
-        .select("id, name, occupied_by_profile_ids")
-        .contains("occupied_by_profile_ids", [principalUserId]);
-
-      if (!props || props.length === 0) { setPrincipalLocation(null); return; }
-      const prop = props[0];
-      setPrincipalLocation({ name: firstName, propertyName: prop.name, propertyId: prop.id });
-    })();
-  }, []);
-
-
-  useEffect(() => {
-    if (permLoading) return;
-    if (!isAdmin) { setFeedLoading(false); return; }
-    supabase
-      .from("system_events")
-      .select("id, event_type, entity_type, payload, created_at, property_id")
-      .order("created_at", { ascending: false })
-      .limit(10)
-      .then(async ({ data }) => {
-        if (!data) { setFeedLoading(false); return; }
-        const propIds = [...new Set(data.map((e) => e.property_id).filter(Boolean))] as string[];
-        let propNames: Record<string, string> = {};
-        if (propIds.length) {
-          const { data: props } = await supabase.from("properties").select("id, name").in("id", propIds);
-          (props ?? []).forEach((p: { id: string; name: string }) => { propNames[p.id] = p.name; });
-        }
-        setFeedEvents(data.map((e) => ({
-          ...e,
-          payload: e.payload as Record<string, unknown> | null,
-          propertyName: e.property_id ? propNames[e.property_id] : undefined,
-        })));
-        setFeedLoading(false);
-      });
-  }, [isAdmin, permLoading]);
-
-  // Load tagline override from DB (shared across all users)
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any).from("system_settings")
-      .select("value")
-      .eq("key", "dashboard_tagline")
-      .maybeSingle()
-      .then(({ data }: { data: { value: TaglineOverride } | null }) => {
-        if (!data?.value) return;
-        const v = data.value as TaglineOverride;
-        if (v.expiresAt && new Date(v.expiresAt) < new Date()) {
-          // Expired — delete it
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase as any).from("system_settings").delete().eq("key", "dashboard_tagline");
-          return;
-        }
-        setTaglineOverride(v);
-      });
-  }, []);
-
-  // Load user's quick action preferences from their profile
-  useEffect(() => {
-    if (!userId || permLoading) return;
-    setQaLoading(true);
-    supabase
-      .from("profiles")
-      .select("section_permissions")
-      .eq("id", userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.section_permissions) {
-          const perms = data.section_permissions as Record<string, unknown>;
-          const qa = perms["_quick_actions"];
-          if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
-        }
-        setQaLoading(false);
-      });
-  }, [userId, permLoading]);
-
-  // Load notifications for the dashboard widget — filtered per user via acknowledged_by
-  // Each user sees notifications they haven't personally acknowledged yet
+  // ── Single batched load: all dashboard data in one Promise.all ───────────────
+  // This replaces 6 separate useEffects that each fired independently, causing
+  // a waterfall of sequential or near-simultaneous DB hits on every dashboard open.
   const loadDashNotifs = useCallback(async () => {
     if (!userId || permLoading) return;
-
-    let query = supabase
+    const { data } = await supabase
       .from("notifications")
       .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id")
       .eq("user_id", userId)
       .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
       .limit(10);
-
-    const { data } = await query;
     setDashNotifs((data as DashNotification[]) ?? []);
-  }, [userId, isMasterAdmin, permLoading]);
+  }, [userId, permLoading]);
 
-  useEffect(() => { loadDashNotifs(); }, [loadDashNotifs]);
+  useEffect(() => {
+    if (!userId || permLoading) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supa = supabase as any;
+
+    Promise.all([
+      // 1. Pending tasks (count only — very fast HEAD request)
+      supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "in_progress", "urgent"])
+        .eq("is_draft", false)
+        .eq("assigned_to", userId),
+
+      // 2. Quick action prefs from profile
+      supabase
+        .from("profiles")
+        .select("section_permissions")
+        .eq("id", userId)
+        .maybeSingle(),
+
+      // 3. Dashboard notifications (unread)
+      supabase
+        .from("notifications")
+        .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id")
+        .eq("user_id", userId)
+        .not("acknowledged_by", "cs", `{${userId}}`)
+        .order("created_at", { ascending: false })
+        .limit(10),
+
+      // 4. Tagline override
+      supa.from("system_settings")
+        .select("value")
+        .eq("key", "dashboard_tagline")
+        .maybeSingle(),
+
+      // 5. Principal user_id setting
+      supa.from("system_settings")
+        .select("value")
+        .eq("key", "principal_user_id")
+        .maybeSingle(),
+
+      // 6. Activity feed (admins only — null result ignored below)
+      isAdmin
+        ? supabase
+            .from("system_events")
+            .select("id, event_type, entity_type, payload, created_at, property_id")
+            .order("created_at", { ascending: false })
+            .limit(10)
+        : Promise.resolve({ data: null }),
+    ]).then(async ([
+      { count: taskCount },
+      { data: profileData },
+      { data: notifsData },
+      { data: taglineSetting },
+      { data: principalSetting },
+      { data: eventsData },
+    ]) => {
+      // 1. Pending count
+      setPendingCount(taskCount ?? 0);
+
+      // 2. Quick actions
+      if (profileData?.section_permissions) {
+        const perms = profileData.section_permissions as Record<string, unknown>;
+        const qa = perms["_quick_actions"];
+        if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
+      }
+      setQaLoading(false);
+
+      // 3. Notifications
+      setDashNotifs((notifsData as DashNotification[]) ?? []);
+
+      // 4. Tagline
+      if (taglineSetting?.value) {
+        const v = taglineSetting.value as TaglineOverride;
+        if (v.expiresAt && new Date(v.expiresAt) < new Date()) {
+          supa.from("system_settings").delete().eq("key", "dashboard_tagline");
+        } else {
+          setTaglineOverride(v);
+        }
+      }
+
+      // 5 + principal location (needs follow-up queries but we run them in parallel too)
+      let principalUserId: string | null = (principalSetting?.value as string) ?? null;
+      if (!principalUserId) {
+        const { data: roleData } = await supabase
+          .from("user_roles").select("user_id").eq("role", "principal").limit(1).maybeSingle();
+        principalUserId = roleData?.user_id ?? null;
+      }
+      if (principalUserId) {
+        const [{ data: principalProfile }, { data: occupiedProps }] = await Promise.all([
+          supabase.from("profiles").select("full_name").eq("id", principalUserId).maybeSingle(),
+          supabase.from("properties").select("id, name, occupied_by_profile_ids")
+            .contains("occupied_by_profile_ids", [principalUserId]),
+        ]);
+        const firstName = principalProfile?.full_name?.split(" ")[0] ?? "Principal";
+        const prop = occupiedProps?.[0];
+        setPrincipalLocation(prop ? { name: firstName, propertyName: prop.name, propertyId: prop.id } : null);
+      } else {
+        setPrincipalLocation(null);
+      }
+
+      // 6. Activity feed
+      if (eventsData) {
+        const propIds = [...new Set(eventsData.map((e: { property_id: string | null }) => e.property_id).filter(Boolean))] as string[];
+        let propNames: Record<string, string> = {};
+        if (propIds.length) {
+          const { data: props } = await supabase.from("properties").select("id, name").in("id", propIds);
+          (props ?? []).forEach((p: { id: string; name: string }) => { propNames[p.id] = p.name; });
+        }
+        setFeedEvents(eventsData.map((e: FeedEvent) => ({
+          ...e,
+          payload: e.payload as Record<string, unknown> | null,
+          propertyName: e.property_id ? propNames[e.property_id] : undefined,
+        })));
+      }
+      setFeedLoading(false);
+    });
+  }, [userId, isAdmin, permLoading]);
 
   // Realtime: refresh dashboard notifications when new ones arrive
   useEffect(() => {
