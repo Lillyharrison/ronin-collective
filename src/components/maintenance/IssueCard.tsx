@@ -94,6 +94,14 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
                   : `${daysOpen}d open`}
               </span>
             </div>
+            {issue.scheduled_date && (
+              <div className="flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 rounded-md px-1.5 py-0.5 w-fit">
+                <CalendarClock size={9} className="text-blue-400 flex-shrink-0" />
+                <span className="text-[10px] font-medium text-blue-400">
+                  {format(new Date(issue.scheduled_date), "MMM d, yyyy")}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       ) : (
