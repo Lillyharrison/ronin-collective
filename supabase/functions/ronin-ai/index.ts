@@ -282,7 +282,7 @@ async function callLLMSync(
   messages: unknown[],
   tools: unknown[],
   apiKey: string,
-  model = "openai/gpt-5"
+  model = "google/gemini-3-flash-preview"
 ): Promise<{
   choices: Array<{
     finish_reason: string;
@@ -450,23 +450,31 @@ async function executeObservationTool(
   return { error: `Unknown observation tool: ${name}` };
 }
 
-/** Silently save a memory to the knowledge base */
+/** Silently save a memory to the knowledge base.
+ *  Accepts optional pre-loaded props/staff arrays to avoid redundant DB fetches. */
 async function saveMemorySilently(
   args: Record<string, unknown>,
-  adminClient: ReturnType<typeof createClient>
+  adminClient: ReturnType<typeof createClient>,
+  ctxProps?: Array<Record<string, unknown>>,
+  ctxStaff?: Array<Record<string, unknown>>,
 ): Promise<void> {
   try {
-    const [pRes, sRes] = await Promise.all([
-      adminClient.from("properties").select("id, name"),
-      adminClient.from("profiles").select("id, full_name"),
-    ]);
+    // Only fetch if no context was passed in
+    let props = ctxProps;
+    let staff = ctxStaff;
+    if (!props || !staff) {
+      const [pRes, sRes] = await Promise.all([
+        adminClient.from("properties").select("id, name"),
+        adminClient.from("profiles").select("id, full_name"),
+      ]);
+      props = pRes.data ?? [];
+      staff = sRes.data ?? [];
+    }
     const memPropId = args.property_hint
-      ? (pRes.data ?? []).find((p: { id: string; name: string }) =>
-          p.name.toLowerCase().includes((args.property_hint as string).toLowerCase()))?.id ?? null
+      ? (props).find((p) => (p.name as string).toLowerCase().includes((args.property_hint as string).toLowerCase()))?.id as string ?? null
       : null;
     const memSubjectId = args.subject_name
-      ? (sRes.data ?? []).find((s: { id: string; full_name: string | null }) =>
-          (s.full_name ?? "").toLowerCase().includes((args.subject_name as string).toLowerCase()))?.id ?? null
+      ? (staff).find((s) => ((s.full_name as string) ?? "").toLowerCase().includes((args.subject_name as string).toLowerCase()))?.id as string ?? null
       : null;
     await adminClient.from("ronin_memories").insert({
       content: args.content, summary: args.summary,
@@ -1174,7 +1182,7 @@ Analyse the photo carefully:
           .select("id, content_text, is_ai_generated, sender_id")
           .eq("thread_id", thread_id)
           .order("created_at", { ascending: true })
-          .limit(30);
+          .limit(25); // Reduced from 30 — context window efficiency
 
         const dbHistory = cleanHistory(
           (dbMessages ?? []).filter(m => m.content_text && m.id !== undefined)
@@ -1182,14 +1190,17 @@ Analyse the photo carefully:
 
         const initialMessages: unknown[] = [baseSystemMsg, ...dbHistory, currentUserMessage];
         const ctx: ContextData = { props, staff };
-        const MAX_ITERATIONS = 5;
+        const MAX_ITERATIONS = 4; // Reduced: most flows need 1-2 iterations max
         let loopMessages: unknown[] = [...initialMessages];
         let finalText = "";
         let pendingWriteTool: { name: string; args: Record<string, unknown> } | null = null;
 
+        // Use gemini-flash for the ReAct tool-calling loop — it's 3-5x faster and handles
+        // tool calls just as well. GPT-5 is reserved for complex reasoning only.
+        const LOOP_MODEL = "google/gemini-3-flash-preview";
+
         for (let i = 0; i < MAX_ITERATIONS; i++) {
-          const model = "openai/gpt-5";
-          const resp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, model);
+          const resp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, LOOP_MODEL);
           const choice = resp.choices?.[0];
           if (!choice) break;
 
@@ -1208,36 +1219,41 @@ Analyse the photo carefully:
           const toolResults: unknown[] = [];
           let hitWriteTool = false;
 
-          for (const tc of toolCalls) {
+          // Execute all tool calls in parallel where possible
+          const toolPromises = toolCalls.map(async (tc) => {
             const toolName = tc.function.name;
             let toolArgs: Record<string, unknown> = {};
             try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
 
             if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
               const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
-              toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+              return { role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) };
 
             } else if (SILENT_TOOL_NAMES.includes(toolName)) {
+              // Pass pre-loaded context to avoid redundant DB fetches
               if (toolName === "add_shopping_list_item") {
                 await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
               } else {
-                await saveMemorySilently(toolArgs, adminClient);
+                await saveMemorySilently(toolArgs, adminClient, props, staff);
               }
-              toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
+              return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) };
 
             } else if (WRITE_TOOL_NAMES.includes(toolName)) {
               pendingWriteTool = { name: toolName, args: toolArgs };
-              toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) });
               hitWriteTool = true;
+              return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) };
             }
-          }
+            return null;
+          });
+
+          const results = await Promise.all(toolPromises);
+          for (const r of results) { if (r) toolResults.push(r); }
 
           loopMessages = [...loopMessages, ...toolResults];
 
           if (hitWriteTool) {
-            const confirmResp = await callLLMSync(loopMessages, [], LOVABLE_API_KEY, "google/gemini-2.5-flash");
-            finalText = stripThinking(confirmResp.choices?.[0]?.message?.content
-              ?? buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args));
+            // Use the deterministic builder — no extra LLM round-trip needed for confirmations
+            finalText = buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args);
             break;
           }
         }
@@ -1270,12 +1286,12 @@ Analyse the photo carefully:
       );
       const streamInitialMessages: unknown[] = [baseSystemMsg, ...cleanedClientHistory, currentUserMessage];
       const ctx: ContextData = { props, staff };
-      const MAX_ITER = 5;
+      const MAX_ITER = 4;
       let loopMessages: unknown[] = [...streamInitialMessages];
       let precomputedFinal: string | null = null;
 
       for (let i = 0; i < MAX_ITER; i++) {
-        const iterResp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, "google/gemini-2.5-flash");
+        const iterResp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, "google/gemini-3-flash-preview");
         const choice = iterResp.choices?.[0];
         if (!choice) break;
 
@@ -1288,32 +1304,33 @@ Analyse the photo carefully:
           tool_calls: toolCalls,
         }];
 
-        const toolResults: unknown[] = [];
-        for (const tc of toolCalls) {
+        // Execute all tool calls in parallel
+        const toolPromises = toolCalls.map(async (tc) => {
           const toolName = tc.function.name;
           let toolArgs: Record<string, unknown> = {};
           try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
 
           if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
             const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
-            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+            return { role: "tool", tool_call_id: tc.id, content: JSON.stringify(result), isPending: false };
           } else if (SILENT_TOOL_NAMES.includes(toolName)) {
             if (toolName === "add_shopping_list_item") {
               await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
             } else {
-              await saveMemorySilently(toolArgs, adminClient);
+              // Pass pre-loaded context — no redundant DB queries
+              await saveMemorySilently(toolArgs, adminClient, props, staff);
             }
-            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
+            return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }), isPending: false };
           } else if (WRITE_TOOL_NAMES.includes(toolName)) {
-            const confirmResp = await callLLMSync(
-              [...loopMessages, { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) }],
-              [], LOVABLE_API_KEY, "google/gemini-2.5-flash"
-            );
-            precomputedFinal = confirmResp.choices?.[0]?.message?.content ?? buildConfirmationMessage(toolName, toolArgs);
-            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) });
+            // Use deterministic builder — no extra LLM round-trip
+            precomputedFinal = buildConfirmationMessage(toolName, toolArgs);
+            return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }), isPending: true };
           }
-        }
-        loopMessages = [...loopMessages, ...toolResults];
+          return null;
+        });
+
+        const results = await Promise.all(toolPromises);
+        for (const r of results) { if (r) loopMessages = [...loopMessages, { role: r.role, tool_call_id: r.tool_call_id, content: r.content }]; }
         if (precomputedFinal) break;
       }
 
