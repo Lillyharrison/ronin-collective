@@ -1130,19 +1130,30 @@ export function StaffCalendarTab({
   useEffect(() => {
     setProfilesLoading(true);
     Promise.all([
-      // Exclude family roles: only admin, manager, staff shown on schedule
-      supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .in("role", ["admin", "manager", "staff"]),
+      supabase.from("user_roles").select("user_id, role"),
       supabase.from("properties").select("id, name").order("sort_order"),
     ]).then(async ([rolesRes, propRes]) => {
-      const staffUserIds = (rolesRes.data ?? []).map((r) => r.user_id);
-      if (staffUserIds.length > 0) {
+      const allRoles = rolesRes.data ?? [];
+
+      // Build sets: who has a family role, who has a staff role
+      const familyRoles = new Set(["principal", "extended_family"]);
+      const staffRoles = new Set(["admin", "manager", "staff"]);
+
+      const hasFamilyRole = new Set(
+        allRoles.filter((r) => familyRoles.has(r.role)).map((r) => r.user_id)
+      );
+      // Only include users who have a staff/admin/manager role AND do NOT also have a family role
+      const staffUserIds = allRoles
+        .filter((r) => staffRoles.has(r.role) && !hasFamilyRole.has(r.user_id))
+        .map((r) => r.user_id);
+
+      const uniqueStaffIds = [...new Set(staffUserIds)];
+
+      if (uniqueStaffIds.length > 0) {
         const { data: profileData } = await supabase
           .from("profiles")
           .select("id, full_name, avatar_url, job_title, department")
-          .in("id", staffUserIds)
+          .in("id", uniqueStaffIds)
           .order("full_name");
         setProfiles((profileData as Profile[]) ?? []);
       } else {
