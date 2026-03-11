@@ -1565,7 +1565,7 @@ export function CalendarSection() {
                 <WeekRow
                   key={wi}
                   weekDays={weekDays}
-                  allEvents={activeEvents}
+                  allEvents={filteredActiveEvents}
                   isRoninMode={mode === "ronin"}
                   activeTab={roninTab}
                   canDrag={isMasterAdmin}
