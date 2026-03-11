@@ -7,7 +7,7 @@ import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
   Clock, ShoppingBag, TriangleAlert, CheckSquare,
   Activity, Zap, Shield, ClipboardList, X, Bell,
-  Pencil, Check, ExternalLink,
+  Pencil, Check, ExternalLink, MapPin,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
