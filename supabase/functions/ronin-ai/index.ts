@@ -1286,12 +1286,12 @@ Analyse the photo carefully:
       );
       const streamInitialMessages: unknown[] = [baseSystemMsg, ...cleanedClientHistory, currentUserMessage];
       const ctx: ContextData = { props, staff };
-      const MAX_ITER = 5;
+      const MAX_ITER = 4;
       let loopMessages: unknown[] = [...streamInitialMessages];
       let precomputedFinal: string | null = null;
 
       for (let i = 0; i < MAX_ITER; i++) {
-        const iterResp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, "google/gemini-2.5-flash");
+        const iterResp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, "google/gemini-3-flash-preview");
         const choice = iterResp.choices?.[0];
         if (!choice) break;
 
@@ -1304,32 +1304,33 @@ Analyse the photo carefully:
           tool_calls: toolCalls,
         }];
 
-        const toolResults: unknown[] = [];
-        for (const tc of toolCalls) {
+        // Execute all tool calls in parallel
+        const toolPromises = toolCalls.map(async (tc) => {
           const toolName = tc.function.name;
           let toolArgs: Record<string, unknown> = {};
           try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
 
           if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
             const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
-            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+            return { role: "tool", tool_call_id: tc.id, content: JSON.stringify(result), isPending: false };
           } else if (SILENT_TOOL_NAMES.includes(toolName)) {
             if (toolName === "add_shopping_list_item") {
               await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
             } else {
-              await saveMemorySilently(toolArgs, adminClient);
+              // Pass pre-loaded context — no redundant DB queries
+              await saveMemorySilently(toolArgs, adminClient, props, staff);
             }
-            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
+            return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }), isPending: false };
           } else if (WRITE_TOOL_NAMES.includes(toolName)) {
-            const confirmResp = await callLLMSync(
-              [...loopMessages, { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) }],
-              [], LOVABLE_API_KEY, "google/gemini-2.5-flash"
-            );
-            precomputedFinal = confirmResp.choices?.[0]?.message?.content ?? buildConfirmationMessage(toolName, toolArgs);
-            toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) });
+            // Use deterministic builder — no extra LLM round-trip
+            precomputedFinal = buildConfirmationMessage(toolName, toolArgs);
+            return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }), isPending: true };
           }
-        }
-        loopMessages = [...loopMessages, ...toolResults];
+          return null;
+        });
+
+        const results = await Promise.all(toolPromises);
+        for (const r of results) { if (r) loopMessages = [...loopMessages, { role: r.role, tool_call_id: r.tool_call_id, content: r.content }]; }
         if (precomputedFinal) break;
       }
 
