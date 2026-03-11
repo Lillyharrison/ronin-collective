@@ -337,7 +337,7 @@ export function Dashboard() {
             await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
           }}
           categories={maintenanceCategories}
-          properties={properties.map(p => ({ id: p.id, name: p.name }))}
+          properties={[]}
           profiles={[]}
           mode="create"
         />
