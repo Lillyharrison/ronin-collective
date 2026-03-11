@@ -883,6 +883,19 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   const [notes, setNotes] = useState(member.notes || "");
   const [assignedProps, setAssignedProps] = useState<string[]>(member.assigned_property_ids || []);
 
+  // Principal designation toggle — only relevant when level = principal
+  const [isPrincipal, setIsPrincipal] = useState(false);
+  const [principalLoading, setPrincipalLoading] = useState(false);
+
+  // Load current principal from system_settings on mount
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).from("system_settings").select("value").eq("key", "principal_user_id").maybeSingle()
+      .then(({ data }: { data: { value: string } | null }) => {
+        if (data?.value === member.id) setIsPrincipal(true);
+      });
+  }, [member.id]);
+
   // Section permissions — seed from DB or derive from level defaults
   const [perms, setPerms] = useState<SectionPermissions>(() => {
     if (member.section_permissions && Object.keys(member.section_permissions).length > 0) {
@@ -1065,6 +1078,53 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
                       </button>
                     ))}
                   </div>
+
+                  {/* Principal designation — only visible when level is Main Family */}
+                  {level === "principal" && (
+                    <div
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${isPrincipal ? "bg-gold/10 border-gold/50" : "bg-charcoal-light border-charcoal-light hover:border-cream/20"}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">👑</span>
+                        <div>
+                          <p className={`text-sm font-semibold ${isPrincipal ? "text-gold" : "text-cream/70"}`}>
+                            {isEN ? "Principal" : "Principal"}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {isEN ? "Shown as primary location on dashboard" : "Aparece como ubicación principal en el panel"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={principalLoading}
+                        onClick={async () => {
+                          setPrincipalLoading(true);
+                          try {
+                            if (isPrincipal) {
+                              // Remove designation
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              await (supabase as any).from("system_settings").delete().eq("key", "principal_user_id");
+                              setIsPrincipal(false);
+                            } else {
+                              // Set this user as principal
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              await (supabase as any).from("system_settings").upsert({
+                                key: "principal_user_id",
+                                value: member.id,
+                                updated_at: new Date().toISOString(),
+                              });
+                              setIsPrincipal(true);
+                            }
+                          } catch (e) { console.error(e); }
+                          setPrincipalLoading(false);
+                        }}
+                        className={`relative w-11 h-6 rounded-full border-2 transition-all shrink-0 ${isPrincipal ? "bg-gold border-gold" : "bg-transparent border-charcoal-light"} disabled:opacity-50`}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${isPrincipal ? "left-5" : "left-0.5"}`} />
+                      </button>
+                    </div>
+                  )}
 
                   {(level === "staff" || level === "manager") && (
                     <>

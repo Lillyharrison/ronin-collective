@@ -176,31 +176,47 @@ export function Dashboard() {
   }, [userId, permLoading]);
 
   // Load principal family member's current location
+  // Prefers the explicit principal_user_id from system_settings (set via Meet the People toggle),
+  // falls back to the first user with role = 'principal'.
   useEffect(() => {
     (async () => {
-      // Find the profile with role = principal
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "principal")
-        .limit(1)
+      // 1. Check system_settings for an explicit principal designation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: setting } = await (supabase as any)
+        .from("system_settings")
+        .select("value")
+        .eq("key", "principal_user_id")
         .maybeSingle();
-      if (!roleData?.user_id) { setPrincipalLocation(null); return; }
 
-      // Get their name
+      let principalUserId: string | null = (setting?.value as string) ?? null;
+
+      // 2. Fall back: first user with role = principal
+      if (!principalUserId) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "principal")
+          .limit(1)
+          .maybeSingle();
+        principalUserId = roleData?.user_id ?? null;
+      }
+
+      if (!principalUserId) { setPrincipalLocation(null); return; }
+
+      // 3. Get their display name
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
-        .eq("id", roleData.user_id)
+        .eq("id", principalUserId)
         .maybeSingle();
       const firstName = profile?.full_name?.split(" ")[0] ?? "Principal";
 
-      // Find which property they're occupying
+      // 4. Find which property they're occupying
       const { data: props } = await supabase
         .from("properties")
         .select("id, name, occupied_by_profile_ids")
-        .contains("occupied_by_profile_ids", [roleData.user_id]);
-      
+        .contains("occupied_by_profile_ids", [principalUserId]);
+
       if (!props || props.length === 0) { setPrincipalLocation(null); return; }
       const prop = props[0];
       setPrincipalLocation({ name: firstName, propertyName: prop.name, propertyId: prop.id });
