@@ -112,7 +112,7 @@ const RONIN_TOOLS = [
           priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Priority level: urgent=safety risk, high=urgent, medium=normal, low=can wait" },
           property_name: { type: "string", description: "Property where the issue is located" },
           location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
-          photo_url: { type: "string", description: "Public URL of the photo attached in the conversation (from content_media_url). Include whenever the user shared an image related to this issue." },
+          photo_url: { type: "string", description: "Public URL of a photo the user explicitly attached in THIS specific report (from content_media_url). ONLY include if the user shared an image directly alongside this particular issue report. Do NOT use photos from earlier, unrelated messages in the thread." },
           reported_by_name: { type: "string", description: "Full name of the person who originally reported/described the issue in the conversation. Only set if different from the person executing the approval (e.g. Lynn reported it, Lilly approved it → set this to 'Lynn')." },
         },
         required: ["title", "category", "priority"],
@@ -738,15 +738,19 @@ serve(async (req) => {
       // ── log_maintenance_issue ─────────────────────────────────────────────
       if (tool_name === "log_maintenance_issue") {
         const propId = resolvePropertyId(tool_args.property_name);
-        // Find the most recent image sent in this thread (before this message) to attach
+        // Only attach a photo if it was sent in this same conversation exchange
+        // (within the last 10 minutes) — prevents old thread photos from being
+        // incorrectly associated with a new, unrelated maintenance issue.
         let resolvedPhotoUrl: string | null = tool_args.photo_url ?? null;
         if (!resolvedPhotoUrl && ctx.threadId) {
+          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const { data: recentMedia } = await adminClient
             .from("messages")
             .select("content_media_url")
             .eq("thread_id", ctx.threadId)
             .eq("media_type", "image")
             .not("content_media_url", "is", null)
+            .gte("created_at", tenMinutesAgo)
             .order("created_at", { ascending: false })
             .limit(1)
             .single();
