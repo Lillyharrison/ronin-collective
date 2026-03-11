@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "";
+// Version bump forces re-subscription when VAPID keys change
+const VAPID_KEY_VERSION = "v4";
+const VAPID_VERSION_KEY = "vapid_key_version";
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -15,6 +18,9 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 /**
  * Registers the service worker and subscribes the user to Web Push.
  * Call this hook once the user is authenticated.
+ *
+ * VAPID_KEY_VERSION: bump this string whenever VAPID keys are regenerated.
+ * This clears the old subscription from the browser and forces a fresh one.
  */
 export function usePushNotifications(userId: string | null) {
   const [supported, setSupported] = useState(false);
@@ -51,10 +57,18 @@ export function usePushNotifications(userId: string | null) {
         if (result !== "granted") return false;
       }
 
-      // Always unsubscribe first to ensure subscription uses the current VAPID key.
-      // Reusing an old subscription tied to a different key causes 403 BadJwtToken.
+      // Always unsubscribe the old subscription first.
+      // This is critical when VAPID keys are rotated — old subscriptions
+      // will always fail with 403 BadJwtToken if the keys don't match.
       const existingSub = await registration.pushManager.getSubscription();
-      if (existingSub) await existingSub.unsubscribe();
+      if (existingSub) {
+        const storedVersion = localStorage.getItem(VAPID_VERSION_KEY);
+        // Force unsubscribe if key version changed OR always to be safe
+        if (storedVersion !== VAPID_KEY_VERSION || existingSub) {
+          await existingSub.unsubscribe();
+          localStorage.setItem(VAPID_VERSION_KEY, VAPID_KEY_VERSION);
+        }
+      }
 
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
@@ -82,6 +96,7 @@ export function usePushNotifications(userId: string | null) {
         }
       );
 
+      localStorage.setItem(VAPID_VERSION_KEY, VAPID_KEY_VERSION);
       didSubscribe.current = true;
       setSubscribed(true);
       return true;
