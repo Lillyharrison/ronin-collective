@@ -112,7 +112,7 @@ const RONIN_TOOLS = [
           priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Priority level: urgent=safety risk, high=urgent, medium=normal, low=can wait" },
           property_name: { type: "string", description: "Property where the issue is located" },
           location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
-          photo_url: { type: "string", description: "Public URL of the photo attached in the conversation (from content_media_url). Include whenever the user shared an image related to this issue." },
+          photo_url: { type: "string", description: "Public URL of a photo the user explicitly attached in THIS specific report (from content_media_url). ONLY include if the user shared an image directly alongside this particular issue report. Do NOT use photos from earlier, unrelated messages in the thread." },
           reported_by_name: { type: "string", description: "Full name of the person who originally reported/described the issue in the conversation. Only set if different from the person executing the approval (e.g. Lynn reported it, Lilly approved it → set this to 'Lynn')." },
         },
         required: ["title", "category", "priority"],
