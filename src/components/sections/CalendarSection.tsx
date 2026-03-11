@@ -1001,10 +1001,11 @@ function RightPanel({
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
 export function CalendarSection() {
-  const { isMasterAdmin, isAdmin, isManager, userId } = usePermissions();
-  const isStaff = !isMasterAdmin && !isAdmin && !isManager;
+  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level } = usePermissions();
+  // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
+  const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
 
-  const [mode, setMode] = useState<CalendarMode>(isStaff ? "ronin" : "family");
+  const [mode, setMode] = useState<CalendarMode>(isFamilyUser ? "family" : "ronin");
   const [roninTab, setRoninTab] = useState<RoninTab>("all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [familyEvents, setFamilyEvents] = useState<CalEvent[]>([]);
@@ -1012,6 +1013,7 @@ export function CalendarSection() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CalEvent | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showNewEvent, setShowNewEvent] = useState(false);
