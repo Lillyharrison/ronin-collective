@@ -102,7 +102,7 @@ const RONIN_TOOLS = [
     type: "function",
     function: {
       name: "log_maintenance_issue",
-      description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. The issue enters the workflow as 'reported' and awaits admin approval.",
+      description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. The issue enters the workflow as 'reported' and awaits admin approval. If the user attached a photo in this conversation, include its URL in photo_url.",
       parameters: {
         type: "object",
         properties: {
@@ -112,6 +112,7 @@ const RONIN_TOOLS = [
           priority: { type: "string", enum: ["low", "medium", "high", "urgent"], description: "Priority level: urgent=safety risk, high=urgent, medium=normal, low=can wait" },
           property_name: { type: "string", description: "Property where the issue is located" },
           location_detail: { type: "string", description: "Specific room or area (e.g. 'Master bedroom', 'Kitchen', 'Pool area')" },
+          photo_url: { type: "string", description: "Public URL of the photo attached in the conversation (from content_media_url). Include whenever the user shared an image related to this issue." },
         },
         required: ["title", "category", "priority"],
       },
