@@ -158,6 +158,8 @@ export function MaintenanceSection() {
     const patch: Partial<MaintenanceIssue> = { status: newStatus };
     if (newStatus === "resolved") patch.resolved_at = new Date().toISOString();
     await updateIssue(issue.id, patch);
+    // Sync the detail drawer so the dropdown doesn't revert to the old status
+    setDetailIssue(prev => prev?.id === issue.id ? { ...prev, ...patch } : prev);
     if (newStatus === "approved" && userId) {
       const key = `approve-${issue.id}`;
       if (notifyingRef.current.has(key)) return;
