@@ -135,16 +135,69 @@ export function ChatView({
     setSending(false);
   };
 
+  /**
+   * Unified media send:
+   * 1. Optimistically render a blob-URL preview immediately (instant feedback)
+   * 2. Upload to storage in the background
+   * 3. Patch the DB row with the real public URL once upload completes
+   * 4. If it's a vision upload, then call Ronin AI
+   * Caption text is bundled into the SAME message row (content_text), never sent as a separate message.
+   */
+  const handleMediaSend = async (
+    file: File,
+    captionText: string,
+    isVision = false,
+  ) => {
+    const blobUrl = URL.createObjectURL(file);
+    const mediaType = file.type.startsWith("image") ? "image" : file.type.startsWith("audio") ? "audio" : "file";
+
+    // 1. Optimistic insert — visible instantly on sender's screen
+    const msgId = await sendMediaMessage(blobUrl, mediaType, currentUserId, captionText || undefined);
+
+    if (isVision) setAgentAnalyzing(true);
+
+    try {
+      // 2. Upload to storage
+      const path = `${currentUserId}/${Date.now()}_${file.name}`;
+      const { data: uploaded, error: uploadErr } = await supabase.storage.from("chat-media").upload(path, file);
+      if (uploadErr || !uploaded) {
+        console.error("Media upload error:", uploadErr);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
+      const publicUrl = urlData.publicUrl;
+
+      // 3. Patch the message row so all other clients get the real URL (not blob)
+      if (msgId) {
+        await supabase.from("messages").update({ content_media_url: publicUrl }).eq("id", msgId);
+        // Also update local state immediately so sender sees the real URL
+        URL.revokeObjectURL(blobUrl);
+      }
+
+      // 4. Vision AI call
+      if (isVision && isAgentThread) {
+        const auth = await getAuthHeader();
+        const visionPrompt = captionText || "Please analyse this image and help me log it to the estate inventory.";
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: auth },
+          body: JSON.stringify({ type: "message", content: visionPrompt, image_url: publicUrl, thread_id: threadId }),
+        });
+      }
+    } catch (err) {
+      console.error("Media send error:", err);
+    } finally {
+      if (isVision) setAgentAnalyzing(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const captionText = input.trim();
+    setInput("");
     setSending(true);
-    const path = `${currentUserId}/${Date.now()}_${file.name}`;
-    const { data: uploaded } = await supabase.storage.from("chat-media").upload(path, file);
-    if (uploaded) {
-      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
-      await sendMediaMessage(urlData.publicUrl, file.type.startsWith("image") ? "image" : "file", currentUserId);
-    }
+    await handleMediaSend(file, captionText, false);
     setSending(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
@@ -155,41 +208,7 @@ export function ChatView({
     if (!file || !file.type.startsWith("image")) return;
     const captionText = input.trim();
     setInput("");
-
-    // 1. Show image immediately using a local blob URL so the UI feels instant
-    const localBlobUrl = URL.createObjectURL(file);
-    await sendMediaMessage(localBlobUrl, "image", currentUserId);
-    if (captionText) await sendMessage(captionText, currentUserId);
-
-    setAgentAnalyzing(true);
-
-    // 2. Upload in background — don't block UI on storage round-trip
-    try {
-      const path = `${currentUserId}/${Date.now()}_vision_${file.name}`;
-      const { data: uploaded, error: uploadErr } = await supabase.storage.from("chat-media").upload(path, file);
-      if (uploadErr || !uploaded) {
-        console.error("Vision upload error:", uploadErr);
-        setAgentAnalyzing(false);
-        if (visionInputRef.current) visionInputRef.current.value = "";
-        return;
-      }
-      const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
-      const publicUrl = urlData.publicUrl;
-
-      // 3. Call Ronin AI with the real public URL
-      const auth = await getAuthHeader();
-      const visionPrompt = captionText || "Please analyse this image and help me log it to the estate inventory.";
-      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ronin-ai`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: auth },
-        body: JSON.stringify({ type: "message", content: visionPrompt, image_url: publicUrl, thread_id: threadId }),
-      });
-    } catch (err) {
-      console.error("Vision analysis error:", err);
-    } finally {
-      setAgentAnalyzing(false);
-      URL.revokeObjectURL(localBlobUrl);
-    }
+    await handleMediaSend(file, captionText, true);
     if (visionInputRef.current) visionInputRef.current.value = "";
   };
 
