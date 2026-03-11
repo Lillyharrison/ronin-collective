@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { imageUrl } from "@/lib/imageUrl";
 import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
@@ -29,6 +29,10 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
   const { t, language } = useLanguage();
   const isL = language === "es";
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<IssueStatus>(issue.status);
+
+  // Keep pendingStatus in sync if the parent refreshes the issue (e.g. after save)
+  useEffect(() => { setPendingStatus(issue.status); }, [issue.status]);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/70"
@@ -153,17 +157,27 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
           {onStatusChange && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t("moveToStatus")}</p>
-              <select
-                value={issue.status}
-                onChange={e => onStatusChange(issue, e.target.value as IssueStatus)}
-                className="w-full rounded-xl border border-border bg-muted/40 text-sm text-foreground px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-gold/40 cursor-pointer"
-              >
-                {STATUSES.map(s => (
-                  <option key={s.value} value={s.value}>
-                    {isL ? s.labelEs : s.label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-2">
+                <select
+                  value={pendingStatus}
+                  onChange={e => setPendingStatus(e.target.value as IssueStatus)}
+                  className="w-full rounded-xl border border-border bg-muted/40 text-sm text-foreground px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-gold/40 cursor-pointer"
+                >
+                  {STATUSES.map(s => (
+                    <option key={s.value} value={s.value}>
+                      {isL ? s.labelEs : s.label}
+                    </option>
+                  ))}
+                </select>
+                {pendingStatus !== issue.status && (
+                  <button
+                    onClick={() => { onStatusChange(issue, pendingStatus); }}
+                    className="w-full rounded-xl bg-[hsl(var(--status-done)/0.9)] hover:bg-[hsl(var(--status-done))] text-white py-2.5 text-sm font-semibold transition-colors"
+                  >
+                    {isL ? "Guardar estado" : "Save Status"}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
