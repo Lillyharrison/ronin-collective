@@ -154,31 +154,6 @@ export function Dashboard() {
   const taglineInputRef = useRef<HTMLInputElement>(null);
 
 
-  // Load properties
-  useEffect(() => {
-    if (permLoading) return;
-    let query = supabase.from("properties").select("id, name, city, country, timezone, status, image_url, is_primary");
-    if (!isAdmin && assignedPropertyIds.length > 0) {
-      query = query.in("id", assignedPropertyIds);
-    } else if (!isAdmin && assignedPropertyIds.length === 0) {
-      setProperties([]);
-      setPropLoading(false);
-      return;
-    }
-    query.then(({ data }) => {
-      if (data) {
-        // Sort: primary first → occupied → then alphabetically by city
-        const sorted = (data as Property[]).sort((a, b) => {
-          if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
-          if (a.status === "occupied" && b.status !== "occupied") return -1;
-          if (b.status === "occupied" && a.status !== "occupied") return 1;
-          return (a.city ?? "").localeCompare(b.city ?? "");
-        });
-        setProperties(sorted);
-      }
-      setPropLoading(false);
-    });
-  }, [isAdmin, assignedPropertyIds, permLoading]);
 
   // Load pending task count — always scoped to current user only
   useEffect(() => {
