@@ -342,7 +342,7 @@ export function ThreadList({
             isPinned={pinnedIds.has(thread.id)}
             isActive={activeThreadId === thread.id}
             isAdmin={isAdmin}
-            canDelete={!!isAdmin && !!onDeleteThread}
+            canDelete={!!onDeleteThread}
             onSelect={() => onSelectThread(thread.id)}
             onPin={() => handleTogglePin(thread.id)}
             onDeleteRequest={() => setConfirmDeleteId(thread.id)}
