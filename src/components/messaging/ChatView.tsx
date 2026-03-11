@@ -67,6 +67,20 @@ export function ChatView({
     return () => document.removeEventListener("mousedown", handler);
   }, [showEmoji, showAttachMenu]);
 
+  // Persist draft to localStorage so it survives navigation
+  useEffect(() => {
+    if (input) {
+      localStorage.setItem(DRAFT_KEY, input);
+    } else {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, [input, DRAFT_KEY]);
+
+  const clearDraft = () => {
+    setInput("");
+    localStorage.removeItem(DRAFT_KEY);
+  };
+
   const getAuthHeader = async () => {
     const { data: session } = await supabase.auth.getSession();
     return session?.session
