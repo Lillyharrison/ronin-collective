@@ -58,7 +58,20 @@ export function useMessages(threadId: string | null) {
           if (profile) newMsg.sender_profile = profile;
         }
         setMessages(prev => {
+          // Exact duplicate guard
           if (prev.find(m => m.id === newMsg.id)) return prev;
+          // Replace optimistic placeholder if it matches (same sender + same text within a few seconds)
+          const optimisticIdx = prev.findIndex(m =>
+            m.id.startsWith("optimistic-") &&
+            m.sender_id === newMsg.sender_id &&
+            m.content_text === newMsg.content_text &&
+            Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) < 10000
+          );
+          if (optimisticIdx !== -1) {
+            const updated = [...prev];
+            updated[optimisticIdx] = { ...updated[optimisticIdx], ...newMsg };
+            return updated;
+          }
           return [...prev, newMsg];
         });
       })
