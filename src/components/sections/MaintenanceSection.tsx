@@ -413,12 +413,23 @@ export function MaintenanceSection() {
                   </div>
                   <div className="bg-muted/20 rounded-b-xl p-2 space-y-2 min-h-[100px] max-h-[60vh] overflow-y-auto">
                     {colIssues.map(issue => (
-                      <IssueCard
-                        key={issue.id}
-                        issue={issue}
-                        onClick={() => setDetailIssue(issue)}
-                        compact
-                      />
+                      <div key={issue.id} className="relative group/card">
+                        <IssueCard
+                          issue={issue}
+                          onClick={() => setDetailIssue(issue)}
+                          compact
+                        />
+                        {/* Quick approve button — only on Reported column for admins */}
+                        {col.key === "reported" && (isMasterAdmin || isAdmin) && (
+                          <button
+                            onClick={e => { e.stopPropagation(); handleApprove(issue); }}
+                            className="absolute bottom-2 right-2 opacity-0 group-hover/card:opacity-100 flex items-center gap-1 bg-green-600/90 hover:bg-green-600 text-white text-[10px] font-semibold px-2 py-1 rounded-full transition-all shadow-lg"
+                            title="Quick approve"
+                          >
+                            <CheckCircle2 size={10} /> {isL ? "Aprobar" : "Approve"}
+                          </button>
+                        )}
+                      </div>
                     ))}
                     {colIssues.length === 0 && (
                       <p className="text-[10px] text-muted-foreground/40 italic text-center py-4">
