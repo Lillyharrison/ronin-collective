@@ -1182,7 +1182,7 @@ Analyse the photo carefully:
           .select("id, content_text, is_ai_generated, sender_id")
           .eq("thread_id", thread_id)
           .order("created_at", { ascending: true })
-          .limit(30);
+          .limit(25); // Reduced from 30 — context window efficiency
 
         const dbHistory = cleanHistory(
           (dbMessages ?? []).filter(m => m.content_text && m.id !== undefined)
@@ -1190,14 +1190,17 @@ Analyse the photo carefully:
 
         const initialMessages: unknown[] = [baseSystemMsg, ...dbHistory, currentUserMessage];
         const ctx: ContextData = { props, staff };
-        const MAX_ITERATIONS = 5;
+        const MAX_ITERATIONS = 4; // Reduced: most flows need 1-2 iterations max
         let loopMessages: unknown[] = [...initialMessages];
         let finalText = "";
         let pendingWriteTool: { name: string; args: Record<string, unknown> } | null = null;
 
+        // Use gemini-flash for the ReAct tool-calling loop — it's 3-5x faster and handles
+        // tool calls just as well. GPT-5 is reserved for complex reasoning only.
+        const LOOP_MODEL = "google/gemini-3-flash-preview";
+
         for (let i = 0; i < MAX_ITERATIONS; i++) {
-          const model = "openai/gpt-5";
-          const resp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, model);
+          const resp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, LOOP_MODEL);
           const choice = resp.choices?.[0];
           if (!choice) break;
 
@@ -1216,36 +1219,41 @@ Analyse the photo carefully:
           const toolResults: unknown[] = [];
           let hitWriteTool = false;
 
-          for (const tc of toolCalls) {
+          // Execute all tool calls in parallel where possible
+          const toolPromises = toolCalls.map(async (tc) => {
             const toolName = tc.function.name;
             let toolArgs: Record<string, unknown> = {};
             try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
 
             if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
               const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
-              toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+              return { role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) };
 
             } else if (SILENT_TOOL_NAMES.includes(toolName)) {
+              // Pass pre-loaded context to avoid redundant DB fetches
               if (toolName === "add_shopping_list_item") {
                 await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
               } else {
-                await saveMemorySilently(toolArgs, adminClient);
+                await saveMemorySilently(toolArgs, adminClient, props, staff);
               }
-              toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) });
+              return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) };
 
             } else if (WRITE_TOOL_NAMES.includes(toolName)) {
               pendingWriteTool = { name: toolName, args: toolArgs };
-              toolResults.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) });
               hitWriteTool = true;
+              return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ status: "pending_confirmation" }) };
             }
-          }
+            return null;
+          });
+
+          const results = await Promise.all(toolPromises);
+          for (const r of results) { if (r) toolResults.push(r); }
 
           loopMessages = [...loopMessages, ...toolResults];
 
           if (hitWriteTool) {
-            const confirmResp = await callLLMSync(loopMessages, [], LOVABLE_API_KEY, "google/gemini-2.5-flash");
-            finalText = stripThinking(confirmResp.choices?.[0]?.message?.content
-              ?? buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args));
+            // Use the deterministic builder — no extra LLM round-trip needed for confirmations
+            finalText = buildConfirmationMessage(pendingWriteTool!.name, pendingWriteTool!.args);
             break;
           }
         }
