@@ -262,6 +262,7 @@ function ShiftModal({
   const [form, setForm] = useState({
     staff_id: editShift?.staff_id ?? prefillStaff ?? "",
     property_id: editShift?.property_id ?? "",
+    location: "",
     shift_date: editShift?.shift_date ?? prefillDate ?? format(new Date(), "yyyy-MM-dd"),
     start_time: editShift?.start_time?.slice(0, 5) ?? "09:00",
     end_time: editShift?.end_time?.slice(0, 5) ?? "17:00",
@@ -271,13 +272,17 @@ function ShiftModal({
 
   useEffect(() => {
     if (open) {
+      const existingNotes = editShift?.notes ?? "";
+      const locPrefix = existingNotes.startsWith("📍") ? existingNotes.split(" – ")[0].replace("📍 ", "") : "";
+      const restNotes = locPrefix ? existingNotes.replace(`📍 ${locPrefix} – `, "").replace(`📍 ${locPrefix}`, "") : existingNotes;
       setForm({
         staff_id: editShift?.staff_id ?? prefillStaff ?? "",
         property_id: editShift?.property_id ?? "",
+        location: locPrefix,
         shift_date: editShift?.shift_date ?? prefillDate ?? format(new Date(), "yyyy-MM-dd"),
         start_time: editShift?.start_time?.slice(0, 5) ?? "09:00",
         end_time: editShift?.end_time?.slice(0, 5) ?? "17:00",
-        notes: editShift?.notes ?? "",
+        notes: restNotes,
       });
     }
   }, [open, prefillDate, prefillStaff, editShift]);
@@ -287,6 +292,8 @@ function ShiftModal({
   const handleSave = async () => {
     if (!form.staff_id || !form.shift_date) return;
     setSaving(true);
+    // Combine location + notes into notes field
+    const locationNote = form.location ? `📍 ${form.location}${form.notes.trim() ? ` – ${form.notes.trim()}` : ""}` : form.notes.trim() || null;
     const ok = await onSave({
       staff_id: form.staff_id,
       property_id: form.property_id || null,
@@ -295,7 +302,7 @@ function ShiftModal({
       start_time: form.start_time || null,
       end_time: form.end_time || null,
       status: "scheduled",
-      notes: form.notes.trim() || null,
+      notes: locationNote,
       created_by: userId,
     });
     setSaving(false);
@@ -323,11 +330,20 @@ function ShiftModal({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Property</Label>
-            <Select value={form.property_id} onValueChange={(v) => setForm((f) => ({ ...f, property_id: v }))}>
-              <SelectTrigger><SelectValue placeholder="Select property…" /></SelectTrigger>
+            <Label>Location</Label>
+            <Select value={form.location || form.property_id || "__none__"} onValueChange={(v) => {
+              const virtualLocs = ["Office", "Remote"];
+              if (virtualLocs.includes(v)) {
+                setForm((f) => ({ ...f, location: v, property_id: "" }));
+              } else {
+                setForm((f) => ({ ...f, property_id: v === "__none__" ? "" : v, location: "" }));
+              }
+            }}>
+              <SelectTrigger><SelectValue placeholder="Select location…" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No property</SelectItem>
+                <SelectItem value="__none__">No location</SelectItem>
+                <SelectItem value="Office">🏢 Office</SelectItem>
+                <SelectItem value="Remote">🏠 Remote</SelectItem>
                 {properties.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
