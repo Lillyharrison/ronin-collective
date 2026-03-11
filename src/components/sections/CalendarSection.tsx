@@ -1190,6 +1190,24 @@ export function CalendarSection() {
   const activeEvents = mode === "family" ? familyEvents : roninEvents;
 
   const deleteEvent = async (ev: CalEvent) => {
+    if (ev._source === "maintenance" && ev._source_id) {
+      // Delete the maintenance issue itself — cascade also removes any auto calendar_events entries
+      const issueTitle = ev.title;
+      await Promise.all([
+        supabase.from("calendar_events").delete().eq("calendar_source", "auto").ilike("title", `%${issueTitle}%`),
+        supabase.from("tasks").delete().eq("is_draft", true).eq("ai_suggested", true).ilike("title_en", `%${issueTitle}%`),
+        supabase.from("maintenance_issues").delete().eq("id", ev._source_id),
+      ]);
+      toast.success("Maintenance issue deleted");
+      refresh();
+      return;
+    }
+    if (ev._source === "orders" && ev._source_id) {
+      await supabase.from("orders").delete().eq("id", ev._source_id);
+      toast.success("Delivery order deleted");
+      refresh();
+      return;
+    }
     if (ev._source === "calendar_events" || !ev._source) {
       await supabase.from("calendar_events").delete().eq("id", ev.id);
       toast.success("Event deleted");
