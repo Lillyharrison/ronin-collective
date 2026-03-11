@@ -6,12 +6,14 @@ import type { MaintenanceIssue, IssueStatus, MaintenanceCategory } from "@/hooks
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 
 interface Props {
   issue: MaintenanceIssue;
   onClose: () => void;
   onEdit?: (issue: MaintenanceIssue) => void;
-  onStatusChange?: (issue: MaintenanceIssue, status: IssueStatus) => void;
+  onStatusChange?: (issue: MaintenanceIssue, status: IssueStatus, scheduledDate?: string) => void;
   onDelete?: (id: string) => void;
   categories: MaintenanceCategory[];
 }
@@ -30,9 +32,28 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
   const isL = language === "es";
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<IssueStatus>(issue.status);
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(
+    issue.scheduled_date ? new Date(issue.scheduled_date) : undefined
+  );
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Keep pendingStatus in sync if the parent refreshes the issue (e.g. after save)
-  useEffect(() => { setPendingStatus(issue.status); }, [issue.status]);
+  // Keep state in sync if parent refreshes the issue
+  useEffect(() => {
+    setPendingStatus(issue.status);
+    setScheduledDate(issue.scheduled_date ? new Date(issue.scheduled_date) : undefined);
+  }, [issue.status, issue.scheduled_date]);
+
+  const statusChanged = pendingStatus !== issue.status;
+  const dateChanged = scheduledDate?.toISOString().split("T")[0] !== issue.scheduled_date?.split("T")[0];
+  const hasChanges = statusChanged || (pendingStatus === "scheduled" && dateChanged);
+
+  const handleSave = () => {
+    if (!onStatusChange) return;
+    const dateStr = pendingStatus === "scheduled" && scheduledDate
+      ? scheduledDate.toISOString()
+      : undefined;
+    onStatusChange(issue, pendingStatus, dateStr);
+  };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/70"
@@ -169,12 +190,43 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
                     </option>
                   ))}
                 </select>
-                {pendingStatus !== issue.status && (
+
+                {/* Inline date picker — appears when Scheduled is selected */}
+                {pendingStatus === "scheduled" && (
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        className={cn(
+                          "w-full flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-colors",
+                          scheduledDate
+                            ? "border-border bg-muted/40 text-foreground"
+                            : "border-dashed border-border/60 bg-muted/20 text-muted-foreground"
+                        )}
+                      >
+                        <Calendar size={14} className="text-gold flex-shrink-0" />
+                        {scheduledDate
+                          ? format(scheduledDate, "EEEE, MMM d, yyyy")
+                          : (isL ? "Seleccionar fecha de programa" : "Pick a scheduled date")}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-[300]" align="start">
+                      <CalendarPicker
+                        mode="single"
+                        selected={scheduledDate}
+                        onSelect={(d) => { setScheduledDate(d); setCalendarOpen(false); }}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+
+                {hasChanges && (
                   <button
-                    onClick={() => { onStatusChange(issue, pendingStatus); }}
+                    onClick={handleSave}
                     className="w-full rounded-xl bg-[hsl(var(--status-done)/0.9)] hover:bg-[hsl(var(--status-done))] text-white py-2.5 text-sm font-semibold transition-colors"
                   >
-                    {isL ? "Guardar estado" : "Save Status"}
+                    {isL ? "Guardar cambios" : "Save Changes"}
                   </button>
                 )}
               </div>
