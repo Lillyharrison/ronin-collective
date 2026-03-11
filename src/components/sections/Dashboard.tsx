@@ -37,6 +37,12 @@ interface DashNotification {
   user_id?: string;
 }
 
+interface PrincipalLocation {
+  name: string;
+  propertyName: string;
+  propertyId: string;
+}
+
 const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
   maintenance_issue: "maintenance",
   task:              "tasks",
