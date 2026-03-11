@@ -282,7 +282,7 @@ async function callLLMSync(
   messages: unknown[],
   tools: unknown[],
   apiKey: string,
-  model = "openai/gpt-5"
+  model = "google/gemini-3-flash-preview"
 ): Promise<{
   choices: Array<{
     finish_reason: string;
