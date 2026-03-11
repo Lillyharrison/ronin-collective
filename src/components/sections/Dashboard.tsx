@@ -548,7 +548,7 @@ export function Dashboard() {
           {language === "es" ? "Acciones Rápidas" : "Quick Actions"}
         </p>
         {/* Wait until user prefs are loaded to avoid flashing unfiltered actions */}
-        {(userQuickActions === null && !permLoading) ? (
+        {(permLoading || qaLoading) ? (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-card border border-border rounded-xl p-4 min-h-[88px] animate-pulse" />
