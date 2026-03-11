@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import roninIcon from "@/assets/ronin-icon.png";
+import roninIcon from "@/assets/ronin-icon-opt.png";
 import roninLogo from "@/assets/ronin-logo.png";
 
 interface RoninRProps {

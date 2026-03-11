@@ -8,7 +8,7 @@
 // The key goal: the app shell (index.html + assets) is served instantly from cache
 // on every open, eliminating the "reload" feeling on iPhone PWA.
 
-const CACHE_VERSION = "ronin-v3";
+const CACHE_VERSION = "ronin-v4";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const DATA_CACHE    = `${CACHE_VERSION}-data`;
 
@@ -54,10 +54,11 @@ self.addEventListener("fetch", (event) => {
   // Never cache auth / edge function calls
   if (NEVER_CACHE.some(p => p.test(url.href))) return;
 
-  // HTML navigation — stale-while-revalidate so the app opens instantly
-  // from cache, then silently refreshes for next visit
+  // HTML navigation — cache-first so iPhone PWA opens instantly with no re-render.
+  // The shell is versioned via CACHE_VERSION so updates still propagate on next
+  // service worker activation.
   if (request.headers.get("accept")?.includes("text/html")) {
-    event.respondWith(staleWhileRevalidate(request, SHELL_CACHE));
+    event.respondWith(cacheFirst(request, SHELL_CACHE));
     return;
   }
 
