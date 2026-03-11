@@ -1470,7 +1470,7 @@ export function CalendarSection() {
         </button>
       </div>
 
-      {/* Ronin category tabs */}
+      {/* Ronin category tabs + inline maintenance property filter */}
       {mode === "ronin" && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][]).map(([key, cfg]) => {
@@ -1497,25 +1497,22 @@ export function CalendarSection() {
               </button>
             );
           })}
-        </div>
-      )}
 
-      {/* Maintenance property filter dropdown */}
-      {mode === "ronin" && roninTab === "maintenance" && maintenanceProperties.length > 1 && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground flex-shrink-0">Property:</span>
-          <Select value={maintenancePropertyFilter} onValueChange={(v) => { setMaintenancePropertyFilter(v); }}>
-            <SelectTrigger className="h-8 text-xs w-[200px]">
-              <SelectValue placeholder="All properties" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All properties</SelectItem>
-              {maintenanceProperties.map((pid) => {
-                const prop = properties.find(p => p.id === pid);
-                return prop ? <SelectItem key={pid} value={pid}>{prop.name}</SelectItem> : null;
-              })}
-            </SelectContent>
-          </Select>
+          {/* Property filter — inline, only when Maintenance tab is active */}
+          {roninTab === "maintenance" && maintenanceProperties.length > 1 && (
+            <Select value={maintenancePropertyFilter} onValueChange={setMaintenancePropertyFilter}>
+              <SelectTrigger className="h-7 text-xs w-[140px] flex-shrink-0 ml-1 border-amber-500/30 bg-amber-500/10 text-amber-400">
+                <SelectValue placeholder="All properties" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All properties</SelectItem>
+                {maintenanceProperties.map((pid) => {
+                  const prop = properties.find(p => p.id === pid);
+                  return prop ? <SelectItem key={pid} value={pid}>{prop.name}</SelectItem> : null;
+                })}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       )}
 
