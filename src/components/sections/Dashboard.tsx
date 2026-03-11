@@ -131,13 +131,11 @@ function eventDotColor(eventType: string): string {
 
 export function Dashboard() {
   const { language, t } = useLanguage();
-  const { setActiveSection, setTargetPropertyId, setActivePropertyId, setPendingMaintenanceIssueId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
   const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
 
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [propLoading, setPropLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
