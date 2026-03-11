@@ -8,7 +8,7 @@
 // The key goal: the app shell (index.html + assets) is served instantly from cache
 // on every open, eliminating the "reload" feeling on iPhone PWA.
 
-const CACHE_VERSION = "ronin-v3";
+const CACHE_VERSION = "ronin-v4";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const DATA_CACHE    = `${CACHE_VERSION}-data`;
 
