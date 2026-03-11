@@ -241,7 +241,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
             </button>
           )}
           <div className="flex gap-2">
-            {(isAdmin || isMasterAdmin) && (
+            {(isAdmin || isMasterAdmin || isManager) && (
               <button
                 onClick={handleDelete}
                 className="p-2.5 rounded-xl border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive transition-colors"

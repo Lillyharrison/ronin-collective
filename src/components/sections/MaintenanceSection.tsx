@@ -528,7 +528,7 @@ export function MaintenanceSection() {
           onClose={() => setDetailIssue(null)}
           onEdit={(issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }}
           onStatusChange={canManage ? handleStatusChange : undefined}
-          onDelete={isMasterAdmin ? async (id) => { await deleteIssue(id); setDetailIssue(null); } : undefined}
+          onDelete={(isMasterAdmin || isAdmin) ? async (id) => { await deleteIssue(id); setDetailIssue(null); } : undefined}
           categories={categories}
         />
       )}

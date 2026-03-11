@@ -480,14 +480,17 @@ function WeekRow({
 function EventDetailSheet({
   event,
   onClose,
-  isMasterAdmin,
+  canDelete,
+  isAdmin,
   onDelete,
 }: {
   event: CalEvent | null;
   onClose: () => void;
-  isMasterAdmin: boolean;
+  canDelete: boolean;
+  isAdmin: boolean;
   onDelete: (ev: CalEvent) => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   if (!event) return null;
   const tab = getRoninTabForEvent(event);
   const familyCfg = getFamilyTypeConfig(event.event_type);
@@ -495,8 +498,15 @@ function EventDetailSheet({
   const start = parseISO(event.start_date);
   const end = event.end_date ? parseISO(event.end_date) : null;
 
+  // Birthdays are auto-generated from profiles — cannot be deleted from here
+  const isDeletable = canDelete && event._source !== "birthday" && event.calendar_source !== "ical";
+  // Source label for linked events
+  const sourceLabel = event._source === "maintenance" ? "maintenance issue"
+    : event._source === "orders" ? "delivery order"
+    : "event";
+
   return (
-    <Sheet open={!!event} onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={!!event} onOpenChange={(o) => { if (!o) { setConfirmDelete(false); onClose(); } }}>
       <SheetContent
         side="bottom"
         className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col rounded-t-2xl sm:rounded-2xl"
@@ -556,12 +566,12 @@ function EventDetailSheet({
             </div>
           )}
           {event._source === "maintenance" && event._source_id && (
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-400">
+            <div className="rounded-xl border border-amber-500/20 bg-[hsl(38_92%_50%/0.05)] p-3 text-xs text-amber-400">
               ↗ Linked to Maintenance section — drag to reschedule
             </div>
           )}
           {event._source === "orders" && event._source_id && (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs text-emerald-400">
+            <div className="rounded-xl border border-emerald-500/20 bg-[hsl(142_71%_45%/0.05)] p-3 text-xs text-emerald-400">
               ↗ Linked to Orders section — drag to update delivery date
             </div>
           )}
@@ -577,15 +587,32 @@ function EventDetailSheet({
           )}
         </div>
 
-        {isMasterAdmin && !event._source && (
+        {isDeletable && (
           <div className="flex-shrink-0 pt-3 border-t border-border">
-            <Button
-              variant="ghost" size="sm"
-              className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => { onDelete(event); onClose(); }}
-            >
-              Delete Event
-            </Button>
+            {confirmDelete ? (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmDelete(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive" size="sm" className="flex-1"
+                  onClick={() => { setConfirmDelete(false); onDelete(event); onClose(); }}
+                >
+                  {event._source ? `Delete ${sourceLabel}` : "Delete event"}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost" size="sm"
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <X size={14} className="mr-1" />
+                {event._source === "maintenance" ? "Delete maintenance issue" :
+                 event._source === "orders" ? "Delete delivery order" :
+                 "Delete event"}
+              </Button>
+            )}
           </div>
         )}
       </SheetContent>
@@ -1163,6 +1190,24 @@ export function CalendarSection() {
   const activeEvents = mode === "family" ? familyEvents : roninEvents;
 
   const deleteEvent = async (ev: CalEvent) => {
+    if (ev._source === "maintenance" && ev._source_id) {
+      // Delete the maintenance issue itself — cascade also removes any auto calendar_events entries
+      const issueTitle = ev.title;
+      await Promise.all([
+        supabase.from("calendar_events").delete().eq("calendar_source", "auto").ilike("title", `%${issueTitle}%`),
+        supabase.from("tasks").delete().eq("is_draft", true).eq("ai_suggested", true).ilike("title_en", `%${issueTitle}%`),
+        supabase.from("maintenance_issues").delete().eq("id", ev._source_id),
+      ]);
+      toast.success("Maintenance issue deleted");
+      refresh();
+      return;
+    }
+    if (ev._source === "orders" && ev._source_id) {
+      await supabase.from("orders").delete().eq("id", ev._source_id);
+      toast.success("Delivery order deleted");
+      refresh();
+      return;
+    }
     if (ev._source === "calendar_events" || !ev._source) {
       await supabase.from("calendar_events").delete().eq("id", ev.id);
       toast.success("Event deleted");
@@ -1186,7 +1231,7 @@ export function CalendarSection() {
               <Settings size={18} />
             </Button>
           )}
-          {isMasterAdmin && (
+          {(isMasterAdmin || isAdmin) && (
             <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
               <Plus size={14} /> Add
             </Button>
@@ -1366,7 +1411,8 @@ export function CalendarSection() {
       <EventDetailSheet
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
-        isMasterAdmin={isMasterAdmin}
+        canDelete={isMasterAdmin || isAdmin}
+        isAdmin={isAdmin}
         onDelete={deleteEvent}
       />
       <CalendarSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} properties={properties} />
