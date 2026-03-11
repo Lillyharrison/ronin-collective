@@ -883,6 +883,19 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   const [notes, setNotes] = useState(member.notes || "");
   const [assignedProps, setAssignedProps] = useState<string[]>(member.assigned_property_ids || []);
 
+  // Principal designation toggle — only relevant when level = principal
+  const [isPrincipal, setIsPrincipal] = useState(false);
+  const [principalLoading, setPrincipalLoading] = useState(false);
+
+  // Load current principal from system_settings on mount
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any).from("system_settings").select("value").eq("key", "principal_user_id").maybeSingle()
+      .then(({ data }: { data: { value: string } | null }) => {
+        if (data?.value === member.id) setIsPrincipal(true);
+      });
+  }, [member.id]);
+
   // Section permissions — seed from DB or derive from level defaults
   const [perms, setPerms] = useState<SectionPermissions>(() => {
     if (member.section_permissions && Object.keys(member.section_permissions).length > 0) {
