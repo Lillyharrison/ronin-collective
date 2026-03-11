@@ -4,7 +4,6 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActiveSection } from "@/contexts/NavigationContext";
-import { imageUrl } from "@/lib/imageUrl";
 import {
   Clock, ShoppingBag, TriangleAlert, CheckSquare,
   Activity, Zap, Shield, ClipboardList, X, Bell,
@@ -15,17 +14,6 @@ import { cn } from "@/lib/utils";
 import { DraftTasksWidget } from "@/components/tasks/DraftTasksWidget";
 import { IssueModal } from "@/components/maintenance/IssueModal";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
-
-interface Property {
-  id: string;
-  name: string;
-  city: string;
-  country: string;
-  timezone: string;
-  status: "occupied" | "vacant" | "maintenance" | "under_construction";
-  image_url: string | null;
-  is_primary: boolean;
-}
 
 interface FeedEvent {
   id: string;
@@ -57,13 +45,6 @@ const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
   message:           "messages",
   property_rule:     "rules",
   checklist:         "checklists",
-};
-
-const statusConfig: Record<string, { label: string; labelEs: string; className: string }> = {
-  occupied:           { label: "Occupied",          labelEs: "Ocupado",           className: "status-done" },
-  vacant:             { label: "Vacant",            labelEs: "Vacante",           className: "status-vacant" },
-  maintenance:        { label: "Maintenance",       labelEs: "Mantenimiento",     className: "status-pending" },
-  under_construction: { label: "Under Construction",labelEs: "En Construcción",   className: "status-pending" },
 };
 
 // Quick actions shown to all users, filtered by per-user canSee permissions
