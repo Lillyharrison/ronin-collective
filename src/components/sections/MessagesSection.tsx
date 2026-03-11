@@ -137,7 +137,7 @@ export function MessagesSection() {
           activeThreadId={activeThreadId}
           onSelectThread={handleSelectThread}
           onNewChat={() => setView("address-book")}
-          onDeleteThread={isMasterAdmin ? deleteThread : undefined}
+          onDeleteThread={deleteThread}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
