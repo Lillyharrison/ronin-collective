@@ -222,7 +222,7 @@ export function ChatView({
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith("image")) return;
     const captionText = input.trim();
-    setInput("");
+    clearDraft();
     await handleMediaSend(file, captionText, true);
     if (visionInputRef.current) visionInputRef.current.value = "";
   };
