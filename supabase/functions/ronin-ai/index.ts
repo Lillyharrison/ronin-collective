@@ -737,6 +737,20 @@ serve(async (req) => {
       // ── log_maintenance_issue ─────────────────────────────────────────────
       if (tool_name === "log_maintenance_issue") {
         const propId = resolvePropertyId(tool_args.property_name);
+        // Find the most recent image sent in this thread (before this message) to attach
+        let resolvedPhotoUrl: string | null = tool_args.photo_url ?? null;
+        if (!resolvedPhotoUrl && ctx.threadId) {
+          const { data: recentMedia } = await adminClient
+            .from("messages")
+            .select("content_media_url")
+            .eq("thread_id", ctx.threadId)
+            .eq("media_type", "image")
+            .not("content_media_url", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+          if (recentMedia?.content_media_url) resolvedPhotoUrl = recentMedia.content_media_url;
+        }
         const { data: issue, error: issueErr } = await adminClient.from("maintenance_issues").insert({
           title: tool_args.title,
           description: tool_args.description ?? null,
@@ -747,6 +761,7 @@ serve(async (req) => {
           reported_by: callerUserId,
           property_id: propId,
           location_detail: tool_args.location_detail ?? null,
+          photo_url: resolvedPhotoUrl,
         }).select("id").single();
 
         if (issueErr) throw new Error(`Failed to log maintenance issue: ${issueErr.message}`);
