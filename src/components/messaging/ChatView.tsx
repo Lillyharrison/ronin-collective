@@ -27,7 +27,8 @@ export function ChatView({
 }: ChatViewProps) {
   const { language } = useLanguage();
   const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, deleteMessage } = useMessages(threadId);
-  const [input, setInput] = useState("");
+  const DRAFT_KEY = `chat_draft_${threadId}`;
+  const [input, setInput] = useState(() => localStorage.getItem(DRAFT_KEY) ?? "");
   const [sending, setSending] = useState(false);
   const [agentTyping, setAgentTyping] = useState(false);
   const [recording, setRecording] = useState(false);
