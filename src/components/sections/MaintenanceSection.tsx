@@ -26,10 +26,8 @@ export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
   const { t, language } = useLanguage();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
-  // Only scope by assigned properties for operational roles (manager/staff with edit access).
-  // View-only staff (e.g. staff with view permission but no canEdit) should see all issues for
-  // awareness — they can't act on them, and issues may have null property_id (AI-logged).
-  const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager || !canManage) ? undefined : assignedPropertyIds;
+  // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
+  const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager) ? undefined : assignedPropertyIds;
 
   // Debounce search to avoid a DB query on every keystroke
   const [search,      setSearch]      = useState("");
