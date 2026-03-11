@@ -215,6 +215,12 @@ function ShiftChip({
   }
   const col = propColor(shift.property_id, properties);
   const prop = properties.find((p) => p.id === shift.property_id);
+
+  // Extract virtual location from notes (e.g. "📍 Office – some note")
+  const virtualLocMatch = shift.notes?.match(/^📍 (Office|Remote)/);
+  const virtualLoc = virtualLocMatch?.[1];
+  const displayLabel = prop?.name ?? virtualLoc ?? "—";
+
   return (
     <div
       draggable
@@ -222,10 +228,12 @@ function ShiftChip({
       onClick={onClick}
       className={cn(
         "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none flex items-center gap-0.5 hover:opacity-80 transition-opacity",
-        col.bg, col.text
+        virtualLoc && !prop
+          ? "bg-muted/60 border-border text-muted-foreground"
+          : `${col.bg} ${col.text}`
       )}
     >
-      <span className="truncate max-w-[64px]">{prop?.name ?? "—"}</span>
+      <span className="truncate max-w-[64px]">{displayLabel}</span>
       {shift.start_time && (
         <span className="opacity-70 flex-shrink-0">{formatTime(shift.start_time)}</span>
       )}
