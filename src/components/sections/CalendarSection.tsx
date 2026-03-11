@@ -1411,7 +1411,8 @@ export function CalendarSection() {
       <EventDetailSheet
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
-        isMasterAdmin={isMasterAdmin}
+        canDelete={isMasterAdmin || isAdmin}
+        isAdmin={isAdmin}
         onDelete={deleteEvent}
       />
       <CalendarSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} properties={properties} />
