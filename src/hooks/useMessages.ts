@@ -58,7 +58,20 @@ export function useMessages(threadId: string | null) {
           if (profile) newMsg.sender_profile = profile;
         }
         setMessages(prev => {
+          // Exact duplicate guard
           if (prev.find(m => m.id === newMsg.id)) return prev;
+          // Replace optimistic placeholder if it matches (same sender + same text within a few seconds)
+          const optimisticIdx = prev.findIndex(m =>
+            m.id.startsWith("optimistic-") &&
+            m.sender_id === newMsg.sender_id &&
+            m.content_text === newMsg.content_text &&
+            Math.abs(new Date(m.created_at).getTime() - new Date(newMsg.created_at).getTime()) < 10000
+          );
+          if (optimisticIdx !== -1) {
+            const updated = [...prev];
+            updated[optimisticIdx] = { ...updated[optimisticIdx], ...newMsg };
+            return updated;
+          }
           return [...prev, newMsg];
         });
       })
@@ -85,6 +98,23 @@ export function useMessages(threadId: string | null) {
 
   const sendMessage = async (content: string, senderId: string) => {
     if (!threadId) return;
+    // Optimistically add to local state immediately — realtime deduplication handles the real insert
+    const optimisticId = `optimistic-${Date.now()}`;
+    setMessages(prev => [...prev, {
+      id: optimisticId,
+      thread_id: threadId,
+      content_text: content,
+      sender_id: senderId,
+      delivery_status: "sent",
+      created_at: new Date().toISOString(),
+      is_ai_generated: false,
+      reactions: null,
+      seen_by: null,
+      content_media_url: null,
+      media_type: null,
+      reply_to_id: null,
+    } as Message]);
+
     const { data: msg } = await supabase.from("messages").insert({
       thread_id: threadId,
       content_text: content,
@@ -92,12 +122,16 @@ export function useMessages(threadId: string | null) {
       delivery_status: "sent",
     }).select("id").single();
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
-    // Trigger push notifications for other thread participants
-    if (msg) triggerPushForThread(threadId, senderId, content);
+
+    // Replace optimistic entry with real DB id once we get it back
+    if (msg) {
+      setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, id: msg.id } : m));
+      triggerPushForThread(threadId, senderId, content);
+    }
   };
 
-  const sendMediaMessage = async (mediaUrl: string, mediaType: string, senderId: string, caption?: string) => {
-    if (!threadId) return;
+  const sendMediaMessage = async (mediaUrl: string, mediaType: string, senderId: string, caption?: string): Promise<string | null> => {
+    if (!threadId) return null;
     const { data: msg } = await supabase.from("messages").insert({
       thread_id: threadId,
       content_media_url: mediaUrl,
@@ -108,6 +142,7 @@ export function useMessages(threadId: string | null) {
     }).select("id").single();
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
     if (msg) triggerPushForThread(threadId, senderId, caption ?? "📎 Media");
+    return msg?.id ?? null;
   };
 
   /** Fire-and-forget: fetch thread participants and call the push edge function */
