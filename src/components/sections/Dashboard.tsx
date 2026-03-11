@@ -7,7 +7,7 @@ import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
   Clock, ShoppingBag, TriangleAlert, CheckSquare,
   Activity, Zap, Shield, ClipboardList, X, Bell,
-  Pencil, Check, ExternalLink,
+  Pencil, Check, ExternalLink, MapPin,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,12 @@ interface DashNotification {
   entity_id: string | null;
   entity_type: string | null;
   user_id?: string;
+}
+
+interface PrincipalLocation {
+  name: string;
+  propertyName: string;
+  propertyId: string;
 }
 
 const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
@@ -142,6 +148,7 @@ export function Dashboard() {
   const [reportIssueOpen, setReportIssueOpen] = useState(false);
   const [userQuickActions, setUserQuickActions] = useState<string[] | null>(null);
   const [qaLoading, setQaLoading] = useState(true);
+  const [principalLocation, setPrincipalLocation] = useState<PrincipalLocation | null | undefined>(undefined); // undefined = loading
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
@@ -168,7 +175,39 @@ export function Dashboard() {
       .then(({ count }) => setPendingCount(count ?? 0));
   }, [userId, permLoading]);
 
-  // Load global feed (admin only)
+  // Load principal family member's current location
+  useEffect(() => {
+    (async () => {
+      // Find the profile with role = principal
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "principal")
+        .limit(1)
+        .maybeSingle();
+      if (!roleData?.user_id) { setPrincipalLocation(null); return; }
+
+      // Get their name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", roleData.user_id)
+        .maybeSingle();
+      const firstName = profile?.full_name?.split(" ")[0] ?? "Principal";
+
+      // Find which property they're occupying
+      const { data: props } = await supabase
+        .from("properties")
+        .select("id, name, occupied_by_profile_ids")
+        .contains("occupied_by_profile_ids", [roleData.user_id]);
+      
+      if (!props || props.length === 0) { setPrincipalLocation(null); return; }
+      const prop = props[0];
+      setPrincipalLocation({ name: firstName, propertyName: prop.name, propertyId: prop.id });
+    })();
+  }, []);
+
+
   useEffect(() => {
     if (permLoading) return;
     if (!isAdmin) { setFeedLoading(false); return; }
@@ -477,6 +516,38 @@ export function Dashboard() {
             )}
           </button>
         </div>
+
+        {/* Principal location tile — full width below the 2-col grid */}
+        {principalLocation !== undefined && (
+          <div className="mt-3">
+            {principalLocation === null ? (
+              <div className="rounded-lg bg-muted/30 border border-border px-3 py-2.5 flex items-center gap-2">
+                <MapPin size={13} className="text-muted-foreground flex-shrink-0" />
+                <span className="text-xs text-muted-foreground">
+                  {language === "es" ? "Ubicación del principal no disponible" : "Principal location unknown"}
+                </span>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-[hsl(var(--gold)/0.08)] border border-[hsl(var(--gold)/0.25)] px-3 py-2.5 flex items-center gap-2.5">
+                <MapPin size={14} className="text-gold flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    <span className="text-gold">{principalLocation.name}</span>
+                    {" "}
+                    <span className="text-muted-foreground font-normal">
+                      {language === "es" ? "está en" : "is at"}
+                    </span>
+                    {" "}
+                    {principalLocation.propertyName}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {principalLocation === undefined && (
+          <div className="mt-3 rounded-lg bg-muted/20 border border-border h-9 animate-pulse" />
+        )}
 
       </div>
 
