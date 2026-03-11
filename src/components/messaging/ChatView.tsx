@@ -91,7 +91,7 @@ export function ChatView({
   const handleSend = async () => {
     const text = input.trim();
     if (!text || sending) return;
-    setInput("");
+    clearDraft();
     setSending(true);
 
     if (isAgentThread) {
