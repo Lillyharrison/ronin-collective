@@ -27,7 +27,8 @@ export function ChatView({
 }: ChatViewProps) {
   const { language } = useLanguage();
   const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, deleteMessage } = useMessages(threadId);
-  const [input, setInput] = useState("");
+  const DRAFT_KEY = `chat_draft_${threadId}`;
+  const [input, setInput] = useState(() => localStorage.getItem(DRAFT_KEY) ?? "");
   const [sending, setSending] = useState(false);
   const [agentTyping, setAgentTyping] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -66,6 +67,20 @@ export function ChatView({
     return () => document.removeEventListener("mousedown", handler);
   }, [showEmoji, showAttachMenu]);
 
+  // Persist draft to localStorage so it survives navigation
+  useEffect(() => {
+    if (input) {
+      localStorage.setItem(DRAFT_KEY, input);
+    } else {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, [input, DRAFT_KEY]);
+
+  const clearDraft = () => {
+    setInput("");
+    localStorage.removeItem(DRAFT_KEY);
+  };
+
   const getAuthHeader = async () => {
     const { data: session } = await supabase.auth.getSession();
     return session?.session
@@ -76,7 +91,7 @@ export function ChatView({
   const handleSend = async () => {
     const text = input.trim();
     if (!text || sending) return;
-    setInput("");
+    clearDraft();
     setSending(true);
 
     if (isAgentThread) {
@@ -195,7 +210,7 @@ export function ChatView({
     const file = e.target.files?.[0];
     if (!file) return;
     const captionText = input.trim();
-    setInput("");
+    clearDraft();
     setSending(true);
     await handleMediaSend(file, captionText, false);
     setSending(false);
@@ -207,7 +222,7 @@ export function ChatView({
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith("image")) return;
     const captionText = input.trim();
-    setInput("");
+    clearDraft();
     await handleMediaSend(file, captionText, true);
     if (visionInputRef.current) visionInputRef.current.value = "";
   };
