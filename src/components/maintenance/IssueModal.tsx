@@ -151,14 +151,14 @@ function ModalContent({
 
   return (
     <div
-      className="fixed inset-x-0 top-0 bottom-0 sm:inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       style={{ backgroundColor: "rgba(0,0,0,0.72)" }}
       onClick={e => {
         if (e.target === e.currentTarget && !pickerOpenRef.current) onClose();
       }}
     >
       <div
-        className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden max-h-full sm:max-h-[90dvh]"
+        className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden h-[90dvh] sm:h-auto sm:max-h-[90dvh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Sticky header */}
