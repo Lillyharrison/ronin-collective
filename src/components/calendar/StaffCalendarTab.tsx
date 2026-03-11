@@ -215,6 +215,12 @@ function ShiftChip({
   }
   const col = propColor(shift.property_id, properties);
   const prop = properties.find((p) => p.id === shift.property_id);
+
+  // Extract virtual location from notes (e.g. "📍 Office – some note")
+  const virtualLocMatch = shift.notes?.match(/^📍 (Office|Remote)/);
+  const virtualLoc = virtualLocMatch?.[1];
+  const displayLabel = prop?.name ?? virtualLoc ?? "—";
+
   return (
     <div
       draggable
@@ -222,10 +228,12 @@ function ShiftChip({
       onClick={onClick}
       className={cn(
         "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none flex items-center gap-0.5 hover:opacity-80 transition-opacity",
-        col.bg, col.text
+        virtualLoc && !prop
+          ? "bg-muted/60 border-border text-muted-foreground"
+          : `${col.bg} ${col.text}`
       )}
     >
-      <span className="truncate max-w-[64px]">{prop?.name ?? "—"}</span>
+      <span className="truncate max-w-[64px]">{displayLabel}</span>
       {shift.start_time && (
         <span className="opacity-70 flex-shrink-0">{formatTime(shift.start_time)}</span>
       )}
@@ -262,6 +270,7 @@ function ShiftModal({
   const [form, setForm] = useState({
     staff_id: editShift?.staff_id ?? prefillStaff ?? "",
     property_id: editShift?.property_id ?? "",
+    location: "",
     shift_date: editShift?.shift_date ?? prefillDate ?? format(new Date(), "yyyy-MM-dd"),
     start_time: editShift?.start_time?.slice(0, 5) ?? "09:00",
     end_time: editShift?.end_time?.slice(0, 5) ?? "17:00",
@@ -271,13 +280,17 @@ function ShiftModal({
 
   useEffect(() => {
     if (open) {
+      const existingNotes = editShift?.notes ?? "";
+      const locPrefix = existingNotes.startsWith("📍") ? existingNotes.split(" – ")[0].replace("📍 ", "") : "";
+      const restNotes = locPrefix ? existingNotes.replace(`📍 ${locPrefix} – `, "").replace(`📍 ${locPrefix}`, "") : existingNotes;
       setForm({
         staff_id: editShift?.staff_id ?? prefillStaff ?? "",
         property_id: editShift?.property_id ?? "",
+        location: locPrefix,
         shift_date: editShift?.shift_date ?? prefillDate ?? format(new Date(), "yyyy-MM-dd"),
         start_time: editShift?.start_time?.slice(0, 5) ?? "09:00",
         end_time: editShift?.end_time?.slice(0, 5) ?? "17:00",
-        notes: editShift?.notes ?? "",
+        notes: restNotes,
       });
     }
   }, [open, prefillDate, prefillStaff, editShift]);
@@ -287,6 +300,8 @@ function ShiftModal({
   const handleSave = async () => {
     if (!form.staff_id || !form.shift_date) return;
     setSaving(true);
+    // Combine location + notes into notes field
+    const locationNote = form.location ? `📍 ${form.location}${form.notes.trim() ? ` – ${form.notes.trim()}` : ""}` : form.notes.trim() || null;
     const ok = await onSave({
       staff_id: form.staff_id,
       property_id: form.property_id || null,
@@ -295,7 +310,7 @@ function ShiftModal({
       start_time: form.start_time || null,
       end_time: form.end_time || null,
       status: "scheduled",
-      notes: form.notes.trim() || null,
+      notes: locationNote,
       created_by: userId,
     });
     setSaving(false);
@@ -323,11 +338,20 @@ function ShiftModal({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Property</Label>
-            <Select value={form.property_id} onValueChange={(v) => setForm((f) => ({ ...f, property_id: v }))}>
-              <SelectTrigger><SelectValue placeholder="Select property…" /></SelectTrigger>
+            <Label>Location</Label>
+            <Select value={form.location || form.property_id || "__none__"} onValueChange={(v) => {
+              const virtualLocs = ["Office", "Remote"];
+              if (virtualLocs.includes(v)) {
+                setForm((f) => ({ ...f, location: v, property_id: "" }));
+              } else {
+                setForm((f) => ({ ...f, property_id: v === "__none__" ? "" : v, location: "" }));
+              }
+            }}>
+              <SelectTrigger><SelectValue placeholder="Select location…" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No property</SelectItem>
+                <SelectItem value="__none__">No location</SelectItem>
+                <SelectItem value="Office">🏢 Office</SelectItem>
+                <SelectItem value="Remote">🏠 Remote</SelectItem>
                 {properties.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
@@ -1102,15 +1126,15 @@ export function StaffCalendarTab({
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
   } = useStaffSchedules(weekStart);
 
-  // Load profiles (staff/manager/admin only — exclude principal/extended_family) and properties once
+  // Load profiles (admin + staff only — exclude principal/extended_family) and properties once
   useEffect(() => {
     setProfilesLoading(true);
     Promise.all([
-      // Join with user_roles to get only operational staff roles
+      // Exclude family roles: only admin, manager, staff shown on schedule
       supabase
         .from("user_roles")
         .select("user_id, role")
-        .in("role", ["master_admin", "admin", "manager", "staff"]),
+        .in("role", ["admin", "manager", "staff"]),
       supabase.from("properties").select("id, name").order("sort_order"),
     ]).then(async ([rolesRes, propRes]) => {
       const staffUserIds = (rolesRes.data ?? []).map((r) => r.user_id);

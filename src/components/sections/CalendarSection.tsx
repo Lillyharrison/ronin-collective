@@ -475,23 +475,182 @@ function WeekRow({
   );
 }
 
+// ─── Edit Event Dialog ────────────────────────────────────────────────────────
+
+function EditEventDialog({ event, open, onClose, onSave, properties, userId }: {
+  event: CalEvent | null;
+  open: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  properties: Property[];
+  userId: string | null;
+}) {
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    location: "",
+    start_date: "",
+    end_date: "",
+    event_type: "general",
+    property_id: "",
+    is_private: false,
+    recurrence: "none",
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (event) {
+      setForm({
+        title: event.title,
+        description: event.description ?? "",
+        location: event.location ?? "",
+        start_date: event.start_date ? event.start_date.slice(0, 16) : "",
+        end_date: event.end_date ? event.end_date.slice(0, 16) : "",
+        event_type: event.event_type ?? "general",
+        property_id: event.property_id ?? "",
+        is_private: event.is_private ?? false,
+        recurrence: event.keywords?.find((k) => k.startsWith("recurrence:"))?.split(":")[1] ?? "none",
+      });
+    }
+  }, [event]);
+
+  if (!event) return null;
+
+  const save = async () => {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    const keywords: string[] = [];
+    if (form.recurrence !== "none") keywords.push(`recurrence:${form.recurrence}`);
+    const { error } = await supabase.from("calendar_events").update({
+      title: form.title.trim(),
+      description: form.description || null,
+      location: form.location || null,
+      start_date: form.start_date,
+      end_date: form.end_date || null,
+      event_type: form.event_type,
+      is_private: form.is_private,
+      property_id: form.property_id || null,
+      keywords: keywords.length ? keywords : null,
+    }).eq("id", event.id);
+    setSaving(false);
+    if (error) { toast.error("Failed to save changes"); return; }
+    toast.success("Event updated");
+    onSave();
+    onClose();
+  };
+
+  const f = (key: string, val: string | boolean) => setForm((prev) => ({ ...prev, [key]: val }));
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col w-full max-w-lg">
+        <DialogHeader className="flex-shrink-0"><DialogTitle>Edit Event</DialogTitle></DialogHeader>
+        <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
+          <div className="space-y-1.5">
+            <Label>Title</Label>
+            <Input value={form.title} onChange={(e) => f("title", e.target.value)} placeholder="Event title" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Start</Label>
+            <Input type="datetime-local" value={form.start_date} onChange={(e) => f("start_date", e.target.value)} className="w-full" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>End <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input type="datetime-local" value={form.end_date} onChange={(e) => f("end_date", e.target.value)} className="w-full" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Repeat</Label>
+            <Select value={form.recurrence} onValueChange={(v) => f("recurrence", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {RECURRENCE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Type</Label>
+            <Select value={form.event_type} onValueChange={(v) => f("event_type", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    <span className="flex items-center gap-2">
+                      <span className={v.color}>{v.icon}</span>
+                      {v.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Location</Label>
+            <Input value={form.location} onChange={(e) => f("location", e.target.value)} placeholder="Optional" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Property</Label>
+            <Select value={form.property_id || "__none__"} onValueChange={(v) => f("property_id", v === "__none__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notes</Label>
+            <textarea
+              value={form.description}
+              onChange={(e) => f("description", e.target.value)}
+              placeholder="Optional notes…"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[72px] resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={form.is_private} onChange={(e) => f("is_private", e.target.checked)} className="w-4 h-4 accent-primary" />
+            <div>
+              <p className="text-sm font-medium">Private</p>
+              <p className="text-xs text-muted-foreground">Admins only</p>
+            </div>
+          </label>
+        </div>
+        <DialogFooter className="flex-shrink-0 pt-3 border-t border-border gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={save} disabled={saving || !form.title.trim()}>
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Event Detail Sheet ───────────────────────────────────────────────────────
 
 function EventDetailSheet({
   event,
   onClose,
   canDelete,
-  isAdmin,
+  canEdit,
+  userId,
   onDelete,
+  onEdit,
 }: {
   event: CalEvent | null;
   onClose: () => void;
   canDelete: boolean;
-  isAdmin: boolean;
+  canEdit: boolean;
+  userId: string | null;
   onDelete: (ev: CalEvent) => void;
+  onEdit: (ev: CalEvent) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   if (!event) return null;
+
+  // Only editable if: not ical-synced, not a virtual source (birthday/auto), and user has edit rights
+  const isEditableEvent = event.calendar_source !== "ical" && event._source === "calendar_events" || event._source === undefined;
   const tab = getRoninTabForEvent(event);
   const familyCfg = getFamilyTypeConfig(event.event_type);
   const roninCfg = RONIN_TAB_CONFIG[tab];
@@ -587,31 +746,43 @@ function EventDetailSheet({
           )}
         </div>
 
-        {isDeletable && (
-          <div className="flex-shrink-0 pt-3 border-t border-border">
-            {confirmDelete ? (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmDelete(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive" size="sm" className="flex-1"
-                  onClick={() => { setConfirmDelete(false); onDelete(event); onClose(); }}
-                >
-                  {event._source ? `Delete ${sourceLabel}` : "Delete event"}
-                </Button>
-              </div>
-            ) : (
+        {(isDeletable || (canEdit && isEditableEvent)) && (
+          <div className="flex-shrink-0 pt-3 border-t border-border space-y-2">
+            {canEdit && isEditableEvent && !confirmDelete && (
               <Button
-                variant="ghost" size="sm"
-                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => setConfirmDelete(true)}
+                variant="outline" size="sm"
+                className="w-full gap-1"
+                onClick={() => { onEdit(event); onClose(); }}
               >
-                <X size={14} className="mr-1" />
-                {event._source === "maintenance" ? "Delete maintenance issue" :
-                 event._source === "orders" ? "Delete delivery order" :
-                 "Delete event"}
+                <Settings size={14} className="mr-1" />
+                Edit event
               </Button>
+            )}
+            {isDeletable && (
+              confirmDelete ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmDelete(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive" size="sm" className="flex-1"
+                    onClick={() => { setConfirmDelete(false); onDelete(event); onClose(); }}
+                  >
+                    {event._source ? `Delete ${sourceLabel}` : "Delete event"}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost" size="sm"
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <X size={14} className="mr-1" />
+                  {event._source === "maintenance" ? "Delete maintenance issue" :
+                   event._source === "orders" ? "Delete delivery order" :
+                   "Delete event"}
+                </Button>
+              )
             )}
           </div>
         )}
@@ -1001,10 +1172,11 @@ function RightPanel({
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
 export function CalendarSection() {
-  const { isMasterAdmin, isAdmin, isManager, userId } = usePermissions();
-  const isStaff = !isMasterAdmin && !isAdmin && !isManager;
+  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level } = usePermissions();
+  // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
+  const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
 
-  const [mode, setMode] = useState<CalendarMode>(isStaff ? "ronin" : "family");
+  const [mode, setMode] = useState<CalendarMode>(isFamilyUser ? "family" : "ronin");
   const [roninTab, setRoninTab] = useState<RoninTab>("all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [familyEvents, setFamilyEvents] = useState<CalEvent[]>([]);
@@ -1012,6 +1184,7 @@ export function CalendarSection() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CalEvent | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showNewEvent, setShowNewEvent] = useState(false);
@@ -1293,7 +1466,7 @@ export function CalendarSection() {
 
       {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
       {mode === "ronin" && roninTab === "staff" && (
-        <StaffCalendarTab canEdit={isMasterAdmin} userId={userId} />
+        <StaffCalendarTab canEdit={isMasterAdmin || isAdmin} userId={userId} />
       )}
 
       {/* ── Calendar grid (hidden when staff tab active) ─────────────────── */}
@@ -1412,8 +1585,18 @@ export function CalendarSection() {
         event={selectedEvent}
         onClose={() => setSelectedEvent(null)}
         canDelete={isMasterAdmin || isAdmin}
-        isAdmin={isAdmin}
+        canEdit={isMasterAdmin || isAdmin || (selectedEvent?.calendar_source === "manual")}
+        userId={userId}
         onDelete={deleteEvent}
+        onEdit={(ev) => { setSelectedEvent(null); setEditingEvent(ev); }}
+      />
+      <EditEventDialog
+        event={editingEvent}
+        open={!!editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onSave={refresh}
+        properties={properties}
+        userId={userId}
       />
       <CalendarSettingsDialog open={showSettings} onClose={() => setShowSettings(false)} properties={properties} />
       <NewEventDialog open={showNewEvent} onClose={() => setShowNewEvent(false)} onSave={refresh} properties={properties} userId={userId} />
