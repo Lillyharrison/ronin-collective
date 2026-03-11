@@ -483,26 +483,37 @@ export function Dashboard() {
       {/* Draft Tasks widget — Ronin AI suggested tasks awaiting approval */}
       <DraftTasksWidget />
 
-      {/* Notifications widget — shows unread alerts, dismissable */}
-      {dashNotifs.length > 0 && (
-        <div className="mx-4 mt-4 rounded-xl bg-card border border-border overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-            <div className="flex items-center gap-2">
-              <Bell size={13} className="text-[hsl(var(--gold))]" />
-              <span className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-                {language === "es" ? "Notificaciones" : "Notifications"}
-              </span>
+      {/* Notifications widget — always visible, shows "all clear" when empty */}
+      <div className="mx-4 mt-4 rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Bell size={13} className="text-[hsl(var(--gold))]" />
+            <span className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
+              {language === "es" ? "Notificaciones" : "Notifications"}
+            </span>
+            {dashNotifs.length > 0 && (
               <span className="text-[10px] bg-status-urgent text-white font-bold px-1.5 py-0.5 rounded-full">
                 {dashNotifs.length}
               </span>
-            </div>
+            )}
+          </div>
+          {dashNotifs.length > 0 && (
             <button
               onClick={() => dashNotifs.forEach(n => dismissNotif(n.id, n.user_id))}
               className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
             >
               {language === "es" ? "Limpiar todas" : "Clear all"}
             </button>
+          )}
+        </div>
+        {dashNotifs.length === 0 ? (
+          <div className="flex items-center gap-2 px-4 py-4">
+            <span className="text-base">✅</span>
+            <span className="text-xs text-muted-foreground">
+              {language === "es" ? "Todo despejado" : "All clear — no new notifications"}
+            </span>
           </div>
+        ) : (
           <div className="divide-y divide-border">
             {dashNotifs.map(n => {
               const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
@@ -539,8 +550,8 @@ export function Dashboard() {
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Quick Actions */}
       <div className="px-4 mt-5">
