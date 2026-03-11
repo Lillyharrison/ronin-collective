@@ -1,45 +1,52 @@
 // Ronin Estates Service Worker
 // Strategy:
-//   - index.html (navigation) → Cache-first + background revalidate (stale-while-revalidate)
+//   - index.html (navigation) → Cache-first (stale-while-revalidate in background)
 //   - App shell (JS/CSS/fonts/images) → Cache-first (versioned cache)
 //   - Supabase REST/storage → Network-first with stale fallback
 //   - Auth / edge functions → Always network, never cache
 //
-// The key goal: the app shell (index.html + assets) is served instantly from cache
-// on every open, eliminating the "reload" feeling on iPhone PWA.
+// The key goal: the app shell is served instantly from cache on every open.
+// NO skipWaiting — this prevents the forced reload when a new SW is detected.
+// The app will update silently on the NEXT launch, not the current session.
 
-const CACHE_VERSION = "ronin-v4";
+const CACHE_VERSION = "ronin-v5";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const DATA_CACHE    = `${CACHE_VERSION}-data`;
 
 // Assets that form the app shell — cached aggressively
 const SHELL_PATTERNS = [/\.js$/, /\.css$/, /\.woff2?$/, /\.png$/, /\.ico$/, /\.svg$/];
 
-// Supabase REST patterns — cached with stale-while-revalidate
+// Supabase REST patterns — network-first with stale fallback
 const DATA_PATTERNS = [/supabase\.co\/rest\/v1\//, /supabase\.co\/storage\/v1\//];
 
 // Never cache these paths — auth redirects and push subscriptions must hit network
 const NEVER_CACHE = [/\/~oauth/, /functions\/v1\//, /auth\/v1\//];
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
+
 self.addEventListener("install", (event) => {
-  // Pre-cache index.html so it's available instantly on first open
+  // Pre-cache the app shell so it's available instantly on first open.
+  // Do NOT call skipWaiting() — that forces a reload on every update.
+  // The new SW will wait and activate on the next app launch instead.
   event.waitUntil(
-    caches.open(SHELL_CACHE).then(cache => cache.addAll(["/"]))
-      .then(() => self.skipWaiting())
+    caches.open(SHELL_CACHE).then(cache => cache.addAll(["/"])).catch(() => {})
   );
 });
 
 self.addEventListener("activate", (event) => {
-  // Delete old caches from previous versions
+  // Clean up old versioned caches, then take control of all open clients
+  // without forcing a reload — clients continue working with the new SW
+  // transparently from the next request forward.
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k.startsWith("ronin-") && k !== SHELL_CACHE && k !== DATA_CACHE)
-          .map(k => caches.delete(k))
+    caches.keys()
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(k => k.startsWith("ronin-") && k !== SHELL_CACHE && k !== DATA_CACHE)
+            .map(k => caches.delete(k))
+        )
       )
-    ).then(() => clients.claim())
+      .then(() => clients.claim())
   );
 });
 
@@ -55,8 +62,7 @@ self.addEventListener("fetch", (event) => {
   if (NEVER_CACHE.some(p => p.test(url.href))) return;
 
   // HTML navigation — cache-first so iPhone PWA opens instantly with no re-render.
-  // The shell is versioned via CACHE_VERSION so updates still propagate on next
-  // service worker activation.
+  // Shell is versioned via CACHE_VERSION so updates propagate on next SW activation.
   if (request.headers.get("accept")?.includes("text/html")) {
     event.respondWith(cacheFirst(request, SHELL_CACHE));
     return;
@@ -77,47 +83,42 @@ self.addEventListener("fetch", (event) => {
 
 // ── Strategies ────────────────────────────────────────────────────────────────
 
-// Serve from cache immediately; update cache in background for next visit
-async function staleWhileRevalidate(request, cacheName) {
-  const cache = await caches.open(cacheName);
+async function cacheFirst(request, cacheName) {
+  const cache  = await caches.open(cacheName);
   const cached = await cache.match(request);
 
-  // Always kick off a background revalidation
-  const networkPromise = fetch(request).then(response => {
+  // Serve cached version immediately — revalidate in background for next visit
+  if (cached) {
+    fetch(request)
+      .then(res => { if (res && res.ok) cache.put(request, res); })
+      .catch(() => {});
+    return cached;
+  }
+
+  // Nothing cached yet — fetch from network and cache the result
+  try {
+    const response = await fetch(request);
     if (response.ok) cache.put(request, response.clone());
     return response;
-  }).catch(() => null);
-
-  // Return cached instantly if available, otherwise wait for network
-  return cached ?? networkPromise;
-}
-
-async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (response.ok) cache.put(request, response.clone());
-  return response;
+  } catch (err) {
+    // If even network fails, return a minimal offline fallback for HTML
+    if (request.headers.get("accept")?.includes("text/html")) {
+      const fallback = await cache.match("/");
+      if (fallback) return fallback;
+    }
+    throw err;
+  }
 }
 
 async function networkFirstWithStale(request, cacheName) {
   const cache = await caches.open(cacheName);
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response.clone());
-    }
+    if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
-    // Network failed — serve stale cache so the app still works offline
     const cached = await cache.match(request);
     if (cached) return cached;
-    // For HTML navigation fallback, try serving index.html
-    if (request.headers.get("accept")?.includes("text/html")) {
-      const fallback = await cache.match("/");
-      if (fallback) return fallback;
-    }
     throw new Error("Network unavailable and no cached response");
   }
 }
