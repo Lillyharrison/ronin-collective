@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
+import { Bell, X } from "lucide-react";
 
 // ── Lazy-loaded section components ───────────────────────────────────────────
 // Only the active section's bundle is downloaded — everything else is deferred.
