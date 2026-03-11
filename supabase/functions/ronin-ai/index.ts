@@ -745,7 +745,7 @@ serve(async (req) => {
           const { data: recentMedia } = await adminClient
             .from("messages")
             .select("content_media_url")
-            .eq("thread_id", ctx.threadId)
+            .eq("thread_id", execThreadId)
             .eq("media_type", "image")
             .not("content_media_url", "is", null)
             .order("created_at", { ascending: false })
