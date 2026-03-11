@@ -648,6 +648,9 @@ function EventDetailSheet({
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   if (!event) return null;
+
+  // Only editable if: not ical-synced, not a virtual source (birthday/auto), and user has edit rights
+  const isEditableEvent = event.calendar_source !== "ical" && event._source === "calendar_events" || event._source === undefined;
   const tab = getRoninTabForEvent(event);
   const familyCfg = getFamilyTypeConfig(event.event_type);
   const roninCfg = RONIN_TAB_CONFIG[tab];
