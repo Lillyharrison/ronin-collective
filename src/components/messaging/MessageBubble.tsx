@@ -3,6 +3,31 @@ import { format } from "date-fns";
 import { Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle, Copy } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
+/** Lazy-loaded image with a skeleton placeholder so layout doesn't jump */
+function ImageWithSkeleton({ src, onClick }: { src: string; onClick: () => void }) {
+  const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
+  return (
+    <div className="relative rounded-lg overflow-hidden mb-1 cursor-pointer max-w-full" style={{ minHeight: loaded ? undefined : "120px" }} onClick={onClick}>
+      {!loaded && !errored && (
+        <div className="absolute inset-0 bg-muted animate-pulse rounded-lg" />
+      )}
+      <img
+        src={src}
+        alt=""
+        className={`rounded-lg max-w-full block transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        onLoad={() => setLoaded(true)}
+        onError={() => { setLoaded(true); setErrored(true); }}
+      />
+      {errored && (
+        <div className="flex items-center justify-center p-4 text-xs text-muted-foreground bg-muted rounded-lg" style={{ minHeight: "80px" }}>
+          📷 Image unavailable
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Render **bold**, *italic*, and `code` markdown inline */
 function renderMarkdown(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
