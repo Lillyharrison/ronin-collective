@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle, Copy } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 /** Render **bold**, *italic*, and `code` markdown inline */
@@ -62,6 +62,8 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [toolExecuted, setToolExecuted] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressClick = useRef(false);
 
   const time = format(new Date(message.created_at), "HH:mm");
   const isAI = message.is_ai_generated;
@@ -76,6 +78,24 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
   const emojiReactions = reactions
     ? Object.entries(reactions).filter(([key]) => key !== "__pending_tool")
     : [];
+
+  const openMenu = () => {
+    // Haptic feedback on mobile
+    if (navigator.vibrate) navigator.vibrate(30);
+    setShowMenu(true);
+    suppressClick.current = true;
+  };
+
+  const handleTouchStart = () => {
+    longPressTimer.current = setTimeout(openMenu, 420);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const toggleAudio = () => {
     if (!audioRef) {
@@ -105,10 +125,20 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
     onCancelTool?.();
   };
 
+  const handleCopy = () => {
+    if (message.content_text) {
+      navigator.clipboard.writeText(message.content_text).catch(() => {});
+    }
+    setShowMenu(false);
+  };
+
   return (
     <div
       className={`flex mb-1 ${isOwn ? "justify-end" : "justify-start"}`}
-      onContextMenu={(e) => { e.preventDefault(); setShowMenu(true); }}
+      onContextMenu={(e) => { e.preventDefault(); openMenu(); }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchEnd}
     >
       {/* AI avatar */}
       {isAI && (
@@ -119,7 +149,7 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
 
       <div className="max-w-[78%] relative group">
         <div
-          className={`rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+          className={`rounded-2xl px-3 py-2 text-sm leading-relaxed select-none transition-transform active:scale-[0.97] ${
             isOwn
               ? "bg-[hsl(var(--status-done))] text-primary-foreground rounded-br-sm"
               : isAI
@@ -222,52 +252,85 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
           </div>
         </div>
 
-        {/* Context menu (long-press / right-click) */}
+        {/* ── WhatsApp-style reaction + action overlay ─────────────────────── */}
         {showMenu && (
           <>
-            <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
+            {/* Backdrop */}
             <div
-              className={`absolute ${isOwn ? "right-0" : "left-0"} -top-2 translate-y-[-100%] bg-card border border-border rounded-xl shadow-lg z-30 py-1 min-w-[140px]`}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+              onClick={() => setShowMenu(false)}
+            />
+
+            {/* Floating panel — anchored above the bubble */}
+            <div
+              className={`absolute ${isOwn ? "right-0" : "left-0"} bottom-full mb-2 z-50 flex flex-col gap-1.5`}
+              style={{ minWidth: "max-content" }}
             >
-              {/* Emoji reactions row */}
-              <div className="flex gap-1 px-2 py-1.5 border-b border-border">
-                {quickEmojis.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => { onReact(emoji); setShowMenu(false); }}
-                    className="text-base hover:scale-125 transition-transform px-0.5"
-                  >
-                    {emoji}
-                  </button>
-                ))}
+              {/* Emoji reaction bar */}
+              <div className="flex items-center gap-1 bg-card border border-border rounded-2xl shadow-xl px-3 py-2 animate-in zoom-in-95 fade-in duration-150">
+                {quickEmojis.map((emoji, i) => {
+                  const hasReacted = emojiReactions.find(([e]) => e === emoji)?.[1] as string[] | undefined;
+                  const iReacted = hasReacted?.includes(currentUserId);
+                  return (
+                    <button
+                      key={emoji}
+                      onClick={() => { onReact(emoji); setShowMenu(false); }}
+                      className={`text-xl w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110 ${
+                        iReacted ? "bg-accent/20 ring-1 ring-accent scale-110" : "hover:bg-muted"
+                      }`}
+                      style={{ animationDelay: `${i * 30}ms` }}
+                    >
+                      {emoji}
+                    </button>
+                  );
+                })}
               </div>
-              {/* Delete option */}
-              {canDelete && onDelete && (
-                <button
-                  onClick={() => { onDelete(message.id); setShowMenu(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                >
-                  <Trash2 size={14} />
-                  Delete message
-                </button>
-              )}
+
+              {/* Action menu */}
+              <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-150">
+                {message.content_text && (
+                  <button
+                    onClick={handleCopy}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
+                  >
+                    <Copy size={15} className="text-muted-foreground" />
+                    Copy
+                  </button>
+                )}
+                {canDelete && onDelete && (
+                  <button
+                    onClick={() => { onDelete(message.id); setShowMenu(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors border-t border-border/50"
+                  >
+                    <Trash2 size={15} />
+                    Delete message
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}
 
-        {/* Emoji reactions (excluding __pending_tool) */}
+        {/* Emoji reactions display */}
         {emojiReactions.length > 0 && (
-          <div className={`flex gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
-            {emojiReactions.map(([emoji, users]) => (
-              <button
-                key={emoji}
-                onClick={() => onReact(emoji)}
-                className="text-xs bg-card border border-border rounded-full px-1.5 py-0.5 flex items-center gap-0.5"
-              >
-                <span>{emoji}</span>
-                <span className="text-[9px] text-muted-foreground">{(users as string[]).length}</span>
-              </button>
-            ))}
+          <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
+            {emojiReactions.map(([emoji, users]) => {
+              const iReacted = (users as string[]).includes(currentUserId);
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => onReact(emoji)}
+                  className={`text-xs rounded-full px-2 py-0.5 flex items-center gap-0.5 border transition-colors ${
+                    iReacted
+                      ? "bg-accent/20 border-accent/40 text-accent"
+                      : "bg-card border-border text-foreground"
+                  }`}
+                >
+                  <span>{emoji}</span>
+                  <span className="text-[9px] font-medium">{(users as string[]).length}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
