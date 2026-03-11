@@ -1188,6 +1188,7 @@ export function CalendarSection() {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showNewEvent, setShowNewEvent] = useState(false);
+  const [maintenancePropertyFilter, setMaintenancePropertyFilter] = useState<string>("all");
   const dragRef = useRef<CalEvent | null>(null);
 
   // ── Fetch family (iCal synced) events ──────────────────────────────────────
