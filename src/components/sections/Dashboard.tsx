@@ -141,6 +141,7 @@ export function Dashboard() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [reportIssueOpen, setReportIssueOpen] = useState(false);
   const [userQuickActions, setUserQuickActions] = useState<string[] | null>(null);
+  const [qaLoading, setQaLoading] = useState(true);
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
@@ -216,16 +217,19 @@ export function Dashboard() {
   // Load user's quick action preferences from their profile
   useEffect(() => {
     if (!userId || permLoading) return;
+    setQaLoading(true);
     supabase
       .from("profiles")
       .select("section_permissions")
       .eq("id", userId)
       .maybeSingle()
       .then(({ data }) => {
-        if (!data?.section_permissions) return;
-        const perms = data.section_permissions as Record<string, unknown>;
-        const qa = perms["_quick_actions"];
-        if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
+        if (data?.section_permissions) {
+          const perms = data.section_permissions as Record<string, unknown>;
+          const qa = perms["_quick_actions"];
+          if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
+        }
+        setQaLoading(false);
       });
   }, [userId, permLoading]);
 
@@ -543,6 +547,14 @@ export function Dashboard() {
         <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
           {language === "es" ? "Acciones Rápidas" : "Quick Actions"}
         </p>
+        {/* Wait until user prefs are loaded to avoid flashing unfiltered actions */}
+        {(permLoading || qaLoading) ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-card border border-border rounded-xl p-4 min-h-[88px] animate-pulse" />
+            ))}
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-3">
           {ALL_QUICK_ACTIONS_DASHBOARD
             .filter(a => {
@@ -570,6 +582,7 @@ export function Dashboard() {
             </button>
           ))}
         </div>
+        )}
       </div>
 
 
