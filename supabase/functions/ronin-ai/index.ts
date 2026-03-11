@@ -1037,6 +1037,8 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
 
 ### WRITE TOOLS — present confirmation before executing:
 - **log_maintenance_issue**: Use THIS (not create_task, not send_staff_message) when someone reports a broken item, damage, leak, or any physical property problem. It creates a proper maintenance work order. Category must be one of: Plumbing, Electrical / Tech, Climate / HVAC, Outdoor / Grounds, Appliances, Structural, Security, General. Priority: urgent/high/medium/low.
+  - **REPORTER CREDIT**: If the issue was described by someone else in the conversation (e.g. Lynn said "the curtain rail is broken" and Lilly is approving it), set `reported_by_name` to the original reporter's name (e.g. "Lynn"). Do NOT credit the approver.
+  - **AUTO-APPROVE**: If the caller is a master_admin or admin, the issue is logged as 'approved' immediately — no second approval step needed. State this clearly in your confirmation message.
 - **create_task**: Use for operational work orders that are NOT physical maintenance issues.
 - **log_vendor**: Use when the user shares contact details for a vendor, contractor, service provider, or any business contact. Even from a phone screenshot, pasted vCard, or described verbally. Extract all available fields.
 - **update_task_status**, **log_asset**, **send_staff_message**
