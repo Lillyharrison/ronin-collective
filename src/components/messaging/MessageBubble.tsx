@@ -141,6 +141,7 @@ function MessageInfoModal({ message, onClose }: { message: Message; onClose: () 
 
 export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact, onDelete, onReply, onConfirmTool, onCancelTool, quickEmojis }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left?: number; right?: number; flipDown?: boolean } | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [starred, setStarred] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
@@ -148,6 +149,7 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
   const [toolExecuted, setToolExecuted] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressClick = useRef(false);
+  const bubbleRef = useRef<HTMLDivElement>(null);
 
   const time = format(new Date(message.created_at), "HH:mm");
   const isAI = message.is_ai_generated;
