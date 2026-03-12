@@ -783,30 +783,43 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
               </div>
 
               <div className="space-y-1">
-                {ALL_SECTIONS.map(section => {
+                {ALL_SECTIONS.map((section, idx) => {
                   const sp = perms[section.key] || { view: false, edit: false, notifications: false };
+                  const prevSection = ALL_SECTIONS[idx - 1];
+                  const showDivider = section.isFeature && prevSection && !prevSection.isFeature;
                   return (
-                    <div key={section.key} className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
-                      <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
-                      <div className="w-10 flex justify-center">
-                        <button onClick={() => togglePerm(section.key, "view")}
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}>
-                          <Check size={11} />
-                        </button>
-                      </div>
-                      <div className="w-10 flex justify-center">
-                        <button onClick={() => section.hasEdit && sp.view && togglePerm(section.key, "edit")}
-                          disabled={!section.hasEdit || !sp.view}
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
-                          <Check size={11} />
-                        </button>
-                      </div>
-                      <div className="w-10 flex justify-center">
-                        <button onClick={() => sp.view && togglePerm(section.key, "notifications")}
-                          disabled={!sp.view}
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
-                          <Check size={11} />
-                        </button>
+                    <div key={section.key}>
+                      {showDivider && (
+                        <div className="flex items-center gap-2 my-3">
+                          <div className="flex-1 h-px bg-charcoal-light" />
+                          <span className="text-[9px] uppercase tracking-widest text-gold/60 font-semibold">
+                            {isEN ? "Feature Visibility" : "Visibilidad de funciones"}
+                          </span>
+                          <div className="flex-1 h-px bg-charcoal-light" />
+                        </div>
+                      )}
+                      <div className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
+                        <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
+                        <div className="w-10 flex justify-center">
+                          <button onClick={() => togglePerm(section.key, "view")}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}>
+                            <Check size={11} />
+                          </button>
+                        </div>
+                        <div className="w-10 flex justify-center">
+                          <button onClick={() => section.hasEdit && sp.view && togglePerm(section.key, "edit")}
+                            disabled={!section.hasEdit || !sp.view}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
+                            <Check size={11} />
+                          </button>
+                        </div>
+                        <div className="w-10 flex justify-center">
+                          <button onClick={() => sp.view && togglePerm(section.key, "notifications")}
+                            disabled={!sp.view}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
+                            <Check size={11} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
