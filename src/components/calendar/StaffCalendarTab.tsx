@@ -336,6 +336,21 @@ function ShiftModal({
     setSaving(true);
     const noteVal = locationNote(form.notes, form.location);
 
+    // ── Edit mode: update the concrete shift directly ──────────────────────
+    if (editShift && editShift.concrete_id) {
+      const ok = await onUpdate(editShift.concrete_id, {
+        staff_id: form.staff_id,
+        property_id: form.property_id || null,
+        shift_date: form.shift_date,
+        start_time: form.start_time || null,
+        end_time: form.end_time || null,
+        notes: noteVal,
+      });
+      setSaving(false);
+      if (ok) onClose();
+      return;
+    }
+
     if (mode === "recurring") {
       // Create one staff_schedule per selected day-of-week
       if (form.days_of_week.length === 0) { setSaving(false); return; }
