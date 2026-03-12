@@ -256,6 +256,7 @@ function ShiftModal({
   open,
   onClose,
   onSave,
+  onUpdate,
   onSaveSchedule,
   profiles,
   properties,
@@ -267,6 +268,7 @@ function ShiftModal({
   open: boolean;
   onClose: () => void;
   onSave: (data: Omit<StaffShift, "id" | "created_at" | "updated_at">) => Promise<boolean>;
+  onUpdate: (id: string, data: Partial<StaffShift>) => Promise<boolean>;
   onSaveSchedule: (data: Omit<StaffSchedule, "id" | "created_at" | "updated_at">) => Promise<boolean>;
   profiles: Profile[];
   properties: Property[];
