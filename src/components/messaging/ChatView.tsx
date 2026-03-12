@@ -3,11 +3,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useMessages } from "@/hooks/useMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageBubble } from "./MessageBubble";
+import { ChatInfoPanel } from "./ChatInfoPanel";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
-  Users, Bot, User, Plus, Image, ScanSearch, Smile,
+  Users, Bot, User, Plus, Image, ScanSearch, Smile, Search, X,
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
@@ -35,6 +36,10 @@ export function ChatView({
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [agentAnalyzing, setAgentAnalyzing] = useState(false);
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [localTitle, setLocalTitle] = useState(threadTitle);
   const visionInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -80,6 +85,18 @@ export function ChatView({
     setInput("");
     localStorage.removeItem(DRAFT_KEY);
   };
+
+  const handleRenameGroup = async (newName: string) => {
+    await supabase.from("chat_threads").update({ title: newName }).eq("id", threadId);
+    setLocalTitle(newName);
+  };
+
+  // Filter messages by in-chat search query
+  const filteredMessages = searchQuery
+    ? messages.filter(m =>
+        m.content_text?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : messages;
 
   const getAuthHeader = async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -260,7 +277,7 @@ export function ChatView({
 
   const groupedMessages: { date: string; msgs: typeof messages }[] = [];
   let lastDateStr = "";
-  for (const msg of messages) {
+  for (const msg of filteredMessages) {
     const d = new Date(msg.created_at);
     const dateStr = format(d, "yyyy-MM-dd");
     if (dateStr !== lastDateStr) {
@@ -310,14 +327,33 @@ export function ChatView({
 
   return (
     <div className="flex flex-col h-full">
+      {/* ── Info panel ── */}
+      <ChatInfoPanel
+        open={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        threadId={threadId}
+        threadTitle={localTitle}
+        threadType={threadType}
+        participants={participants}
+        currentUserId={currentUserId}
+        isAdmin={isAdmin}
+        isAgentThread={isAgentThread}
+        onRenameGroup={handleRenameGroup}
+        onSearchOpen={() => setSearchOpen(true)}
+      />
+
       {/* ── Sticky chat sub-header — stays pinned inside the flex column ── */}
       <div className={`flex-shrink-0 ${CHAT_HEADER_H} z-40 px-3 border-b border-border bg-card flex items-center gap-3`}>
         <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors">
           <ArrowLeft size={20} className="text-foreground" />
         </button>
         {getHeaderAvatar()}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">{threadTitle}</p>
+        {/* Tappable name area — opens info panel */}
+        <button
+          className="flex-1 min-w-0 text-left"
+          onClick={() => setShowInfoPanel(true)}
+        >
+          <p className="text-sm font-semibold text-foreground truncate">{localTitle}</p>
           <p className="text-[10px] text-muted-foreground">
             {isAgentThread
               ? (language === "es" ? "Agente IA · En línea" : "AI Agent · Online")
@@ -325,8 +361,41 @@ export function ChatView({
               ? `${participants.length} ${language === "es" ? "miembros" : "members"}`
               : (language === "es" ? "En línea" : "Online")}
           </p>
-        </div>
+        </button>
+        {/* Search icon in header */}
+        <button
+          onClick={() => setSearchOpen(v => !v)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"
+        >
+          <Search size={17} />
+        </button>
       </div>
+
+      {/* ── In-chat search bar ── */}
+      {searchOpen && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-card border-b border-border">
+          <Search size={15} className="text-muted-foreground flex-shrink-0" />
+          <input
+            autoFocus
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search messages…"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            style={{ fontSize: "16px" }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="text-muted-foreground hover:text-foreground">
+              <X size={14} />
+            </button>
+          )}
+          <button
+            onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+            className="text-xs text-muted-foreground hover:text-foreground ml-1"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Messages area — fills remaining flex space, scrolls independently */}
       <div
