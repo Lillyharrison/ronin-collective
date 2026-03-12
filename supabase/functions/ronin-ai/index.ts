@@ -213,6 +213,24 @@ const RONIN_TOOLS = [
     },
   },
 
+  // ── update_occupancy ─────────────────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "update_occupancy",
+      description: "Update who is occupying a property. Use when the user asks to add or remove someone from a property's occupants list, or to mark a property as vacant. You can add one person, remove one person, or clear all occupants. Only master_admin and admin roles can use this.",
+      parameters: {
+        type: "object",
+        properties: {
+          property_name: { type: "string", description: "Name of the property to update" },
+          action: { type: "string", enum: ["add", "remove", "clear"], description: "add=add a person to occupants, remove=remove a specific person, clear=remove all occupants (make vacant)" },
+          person_name: { type: "string", description: "Full name of the person to add or remove. Not needed for 'clear'." },
+        },
+        required: ["property_name", "action"],
+      },
+    },
+  },
+
   // ── SILENT TOOLS (auto-execute, no feedback) ─────────────────────────────────
   {
     type: "function",
