@@ -41,7 +41,7 @@ const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon
   occupied:          { label: "Occupied",          color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: <CheckCircle size={12} /> },
   vacant:            { label: "Vacant",            color: "bg-muted text-muted-foreground border-border",             icon: <Clock size={12} /> },
   maintenance:       { label: "Maintenance",       color: "bg-amber-500/20 text-amber-400 border-amber-500/30",       icon: <AlertTriangle size={12} /> },
-  under_construction:{ label: "Under Construction",color: "bg-orange-500/20 text-orange-400 border-orange-500/30",   icon: <Wrench size={12} /> },
+  under_construction:{ label: "Under Construction",color: "bg-black/60 text-white border-white/30 backdrop-blur-sm",  icon: <Wrench size={12} /> },
 };
 
 const PROPERTY_SUB_SECTIONS = [
