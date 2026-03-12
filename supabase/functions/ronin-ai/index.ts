@@ -742,8 +742,25 @@ serve(async (req) => {
       const staff = staffRes.data ?? [];
       const resolvePropertyId = (name?: string) => {
         if (!name) return null;
-        const lower = name.toLowerCase();
-        return props.find((p: { id: string; name: string }) => p.name.toLowerCase().includes(lower) || lower.includes(p.name.toLowerCase()))?.id ?? null;
+        // Normalize: strip dashes/hyphens and collapse spaces for fuzzy matching
+        const normalize = (s: string) => s.toLowerCase().replace(/[-–—]/g, " ").replace(/\s+/g, " ").trim();
+        const needle = normalize(name);
+        // 1. Exact normalized match
+        let match = props.find((p: { id: string; name: string }) => normalize(p.name) === needle);
+        if (match) return match.id;
+        // 2. Property name contains the search term (or vice versa)
+        match = props.find((p: { id: string; name: string }) => {
+          const hay = normalize(p.name);
+          return hay.includes(needle) || needle.includes(hay);
+        });
+        if (match) return match.id;
+        // 3. All words in the search appear in the property name (e.g. "grosvenor penthouse")
+        const words = needle.split(" ").filter(Boolean);
+        match = props.find((p: { id: string; name: string }) => {
+          const hay = normalize(p.name);
+          return words.every(w => hay.includes(w));
+        });
+        return match?.id ?? null;
       };
       const resolveStaffId = (name?: string) => {
         if (!name) return null;
