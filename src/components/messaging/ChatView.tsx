@@ -86,6 +86,18 @@ export function ChatView({
     localStorage.removeItem(DRAFT_KEY);
   };
 
+  const handleRenameGroup = async (newName: string) => {
+    await supabase.from("chat_threads").update({ title: newName }).eq("id", threadId);
+    setLocalTitle(newName);
+  };
+
+  // Filter messages by in-chat search query
+  const filteredMessages = searchQuery
+    ? messages.filter(m =>
+        m.content_text?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : messages;
+
   const getAuthHeader = async () => {
     const { data: session } = await supabase.auth.getSession();
     return session?.session
