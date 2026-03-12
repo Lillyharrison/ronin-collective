@@ -155,10 +155,33 @@ export function useThreads(userId: string | null) {
   };
 
   const deleteThread = async (threadId: string): Promise<boolean> => {
-    await supabase.from("messages").delete().eq("thread_id", threadId);
-    const { error } = await supabase.from("chat_threads").delete().eq("id", threadId);
-    if (!error) await fetchThreads();
-    return !error;
+    if (!userId) return false;
+
+    // Fetch current participant list
+    const { data: thread } = await supabase
+      .from("chat_threads")
+      .select("participant_ids")
+      .eq("id", threadId)
+      .single();
+
+    const participants: string[] = (thread?.participant_ids as string[]) ?? [];
+    const remaining = participants.filter(id => id !== userId);
+
+    if (remaining.length === 0) {
+      // Last participant — fully delete thread and its messages
+      await supabase.from("messages").delete().eq("thread_id", threadId);
+      const { error } = await supabase.from("chat_threads").delete().eq("id", threadId);
+      if (!error) await fetchThreads();
+      return !error;
+    } else {
+      // "Delete for me" — remove self from participant_ids so it disappears from our list
+      const { error } = await supabase
+        .from("chat_threads")
+        .update({ participant_ids: remaining } as never)
+        .eq("id", threadId);
+      if (!error) await fetchThreads();
+      return !error;
+    }
   };
 
   return { threads, loading, createDM, createGroup, refetch: fetchThreads, deleteThread };

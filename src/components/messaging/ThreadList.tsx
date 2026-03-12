@@ -361,12 +361,12 @@ export function ThreadList({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {language === "es" ? "¿Eliminar conversación?" : "Delete conversation?"}
+              {language === "es" ? "¿Eliminar para mí?" : "Delete for me?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {language === "es"
-                ? `Esto eliminará "${threadToDelete ? getThreadName(threadToDelete) : ""}" y todos sus mensajes permanentemente.`
-                : `This will permanently delete "${threadToDelete ? getThreadName(threadToDelete) : ""}" and all its messages.`}
+                ? `"${threadToDelete ? getThreadName(threadToDelete) : ""}" desaparecerá de tu lista. Los demás participantes no se verán afectados.`
+                : `"${threadToDelete ? getThreadName(threadToDelete) : ""}" will be removed from your list. Other participants won't be affected.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -379,8 +379,8 @@ export function ThreadList({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting
-                ? (language === "es" ? "Eliminando..." : "Deleting...")
-                : (language === "es" ? "Eliminar" : "Delete")}
+                ? (language === "es" ? "Eliminando..." : "Removing...")
+                : (language === "es" ? "Eliminar para mí" : "Delete for me")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
