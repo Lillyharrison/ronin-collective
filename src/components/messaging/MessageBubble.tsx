@@ -165,8 +165,25 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
 
   const openMenu = () => {
     if (navigator.vibrate) navigator.vibrate(30);
-    setShowMenu(true);
     suppressClick.current = true;
+    if (bubbleRef.current) {
+      const rect = bubbleRef.current.getBoundingClientRect();
+      const menuHeight = 360; // approx max height of menu
+      const spaceAbove = rect.top;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const flipDown = spaceAbove < menuHeight && spaceBelow > spaceAbove;
+      const pos: typeof menuPos = {
+        flipDown,
+        top: flipDown ? rect.bottom + 8 : rect.top - 8,
+      };
+      if (isOwn) {
+        pos.right = window.innerWidth - rect.right;
+      } else {
+        pos.left = rect.left;
+      }
+      setMenuPos(pos);
+    }
+    setShowMenu(true);
   };
 
   const handleTouchStart = () => {
