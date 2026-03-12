@@ -524,7 +524,7 @@ export function Dashboard() {
         </div>
 
         {/* Principal location tile — full width below the 2-col grid */}
-        {principalLocation !== undefined && (
+        {canSee("principal-location") && principalLocation !== undefined && (
           <div className="mt-3">
             {principalLocation === null ? (
               <div className="rounded-lg bg-muted/30 border border-border px-3 py-2.5 flex items-center gap-2">
@@ -551,7 +551,7 @@ export function Dashboard() {
             )}
           </div>
         )}
-        {principalLocation === undefined && (
+        {canSee("principal-location") && principalLocation === undefined && (
           <div className="mt-3 rounded-lg bg-muted/20 border border-border h-9 animate-pulse" />
         )}
 
