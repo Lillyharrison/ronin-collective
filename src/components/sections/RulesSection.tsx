@@ -324,13 +324,19 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => onToggleActive(rule)}
-              className="p-1.5 rounded-lg hover:bg-black/10 transition-colors"
-              title={rule.is_active ? "Deactivate" : "Activate"}
+              title={rule.is_active ? "Deactivate rule" : "Activate rule"}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all",
+                rule.is_active
+                  ? "bg-[hsl(var(--status-done)/0.15)] border-[hsl(var(--status-done)/0.4)] text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.25)]"
+                  : "bg-muted/60 border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              )}
             >
-              {rule.is_active
-                ? <CheckCircle2 size={13} className="text-[hsl(var(--status-done))]" />
-                : <XCircle size={13} className="text-muted-foreground" />
-              }
+              {rule.is_active ? (
+                <><CheckCircle2 size={12} /> Active</>
+              ) : (
+                <><XCircle size={12} /> Inactive</>
+              )}
             </button>
             <button onClick={() => onEdit(rule)} className="p-1.5 rounded-lg hover:bg-black/10 transition-colors">
               <Pencil size={13} />
