@@ -1602,6 +1602,7 @@ export function StaffCalendarTab({
         open={showShiftModal}
         onClose={() => setShowShiftModal(false)}
         onSave={createShift}
+        onSaveSchedule={createSchedule}
         profiles={profiles}
         properties={properties}
         prefillDate={prefillDate}
