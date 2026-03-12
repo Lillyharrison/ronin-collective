@@ -260,6 +260,100 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
         <MessageInfoModal message={message} onClose={() => setShowInfoModal(false)} />
       )}
 
+      {/* ── Long-press context menu portal — renders above all content ─── */}
+      {showMenu && menuPos && createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-[3px]"
+            onClick={() => setShowMenu(false)}
+          />
+
+          {/* Floating menu — positioned via measured rect, flips if near top */}
+          <div
+            className="fixed z-[100] flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
+            style={{
+              minWidth: "220px",
+              maxWidth: "280px",
+              ...(menuPos.flipDown
+                ? { top: menuPos.top }
+                : { bottom: window.innerHeight - menuPos.top }),
+              ...(menuPos.left !== undefined ? { left: Math.max(8, menuPos.left) } : {}),
+              ...(menuPos.right !== undefined ? { right: Math.max(8, menuPos.right) } : {}),
+            }}
+          >
+            {/* Emoji reaction bar */}
+            <div className="flex items-center gap-1 bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl px-3 py-2">
+              {quickEmojis.map((emoji, i) => {
+                const hasReacted = emojiReactions.find(([e]) => e === emoji)?.[1] as string[] | undefined;
+                const iReacted = hasReacted?.includes(currentUserId);
+                return (
+                  <button
+                    key={emoji}
+                    onClick={() => { onReact(emoji); setShowMenu(false); }}
+                    className={cn(
+                      "text-xl w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110",
+                      iReacted ? "bg-accent/20 ring-1 ring-accent scale-110" : "hover:bg-muted"
+                    )}
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })}
+              <button className="w-9 h-9 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors">
+                <MoreHorizontal size={16} />
+              </button>
+            </div>
+
+            {/* Action list */}
+            <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl overflow-hidden">
+              <ActionRow
+                icon={<Reply size={16} className="text-muted-foreground" />}
+                label="Reply"
+                onClick={handleReply}
+              />
+              <ActionRow
+                icon={<Forward size={16} className="text-muted-foreground" />}
+                label="Forward"
+                onClick={handleForward}
+                divider
+              />
+              {message.content_text && (
+                <ActionRow
+                  icon={<Copy size={16} className="text-muted-foreground" />}
+                  label="Copy"
+                  onClick={handleCopy}
+                  divider
+                />
+              )}
+              <ActionRow
+                icon={<Info size={16} className="text-muted-foreground" />}
+                label="Info"
+                onClick={handleInfo}
+                divider
+              />
+              <ActionRow
+                icon={<Star size={16} className={starred ? "text-[hsl(var(--gold))] fill-[hsl(var(--gold))]" : "text-muted-foreground"} />}
+                label={starred ? "Unstar" : "Star"}
+                onClick={handleStar}
+                divider
+              />
+              {canDelete && onDelete && (
+                <ActionRow
+                  icon={<Trash2 size={16} className="text-destructive" />}
+                  label="Delete"
+                  onClick={() => { onDelete(message.id); setShowMenu(false); }}
+                  divider
+                  danger
+                />
+              )}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
       <div
         className={`flex mb-1 ${isOwn ? "justify-end" : "justify-start"}`}
         onContextMenu={(e) => { e.preventDefault(); openMenu(); }}
@@ -274,7 +368,7 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
           </div>
         )}
 
-        <div className="max-w-[78%] relative group">
+        <div className="max-w-[78%] relative group" ref={bubbleRef}>
           <div
             className={cn(
               "rounded-2xl px-3 py-2 text-sm leading-relaxed select-none transition-transform active:scale-[0.97]",
@@ -382,106 +476,6 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
               )}
             </div>
           </div>
-
-          {/* ── Long-press context menu ─────────────────────────────────────── */}
-          {showMenu && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[3px]"
-                onClick={() => setShowMenu(false)}
-              />
-
-              {/* Floating container above bubble */}
-              <div
-                className={cn(
-                  "absolute bottom-full mb-2 z-50 flex flex-col gap-1.5",
-                  isOwn ? "right-0" : "left-0"
-                )}
-                style={{ minWidth: "200px" }}
-              >
-                {/* Emoji reaction bar */}
-                <div className="flex items-center gap-1 bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl px-3 py-2 animate-in zoom-in-95 fade-in duration-150">
-                  {quickEmojis.map((emoji, i) => {
-                    const hasReacted = emojiReactions.find(([e]) => e === emoji)?.[1] as string[] | undefined;
-                    const iReacted = hasReacted?.includes(currentUserId);
-                    return (
-                      <button
-                        key={emoji}
-                        onClick={() => { onReact(emoji); setShowMenu(false); }}
-                        className={cn(
-                          "text-xl w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110",
-                          iReacted ? "bg-accent/20 ring-1 ring-accent scale-110" : "hover:bg-muted"
-                        )}
-                        style={{ animationDelay: `${i * 30}ms` }}
-                      >
-                        {emoji}
-                      </button>
-                    );
-                  })}
-                  {/* + button for more emojis */}
-                  <button className="w-9 h-9 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors">
-                    <MoreHorizontal size={16} />
-                  </button>
-                </div>
-
-                {/* Action list */}
-                <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-150">
-                  {/* Reply */}
-                  <ActionRow
-                    icon={<Reply size={16} className="text-muted-foreground" />}
-                    label="Reply"
-                    onClick={handleReply}
-                  />
-
-                  {/* Forward / Copy link */}
-                  <ActionRow
-                    icon={<Forward size={16} className="text-muted-foreground" />}
-                    label="Forward"
-                    onClick={handleForward}
-                    divider
-                  />
-
-                  {/* Copy */}
-                  {message.content_text && (
-                    <ActionRow
-                      icon={<Copy size={16} className="text-muted-foreground" />}
-                      label="Copy"
-                      onClick={handleCopy}
-                      divider
-                    />
-                  )}
-
-                  {/* Info */}
-                  <ActionRow
-                    icon={<Info size={16} className="text-muted-foreground" />}
-                    label="Info"
-                    onClick={handleInfo}
-                    divider
-                  />
-
-                  {/* Star */}
-                  <ActionRow
-                    icon={<Star size={16} className={starred ? "text-[hsl(var(--gold))] fill-[hsl(var(--gold))]" : "text-muted-foreground"} />}
-                    label={starred ? "Unstar" : "Star"}
-                    onClick={handleStar}
-                    divider
-                  />
-
-                  {/* Delete */}
-                  {canDelete && onDelete && (
-                    <ActionRow
-                      icon={<Trash2 size={16} className="text-destructive" />}
-                      label="Delete"
-                      onClick={() => { onDelete(message.id); setShowMenu(false); }}
-                      divider
-                      danger
-                    />
-                  )}
-                </div>
-              </div>
-            </>
-          )}
 
           {/* Emoji reactions display */}
           {emojiReactions.length > 0 && (
