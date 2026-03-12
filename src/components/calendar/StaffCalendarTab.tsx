@@ -1309,7 +1309,7 @@ export function StaffCalendarTab({
     createSchedule, editSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
-  } = useStaffSchedules(weekStart);
+  } = useStaffSchedules(weekStart, userId, canEdit);
 
   // Load profiles (admin + staff only — exclude principal/extended_family) and properties once
   useEffect(() => {
