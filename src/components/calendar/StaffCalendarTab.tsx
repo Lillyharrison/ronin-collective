@@ -1625,14 +1625,16 @@ export function StaffCalendarTab({
       {/* ── Modals ────────────────────────────────────────────────────────── */}
       <ShiftModal
         open={showShiftModal}
-        onClose={() => setShowShiftModal(false)}
+        onClose={() => { setShowShiftModal(false); setEditingShift(null); }}
         onSave={createShift}
+        onUpdate={updateShift}
         onSaveSchedule={createSchedule}
         profiles={profiles}
         properties={properties}
         prefillDate={prefillDate}
         prefillStaff={prefillStaff}
         userId={userId}
+        editShift={editingShift}
       />
 
       <LeaveModal
