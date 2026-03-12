@@ -954,6 +954,85 @@ serve(async (req) => {
           resultMessage = `✅ **Message sent to ${tool_args.recipient_name}.**\n\n> "${tool_args.message_text}"\n\nVisible in their Messages.`;
         }
 
+      // ── update_occupancy ──────────────────────────────────────────────────
+      } else if (tool_name === "update_occupancy") {
+        if (!["master_admin", "admin"].includes(callerRole)) {
+          resultMessage = `⚠️ Only admins can update property occupancy.`;
+        } else {
+          const propId = resolvePropertyId(tool_args.property_name);
+          if (!propId) {
+            resultMessage = `⚠️ Property **"${tool_args.property_name}"** not found.`;
+          } else {
+            const { data: prop } = await adminClient.from("properties").select("id, name, occupied_by_profile_ids").eq("id", propId).single();
+            if (!prop) {
+              resultMessage = `⚠️ Could not load property data.`;
+            } else {
+              const currentIds: string[] = (prop.occupied_by_profile_ids as string[]) ?? [];
+              let newIds: string[] = [...currentIds];
+              let personLabel = "";
+
+              if (tool_args.action === "clear") {
+                newIds = [];
+                personLabel = "all occupants removed";
+              } else if (tool_args.person_name) {
+                // Find the profile by name
+                const matchedProfile = staff.find((s: { id: string; full_name: string | null }) =>
+                  (s.full_name ?? "").toLowerCase().includes((tool_args.person_name as string).toLowerCase())
+                );
+                if (!matchedProfile) {
+                  resultMessage = `⚠️ Person **"${tool_args.person_name}"** not found in the system.`;
+                } else {
+                  const personId = matchedProfile.id as string;
+                  const personName = (matchedProfile.full_name as string) ?? tool_args.person_name;
+                  if (tool_args.action === "add") {
+                    if (!newIds.includes(personId)) newIds.push(personId);
+                    personLabel = `**${personName}** added as occupant`;
+                  } else if (tool_args.action === "remove") {
+                    newIds = newIds.filter(id => id !== personId);
+                    personLabel = `**${personName}** removed from occupants`;
+                  }
+                }
+              }
+
+              if (!resultMessage) {
+                // Rebuild the occupied_by text field from resolved names
+                const newNames = await Promise.all(
+                  newIds.map(async (id) => {
+                    const match = staff.find((s: { id: string }) => s.id === id);
+                    return (match as { full_name?: string | null } | undefined)?.full_name ?? id;
+                  })
+                );
+                const newStatus = newIds.length > 0 ? "occupied" : "vacant";
+                const { error: updateErr } = await adminClient.from("properties").update({
+                  occupied_by_profile_ids: newIds,
+                  occupied_by: newNames.length > 0 ? newNames.join(", ") : null,
+                  status: newStatus,
+                }).eq("id", propId);
+
+                if (updateErr) {
+                  resultMessage = `⚠️ Failed to update occupancy: ${updateErr.message}`;
+                } else {
+                  const propName = prop.name as string;
+                  const statusLabel = newIds.length > 0
+                    ? `Now occupied by: ${newNames.join(", ")}`
+                    : `Property is now **vacant**.`;
+                  resultMessage = `🏠 **Occupancy updated — ${propName}**\n\n${personLabel || "Occupancy cleared"}.\n${statusLabel}`;
+
+                  await adminClient.from("system_events").insert({
+                    event_type: "occupancy_changed",
+                    entity_type: "property",
+                    entity_id: propId,
+                    property_id: propId,
+                    triggered_by: callerUserId,
+                    payload: { property_name: propName, action: tool_args.action, person_name: tool_args.person_name ?? null, new_occupants: newNames },
+                    processed_by_ai: true,
+                  });
+                }
+              }
+            }
+          }
+        }
+
       } else if (tool_name === "save_memory") {
         await saveMemorySilently(tool_args, adminClient);
         resultMessage = `🧠 **Memory saved.**`;
