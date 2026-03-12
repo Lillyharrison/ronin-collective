@@ -1601,6 +1601,12 @@ export function StaffCalendarTab({
                         onDragStart={handleDragStart}
                         onDrop={handleDrop}
                         onDeleteShift={(id) => deleteShift(id)}
+                        onShiftDoubleClick={(shift) => {
+                          setEditingShift(shift);
+                          setPrefillDate(shift.shift_date);
+                          setPrefillStaff(shift.staff_id);
+                          setShowShiftModal(true);
+                        }}
                       />
                     );
                   })}
