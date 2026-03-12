@@ -218,13 +218,42 @@ serve(async (req) => {
     const allStaff = staffRes.data ?? [];
     const masterAdminId = masterRes.data?.[0]?.user_id ?? null;
 
-    // Helper: find master admin's system_ai thread
+    // Helper: find master admin's PRIVATE system_ai thread (Agent Ronin DM only).
+    // Must be type=system_ai AND exactly contain the master admin (and possibly null/AI sender).
+    // We pick the thread with fewest participants to avoid group chats that were
+    // accidentally marked system_ai bleeding proactive alerts into other channels.
     async function getMasterThreadId(): Promise<string | null> {
       if (!masterAdminId) return null;
       const { data: threads } = await adminClient
-        .from("chat_threads").select("id, participant_ids").eq("type", "system_ai");
-      return threads?.find((t: { participant_ids: string[] | null }) =>
-        t.participant_ids?.includes(masterAdminId))?.id ?? null;
+        .from("chat_threads")
+        .select("id, participant_ids, title")
+        .eq("type", "system_ai")
+        .contains("participant_ids", [masterAdminId]);
+
+      if (!threads?.length) return null;
+
+      // Prefer: a thread titled "Agent Ronin" that contains ONLY the master admin
+      // (i.e. participant_ids has exactly 1 entry — the master admin themselves,
+      // since Ronin AI has no real user row).
+      const dedicated = threads.find(
+        (t: { participant_ids: string[] | null; title: string | null }) =>
+          (t.title === "Agent Ronin") &&
+          (t.participant_ids?.length === 1)
+      );
+      if (dedicated) return dedicated.id;
+
+      // Fallback: any system_ai thread where master admin is the ONLY participant
+      const solo = threads.find(
+        (t: { participant_ids: string[] | null }) => t.participant_ids?.length === 1
+      );
+      if (solo) return solo.id;
+
+      // Last resort: smallest participant list (i.e. most private channel)
+      const sorted = [...threads].sort(
+        (a: { participant_ids: string[] | null }, b: { participant_ids: string[] | null }) =>
+          (a.participant_ids?.length ?? 99) - (b.participant_ids?.length ?? 99)
+      );
+      return sorted[0]?.id ?? null;
     }
 
     // Helper: post message to master admin's Ronin thread
