@@ -43,7 +43,7 @@ export interface StaffLeaveRequest {
   created_by: string | null;
 }
 
-export function useStaffSchedules(weekStart: Date) {
+export function useStaffSchedules(weekStart: Date, currentUserId?: string | null, canEdit?: boolean) {
   const [schedules, setSchedules] = useState<StaffSchedule[]>([]);
   const [shifts, setShifts] = useState<StaffShift[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<StaffLeaveRequest[]>([]);
@@ -53,31 +53,48 @@ export function useStaffSchedules(weekStart: Date) {
   const weekStartStr = format(weekStart, "yyyy-MM-dd");
   const weekEndStr = format(weekEnd, "yyyy-MM-dd");
 
+  // Staff (non-admin) only see their own shifts/schedules/leave
+  const isAdmin = canEdit === true;
+
   const fetchData = useCallback(async () => {
     setLoading(true);
+
+    let schedulesQuery = supabase
+      .from("staff_schedules")
+      .select("*")
+      .eq("is_active", true)
+      .lte("effective_from", weekEndStr)
+      .or(`effective_to.is.null,effective_to.gte.${weekStartStr}`);
+
+    let shiftsQuery = supabase
+      .from("staff_shifts")
+      .select("*")
+      .gte("shift_date", weekStartStr)
+      .lte("shift_date", weekEndStr);
+
+    let leaveQuery = supabase
+      .from("staff_leave_requests")
+      .select("*")
+      .lte("start_date", weekEndStr)
+      .gte("end_date", weekStartStr);
+
+    // Non-admins only see their own data
+    if (!isAdmin && currentUserId) {
+      schedulesQuery = schedulesQuery.eq("staff_id", currentUserId) as typeof schedulesQuery;
+      shiftsQuery = shiftsQuery.eq("staff_id", currentUserId) as typeof shiftsQuery;
+      leaveQuery = leaveQuery.eq("staff_id", currentUserId) as typeof leaveQuery;
+    }
+
     const [schedulesRes, shiftsRes, leaveRes] = await Promise.all([
-      supabase
-        .from("staff_schedules")
-        .select("*")
-        .eq("is_active", true)
-        .lte("effective_from", weekEndStr)
-        .or(`effective_to.is.null,effective_to.gte.${weekStartStr}`),
-      supabase
-        .from("staff_shifts")
-        .select("*")
-        .gte("shift_date", weekStartStr)
-        .lte("shift_date", weekEndStr),
-      supabase
-        .from("staff_leave_requests")
-        .select("*")
-        .lte("start_date", weekEndStr)
-        .gte("end_date", weekStartStr),
+      schedulesQuery,
+      shiftsQuery,
+      leaveQuery,
     ]);
     setSchedules((schedulesRes.data as StaffSchedule[]) ?? []);
     setShifts((shiftsRes.data as StaffShift[]) ?? []);
     setLeaveRequests((leaveRes.data as StaffLeaveRequest[]) ?? []);
     setLoading(false);
-  }, [weekStartStr, weekEndStr]);
+  }, [weekStartStr, weekEndStr, isAdmin, currentUserId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

@@ -1309,7 +1309,7 @@ export function StaffCalendarTab({
     createSchedule, editSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
-  } = useStaffSchedules(weekStart);
+  } = useStaffSchedules(weekStart, userId, canEdit);
 
   // Load profiles (admin + staff only — exclude principal/extended_family) and properties once
   useEffect(() => {
@@ -1356,18 +1356,21 @@ export function StaffCalendarTab({
 
   const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
 
-  // Staff who have any shifts this week + unique staff from schedules
-  const activeStaffIds = Array.from(
-    new Set([
-      ...displayShifts.map((s) => s.staff_id),
-      ...schedules.map((s) => s.staff_id),
-    ])
-  );
-  const allStaff = profiles.filter((p) =>
-    filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff
-  );
-  // Also include all profiles for "all" if no schedules yet
-  const staffToShow = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10) : profiles.filter((p) => p.id === filterStaff));
+  // Non-admins only see their own row
+  const staffToShow = !canEdit && userId
+    ? profiles.filter((p) => p.id === userId)
+    : (() => {
+        const activeStaffIds = Array.from(
+          new Set([
+            ...displayShifts.map((s) => s.staff_id),
+            ...schedules.map((s) => s.staff_id),
+          ])
+        );
+        const allStaff = profiles.filter((p) =>
+          filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff
+        );
+        return allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10) : profiles.filter((p) => p.id === filterStaff));
+      })();
 
   // ── Drag handlers ──────────────────────────────────────────────────────────
   const handleDragStart = (shift: DisplayShift) => {
