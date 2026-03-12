@@ -328,14 +328,14 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all",
                 rule.is_active
-                  ? "bg-[hsl(var(--status-done)/0.15)] border-[hsl(var(--status-done)/0.4)] text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.25)]"
-                  : "bg-muted/60 border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                  ? "bg-[hsl(var(--status-urgent)/0.12)] border-[hsl(var(--status-urgent)/0.4)] text-[hsl(var(--status-urgent))] hover:bg-[hsl(var(--status-urgent)/0.22)]"
+                  : "bg-[hsl(var(--status-done)/0.12)] border-[hsl(var(--status-done)/0.4)] text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.22)]"
               )}
             >
               {rule.is_active ? (
-                <><CheckCircle2 size={12} /> Active</>
+                <><XCircle size={12} /> Deactivate</>
               ) : (
-                <><XCircle size={12} /> Inactive</>
+                <><CheckCircle2 size={12} /> Activate</>
               )}
             </button>
             <button onClick={() => onEdit(rule)} className="p-1.5 rounded-lg hover:bg-black/10 transition-colors">
