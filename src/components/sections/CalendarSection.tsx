@@ -1472,17 +1472,16 @@ export function CalendarSection() {
         </div>
 
         {/* Property filter — next to Ronin toggle, only when Maintenance tab is active */}
-        {mode === "ronin" && roninTab === "maintenance" && maintenanceProperties.length > 1 && (
+        {mode === "ronin" && roninTab === "maintenance" && properties.length > 0 && (
           <Select value={maintenancePropertyFilter} onValueChange={setMaintenancePropertyFilter}>
             <SelectTrigger className="h-8 text-xs w-[150px] border-amber-500/30 bg-amber-500/10 text-amber-400">
               <SelectValue placeholder="All properties" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All properties</SelectItem>
-              {maintenanceProperties.map((pid) => {
-                const prop = properties.find(p => p.id === pid);
-                return prop ? <SelectItem key={pid} value={pid}>{prop.name}</SelectItem> : null;
-              })}
+              {properties.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         )}
