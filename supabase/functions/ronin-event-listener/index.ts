@@ -263,33 +263,21 @@ serve(async (req) => {
     if (eventType === "occupancy_changed") {
       const { property_name, old_occupant, new_occupant, old_status, new_status } = payload;
       const cleared = !new_occupant && old_occupant;
-      const arrived  = new_occupant && !old_occupant;
       const propLabel = property_name || propertyName;
 
-      const aiPrompt = `You are Ronin AI, an elite estate manager.
-The occupancy status of **${propLabel}** has changed.
-${cleared ? `The occupant **${old_occupant}** has departed. The property is now ${new_status || "vacant"}.` : ""}
-${arrived ? `**${new_occupant}** has just been registered as the occupant. Status is now ${new_status}.` : ""}
-${!cleared && !arrived ? `Status changed from ${old_status} to ${new_status}. Occupant: ${new_occupant || "none"}.` : ""}
-
-Write a concise estate briefing (max 120 words) for the Master Admin noting:
-1. What changed and what it means operationally
-2. ${cleared ? "Key tasks to action now (securing property, adjusting climate, notifying relevant staff, any occupancy-linked rules that were auto-deactivated)" : "Key tasks to prepare for the arrival and any rules that should be reviewed"}
-3. Any follow-up Ronin recommends
-
-Be direct and professional. Use bullet points for tasks.`;
-
-      const aiText = await quickAI(aiPrompt, 400);
-      if (aiText) {
-        const icon = cleared ? "🏠" : "👤";
-        const heading = cleared
-          ? `${icon} **Occupancy Alert — ${propLabel} is now vacant**`
-          : `${icon} **Occupancy Update — ${new_occupant} registered at ${propLabel}**`;
-        await alertMasterAdmin(`${heading}\n\n${aiText}`);
+      let message: string;
+      if (cleared) {
+        message = `🏠 **${propLabel}** is now vacant. ${old_occupant ? `${old_occupant} has been removed as occupant.` : ""}`.trim();
+      } else if (new_occupant) {
+        message = `👤 **${new_occupant}** has been registered as occupant at **${propLabel}**.`;
+      } else {
+        message = `🏠 Occupancy status at **${propLabel}** updated to **${new_status || "unknown"}**.`;
       }
 
+      await alertMasterAdmin(message);
+
       if (event.event_id) {
-        await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: aiText?.slice(0, 300) ?? "" })
+        await adminClient.from("system_events").update({ processed_by_ai: true, ai_response: message.slice(0, 300) })
           .eq("id", event.event_id);
       }
 
