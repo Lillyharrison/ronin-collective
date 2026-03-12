@@ -987,6 +987,30 @@ serve(async (req) => {
                   if (tool_args.action === "add") {
                     if (!newIds.includes(personId)) newIds.push(personId);
                     personLabel = `**${personName}** added as occupant`;
+
+                    // Remove this person from any other property they occupy
+                    const { data: otherProps } = await adminClient
+                      .from("properties")
+                      .select("id, name, occupied_by_profile_ids")
+                      .neq("id", propId);
+                    for (const op of otherProps ?? []) {
+                      const opIds: string[] = (op.occupied_by_profile_ids as string[]) ?? [];
+                      if (opIds.includes(personId)) {
+                        const updatedIds = opIds.filter(id => id !== personId);
+                        const updatedNames = await Promise.all(
+                          updatedIds.map(async (id) => {
+                            const m = staff.find((s: { id: string }) => s.id === id);
+                            return (m as { full_name?: string | null } | undefined)?.full_name ?? id;
+                          })
+                        );
+                        await adminClient.from("properties").update({
+                          occupied_by_profile_ids: updatedIds,
+                          occupied_by: updatedNames.length > 0 ? updatedNames.join(", ") : null,
+                          status: updatedIds.length > 0 ? "occupied" : "vacant",
+                        }).eq("id", op.id);
+                        personLabel += ` (removed from **${op.name as string}**)`;
+                      }
+                    }
                   } else if (tool_args.action === "remove") {
                     newIds = newIds.filter(id => id !== personId);
                     personLabel = `**${personName}** removed from occupants`;
