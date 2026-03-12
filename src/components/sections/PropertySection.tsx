@@ -520,6 +520,33 @@ function PropertyOccupantsManager({ property, isMasterAdmin, onBack, onChanged }
       .map(id => profiles.find(p => p.id === id)?.full_name)
       .filter(Boolean)
       .join(", ");
+
+    // Remove these occupants from any other property they're currently listed at
+    if (newIds.length > 0) {
+      const { data: otherProps } = await supabase
+        .from("properties")
+        .select("id, occupied_by_profile_ids, occupied_by")
+        .neq("id", property.id);
+
+      for (const op of otherProps ?? []) {
+        const opIds: string[] = Array.isArray(op.occupied_by_profile_ids) ? op.occupied_by_profile_ids : [];
+        const overlap = newIds.filter(id => opIds.includes(id));
+        if (overlap.length > 0) {
+          const updatedIds = opIds.filter(id => !overlap.includes(id));
+          const updatedNames = updatedIds
+            .map(id => profiles.find(p => p.id === id)?.full_name)
+            .filter(Boolean)
+            .join(", ");
+          await supabase.from("properties").update({
+            occupied_by_profile_ids: updatedIds,
+            occupied_by_profile_id: updatedIds[0] ?? null,
+            occupied_by: updatedNames || null,
+            status: updatedIds.length > 0 ? "occupied" : "vacant",
+          } as any).eq("id", op.id);
+        }
+      }
+    }
+
     await supabase.from("properties").update({
       occupied_by_profile_ids: newIds,
       occupied_by_profile_id: newIds[0] ?? null,
