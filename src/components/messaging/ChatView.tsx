@@ -277,7 +277,7 @@ export function ChatView({
 
   const groupedMessages: { date: string; msgs: typeof messages }[] = [];
   let lastDateStr = "";
-  for (const msg of messages) {
+  for (const msg of filteredMessages) {
     const d = new Date(msg.created_at);
     const dateStr = format(d, "yyyy-MM-dd");
     if (dateStr !== lastDateStr) {
