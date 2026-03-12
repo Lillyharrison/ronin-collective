@@ -1,7 +1,11 @@
 import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle, Copy } from "lucide-react";
+import {
+  Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle,
+  Copy, Reply, Forward, Info, Star, MoreHorizontal, X,
+} from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { cn } from "@/lib/utils";
 
 /** Lazy-loaded image with a skeleton placeholder so layout doesn't jump */
 function ImageWithSkeleton({ src, onClick }: { src: string; onClick: () => void }) {
@@ -70,6 +74,7 @@ interface MessageBubbleProps {
   isAdmin?: boolean;
   onReact: (emoji: string) => void;
   onDelete?: (messageId: string) => void;
+  onReply?: (message: Message) => void;
   onConfirmTool?: (toolName: string, toolArgs: Record<string, unknown>) => void;
   onCancelTool?: () => void;
   quickEmojis: string[];
@@ -82,8 +87,61 @@ const TOOL_LABELS: Record<string, string> = {
   log_asset: "Log Asset",
 };
 
-export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact, onDelete, onConfirmTool, onCancelTool, quickEmojis }: MessageBubbleProps) {
+/** Message Info modal */
+function MessageInfoModal({ message, onClose }: { message: Message; onClose: () => void }) {
+  const sentAt = format(new Date(message.created_at), "d MMM yyyy, HH:mm:ss");
+  const seenBy = message.seen_by ?? [];
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-80 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="text-sm font-semibold text-foreground">Message Info</span>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-4 space-y-3">
+          {message.content_text && (
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Content</p>
+              <p className="text-sm text-foreground line-clamp-4 bg-muted/40 rounded-lg px-3 py-2">
+                {message.content_text}
+              </p>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
+              <p className="text-xs text-foreground">{sentAt}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Status</p>
+              <p className="text-xs text-foreground capitalize">{message.delivery_status}</p>
+            </div>
+          </div>
+          {seenBy.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Read by</p>
+              <p className="text-xs text-foreground">{seenBy.length} {seenBy.length === 1 ? "person" : "people"}</p>
+            </div>
+          )}
+          {message.media_type && (
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Type</p>
+              <p className="text-xs text-foreground capitalize">{message.media_type}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact, onDelete, onReply, onConfirmTool, onCancelTool, quickEmojis }: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [starred, setStarred] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [toolExecuted, setToolExecuted] = useState(false);
@@ -96,16 +154,13 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
   const status = message.delivery_status as string;
   const canDelete = isOwn || isAdmin;
 
-  // Detect pending tool call stored in reactions field
   const reactions = message.reactions as Record<string, unknown> | null;
   const pendingTool = reactions?.__pending_tool as { name: string; args: Record<string, unknown> } | undefined;
-  // Filter out __pending_tool from visible emoji reactions
   const emojiReactions = reactions
     ? Object.entries(reactions).filter(([key]) => key !== "__pending_tool")
     : [];
 
   const openMenu = () => {
-    // Haptic feedback on mobile
     if (navigator.vibrate) navigator.vibrate(30);
     setShowMenu(true);
     suppressClick.current = true;
@@ -157,206 +212,308 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
     setShowMenu(false);
   };
 
+  const handleForward = () => {
+    if (message.content_text) {
+      navigator.clipboard.writeText(message.content_text).catch(() => {});
+    }
+    setShowMenu(false);
+  };
+
+  const handleReply = () => {
+    onReply?.(message);
+    setShowMenu(false);
+  };
+
+  const handleStar = () => {
+    setStarred(v => !v);
+    setShowMenu(false);
+  };
+
+  const handleInfo = () => {
+    setShowMenu(false);
+    setShowInfoModal(true);
+  };
+
   return (
-    <div
-      className={`flex mb-1 ${isOwn ? "justify-end" : "justify-start"}`}
-      onContextMenu={(e) => { e.preventDefault(); openMenu(); }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchMove={handleTouchEnd}
-    >
-      {/* AI avatar */}
-      {isAI && (
-        <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center mr-1.5 mt-auto mb-1 flex-shrink-0">
-          <Bot size={12} className="text-accent" />
-        </div>
+    <>
+      {showInfoModal && (
+        <MessageInfoModal message={message} onClose={() => setShowInfoModal(false)} />
       )}
 
-      <div className="max-w-[78%] relative group">
-        <div
-          className={`rounded-2xl px-3 py-2 text-sm leading-relaxed select-none transition-transform active:scale-[0.97] ${
-            isOwn
-              ? "bg-[hsl(var(--status-done))] text-primary-foreground rounded-br-sm"
-              : isAI
-              ? "bg-card border-2 border-accent/30 text-foreground rounded-bl-sm"
-              : "bg-card border border-border text-foreground rounded-bl-sm"
-          }`}
-        >
-          {/* Sender name for groups */}
-          {!isOwn && !isAI && message.sender_profile?.full_name && (
-            <p className="text-[11px] font-semibold text-accent mb-0.5">
-              {message.sender_profile.full_name}
-            </p>
-          )}
+      <div
+        className={`flex mb-1 ${isOwn ? "justify-end" : "justify-start"}`}
+        onContextMenu={(e) => { e.preventDefault(); openMenu(); }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchEnd}
+      >
+        {/* AI avatar */}
+        {isAI && (
+          <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center mr-1.5 mt-auto mb-1 flex-shrink-0">
+            <Bot size={12} className="text-accent" />
+          </div>
+        )}
 
-          {/* Image — with skeleton until loaded */}
-          {message.media_type === "image" && message.content_media_url && (
-            <ImageWithSkeleton
-              src={message.content_media_url}
-              onClick={() => window.open(message.content_media_url!, "_blank")}
-            />
-          )}
-
-          {/* Audio / voice note */}
-          {message.media_type === "audio" && message.content_media_url && (
-            <button onClick={toggleAudio} className="flex items-center gap-2 py-1">
-              {audioPlaying ? <Pause size={16} /> : <Play size={16} />}
-              <div className="flex gap-0.5">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-0.5 rounded-full ${audioPlaying ? "bg-accent" : isOwn ? "bg-white/60" : "bg-muted-foreground/40"}`}
-                    style={{ height: `${4 + Math.random() * 12}px` }}
-                  />
-                ))}
-              </div>
-              <span className="text-[10px] opacity-70">0:00</span>
-            </button>
-          )}
-
-          {/* Text */}
-          {message.content_text && (
-            isAI
-              ? <RenderAIText text={message.content_text} />
-              : <span className="whitespace-pre-wrap">{message.content_text}</span>
-          )}
-
-          {/* Loading state for AI */}
-          {isAI && !message.content_text && (
-            <div className="flex gap-1 py-1">
-              <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-            </div>
-          )}
-
-          {/* ── Pending tool confirmation buttons ───────────────────────────── */}
-          {pendingTool && !toolExecuted && (
-            <div className="mt-3 pt-2 border-t border-accent/20">
-              <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
-                Action: {TOOL_LABELS[pendingTool.name] ?? pendingTool.name}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleConfirm}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <CheckCircle size={13} />
-                  Confirm
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-muted/50 hover:bg-muted border border-border text-muted-foreground text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <XCircle size={13} />
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Executed state */}
-          {pendingTool && toolExecuted && (
-            <div className="mt-2 pt-2 border-t border-border">
-              <p className="text-[10px] text-muted-foreground italic">Action confirmed — executing…</p>
-            </div>
-          )}
-
-          {/* Time + delivery status */}
-          <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
-            <span className={`text-[9px] ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{time}</span>
-            {isOwn && (
-              status === "read" || isRead ? (
-                <CheckCheck size={12} className="text-accent" />
-              ) : (
-                <Check size={12} className={isOwn ? "text-primary-foreground/70" : "text-muted-foreground"} />
-              )
+        <div className="max-w-[78%] relative group">
+          <div
+            className={cn(
+              "rounded-2xl px-3 py-2 text-sm leading-relaxed select-none transition-transform active:scale-[0.97]",
+              isOwn
+                ? "bg-[hsl(var(--status-done))] text-primary-foreground rounded-br-sm"
+                : isAI
+                ? "bg-card border-2 border-accent/30 text-foreground rounded-bl-sm"
+                : "bg-card border border-border text-foreground rounded-bl-sm",
+              starred && "ring-2 ring-[hsl(var(--gold))] ring-offset-1 ring-offset-background"
             )}
-          </div>
-        </div>
+          >
+            {/* Sender name for groups */}
+            {!isOwn && !isAI && message.sender_profile?.full_name && (
+              <p className="text-[11px] font-semibold text-accent mb-0.5">
+                {message.sender_profile.full_name}
+              </p>
+            )}
 
-        {/* ── WhatsApp-style reaction + action overlay ─────────────────────── */}
-        {showMenu && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
-              onClick={() => setShowMenu(false)}
-            />
+            {/* Starred badge */}
+            {starred && (
+              <span className="absolute -top-2 -right-1 text-[hsl(var(--gold))] text-xs">⭐</span>
+            )}
 
-            {/* Floating panel — anchored above the bubble */}
-            <div
-              className={`absolute ${isOwn ? "right-0" : "left-0"} bottom-full mb-2 z-50 flex flex-col gap-1.5`}
-              style={{ minWidth: "max-content" }}
-            >
-              {/* Emoji reaction bar */}
-              <div className="flex items-center gap-1 bg-card border border-border rounded-2xl shadow-xl px-3 py-2 animate-in zoom-in-95 fade-in duration-150">
-                {quickEmojis.map((emoji, i) => {
-                  const hasReacted = emojiReactions.find(([e]) => e === emoji)?.[1] as string[] | undefined;
-                  const iReacted = hasReacted?.includes(currentUserId);
-                  return (
-                    <button
-                      key={emoji}
-                      onClick={() => { onReact(emoji); setShowMenu(false); }}
-                      className={`text-xl w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110 ${
-                        iReacted ? "bg-accent/20 ring-1 ring-accent scale-110" : "hover:bg-muted"
-                      }`}
-                      style={{ animationDelay: `${i * 30}ms` }}
-                    >
-                      {emoji}
-                    </button>
-                  );
-                })}
+            {/* Image */}
+            {message.media_type === "image" && message.content_media_url && (
+              <ImageWithSkeleton
+                src={message.content_media_url}
+                onClick={() => window.open(message.content_media_url!, "_blank")}
+              />
+            )}
+
+            {/* Audio / voice note */}
+            {message.media_type === "audio" && message.content_media_url && (
+              <button onClick={toggleAudio} className="flex items-center gap-2 py-1">
+                {audioPlaying ? <Pause size={16} /> : <Play size={16} />}
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-0.5 rounded-full ${audioPlaying ? "bg-accent" : isOwn ? "bg-white/60" : "bg-muted-foreground/40"}`}
+                      style={{ height: `${4 + Math.random() * 12}px` }}
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] opacity-70">0:00</span>
+              </button>
+            )}
+
+            {/* Text */}
+            {message.content_text && (
+              isAI
+                ? <RenderAIText text={message.content_text} />
+                : <span className="whitespace-pre-wrap">{message.content_text}</span>
+            )}
+
+            {/* Loading state for AI */}
+            {isAI && !message.content_text && (
+              <div className="flex gap-1 py-1">
+                <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
+            )}
 
-              {/* Action menu */}
-              <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-150">
-                {message.content_text && (
+            {/* Pending tool confirmation */}
+            {pendingTool && !toolExecuted && (
+              <div className="mt-3 pt-2 border-t border-accent/20">
+                <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
+                  Action: {TOOL_LABELS[pendingTool.name] ?? pendingTool.name}
+                </p>
+                <div className="flex gap-2">
                   <button
-                    onClick={handleCopy}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
+                    onClick={handleConfirm}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-accent/15 hover:bg-accent/25 border border-accent/40 text-accent text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
-                    <Copy size={15} className="text-muted-foreground" />
-                    Copy
+                    <CheckCircle size={13} />
+                    Confirm
                   </button>
-                )}
-                {canDelete && onDelete && (
                   <button
-                    onClick={() => { onDelete(message.id); setShowMenu(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors border-t border-border/50"
+                    onClick={handleCancel}
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-muted/50 hover:bg-muted border border-border text-muted-foreground text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
-                    <Trash2 size={15} />
-                    Delete message
+                    <XCircle size={13} />
+                    Cancel
                   </button>
-                )}
+                </div>
               </div>
+            )}
+
+            {pendingTool && toolExecuted && (
+              <div className="mt-2 pt-2 border-t border-border">
+                <p className="text-[10px] text-muted-foreground italic">Action confirmed — executing…</p>
+              </div>
+            )}
+
+            {/* Time + delivery status */}
+            <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
+              <span className={`text-[9px] ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{time}</span>
+              {isOwn && (
+                status === "read" || isRead ? (
+                  <CheckCheck size={12} className="text-accent" />
+                ) : (
+                  <Check size={12} className={isOwn ? "text-primary-foreground/70" : "text-muted-foreground"} />
+                )
+              )}
             </div>
-          </>
-        )}
-
-        {/* Emoji reactions display */}
-        {emojiReactions.length > 0 && (
-          <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
-            {emojiReactions.map(([emoji, users]) => {
-              const iReacted = (users as string[]).includes(currentUserId);
-              return (
-                <button
-                  key={emoji}
-                  onClick={() => onReact(emoji)}
-                  className={`text-xs rounded-full px-2 py-0.5 flex items-center gap-0.5 border transition-colors ${
-                    iReacted
-                      ? "bg-accent/20 border-accent/40 text-accent"
-                      : "bg-card border-border text-foreground"
-                  }`}
-                >
-                  <span>{emoji}</span>
-                  <span className="text-[9px] font-medium">{(users as string[]).length}</span>
-                </button>
-              );
-            })}
           </div>
-        )}
+
+          {/* ── Long-press context menu ─────────────────────────────────────── */}
+          {showMenu && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[3px]"
+                onClick={() => setShowMenu(false)}
+              />
+
+              {/* Floating container above bubble */}
+              <div
+                className={cn(
+                  "absolute bottom-full mb-2 z-50 flex flex-col gap-1.5",
+                  isOwn ? "right-0" : "left-0"
+                )}
+                style={{ minWidth: "200px" }}
+              >
+                {/* Emoji reaction bar */}
+                <div className="flex items-center gap-1 bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl px-3 py-2 animate-in zoom-in-95 fade-in duration-150">
+                  {quickEmojis.map((emoji, i) => {
+                    const hasReacted = emojiReactions.find(([e]) => e === emoji)?.[1] as string[] | undefined;
+                    const iReacted = hasReacted?.includes(currentUserId);
+                    return (
+                      <button
+                        key={emoji}
+                        onClick={() => { onReact(emoji); setShowMenu(false); }}
+                        className={cn(
+                          "text-xl w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110",
+                          iReacted ? "bg-accent/20 ring-1 ring-accent scale-110" : "hover:bg-muted"
+                        )}
+                        style={{ animationDelay: `${i * 30}ms` }}
+                      >
+                        {emoji}
+                      </button>
+                    );
+                  })}
+                  {/* + button for more emojis */}
+                  <button className="w-9 h-9 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors">
+                    <MoreHorizontal size={16} />
+                  </button>
+                </div>
+
+                {/* Action list */}
+                <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-150">
+                  {/* Reply */}
+                  <ActionRow
+                    icon={<Reply size={16} className="text-muted-foreground" />}
+                    label="Reply"
+                    onClick={handleReply}
+                  />
+
+                  {/* Forward / Copy link */}
+                  <ActionRow
+                    icon={<Forward size={16} className="text-muted-foreground" />}
+                    label="Forward"
+                    onClick={handleForward}
+                    divider
+                  />
+
+                  {/* Copy */}
+                  {message.content_text && (
+                    <ActionRow
+                      icon={<Copy size={16} className="text-muted-foreground" />}
+                      label="Copy"
+                      onClick={handleCopy}
+                      divider
+                    />
+                  )}
+
+                  {/* Info */}
+                  <ActionRow
+                    icon={<Info size={16} className="text-muted-foreground" />}
+                    label="Info"
+                    onClick={handleInfo}
+                    divider
+                  />
+
+                  {/* Star */}
+                  <ActionRow
+                    icon={<Star size={16} className={starred ? "text-[hsl(var(--gold))] fill-[hsl(var(--gold))]" : "text-muted-foreground"} />}
+                    label={starred ? "Unstar" : "Star"}
+                    onClick={handleStar}
+                    divider
+                  />
+
+                  {/* Delete */}
+                  {canDelete && onDelete && (
+                    <ActionRow
+                      icon={<Trash2 size={16} className="text-destructive" />}
+                      label="Delete"
+                      onClick={() => { onDelete(message.id); setShowMenu(false); }}
+                      divider
+                      danger
+                    />
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Emoji reactions display */}
+          {emojiReactions.length > 0 && (
+            <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
+              {emojiReactions.map(([emoji, users]) => {
+                const iReacted = (users as string[]).includes(currentUserId);
+                return (
+                  <button
+                    key={emoji}
+                    onClick={() => onReact(emoji)}
+                    className={cn(
+                      "text-xs rounded-full px-2 py-0.5 flex items-center gap-0.5 border transition-colors",
+                      iReacted
+                        ? "bg-accent/20 border-accent/40 text-accent"
+                        : "bg-card border-border text-foreground"
+                    )}
+                  >
+                    <span>{emoji}</span>
+                    <span className="text-[9px] font-medium">{(users as string[]).length}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
+  );
+}
+
+function ActionRow({
+  icon, label, onClick, divider, danger,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  divider?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center justify-between px-4 py-3.5 text-sm transition-colors",
+        divider && "border-t border-border/50",
+        danger
+          ? "text-destructive hover:bg-destructive/8"
+          : "text-foreground hover:bg-muted/60"
+      )}
+    >
+      <span className="font-medium">{label}</span>
+      {icon}
+    </button>
   );
 }
