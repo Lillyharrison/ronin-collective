@@ -36,6 +36,10 @@ export function ChatView({
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [agentAnalyzing, setAgentAnalyzing] = useState(false);
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [localTitle, setLocalTitle] = useState(threadTitle);
   const visionInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
