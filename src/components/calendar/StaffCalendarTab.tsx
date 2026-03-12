@@ -1217,6 +1217,7 @@ function StaffDayCell({
   onDragStart,
   onDrop,
   onDeleteShift,
+  onShiftDoubleClick,
 }: {
   dateStr: string;
   day: Date;
@@ -1227,6 +1228,7 @@ function StaffDayCell({
   onDragStart: (shift: DisplayShift) => void;
   onDrop: (targetDateStr: string) => void;
   onDeleteShift: (id: string) => void;
+  onShiftDoubleClick: (shift: DisplayShift) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -1249,6 +1251,7 @@ function StaffDayCell({
               properties={properties}
               onDragStart={(_e) => onDragStart(shift)}
               onClick={(e) => { e.stopPropagation(); }}
+              onDoubleClick={canEdit ? (e) => { e.stopPropagation(); onShiftDoubleClick(shift); } : undefined}
             />
             {canEdit && shift.concrete_id && (
               <button
