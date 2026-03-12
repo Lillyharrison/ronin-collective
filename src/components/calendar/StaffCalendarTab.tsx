@@ -200,11 +200,13 @@ function ShiftChip({
   properties,
   onDragStart,
   onClick,
+  onDoubleClick,
 }: {
   shift: DisplayShift;
   properties: Property[];
   onDragStart: (e: React.DragEvent) => void;
   onClick: (e: React.MouseEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
 }) {
   if (shift.is_leave) {
     return (
@@ -226,6 +228,8 @@ function ShiftChip({
       draggable
       onDragStart={onDragStart}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      title="Double-click to edit"
       className={cn(
         "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none flex items-center gap-0.5 hover:opacity-80 transition-opacity",
         virtualLoc && !prop
@@ -252,6 +256,7 @@ function ShiftModal({
   open,
   onClose,
   onSave,
+  onUpdate,
   onSaveSchedule,
   profiles,
   properties,
@@ -263,6 +268,7 @@ function ShiftModal({
   open: boolean;
   onClose: () => void;
   onSave: (data: Omit<StaffShift, "id" | "created_at" | "updated_at">) => Promise<boolean>;
+  onUpdate: (id: string, data: Partial<StaffShift>) => Promise<boolean>;
   onSaveSchedule: (data: Omit<StaffSchedule, "id" | "created_at" | "updated_at">) => Promise<boolean>;
   profiles: Profile[];
   properties: Property[];
@@ -329,6 +335,21 @@ function ShiftModal({
     if (!form.staff_id) return;
     setSaving(true);
     const noteVal = locationNote(form.notes, form.location);
+
+    // ── Edit mode: update the concrete shift directly ──────────────────────
+    if (editShift && editShift.concrete_id) {
+      const ok = await onUpdate(editShift.concrete_id, {
+        staff_id: form.staff_id,
+        property_id: form.property_id || null,
+        shift_date: form.shift_date,
+        start_time: form.start_time || null,
+        end_time: form.end_time || null,
+        notes: noteVal,
+      });
+      setSaving(false);
+      if (ok) onClose();
+      return;
+    }
 
     if (mode === "recurring") {
       // Create one staff_schedule per selected day-of-week
@@ -1196,6 +1217,7 @@ function StaffDayCell({
   onDragStart,
   onDrop,
   onDeleteShift,
+  onShiftDoubleClick,
 }: {
   dateStr: string;
   day: Date;
@@ -1206,6 +1228,7 @@ function StaffDayCell({
   onDragStart: (shift: DisplayShift) => void;
   onDrop: (targetDateStr: string) => void;
   onDeleteShift: (id: string) => void;
+  onShiftDoubleClick: (shift: DisplayShift) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -1228,6 +1251,7 @@ function StaffDayCell({
               properties={properties}
               onDragStart={(_e) => onDragStart(shift)}
               onClick={(e) => { e.stopPropagation(); }}
+              onDoubleClick={canEdit ? (e) => { e.stopPropagation(); onShiftDoubleClick(shift); } : undefined}
             />
             {canEdit && shift.concrete_id && (
               <button
@@ -1273,6 +1297,7 @@ export function StaffCalendarTab({
   const [showScheduleManager, setShowScheduleManager] = useState(false);
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [prefillStaff, setPrefillStaff] = useState<string | undefined>();
+  const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
   const [filterStaff, setFilterStaff] = useState<string>("all");
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
@@ -1576,6 +1601,12 @@ export function StaffCalendarTab({
                         onDragStart={handleDragStart}
                         onDrop={handleDrop}
                         onDeleteShift={(id) => deleteShift(id)}
+                        onShiftDoubleClick={(shift) => {
+                          setEditingShift(shift);
+                          setPrefillDate(shift.shift_date);
+                          setPrefillStaff(shift.staff_id);
+                          setShowShiftModal(true);
+                        }}
                       />
                     );
                   })}
@@ -1600,14 +1631,16 @@ export function StaffCalendarTab({
       {/* ── Modals ────────────────────────────────────────────────────────── */}
       <ShiftModal
         open={showShiftModal}
-        onClose={() => setShowShiftModal(false)}
+        onClose={() => { setShowShiftModal(false); setEditingShift(null); }}
         onSave={createShift}
+        onUpdate={updateShift}
         onSaveSchedule={createSchedule}
         profiles={profiles}
         properties={properties}
         prefillDate={prefillDate}
         prefillStaff={prefillStaff}
         userId={userId}
+        editShift={editingShift}
       />
 
       <LeaveModal
