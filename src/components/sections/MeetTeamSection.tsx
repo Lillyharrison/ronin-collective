@@ -65,23 +65,25 @@ interface AddUserForm {
 }
 
 // ─── All navigable sections in the app ────────────────────────────────────────
-const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean }[] = [
-  { key: "dashboard",    label: "Dashboard",    labelEs: "Panel",        hasEdit: false },
-  { key: "property",     label: "Property",     labelEs: "Propiedad",    hasEdit: true  },
-  { key: "maintenance",  label: "Maintenance",  labelEs: "Mantenimiento",hasEdit: true  },
-  { key: "messages",     label: "Messages",     labelEs: "Mensajes",     hasEdit: true  },
-  { key: "tasks",        label: "Tasks",        labelEs: "Tareas",       hasEdit: true  },
-  { key: "checklists",   label: "Checklists",   labelEs: "Listas",       hasEdit: true  },
-  { key: "manuals",      label: "Manuals",      labelEs: "Manuales",     hasEdit: true  },
-  { key: "contacts",     label: "Contacts",     labelEs: "Contactos",    hasEdit: true  },
-  { key: "inventory",    label: "Inventory",    labelEs: "Inventario",   hasEdit: true  },
-  { key: "laundry",      label: "Laundry",      labelEs: "Lavandería",   hasEdit: true  },
-  { key: "orders",       label: "Orders",       labelEs: "Pedidos",      hasEdit: true  },
-  { key: "meet-team",    label: "Meet the Team",labelEs: "Equipo",       hasEdit: false },
-  { key: "travel",       label: "Travel",       labelEs: "Viajes",       hasEdit: true  },
-  { key: "calendar",     label: "Calendar",     labelEs: "Calendario",   hasEdit: true  },
-  { key: "achievements", label: "Achievements", labelEs: "Logros",       hasEdit: false },
-  { key: "profile",      label: "Profile",      labelEs: "Perfil",       hasEdit: true  },
+const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; isFeature?: boolean }[] = [
+  { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
+  { key: "property",           label: "Property",            labelEs: "Propiedad",         hasEdit: true  },
+  { key: "maintenance",        label: "Maintenance",         labelEs: "Mantenimiento",     hasEdit: true  },
+  { key: "messages",           label: "Messages",            labelEs: "Mensajes",          hasEdit: true  },
+  { key: "tasks",              label: "Tasks",               labelEs: "Tareas",            hasEdit: true  },
+  { key: "checklists",         label: "Checklists",          labelEs: "Listas",            hasEdit: true  },
+  { key: "manuals",            label: "Manuals",             labelEs: "Manuales",          hasEdit: true  },
+  { key: "contacts",           label: "Contacts",            labelEs: "Contactos",         hasEdit: true  },
+  { key: "inventory",          label: "Inventory",           labelEs: "Inventario",        hasEdit: true  },
+  { key: "laundry",            label: "Laundry",             labelEs: "Lavandería",        hasEdit: true  },
+  { key: "orders",             label: "Orders",              labelEs: "Pedidos",           hasEdit: true  },
+  { key: "meet-team",          label: "Meet the Team",       labelEs: "Equipo",            hasEdit: false },
+  { key: "travel",             label: "Travel",              labelEs: "Viajes",            hasEdit: true  },
+  { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
+  { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
+  { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
+  // ── Feature visibility toggles (not full sections) ──
+  { key: "principal-location", label: "📍 Principal Location", labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
 ];
 
 // ─── Quick actions available on the dashboard ─────────────────────────────────
