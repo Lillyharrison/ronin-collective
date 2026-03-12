@@ -200,11 +200,13 @@ function ShiftChip({
   properties,
   onDragStart,
   onClick,
+  onDoubleClick,
 }: {
   shift: DisplayShift;
   properties: Property[];
   onDragStart: (e: React.DragEvent) => void;
   onClick: (e: React.MouseEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
 }) {
   if (shift.is_leave) {
     return (
@@ -226,6 +228,8 @@ function ShiftChip({
       draggable
       onDragStart={onDragStart}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      title="Double-click to edit"
       className={cn(
         "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none flex items-center gap-0.5 hover:opacity-80 transition-opacity",
         virtualLoc && !prop
