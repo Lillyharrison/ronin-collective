@@ -1769,17 +1769,19 @@ export function StaffCalendarTab({
     <div className="space-y-4">
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Week navigation */}
+        {/* Navigation */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setWeekStart((w) => subWeeks(w, 1))}
+            onClick={() => calView === "month"
+              ? setMonthStart((m) => subMonths(m, 1))
+              : setWeekStart((w) => subWeeks(w, 1))}
             className="w-8 h-8 rounded-lg flex items-center justify-center border border-border hover:bg-muted transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
           <div className="text-center min-w-[160px]">
             <p className="text-sm font-semibold">{weekLabel}</p>
-            {!isCurrentWeek && (
+            {calView === "week" && !isCurrentWeek && (
               <button
                 onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
                 className="text-[10px] text-muted-foreground hover:text-foreground underline"
@@ -1787,17 +1789,49 @@ export function StaffCalendarTab({
                 This week
               </button>
             )}
+            {calView === "month" && !isCurrentMonth && (
+              <button
+                onClick={() => setMonthStart(startOfMonth(new Date()))}
+                className="text-[10px] text-muted-foreground hover:text-foreground underline"
+              >
+                This month
+              </button>
+            )}
           </div>
           <button
-            onClick={() => setWeekStart((w) => addWeeks(w, 1))}
+            onClick={() => calView === "month"
+              ? setMonthStart((m) => addMonths(m, 1))
+              : setWeekStart((w) => addWeeks(w, 1))}
             className="w-8 h-8 rounded-lg flex items-center justify-center border border-border hover:bg-muted transition-colors"
           >
             <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* Actions */}
+        {/* View toggle + Actions */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Week / Month toggle */}
+          <div className="flex items-center rounded-lg border border-border overflow-hidden h-8">
+            <button
+              onClick={() => setCalView("week")}
+              className={cn(
+                "px-3 h-full text-xs font-medium transition-colors",
+                calView === "week" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setCalView("month")}
+              className={cn(
+                "px-3 h-full text-xs font-medium transition-colors border-l border-border",
+                calView === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Month
+            </button>
+          </div>
+
           {/* Visible to ALL users — primary CTA for staff */}
           <Button
             variant="outline"
@@ -1825,24 +1859,28 @@ export function StaffCalendarTab({
               >
                 <Settings2 size={15} />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleExportExcel}
-                title="Download Excel"
-              >
-                <Download size={15} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-xs h-8"
-                onClick={handleExportPDF}
-                title="Download PDF"
-              >
-                PDF
-              </Button>
+              {calView === "week" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleExportExcel}
+                    title="Download Excel"
+                  >
+                    <Download size={15} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs h-8"
+                    onClick={handleExportPDF}
+                    title="Download PDF"
+                  >
+                    PDF
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -1867,8 +1905,21 @@ export function StaffCalendarTab({
         </div>
       )}
 
-      {/* ── Schedule Grid ─────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      {/* ── Month View ────────────────────────────────────────────────────── */}
+      {calView === "month" && (
+        <StaffMonthGrid
+          monthStart={monthStart}
+          staffToShow={staffToShow}
+          displayShifts={displayShifts}
+          properties={properties}
+          loading={loading || profilesLoading}
+          canEdit={canEdit}
+          onShowScheduleManager={() => setShowScheduleManager(true)}
+        />
+      )}
+
+      {/* ── Week Schedule Grid ────────────────────────────────────────────── */}
+      {calView === "week" && (
         {/* Day headers */}
         <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
           <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
