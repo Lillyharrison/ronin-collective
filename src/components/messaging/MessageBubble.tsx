@@ -556,19 +556,20 @@ export function MessageBubble({
             )}
 
             {/* Time + delivery status */}
-            <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
+            <div className={cn(
+              "flex items-center gap-1 mt-0.5",
+              isOwn ? "justify-end" : "justify-start",
+              message.media_type === "image" && !message.content_text && "px-2 pb-1"
+            )}>
               <span className={`text-[9px] ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{time}</span>
               {isOwn && (() => {
                 const isOptimistic = message.id.startsWith("optimistic-");
                 const isReadMsg = status === "read" || isRead;
                 if (isOptimistic) {
-                  // Single grey tick — not yet confirmed by server
                   return <Check size={12} className="text-primary-foreground/50" />;
                 } else if (isReadMsg) {
-                  // Double blue tick — read
                   return <CheckCheck size={12} className="text-accent drop-shadow-sm" />;
                 } else {
-                  // Double grey tick — delivered (server confirmed)
                   return <CheckCheck size={12} className="text-primary-foreground/60" />;
                 }
               })()}
