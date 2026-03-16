@@ -66,8 +66,10 @@ interface AddUserForm {
 }
 
 // ─── All navigable sections in the app ────────────────────────────────────────
-const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; isFeature?: boolean; isCalendarSub?: boolean }[] = [
+const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean }[] = [
   { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
+  // ── Dashboard sub-features ──
+  { key: "principal-location",   label: "   ↳ Principal Location", labelEs: "   ↳ Ubicación del Principal", hasEdit: false, isFeature: true, isDashboardSub: true },
   { key: "property",           label: "Property",            labelEs: "Propiedad",         hasEdit: true  },
   { key: "maintenance",        label: "Maintenance",         labelEs: "Mantenimiento",     hasEdit: true  },
   { key: "messages",           label: "Messages",            labelEs: "Mensajes",          hasEdit: true  },
@@ -81,17 +83,16 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "meet-team",          label: "Meet the Team",       labelEs: "Equipo",            hasEdit: false },
   { key: "travel",             label: "Travel",              labelEs: "Viajes",            hasEdit: true  },
   { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
+  // ── Calendar sub-tabs ──
+  { key: "family-calendar",      label: "   ↳ Family Calendar",      labelEs: "   ↳ Calendario Familiar",    hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-travel",      label: "   ↳ Travel",               labelEs: "   ↳ Viajes",                 hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-birthdays",   label: "   ↳ Birthdays",            labelEs: "   ↳ Cumpleaños",             hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-maintenance", label: "   ↳ Maintenance",          labelEs: "   ↳ Mantenimiento",          hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-deliveries",  label: "   ↳ Deliveries",           labelEs: "   ↳ Entregas",               hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-construction",label: "   ↳ Construction / Design",labelEs: "   ↳ Construcción / Diseño",  hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-staff",       label: "   ↳ Staff Schedule",       labelEs: "   ↳ Horario del Personal",   hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
-  // ── Feature visibility toggles (not full sections) ──
-  { key: "principal-location",   label: "📍 Principal Location",  labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
-  // ── Calendar sub-tabs ──
-  { key: "family-calendar",      label: "   ↳ Family Calendar",   labelEs: "   ↳ Calendario Familiar",   hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-travel",      label: "   ↳ Travel",            labelEs: "   ↳ Viajes",                hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-birthdays",   label: "   ↳ Birthdays",         labelEs: "   ↳ Cumpleaños",            hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-maintenance", label: "   ↳ Maintenance",       labelEs: "   ↳ Mantenimiento",         hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-deliveries",  label: "   ↳ Deliveries",        labelEs: "   ↳ Entregas",              hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-staff",       label: "   ↳ Staff Schedule",    labelEs: "   ↳ Horario del Personal",  hasEdit: false, isFeature: true, isCalendarSub: true },
 ];
 
 // ─── Quick actions available on the dashboard ─────────────────────────────────
