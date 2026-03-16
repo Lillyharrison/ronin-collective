@@ -83,8 +83,14 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
   // ── Feature visibility toggles (not full sections) ──
-  { key: "principal-location", label: "📍 Principal Location", labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
-  { key: "family-calendar",    label: "📅 Family Calendar",    labelEs: "📅 Calendario Familiar",     hasEdit: false, isFeature: true },
+  { key: "principal-location",   label: "📍 Principal Location",  labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
+  // ── Calendar sub-tabs ──
+  { key: "family-calendar",      label: "   ↳ Family Calendar",   labelEs: "   ↳ Calendario Familiar",   hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-travel",      label: "   ↳ Travel",            labelEs: "   ↳ Viajes",                hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-birthdays",   label: "   ↳ Birthdays",         labelEs: "   ↳ Cumpleaños",            hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-maintenance", label: "   ↳ Maintenance",       labelEs: "   ↳ Mantenimiento",         hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-deliveries",  label: "   ↳ Deliveries",        labelEs: "   ↳ Entregas",              hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-staff",       label: "   ↳ Staff Schedule",    labelEs: "   ↳ Horario del Personal",  hasEdit: false, isFeature: true, isCalendarSub: true },
 ];
 
 // ─── Quick actions available on the dashboard ─────────────────────────────────
