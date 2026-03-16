@@ -1017,6 +1017,7 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
               <SelectContent>
                 <SelectItem value="general">📅 General</SelectItem>
                 <SelectItem value="travel">✈️ Travel</SelectItem>
+                <SelectItem value="construction">🏗️ Construction / Design</SelectItem>
                 <SelectItem value="guest_stay">🏠 Guest Stay</SelectItem>
                 <SelectItem value="event">🎉 Event / Party</SelectItem>
                 <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
