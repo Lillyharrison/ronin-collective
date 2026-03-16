@@ -15,9 +15,12 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Settings2,
   CalendarOff, UserCheck, X, Check, Clock, Pencil,
-  PlaneTakeoff, AlertCircle, GripVertical,
+  PlaneTakeoff, AlertCircle, GripVertical, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -240,18 +243,20 @@ function ShiftChip({
       onDoubleClick={onDoubleClick}
       title="Double-click to edit"
       className={cn(
-        "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none flex items-center gap-0.5 hover:opacity-80 transition-opacity",
+        "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight",
         virtualLoc && !prop
           ? "bg-muted/60 border-border text-muted-foreground"
           : `${col.bg} ${col.text}`
       )}
     >
-      <span className="truncate max-w-[64px]">{displayLabel}</span>
+      <div className="flex items-center gap-0.5">
+        <span className="truncate">{displayLabel}</span>
+        {shift.is_virtual && (
+          <span className="opacity-50 flex-shrink-0 text-[8px]">↻</span>
+        )}
+      </div>
       {shift.start_time && (
-        <span className="opacity-70 flex-shrink-0">{formatTime(shift.start_time)}</span>
-      )}
-      {shift.is_virtual && (
-        <span className="opacity-50 flex-shrink-0 text-[8px]">↻</span>
+        <div className="opacity-70 text-[9px]">{formatTime(shift.start_time)}</div>
       )}
     </div>
   );
@@ -1470,6 +1475,138 @@ export function StaffCalendarTab({
   const weekLabel = `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 }));
 
+  // ── Property color map for export (hex colors matching PROPERTY_COLORS) ──────
+  const EXPORT_PROP_COLORS = [
+    { bg: "DBEAFE", text: "1D4ED8" },  // blue
+    { bg: "D1FAE5", text: "065F46" },  // emerald
+    { bg: "EDE9FE", text: "5B21B6" },  // purple
+    { bg: "FFEDD5", text: "9A3412" },  // orange
+    { bg: "FCE7F3", text: "9D174D" },  // pink
+    { bg: "CFFAFE", text: "164E63" },  // cyan
+  ];
+
+  function getExportPropColor(propId: string | null) {
+    if (!propId) return EXPORT_PROP_COLORS[EXPORT_PROP_COLORS.length - 1];
+    const idx = properties.findIndex((p) => p.id === propId);
+    return EXPORT_PROP_COLORS[Math.abs(idx) % EXPORT_PROP_COLORS.length];
+  }
+
+  function buildExportRows() {
+    return staffToShow.map((person) => {
+      const row: Record<string, string> = { Staff: getDisplayName(person) };
+      weekDays.forEach((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const dayShifts = displayShifts.filter(
+          (s) => s.staff_id === person.id && s.shift_date === dateStr
+        );
+        row[format(day, "EEE d/M")] = dayShifts.length === 0
+          ? ""
+          : dayShifts.map((s) => {
+              if (s.is_leave) return "Leave";
+              const prop = properties.find((p) => p.id === s.property_id);
+              const name = prop?.name ?? "—";
+              const time = s.start_time ? formatTime(s.start_time) : "";
+              return time ? `${name} ${time}` : name;
+            }).join(", ");
+      });
+      return row;
+    });
+  }
+
+  const handleExportExcel = () => {
+    const rows = buildExportRows();
+    const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
+    const ws = XLSX.utils.json_to_sheet(rows, { header: ["Staff", ...dayHeaders] });
+
+    // Style header row
+    const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: "1C1D20" } }, font2: { color: { rgb: "F5F0E8" } } };
+    ["A1", ...dayHeaders.map((_, i) => `${String.fromCharCode(66 + i)}1`)].forEach((cell) => {
+      if (ws[cell]) ws[cell].s = { font: { bold: true, color: { rgb: "F5F0E8" } }, fill: { patternType: "solid", fgColor: { rgb: "1C1D20" } } };
+    });
+
+    // Color data cells by property
+    staffToShow.forEach((person, ri) => {
+      weekDays.forEach((day, ci) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const dayShifts = displayShifts.filter(
+          (s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave
+        );
+        const cellAddr = `${String.fromCharCode(66 + ci)}${ri + 2}`;
+        if (ws[cellAddr] && dayShifts.length > 0) {
+          const col = getExportPropColor(dayShifts[0].property_id);
+          ws[cellAddr].s = { fill: { patternType: "solid", fgColor: { rgb: col.bg } }, font: { color: { rgb: col.text } } };
+        }
+      });
+    });
+
+    // Column widths
+    ws["!cols"] = [{ wch: 22 }, ...dayHeaders.map(() => ({ wch: 18 }))];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Schedule");
+    XLSX.writeFile(wb, `staff-schedule-${format(weekStart, "yyyy-MM-dd")}.xlsx`);
+    toast.success("Excel file downloaded");
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text(`Staff Schedule — ${weekLabel}`, 14, 14);
+
+    const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
+    const rows = buildExportRows();
+
+    autoTable(doc, {
+      startY: 20,
+      head: [["Staff", ...dayHeaders]],
+      body: rows.map((row) => ["Staff", ...dayHeaders].map((h) => row[h] ?? "")),
+      headStyles: { fillColor: [28, 29, 32], textColor: [245, 240, 232], fontStyle: "bold", fontSize: 8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: { 0: { cellWidth: 36 } },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index > 0) {
+          const person = staffToShow[data.row.index];
+          if (!person) return;
+          const day = weekDays[data.column.index - 1];
+          const dateStr = format(day, "yyyy-MM-dd");
+          const dayShifts = displayShifts.filter(
+            (s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave
+          );
+          if (dayShifts.length > 0) {
+            const col = getExportPropColor(dayShifts[0].property_id);
+            const r = parseInt(col.bg.slice(0, 2), 16);
+            const g = parseInt(col.bg.slice(2, 4), 16);
+            const b = parseInt(col.bg.slice(4, 6), 16);
+            data.cell.styles.fillColor = [r, g, b];
+            const tr = parseInt(col.text.slice(0, 2), 16);
+            const tg = parseInt(col.text.slice(2, 4), 16);
+            const tb = parseInt(col.text.slice(4, 6), 16);
+            data.cell.styles.textColor = [tr, tg, tb];
+          }
+        }
+      },
+      margin: { left: 10, right: 10 },
+    });
+
+    // Legend
+    const finalY = (doc as any).lastAutoTable?.finalY ?? 180;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    properties.forEach((p, i) => {
+      const col = EXPORT_PROP_COLORS[i % EXPORT_PROP_COLORS.length];
+      const x = 10 + i * 40;
+      const y = finalY + 8;
+      doc.setFillColor(parseInt(col.bg.slice(0, 2), 16), parseInt(col.bg.slice(2, 4), 16), parseInt(col.bg.slice(4, 6), 16));
+      doc.rect(x, y - 3, 5, 3, "F");
+      doc.setTextColor(60, 60, 60);
+      doc.text(p.name, x + 6, y);
+    });
+
+    doc.save(`staff-schedule-${format(weekStart, "yyyy-MM-dd")}.pdf`);
+    toast.success("PDF downloaded");
+  };
+
   return (
     <div className="space-y-4">
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
@@ -1502,7 +1639,7 @@ export function StaffCalendarTab({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Visible to ALL users — primary CTA for staff */}
           <Button
             variant="outline"
@@ -1529,6 +1666,24 @@ export function StaffCalendarTab({
                 title="Manage recurring schedules"
               >
                 <Settings2 size={15} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleExportExcel}
+                title="Download Excel"
+              >
+                <Download size={15} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8"
+                onClick={handleExportPDF}
+                title="Download PDF"
+              >
+                PDF
               </Button>
             </>
           )}
@@ -1557,7 +1712,7 @@ export function StaffCalendarTab({
       {/* ── Schedule Grid ─────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         {/* Day headers */}
-        <div className="grid border-b border-border" style={{ gridTemplateColumns: "160px repeat(7, 1fr)" }}>
+        <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
           <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
           {weekDays.map((day) => (
             <div
@@ -1615,7 +1770,7 @@ export function StaffCalendarTab({
               >
                 <div
                   className="grid"
-                  style={{ gridTemplateColumns: "160px repeat(7, 1fr)" }}
+                  style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}
                 >
                   {/* Staff name cell */}
                   <div className="px-1.5 py-2 border-r border-border flex items-center gap-1.5 min-w-0">
