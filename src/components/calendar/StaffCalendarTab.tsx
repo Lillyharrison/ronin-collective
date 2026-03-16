@@ -1325,11 +1325,27 @@ export function StaffCalendarTab({
   const rowDragRef = useRef<string | null>(null); // staff_id being row-dragged
   const [rowDragOver, setRowDragOver] = useState<string | null>(null); // staff_id hovered over
 
-  // Persistent staff order (localStorage)
+  // Persistent staff order — stored in system_settings (DB), localStorage as fast cache
   const [staffOrder, setStaffOrder] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("ronin_staff_order") ?? "[]"); }
     catch { return []; }
   });
+
+  // Load authoritative order from DB on mount
+  useEffect(() => {
+    supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "staff_calendar_order")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value && Array.isArray(data.value)) {
+          const order = data.value as string[];
+          setStaffOrder(order);
+          try { localStorage.setItem("ronin_staff_order", JSON.stringify(order)); } catch { /* noop */ }
+        }
+      });
+  }, []);
 
   const {
     schedules, shifts, leaveRequests, loading, refetch,
@@ -1408,7 +1424,7 @@ export function StaffCalendarTab({
 
   // ── Row reorder drag handlers ───────────────────────────────────────────────
   const handleRowDragStart = (staffId: string) => { rowDragRef.current = staffId; };
-  const handleRowDrop = (targetStaffId: string) => {
+  const handleRowDrop = useCallback(async (targetStaffId: string) => {
     const dragged = rowDragRef.current;
     rowDragRef.current = null;
     setRowDragOver(null);
@@ -1421,8 +1437,13 @@ export function StaffCalendarTab({
     newOrder.splice(fromIdx, 1);
     newOrder.splice(toIdx, 0, dragged);
     setStaffOrder(newOrder);
+    // Persist to localStorage (fast) and DB (permanent)
     try { localStorage.setItem("ronin_staff_order", JSON.stringify(newOrder)); } catch { /* noop */ }
-  };
+    await supabase.from("system_settings").upsert(
+      { key: "staff_calendar_order", value: newOrder as never, updated_by: userId },
+      { onConflict: "key" }
+    );
+  }, [staffToShow, userId]);
 
   // ── Shift drag handlers ──────────────────────────────────────────────────────
   const handleDragStart = (shift: DisplayShift) => {
