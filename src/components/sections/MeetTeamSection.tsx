@@ -84,6 +84,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
   // ── Feature visibility toggles (not full sections) ──
   { key: "principal-location", label: "📍 Principal Location", labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
+  { key: "family-calendar",    label: "📅 Family Calendar",    labelEs: "📅 Calendario Familiar",     hasEdit: false, isFeature: true },
 ];
 
 // ─── Quick actions available on the dashboard ─────────────────────────────────
