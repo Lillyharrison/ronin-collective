@@ -1745,8 +1745,8 @@ export function StaffCalendarTab({
       {/* ── Property Legend ───────────────────────────────────────────────── */}
       {properties.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
-          {properties.map((p, i) => {
-            const col = PROPERTY_COLORS[i % PROPERTY_COLORS.length];
+          {properties.map((p) => {
+            const col = propColor(p.id, properties);
             return (
               <div key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <div className={cn("w-2 h-2 rounded-full", col.dot)} />
