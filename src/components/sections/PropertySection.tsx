@@ -501,7 +501,7 @@ function PropertyOccupantsManager({ property, isMasterAdmin, onBack, onChanged }
     supabase
       .from("user_roles")
       .select("user_id")
-      .in("role", ["principal", "extended_family"])
+      .in("role", ["principal"])
       .then(async ({ data: roleRows }) => {
         const familyIds = (roleRows ?? []).map(r => r.user_id);
         if (familyIds.length === 0) { setProfiles([]); setLoading(false); return; }
