@@ -1036,28 +1036,88 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         _quick_actions: quickActions as unknown as SectionPerm,
       };
 
-      // Update profile
-      await supabase.from("profiles").update({
-        full_name: fullName,
-        job_title: jobTitle,
-        phone: phone || null,
-        level,
-        department: (level === "staff" || level === "manager") ? (department || null) : null,
-        start_date: startDate || null,
-        birthday: birthday || null,
-        notes: notes || null,
-        assigned_property_ids: assignedProps,
-        section_permissions: finalPerms as unknown as import("@/integrations/supabase/types").Json,
-      }).eq("id", member.id);
+      if (isDraft) {
+        // Draft profiles: save via edge function so is_draft flag is preserved
+        await supabase.functions.invoke("ronin-ai", {
+          body: {
+            action: "save_draft_user",
+            profile_id: member.id,
+            full_name: fullName || null,
+            job_title: jobTitle || null,
+            phone: phone || null,
+            level,
+            department: (level === "staff" || level === "manager") ? (department || null) : null,
+            start_date: startDate || null,
+            birthday: birthday || null,
+            notes: notes || null,
+            assigned_property_ids: assignedProps,
+            section_permissions: finalPerms as unknown,
+            role: roleToSet,
+            send_invitation: false,
+          },
+        });
+      } else {
+        // Regular (non-draft) profiles: update directly
+        await supabase.from("profiles").update({
+          full_name: fullName,
+          job_title: jobTitle,
+          phone: phone || null,
+          level,
+          department: (level === "staff" || level === "manager") ? (department || null) : null,
+          start_date: startDate || null,
+          birthday: birthday || null,
+          notes: notes || null,
+          assigned_property_ids: assignedProps,
+          section_permissions: finalPerms as unknown as import("@/integrations/supabase/types").Json,
+        }).eq("id", member.id);
 
-      // Update role if changed
-      if (roleToSet !== member.role) {
-        await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
+        // Update role if changed
+        if (roleToSet !== member.role) {
+          await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
+        }
       }
 
-      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: finalPerms, role: roleToSet });
+      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: finalPerms, role: roleToSet, is_draft: isDraft });
     } catch (e) { console.error(e); }
     setSaving(false);
+  }
+
+  async function handleSendInvitation() {
+    if (!fullName || !draftEmail) return;
+    setSendingInvite(true);
+    try {
+      const resolvedRole = level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff");
+      const finalPerms = { ...perms, _quick_actions: quickActions as unknown as SectionPerm };
+      const { error } = await supabase.functions.invoke("ronin-ai", {
+        body: {
+          action: "save_draft_user",
+          profile_id: member.id,
+          full_name: fullName,
+          email: draftEmail,
+          job_title: jobTitle || null,
+          phone: phone || null,
+          level,
+          department: (level === "staff" || level === "manager") ? (department || null) : null,
+          start_date: startDate || null,
+          birthday: birthday || null,
+          notes: notes || null,
+          assigned_property_ids: assignedProps,
+          section_permissions: finalPerms as unknown,
+          role: resolvedRole,
+          send_invitation: true,
+        },
+      });
+      if (error) throw error;
+      setIsDraft(false);
+      toast.success(isEN ? "Invitation sent!" : "¡Invitación enviada!", {
+        description: isEN ? `A login invite has been sent to ${draftEmail}` : `Se envió un enlace de invitación a ${draftEmail}`,
+      });
+      onSaved({ ...member, full_name: fullName, is_draft: false });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to send invitation.";
+      toast.error(msg);
+    }
+    setSendingInvite(false);
   }
 
   const lvlInfo = LEVEL_OPTIONS.find(l => l.value === (member.level as Level));
