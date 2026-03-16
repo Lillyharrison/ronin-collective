@@ -1513,18 +1513,19 @@ export function CalendarSection() {
         )}
       </div>
 
-      {/* Ronin category tabs */}
-      {mode === "ronin" && (
+      {/* Ronin category tabs — staff excluded here, lives in the header button */}
+      {mode === "ronin" && roninTab !== "staff" && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][])
             .filter(([key]) => {
+              if (key === "staff") return false; // staff moved to header
               if (isMasterAdmin) return true;
               if (key === "all") return true;
               if (key === "birthdays") return canSee("calendar-birthdays");
               if (key === "maintenance") return canSee("calendar-maintenance");
               if (key === "deliveries") return canSee("calendar-deliveries");
               if (key === "travel") return canSee("calendar-travel");
-              if (key === "staff") return canSee("calendar-staff");
+              if (key === "construction") return canSee("calendar-construction");
               return true;
             })
             .map(([key, cfg]) => {
