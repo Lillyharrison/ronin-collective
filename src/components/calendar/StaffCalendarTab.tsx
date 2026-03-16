@@ -15,9 +15,12 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Settings2,
   CalendarOff, UserCheck, X, Check, Clock, Pencil,
-  PlaneTakeoff, AlertCircle, GripVertical,
+  PlaneTakeoff, AlertCircle, GripVertical, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
