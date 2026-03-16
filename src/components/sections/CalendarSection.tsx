@@ -306,6 +306,8 @@ function getEventBarColor(ev: CalEvent, isRoninMode: boolean): string {
     if (tab === "birthdays") return EVENT_SOLID_COLORS.birthdays;
     if (tab === "maintenance") return EVENT_SOLID_COLORS.maintenance;
     if (tab === "deliveries") return EVENT_SOLID_COLORS.delivery;
+    if (tab === "travel") return EVENT_SOLID_COLORS.travel;
+    if (tab === "construction") return EVENT_SOLID_COLORS.construction;
     return "hsl(var(--accent))";
   }
   return EVENT_SOLID_COLORS[ev.event_type] ?? EVENT_SOLID_COLORS.general;
