@@ -517,11 +517,26 @@ export function MessageBubble({
             )}
 
             {/* Text */}
-            {message.content_text && (
-              isAI
+            {message.content_text && (() => {
+              const fwd = parseForwarded(message.content_text);
+              if (fwd) {
+                return (
+                  <div>
+                    {/* Forwarded header */}
+                    <div className="flex items-center gap-1 mb-1 pb-1 border-b border-[hsl(25,100%,50%)]/25">
+                      <Share2 size={11} className="text-[hsl(25,100%,50%)] flex-shrink-0" />
+                      <span className="text-[10px] text-[hsl(25,100%,50%)] font-semibold uppercase tracking-wide truncate">
+                        {fwd.sender} · WhatsApp
+                      </span>
+                    </div>
+                    <span className="whitespace-pre-wrap">{fwd.body}</span>
+                  </div>
+                );
+              }
+              return isAI
                 ? <RenderAIText text={message.content_text} />
-                : <span className="whitespace-pre-wrap">{message.content_text}</span>
-            )}
+                : <span className="whitespace-pre-wrap">{message.content_text}</span>;
+            })()}
 
             {/* Loading state for AI */}
             {isAI && !message.content_text && (
