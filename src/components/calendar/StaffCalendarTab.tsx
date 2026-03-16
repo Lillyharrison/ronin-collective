@@ -3,6 +3,7 @@ import {
   format, startOfWeek, endOfWeek, eachDayOfInterval,
   addWeeks, subWeeks, isToday, getDay, isSameDay,
   differenceInCalendarDays, parseISO, isWeekend,
+  startOfMonth, endOfMonth, addMonths, subMonths,
 } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -1295,6 +1296,184 @@ function StaffDayCell({
   );
 }
 
+// ── Staff Month Grid ──────────────────────────────────────────────────────────
+
+function StaffMonthGrid({
+  monthStart,
+  staffToShow,
+  displayShifts,
+  properties,
+  loading,
+  canEdit,
+  onShowScheduleManager,
+}: {
+  monthStart: Date;
+  staffToShow: Profile[];
+  displayShifts: DisplayShift[];
+  properties: Property[];
+  loading: boolean;
+  canEdit: boolean;
+  onShowScheduleManager: () => void;
+}) {
+  const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+  // Group days into weeks (Mon–Sun rows)
+  const weeks: Date[][] = [];
+  let week: Date[] = [];
+  monthDays.forEach((day) => {
+    week.push(day);
+    if (getDay(day) === 0 || day === monthDays[monthDays.length - 1]) {
+      weeks.push(week);
+      week = [];
+    }
+  });
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 rounded-xl border border-border bg-muted/20 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (staffToShow.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center px-4 rounded-2xl border border-border bg-card">
+        <UserCheck size={36} className="text-muted-foreground/30 mb-3" />
+        <p className="text-sm font-medium text-muted-foreground">No staff scheduled this month</p>
+        {canEdit && (
+          <Button variant="outline" size="sm" className="mt-3 gap-2" onClick={onShowScheduleManager}>
+            <Settings2 size={13} /> Set Up Schedules
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-x-auto">
+      {/* Header row: Name + day numbers */}
+      <div className="min-w-[600px]">
+        {/* Month day-number header */}
+        <div
+          className="grid border-b border-border bg-muted/30"
+          style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
+        >
+          <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
+            {format(monthStart, "MMMM yyyy")}
+          </div>
+          {monthDays.map((day) => (
+            <div
+              key={day.toISOString()}
+              className={cn(
+                "py-1.5 text-center border-r border-border last:border-r-0",
+                isToday(day) && "bg-primary/10",
+                isWeekend(day) && "bg-muted/20"
+              )}
+            >
+              <p className={cn(
+                "text-[9px] font-medium text-muted-foreground uppercase leading-none",
+                isToday(day) && "text-primary"
+              )}>
+                {format(day, "EEE")}
+              </p>
+              <p className={cn(
+                "text-[11px] font-bold mt-0.5 w-5 h-5 rounded-full flex items-center justify-center mx-auto",
+                isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
+              )}>
+                {format(day, "d")}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Staff rows */}
+        {staffToShow.map((person) => {
+          const personShifts = displayShifts.filter((s) => s.staff_id === person.id);
+          return (
+            <div
+              key={person.id}
+              className="grid border-b border-border last:border-b-0 hover:bg-muted/10 transition-colors"
+              style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
+            >
+              {/* Staff name cell */}
+              <div className="px-2 py-2 border-r border-border flex items-center gap-1.5 min-w-0 sticky left-0 bg-card z-10">
+                <div className={cn(
+                  "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-semibold",
+                  person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
+                )}>
+                  {getDisplayName(person, "?").charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className={cn(
+                    "text-[11px] font-medium truncate leading-tight",
+                    person.is_draft && "italic text-muted-foreground"
+                  )}>
+                    {getDisplayName(person)}
+                  </p>
+                  {person.job_title && !person.is_draft && (
+                    <p className="text-[9px] text-muted-foreground truncate leading-tight">{person.job_title}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Day cells */}
+              {monthDays.map((day) => {
+                const dateStr = format(day, "yyyy-MM-dd");
+                const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
+                const hasLeave = dayShifts.some((s) => s.is_leave);
+                const workShifts = dayShifts.filter((s) => !s.is_leave);
+
+                return (
+                  <div
+                    key={dateStr}
+                    className={cn(
+                      "border-r border-border last:border-r-0 py-1 px-0.5 flex flex-col gap-0.5 items-center justify-center min-h-[44px]",
+                      isToday(day) && "bg-primary/5",
+                      isWeekend(day) && workShifts.length === 0 && !hasLeave && "bg-muted/10"
+                    )}
+                  >
+                    {hasLeave && (
+                      <div className="w-full rounded px-0.5 py-0.5 bg-muted/60 border border-border flex items-center justify-center" title="Leave">
+                        <CalendarOff size={9} className="text-muted-foreground" />
+                      </div>
+                    )}
+                    {workShifts.map((s, si) => {
+                      const col = propColor(s.property_id, properties);
+                      const prop = properties.find((p) => p.id === s.property_id);
+                      const label = prop?.name ? prop.name.split(" ")[0] : "—";
+                      const time = s.start_time && s.end_time
+                        ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
+                        : s.start_time ? formatTime(s.start_time) : "";
+                      return (
+                        <div
+                          key={si}
+                          title={`${prop?.name ?? "—"} ${time}`}
+                          className={cn(
+                            "w-full rounded px-0.5 py-0.5 text-center",
+                            col.bg, col.text,
+                            "border"
+                          )}
+                        >
+                          <div className="text-[8px] font-semibold leading-tight truncate">{label}</div>
+                          {time && (
+                            <div className="text-[7px] opacity-80 leading-tight truncate">{time}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main StaffCalendarTab ─────────────────────────────────────────────────────
 
 export function StaffCalendarTab({
@@ -1304,9 +1483,11 @@ export function StaffCalendarTab({
   canEdit: boolean;
   userId: string | null;
 }) {
+  const [calView, setCalView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
+  const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()));
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
@@ -1352,7 +1533,12 @@ export function StaffCalendarTab({
     createSchedule, editSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
-  } = useStaffSchedules(weekStart, userId, canEdit);
+  } = useStaffSchedules(
+    calView === "month" ? monthStart : weekStart,
+    userId,
+    canEdit,
+    calView === "month" ? endOfMonth(monthStart) : undefined
+  );
 
   // Load profiles (admin + staff only — exclude principal/extended_family) and properties once
   useEffect(() => {
@@ -1392,10 +1578,12 @@ export function StaffCalendarTab({
     });
   }, []);
 
-  const weekDays = eachDayOfInterval({
-    start: weekStart,
-    end: endOfWeek(weekStart, { weekStartsOn: 1 }),
-  });
+  const weekDays = calView === "month"
+    ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
+    : eachDayOfInterval({
+        start: weekStart,
+        end: endOfWeek(weekStart, { weekStartsOn: 1 }),
+      });
 
   const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
 
@@ -1498,8 +1686,11 @@ export function StaffCalendarTab({
     setShowShiftModal(true);
   };
 
-  const weekLabel = `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
+  const weekLabel = calView === "month"
+    ? format(monthStart, "MMMM yyyy")
+    : `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const isCurrentMonth = format(monthStart, "yyyy-MM") === format(new Date(), "yyyy-MM");
 
   // ── Property color map for export (hex colors matching PROPERTY_COLORS) ──────
   const EXPORT_PROP_COLORS = [
@@ -1523,8 +1714,9 @@ export function StaffCalendarTab({
 
   function buildExportRows() {
     return staffToShow.map((person) => {
+      // Staff column: name only — job title is drawn separately via didDrawCell
       const row: Record<string, string> = {
-        Staff: getDisplayName(person) + (person.job_title ? `\n${person.job_title}` : ""),
+        Staff: getDisplayName(person),
       };
       weekDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
@@ -1609,17 +1801,20 @@ export function StaffCalendarTab({
     let lastDept: string | null | undefined = undefined;
 
     staffToShow.forEach((person, idx) => {
+      // Normalize: treat null and undefined the same so we don't get false breaks
       const dept = person.department ?? null;
-      // Insert thin separator when department changes (not before very first row)
+      // Insert thin separator only when department genuinely changes (skip first row)
       if (idx > 0 && dept !== lastDept) {
         pdfRows.push({ cells: Array(8).fill(""), isSeparator: true, staffIndex: -1 });
       }
       lastDept = dept;
 
+      const nameOnly = getDisplayName(person);
+      const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
       const exportRows = buildExportRows();
       const row = exportRows[idx];
       pdfRows.push({
-        cells: ["Staff", ...dayHeaders].map((h) => row[h] ?? ""),
+        cells: [nameOnly, ...dayHeaders.map((h) => row[h] ?? "")],
         isSeparator: false,
         staffIndex: idx,
       });
@@ -1640,10 +1835,11 @@ export function StaffCalendarTab({
       },
       bodyStyles: {
         fontSize: 7.5,
-        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+        cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
         overflow: "linebreak",
         lineWidth: 0.1,
         lineColor: [200, 200, 200],
+        minCellHeight: 14,
       },
       columnStyles: {
         0: { cellWidth: staffColW },
@@ -1654,27 +1850,24 @@ export function StaffCalendarTab({
         const pdfRow = pdfRows[data.row.index];
         if (!pdfRow) return;
 
-        // Separator row: white bg, minimal height, no borders
+        // Separator row: white bg, 3pt height, no borders
         if (pdfRow.isSeparator) {
           data.cell.styles.fillColor = [255, 255, 255];
           data.cell.styles.textColor = [255, 255, 255];
-          data.cell.styles.fontSize = 3;
+          data.cell.styles.fontSize = 1;
           data.cell.styles.cellPadding = { top: 1, bottom: 1, left: 0, right: 0 };
           data.cell.styles.lineWidth = 0;
+          data.cell.styles.minCellHeight = 3;
           return;
         }
 
-        // Staff name column (col 0): bold name, italic title in smaller font
+        // Staff name column (col 0): bold name — title drawn via didDrawCell
         if (data.column.index === 0) {
-          const person = staffToShow[pdfRow.staffIndex];
-          if (person?.job_title) {
-            // Name is rendered bold by column style; title will be added via didDrawCell
-            data.cell.styles.fontStyle = "bold";
-          }
+          data.cell.styles.fontStyle = "bold";
           return;
         }
 
-        // Shift cells: apply property color
+        // Shift cells: apply property bg + text color
         const person = staffToShow[pdfRow.staffIndex];
         if (!person) return;
         const day = weekDays[data.column.index - 1];
@@ -1684,36 +1877,37 @@ export function StaffCalendarTab({
         );
         if (dayShifts.length > 0) {
           const col = getExportPropColor(dayShifts[0].property_id);
-          const r2 = parseInt(col.bg.slice(0, 2), 16);
-          const g2 = parseInt(col.bg.slice(2, 4), 16);
-          const b2 = parseInt(col.bg.slice(4, 6), 16);
-          data.cell.styles.fillColor = [r2, g2, b2];
-          const tr = parseInt(col.text.slice(0, 2), 16);
-          const tg = parseInt(col.text.slice(2, 4), 16);
-          const tb = parseInt(col.text.slice(4, 6), 16);
-          data.cell.styles.textColor = [tr, tg, tb];
+          data.cell.styles.fillColor = [
+            parseInt(col.bg.slice(0, 2), 16),
+            parseInt(col.bg.slice(2, 4), 16),
+            parseInt(col.bg.slice(4, 6), 16),
+          ];
+          data.cell.styles.textColor = [
+            parseInt(col.text.slice(0, 2), 16),
+            parseInt(col.text.slice(2, 4), 16),
+            parseInt(col.text.slice(4, 6), 16),
+          ];
         }
       },
       didDrawCell: (data) => {
-        // Render job title in smaller italic text below the name in col 0
+        // Draw job title in smaller italic grey text directly below the bold name
         if (data.section !== "body" || data.column.index !== 0) return;
         const pdfRow = pdfRows[data.row.index];
         if (!pdfRow || pdfRow.isSeparator) return;
         const person = staffToShow[pdfRow.staffIndex];
         if (!person?.job_title) return;
 
-        const lines = getDisplayName(person).split("\n");
-        const nameLines = lines.length;
-        // Draw job title line below the name
-        const titleY = data.cell.y + 2 + nameLines * 3.2 + 1.5;
+        // Name baseline is at y + top-padding + font-size-in-mm
+        // 7.5pt ≈ 2.6mm; top padding = 2.5mm
+        const nameBaselineY = data.cell.y + 2.5 + 2.6;
+        const titleY = nameBaselineY + 3.5; // 3.5mm gap below name baseline
         doc.setFontSize(5.5);
         doc.setFont("helvetica", "italic");
-        doc.setTextColor(120, 120, 120);
-        doc.text(person.job_title, data.cell.x + 2, titleY, {
-          maxWidth: staffColW - 4,
-        });
-        // Reset font
+        doc.setTextColor(110, 110, 110);
+        doc.text(person.job_title, data.cell.x + 2, titleY, { maxWidth: staffColW - 4 });
+        // Reset
         doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
         doc.setFontSize(7.5);
       },
       margin: { left: marginL, right: marginR },
@@ -1753,17 +1947,19 @@ export function StaffCalendarTab({
     <div className="space-y-4">
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Week navigation */}
+        {/* Navigation */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setWeekStart((w) => subWeeks(w, 1))}
+            onClick={() => calView === "month"
+              ? setMonthStart((m) => subMonths(m, 1))
+              : setWeekStart((w) => subWeeks(w, 1))}
             className="w-8 h-8 rounded-lg flex items-center justify-center border border-border hover:bg-muted transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
           <div className="text-center min-w-[160px]">
             <p className="text-sm font-semibold">{weekLabel}</p>
-            {!isCurrentWeek && (
+            {calView === "week" && !isCurrentWeek && (
               <button
                 onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}
                 className="text-[10px] text-muted-foreground hover:text-foreground underline"
@@ -1771,17 +1967,49 @@ export function StaffCalendarTab({
                 This week
               </button>
             )}
+            {calView === "month" && !isCurrentMonth && (
+              <button
+                onClick={() => setMonthStart(startOfMonth(new Date()))}
+                className="text-[10px] text-muted-foreground hover:text-foreground underline"
+              >
+                This month
+              </button>
+            )}
           </div>
           <button
-            onClick={() => setWeekStart((w) => addWeeks(w, 1))}
+            onClick={() => calView === "month"
+              ? setMonthStart((m) => addMonths(m, 1))
+              : setWeekStart((w) => addWeeks(w, 1))}
             className="w-8 h-8 rounded-lg flex items-center justify-center border border-border hover:bg-muted transition-colors"
           >
             <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* Actions */}
+        {/* View toggle + Actions */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Week / Month toggle */}
+          <div className="flex items-center rounded-lg border border-border overflow-hidden h-8">
+            <button
+              onClick={() => setCalView("week")}
+              className={cn(
+                "px-3 h-full text-xs font-medium transition-colors",
+                calView === "week" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setCalView("month")}
+              className={cn(
+                "px-3 h-full text-xs font-medium transition-colors border-l border-border",
+                calView === "month" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              Month
+            </button>
+          </div>
+
           {/* Visible to ALL users — primary CTA for staff */}
           <Button
             variant="outline"
@@ -1809,24 +2037,28 @@ export function StaffCalendarTab({
               >
                 <Settings2 size={15} />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleExportExcel}
-                title="Download Excel"
-              >
-                <Download size={15} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-xs h-8"
-                onClick={handleExportPDF}
-                title="Download PDF"
-              >
-                PDF
-              </Button>
+              {calView === "week" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleExportExcel}
+                    title="Download Excel"
+                  >
+                    <Download size={15} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs h-8"
+                    onClick={handleExportPDF}
+                    title="Download PDF"
+                  >
+                    PDF
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -1851,10 +2083,24 @@ export function StaffCalendarTab({
         </div>
       )}
 
-      {/* ── Schedule Grid ─────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        {/* Day headers */}
-        <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
+      {/* ── Month View ────────────────────────────────────────────────────── */}
+      {calView === "month" && (
+        <StaffMonthGrid
+          monthStart={monthStart}
+          staffToShow={staffToShow}
+          displayShifts={displayShifts}
+          properties={properties}
+          loading={loading || profilesLoading}
+          canEdit={canEdit}
+          onShowScheduleManager={() => setShowScheduleManager(true)}
+        />
+      )}
+
+      {/* ── Week Schedule Grid ────────────────────────────────────────────── */}
+      {calView === "week" && (
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          {/* Day headers */}
+          <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
           <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
           {weekDays.map((day) => (
             <div
@@ -2006,7 +2252,8 @@ export function StaffCalendarTab({
             );
           })
         )}
-      </div>
+        </div>
+      )}
 
       {/* ── Leave Panel ──────────────────────────────────────────── */}
       <LeavePanel
