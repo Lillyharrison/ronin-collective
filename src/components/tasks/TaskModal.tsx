@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -6,6 +6,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
 import { notifySection } from "@/lib/notifySection";
+import { enqueue } from "@/lib/offlineDB";
+import { OfflineSyncContext } from "@/hooks/useOfflineSync";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
   ChevronDown, Check, Send, Trash2, Clock, AlertTriangle, Package,
@@ -72,6 +74,7 @@ async function findLinkedOrder(taskId: string): Promise<{ id: string; status: st
 export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Props) {
   const { language } = useLanguage();
   const { userId, isAdmin, isMasterAdmin, isManager, department } = usePermissions();
+  const syncCtx = useContext(OfflineSyncContext);
   const isL = language === "es";
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -180,7 +183,13 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     let savedTaskId = task?.id;
 
     if (task?.id) {
-      await supabase.from("tasks").update(payload as any).eq("id", task.id);
+      if (!navigator.onLine) {
+        // Optimistic local update — queue and close
+        await enqueue("tasks", "update", payload as Record<string, unknown>, { id: task.id });
+        syncCtx?.notifyQueued();
+      } else {
+        await supabase.from("tasks").update(payload as any).eq("id", task.id);
+      }
     } else {
       const { data } = await supabase.from("tasks").insert({ ...payload, created_by: userId } as any).select("id").single();
       savedTaskId = data?.id;
@@ -244,10 +253,18 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     setCompleting(true);
 
     // Mark the task complete
-    await supabase.from("tasks").update({
+    const completionPatch = {
       status: "completed",
       completed_at: new Date().toISOString(),
-    } as any).eq("id", task.id);
+    };
+    if (!navigator.onLine) {
+      // Optimistic — update local state visually, queue the write
+      setCompleted(true);
+      await enqueue("tasks", "update", completionPatch as Record<string, unknown>, { id: task.id });
+      syncCtx?.notifyQueued();
+    } else {
+      await supabase.from("tasks").update(completionPatch as any).eq("id", task.id);
+    }
 
     // Notify task completion
     await notifySection("tasks", {

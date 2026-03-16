@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { enqueue } from "@/lib/offlineDB";
+import { OfflineSyncContext } from "@/hooks/useOfflineSync";
 
 export type IssuePriority = "urgent" | "high" | "medium" | "low";
 export type IssueStatus = "reported" | "approved" | "assigned" | "scheduled" | "in_progress" | "resolved";
@@ -56,6 +58,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
+  const syncCtx = useContext(OfflineSyncContext);
 
   const fetchCategories = useCallback(async () => {
     const { data } = await supabase
@@ -143,6 +146,20 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   }, [fetchCategories, fetchIssues]);
 
   const createIssue = async (payload: Omit<MaintenanceIssue, "id" | "created_at" | "updated_at" | "property_name" | "reporter_name" | "assignee_name" | "assignee_avatar" | "related_issue_title">) => {
+    if (!navigator.onLine) {
+      // Optimistic local insert with a temp id so the UI reflects it immediately
+      const tempId = crypto.randomUUID();
+      const optimistic: MaintenanceIssue = {
+        ...payload,
+        id: tempId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setIssues(prev => [optimistic, ...prev]);
+      await enqueue("maintenance_issues", "insert", payload as unknown as Record<string, unknown>);
+      syncCtx?.notifyQueued();
+      return { data: optimistic, error: null };
+    }
     const { data, error } = await supabase.from("maintenance_issues").insert(payload).select().single();
     if (!error) await fetchIssues(0);
     return { data, error };
