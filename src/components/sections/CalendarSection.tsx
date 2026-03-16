@@ -123,6 +123,7 @@ function getRoninTabForEvent(ev: CalEvent): RoninTab {
   if (ev._source === "birthday") return "birthdays";
   if (ev._source === "maintenance") return "maintenance";
   if (ev._source === "orders") return "deliveries";
+  if (ev.event_type === "travel") return "travel";
   return "all";
 }
 
