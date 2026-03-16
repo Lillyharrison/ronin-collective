@@ -13,6 +13,11 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register("/sw.js", { updateViaCache: "all" })
       .then(reg => {
+        // Register for background sync — lets the SW flush the offline queue
+        // even if the app tab is not visible (Chrome/Android only).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (reg as any).sync?.register("ronin-sync-queue").catch(() => {});
+
         // Check for updates only once when the app becomes visible after being
         // hidden — not on every focus event. This avoids spurious reload cycles
         // when users switch back to the app.

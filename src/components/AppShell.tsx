@@ -6,6 +6,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
 import { Bell, X } from "lucide-react";
@@ -177,6 +178,7 @@ export function AppShell() {
       <Sidebar />
       <Header title={showDetail ? undefined : title} />
       {user?.id && <PushPromptBanner userId={user.id} />}
+      <OfflineBanner />
 
       <main
         className={activeSection === "messages" ? "h-[100dvh] overflow-hidden" : "min-h-screen pb-20"}

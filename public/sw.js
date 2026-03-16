@@ -123,7 +123,20 @@ async function networkFirstWithStale(request, cacheName) {
   }
 }
 
-// ── Push notifications ────────────────────────────────────────────────────────
+// ── Background Sync (Chrome/Android) ─────────────────────────────────────────
+// Signal the React app to flush its IndexedDB mutation queue when the browser
+// grants a background sync opportunity (fires when back online).
+self.addEventListener("sync", (event) => {
+  if (event.tag === "ronin-sync-queue") {
+    event.waitUntil(
+      clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
+        cs.forEach(c => c.postMessage({ type: "SYNC_QUEUE" }));
+      })
+    );
+  }
+});
+
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
