@@ -497,11 +497,22 @@ function PropertyOccupantsManager({ property, isMasterAdmin, onBack, onChanged }
   const [selected, setSelected] = useState<Set<string>>(new Set(currentIds));
 
   useEffect(() => {
+    // Only family roles (principal, extended_family) are eligible occupants
     supabase
-      .from("profiles")
-      .select("id, full_name, avatar_url, level")
-      .order("full_name")
-      .then(({ data }) => { setProfiles((data as OccupantProfile[]) ?? []); setLoading(false); });
+      .from("user_roles")
+      .select("user_id")
+      .in("role", ["principal", "extended_family"])
+      .then(async ({ data: roleRows }) => {
+        const familyIds = (roleRows ?? []).map(r => r.user_id);
+        if (familyIds.length === 0) { setProfiles([]); setLoading(false); return; }
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, level")
+          .in("id", familyIds)
+          .order("full_name");
+        setProfiles((data as OccupantProfile[]) ?? []);
+        setLoading(false);
+      });
   }, []);
 
   function toggle(id: string) {
