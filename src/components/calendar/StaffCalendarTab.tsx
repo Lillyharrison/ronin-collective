@@ -1610,17 +1610,20 @@ export function StaffCalendarTab({
     let lastDept: string | null | undefined = undefined;
 
     staffToShow.forEach((person, idx) => {
+      // Normalize: treat null and undefined the same so we don't get false breaks
       const dept = person.department ?? null;
-      // Insert thin separator when department changes (not before very first row)
+      // Insert thin separator only when department genuinely changes (skip first row)
       if (idx > 0 && dept !== lastDept) {
         pdfRows.push({ cells: Array(8).fill(""), isSeparator: true, staffIndex: -1 });
       }
       lastDept = dept;
 
+      const nameOnly = getDisplayName(person);
+      const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
       const exportRows = buildExportRows();
       const row = exportRows[idx];
       pdfRows.push({
-        cells: ["Staff", ...dayHeaders].map((h) => row[h] ?? ""),
+        cells: [nameOnly, ...dayHeaders.map((h) => row[h] ?? "")],
         isSeparator: false,
         staffIndex: idx,
       });
