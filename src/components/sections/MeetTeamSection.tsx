@@ -1200,6 +1200,19 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
           {tab === "details" && (
             <div className="px-5 py-4 space-y-4">
               <EditField label={isEN ? "Full Name" : "Nombre"} value={fullName} onChange={setFullName} disabled={!canEdit} />
+              {/* Email field shown only for drafts — needed to send the invitation */}
+              {isDraft && canEdit && (
+                <div>
+                  <FieldLabel label={isEN ? "Email (required to send invitation)" : "Correo (requerido para invitar)"} />
+                  <Input
+                    type="email"
+                    value={draftEmail}
+                    onChange={e => setDraftEmail(e.target.value)}
+                    placeholder="jane@example.com"
+                    className="bg-charcoal-light border-charcoal-light text-cream"
+                  />
+                </div>
+              )}
               <EditField label={isEN ? "Job Title" : "Puesto"} value={jobTitle} onChange={setJobTitle} disabled={!canEdit} />
               <EditField label={isEN ? "Phone" : "Teléfono"} value={phone} onChange={setPhone} disabled={!canEdit} type="tel" />
 
