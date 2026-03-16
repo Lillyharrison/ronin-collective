@@ -122,11 +122,15 @@ export function useChecklistItems(templateId: string | null) {
 export function useChecklistSessions(templateId: string | null, propertyId?: string | null) {
   const [sessions, setSessions] = useState<ChecklistSession[]>([]);
   const { userId } = usePermissions();
+  // Use sync context if available (may be null before Provider mounts)
+  const syncCtx = useContext(OfflineSyncContext);
 
   const today = new Date().toISOString().slice(0, 10);
 
   const load = useCallback(async () => {
     if (!templateId) { setSessions([]); return; }
+    // Skip network fetch when offline — keep whatever is already in local state
+    if (!navigator.onLine) return;
     const { data } = await supabase
       .from("checklist_sessions")
       .select("id, item_id, completed_by, session_date, completed_at")
@@ -154,24 +158,70 @@ export function useChecklistSessions(templateId: string | null, propertyId?: str
 
   const toggle = useCallback(async (itemId: string, isCompleted: boolean) => {
     if (!userId) return;
+
+    const isOffline = !navigator.onLine;
+
     if (isCompleted) {
-      await supabase.from("checklist_sessions").delete()
-        .eq("template_id", templateId!)
-        .eq("item_id", itemId)
-        .eq("session_date", today)
-        .eq("completed_by", userId);
+      // Optimistic update — remove locally right away
       setSessions(prev => prev.filter(s => !(s.item_id === itemId && s.completed_by === userId)));
+
+      if (isOffline) {
+        // Queue the delete for when we're back online
+        await enqueue(
+          "checklist_sessions",
+          "delete",
+          {},
+          {
+            template_id: templateId!,
+            item_id: itemId,
+            session_date: today,
+            completed_by: userId,
+          },
+        );
+        syncCtx?.notifyQueued();
+      } else {
+        await supabase.from("checklist_sessions").delete()
+          .eq("template_id", templateId!)
+          .eq("item_id", itemId)
+          .eq("session_date", today)
+          .eq("completed_by", userId);
+      }
     } else {
-      const { data } = await supabase.from("checklist_sessions").insert({
-        template_id: templateId!,
+      // Optimistic insert with a temp id
+      const tempId = crypto.randomUUID();
+      const optimistic: ChecklistSession = {
+        id: tempId,
         item_id: itemId,
-        property_id: propertyId ?? null,
-        session_date: today,
         completed_by: userId,
-      }).select().single();
-      if (data) setSessions(prev => [...prev, data as ChecklistSession]);
+        session_date: today,
+        completed_at: new Date().toISOString(),
+      };
+      setSessions(prev => [...prev, optimistic]);
+
+      if (isOffline) {
+        await enqueue("checklist_sessions", "insert", {
+          template_id: templateId!,
+          item_id: itemId,
+          property_id: propertyId ?? null,
+          session_date: today,
+          completed_by: userId,
+        });
+        syncCtx?.notifyQueued();
+      } else {
+        const { data } = await supabase.from("checklist_sessions").insert({
+          template_id: templateId!,
+          item_id: itemId,
+          property_id: propertyId ?? null,
+          session_date: today,
+          completed_by: userId,
+        }).select().single();
+        // Replace temp entry with the real DB row
+        if (data) {
+          setSessions(prev => prev.map(s => s.id === tempId ? (data as ChecklistSession) : s));
+        }
+      }
     }
-  }, [templateId, propertyId, userId, today]);
+  }, [templateId, propertyId, userId, today, syncCtx]);
 
   const completedIds = new Set(sessions.map(s => s.item_id));
   // Map itemId → session for timestamp display
