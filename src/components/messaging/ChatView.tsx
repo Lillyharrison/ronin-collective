@@ -440,6 +440,7 @@ export function ChatView({
                 isAdmin={isAdmin}
                 onReact={(emoji) => toggleReaction(msg.id, currentUserId, emoji)}
                 onDelete={(id) => deleteMessage(id)}
+                onToggleStar={(id, currentlyStarred) => toggleStar(id, currentlyStarred)}
                 onConfirmTool={async (toolName, toolArgs) => {
                   setAgentTyping(true);
                   try {
