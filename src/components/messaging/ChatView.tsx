@@ -180,8 +180,14 @@ export function ChatView({
   };
 
   const handleSend = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
+    const raw = input.trim();
+    if (!raw || sending) return;
+
+    // Build the actual message — wrap with forward prefix if in forward mode
+    const text = forwardMode && forwardSender.trim()
+      ? `FWDWA::${forwardSender.trim()}::${raw}`
+      : raw;
+
     clearDraft();
     clearTyping();
     setSending(true);
@@ -191,8 +197,8 @@ export function ChatView({
       const pendingTool = (lastAiMsg?.reactions as Record<string, unknown> | null)?.__pending_tool as
         { name: string; args: Record<string, unknown> } | undefined;
 
-      const isConfirmation = pendingTool && /^(yes|si|sí|proceed|confirm|do it|go ahead|adelante|hazlo|confirmar)/i.test(text);
-      const isCancellation = pendingTool && /^(no|cancel|cancelar|stop|nevermind|don't)/i.test(text);
+      const isConfirmation = pendingTool && /^(yes|si|sí|proceed|confirm|do it|go ahead|adelante|hazlo|confirmar)/i.test(raw);
+      const isCancellation = pendingTool && /^(no|cancel|cancelar|stop|nevermind|don't)/i.test(raw);
 
       await sendMessage(text, currentUserId);
       setAgentTyping(true);
