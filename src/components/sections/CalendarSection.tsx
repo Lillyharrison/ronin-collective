@@ -1422,6 +1422,17 @@ export function CalendarSection() {
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <div className="flex items-center gap-2">
+            {/* Staff schedule — separate from calendar tabs, lives up here */}
+            {(isMasterAdmin || isAdmin || canSee("calendar-staff")) && (
+              <Button
+                variant={roninTab === "staff" && mode === "ronin" ? "default" : "outline"}
+                size="sm"
+                onClick={() => { setMode("ronin"); setRoninTab(roninTab === "staff" ? "all" : "staff"); }}
+                className="gap-1.5 h-8 text-xs"
+              >
+                <UserCheck size={13} /> Staff
+              </Button>
+            )}
             {isMasterAdmin && (
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
                 <Settings size={18} />
@@ -1447,6 +1458,7 @@ export function CalendarSection() {
                     : k === "maintenance" ? EVENT_SOLID_COLORS.maintenance
                     : k === "deliveries" ? EVENT_SOLID_COLORS.delivery
                     : k === "travel" ? EVENT_SOLID_COLORS.travel
+                    : k === "construction" ? EVENT_SOLID_COLORS.construction
                     : "hsl(var(--accent))";
                   return (
                     <div key={k} className="flex items-center gap-2">
