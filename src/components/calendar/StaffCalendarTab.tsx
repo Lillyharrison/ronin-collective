@@ -1508,8 +1508,11 @@ export function StaffCalendarTab({
     setShowShiftModal(true);
   };
 
-  const weekLabel = `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
+  const weekLabel = calView === "month"
+    ? format(monthStart, "MMMM yyyy")
+    : `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const isCurrentMonth = format(monthStart, "yyyy-MM") === format(new Date(), "yyyy-MM");
 
   // ── Property color map for export (hex colors matching PROPERTY_COLORS) ──────
   const EXPORT_PROP_COLORS = [
