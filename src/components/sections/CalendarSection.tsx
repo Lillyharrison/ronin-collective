@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   ChevronLeft, ChevronRight, Settings, RefreshCw, Plus, CalendarDays,
   MapPin, Clock, Tag, Globe, Lock, Plane, Users, Wrench, PartyPopper,
-  Calendar, X, Check, AlertTriangle, Cake, Package, UserCheck,
+  Calendar, X, Check, AlertTriangle, Cake, Package, UserCheck, HardHat,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type CalendarMode = "family" | "ronin";
-type RoninTab = "all" | "birthdays" | "maintenance" | "deliveries" | "travel" | "staff";
+type RoninTab = "all" | "birthdays" | "maintenance" | "deliveries" | "travel" | "construction" | "staff";
 
 interface CalEvent {
   id: string;
@@ -83,33 +83,35 @@ interface Order {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const RONIN_TAB_CONFIG: Record<RoninTab, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-  all:          { label: "All",         icon: <Calendar size={12} />,    color: "text-foreground",      bg: "bg-muted" },
-  birthdays:    { label: "Birthdays",   icon: <Cake size={12} />,        color: "text-pink-400",        bg: "bg-pink-500/15 border-pink-500/30" },
-  maintenance:  { label: "Maintenance", icon: <Wrench size={12} />,      color: "text-amber-400",       bg: "bg-amber-500/15 border-amber-500/30" },
-  deliveries:   { label: "Deliveries",  icon: <Package size={12} />,     color: "text-emerald-400",     bg: "bg-emerald-500/15 border-emerald-500/30" },
-  travel:       { label: "Travel",      icon: <Plane size={12} />,       color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
-  staff:        { label: "Staff",       icon: <UserCheck size={12} />,   color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
+  all:          { label: "All",               icon: <Calendar size={12} />,    color: "text-foreground",      bg: "bg-muted" },
+  birthdays:    { label: "Birthdays",         icon: <Cake size={12} />,        color: "text-pink-400",        bg: "bg-pink-500/15 border-pink-500/30" },
+  maintenance:  { label: "Maintenance",       icon: <Wrench size={12} />,      color: "text-amber-400",       bg: "bg-amber-500/15 border-amber-500/30" },
+  deliveries:   { label: "Deliveries",        icon: <Package size={12} />,     color: "text-emerald-400",     bg: "bg-emerald-500/15 border-emerald-500/30" },
+  travel:       { label: "Travel",            icon: <Plane size={12} />,       color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
+  construction: { label: "Construction",      icon: <HardHat size={12} />,     color: "text-orange-400",      bg: "bg-orange-500/15 border-orange-500/30" },
+  staff:        { label: "Staff",             icon: <UserCheck size={12} />,   color: "text-violet-400",      bg: "bg-violet-500/15 border-violet-500/30" },
 };
 
 const FAMILY_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  travel:      { label: "Travel",       color: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30",    icon: <Plane size={10} /> },
-  guest_stay:  { label: "Guest Stay",   color: "text-purple-400", bg: "bg-purple-500/15 border-purple-500/30", icon: <Users size={10} /> },
-  event:       { label: "Event / Party",color: "text-pink-400",   bg: "bg-pink-500/15 border-pink-500/30",    icon: <PartyPopper size={10} /> },
-  maintenance: { label: "Maintenance",  color: "text-amber-400",  bg: "bg-amber-500/15 border-amber-500/30",  icon: <Wrench size={10} /> },
-  general:     { label: "General",      color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
+  travel:       { label: "Travel",             color: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30",    icon: <Plane size={10} /> },
+  guest_stay:   { label: "Guest Stay",         color: "text-purple-400", bg: "bg-purple-500/15 border-purple-500/30", icon: <Users size={10} /> },
+  event:        { label: "Event / Party",      color: "text-pink-400",   bg: "bg-pink-500/15 border-pink-500/30",    icon: <PartyPopper size={10} /> },
+  maintenance:  { label: "Maintenance",        color: "text-amber-400",  bg: "bg-amber-500/15 border-amber-500/30",  icon: <Wrench size={10} /> },
+  construction: { label: "Construction / Design", color: "text-orange-400", bg: "bg-orange-500/15 border-orange-500/30", icon: <HardHat size={10} /> },
+  general:      { label: "General",            color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
 };
 
-// Solid background colors for multi-day bars (inline style, richer look)
 const EVENT_SOLID_COLORS: Record<string, string> = {
-  travel:      "hsl(217 91% 60%)",
-  guest_stay:  "hsl(271 91% 65%)",
-  event:       "hsl(330 85% 60%)",
-  maintenance: "hsl(38 92% 50%)",
-  general:     "hsl(var(--accent))",
+  travel:       "hsl(217 91% 60%)",
+  guest_stay:   "hsl(271 91% 65%)",
+  event:        "hsl(330 85% 60%)",
+  maintenance:  "hsl(38 92% 50%)",
+  construction: "hsl(24 94% 53%)",
+  general:      "hsl(var(--accent))",
   // ronin types
-  birthdays:   "hsl(330 85% 60%)",
-  delivery:    "hsl(142 71% 45%)",
-  birthday:    "hsl(330 85% 60%)",
+  birthdays:    "hsl(330 85% 60%)",
+  delivery:     "hsl(142 71% 45%)",
+  birthday:     "hsl(330 85% 60%)",
   // ronin travel tab
   ronin_travel: "hsl(217 91% 60%)",
 };
@@ -124,6 +126,7 @@ function getRoninTabForEvent(ev: CalEvent): RoninTab {
   if (ev._source === "maintenance") return "maintenance";
   if (ev._source === "orders") return "deliveries";
   if (ev.event_type === "travel") return "travel";
+  if (ev.event_type === "construction") return "construction";
   if (ev.event_type === "birthday") return "birthdays";
   if (ev.event_type === "maintenance") return "maintenance";
   if (ev.event_type === "delivery") return "deliveries";
@@ -303,6 +306,8 @@ function getEventBarColor(ev: CalEvent, isRoninMode: boolean): string {
     if (tab === "birthdays") return EVENT_SOLID_COLORS.birthdays;
     if (tab === "maintenance") return EVENT_SOLID_COLORS.maintenance;
     if (tab === "deliveries") return EVENT_SOLID_COLORS.delivery;
+    if (tab === "travel") return EVENT_SOLID_COLORS.travel;
+    if (tab === "construction") return EVENT_SOLID_COLORS.construction;
     return "hsl(var(--accent))";
   }
   return EVENT_SOLID_COLORS[ev.event_type] ?? EVENT_SOLID_COLORS.general;
@@ -1015,6 +1020,7 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
               <SelectContent>
                 <SelectItem value="general">📅 General</SelectItem>
                 <SelectItem value="travel">✈️ Travel</SelectItem>
+                <SelectItem value="construction">🏗️ Construction / Design</SelectItem>
                 <SelectItem value="guest_stay">🏠 Guest Stay</SelectItem>
                 <SelectItem value="event">🎉 Event / Party</SelectItem>
                 <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
@@ -1419,6 +1425,17 @@ export function CalendarSection() {
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <div className="flex items-center gap-2">
+            {/* Staff schedule — separate from calendar tabs, lives up here */}
+            {(isMasterAdmin || isAdmin || canSee("calendar-staff")) && (
+              <Button
+                variant={roninTab === "staff" && mode === "ronin" ? "default" : "outline"}
+                size="sm"
+                onClick={() => { setMode("ronin"); setRoninTab(roninTab === "staff" ? "all" : "staff"); }}
+                className="gap-1.5 h-8 text-xs"
+              >
+                <UserCheck size={13} /> Staff
+              </Button>
+            )}
             {isMasterAdmin && (
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
                 <Settings size={18} />
@@ -1444,6 +1461,7 @@ export function CalendarSection() {
                     : k === "maintenance" ? EVENT_SOLID_COLORS.maintenance
                     : k === "deliveries" ? EVENT_SOLID_COLORS.delivery
                     : k === "travel" ? EVENT_SOLID_COLORS.travel
+                    : k === "construction" ? EVENT_SOLID_COLORS.construction
                     : "hsl(var(--accent))";
                   return (
                     <div key={k} className="flex items-center gap-2">
@@ -1498,18 +1516,19 @@ export function CalendarSection() {
         )}
       </div>
 
-      {/* Ronin category tabs */}
-      {mode === "ronin" && (
+      {/* Ronin category tabs — staff excluded here, lives in the header button */}
+      {mode === "ronin" && roninTab !== "staff" && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][])
             .filter(([key]) => {
+              if (key === "staff") return false; // staff moved to header
               if (isMasterAdmin) return true;
               if (key === "all") return true;
               if (key === "birthdays") return canSee("calendar-birthdays");
               if (key === "maintenance") return canSee("calendar-maintenance");
               if (key === "deliveries") return canSee("calendar-deliveries");
               if (key === "travel") return canSee("calendar-travel");
-              if (key === "staff") return canSee("calendar-staff");
+              if (key === "construction") return canSee("calendar-construction");
               return true;
             })
             .map(([key, cfg]) => {
