@@ -1627,7 +1627,26 @@ export function StaffCalendarTab({
                         onCellClick={() => handleCellClick(dateStr, person.id)}
                         onDragStart={handleDragStart}
                         onDrop={handleDrop}
-                        onDeleteShift={(id) => deleteShift(id)}
+                        onDeleteShift={async (shift) => {
+                          if (shift.concrete_id) {
+                            await deleteShift(shift.concrete_id);
+                          } else if (shift.is_virtual && shift.schedule_id) {
+                            // Insert a cancelled concrete record to override the recurring pattern for this day
+                            const { error } = await supabase.from("staff_shifts").insert({
+                              staff_id: shift.staff_id,
+                              property_id: shift.property_id,
+                              schedule_id: shift.schedule_id,
+                              shift_date: shift.shift_date,
+                              start_time: shift.start_time,
+                              end_time: shift.end_time,
+                              status: "cancelled",
+                              notes: "Cancelled for this day",
+                              created_by: userId,
+                            } as never);
+                            if (error) { toast.error("Failed to cancel shift"); }
+                            else { toast.success("Shift cancelled for this day"); refetch(); }
+                          }
+                        }}
                         onShiftDoubleClick={(shift) => {
                           setEditingShift(shift);
                           setPrefillDate(shift.shift_date);
