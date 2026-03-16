@@ -1262,9 +1262,9 @@ function StaffDayCell({
               onClick={(e) => { e.stopPropagation(); }}
               onDoubleClick={canEdit ? (e) => { e.stopPropagation(); onShiftDoubleClick(shift); } : undefined}
             />
-            {canEdit && shift.concrete_id && (
+            {canEdit && !shift.is_leave && (
               <button
-                onClick={(e) => { e.stopPropagation(); onDeleteShift(shift.concrete_id!); }}
+                onClick={(e) => { e.stopPropagation(); onDeleteShift(shift); }}
                 className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-3.5 h-3.5 items-center justify-center text-[8px] hidden group-hover:flex z-10"
               >
                 ×
