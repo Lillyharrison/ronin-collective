@@ -45,6 +45,7 @@ interface TeamMember {
   assigned_property_ids: string[] | null;
   section_permissions: SectionPermissions | null;
   role?: AppRole | null;
+  is_draft?: boolean;
 }
 
 interface Property {
