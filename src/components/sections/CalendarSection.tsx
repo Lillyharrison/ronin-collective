@@ -1172,11 +1172,12 @@ function RightPanel({
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
 export function CalendarSection() {
-  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee } = usePermissions();
   // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
+  const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
 
-  const [mode, setMode] = useState<CalendarMode>(isFamilyUser ? "family" : "ronin");
+  const [mode, setMode] = useState<CalendarMode>((isFamilyUser && canSeeFamilyCal) ? "family" : "ronin");
   const [roninTab, setRoninTab] = useState<RoninTab>("all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [familyEvents, setFamilyEvents] = useState<CalEvent[]>([]);
