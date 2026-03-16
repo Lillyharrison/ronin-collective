@@ -1639,7 +1639,7 @@ export function StaffCalendarTab({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Visible to ALL users — primary CTA for staff */}
           <Button
             variant="outline"
@@ -1666,6 +1666,24 @@ export function StaffCalendarTab({
                 title="Manage recurring schedules"
               >
                 <Settings2 size={15} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleExportExcel}
+                title="Download Excel"
+              >
+                <Download size={15} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8"
+                onClick={handleExportPDF}
+                title="Download PDF"
+              >
+                PDF
               </Button>
             </>
           )}
