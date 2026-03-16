@@ -1115,9 +1115,9 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
                 <span className="flex-1 text-sm text-foreground font-medium">{room.name}</span>
                 <button
                   onClick={() => setDeleteId(room.id)}
-                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}
