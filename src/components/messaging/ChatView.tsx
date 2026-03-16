@@ -10,6 +10,7 @@ import { es } from "date-fns/locale";
 import {
   ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
   Users, Bot, User, Plus, Image, ScanSearch, Smile, Search, X, ChevronUp,
+  Share2,
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
