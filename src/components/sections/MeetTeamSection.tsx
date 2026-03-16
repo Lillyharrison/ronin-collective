@@ -1160,12 +1160,30 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
               }
             </div>
             <div>
-              <p className="text-cream font-semibold text-sm leading-none">{member.full_name || "—"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-cream font-semibold text-sm leading-none">{member.full_name || (isDraft ? "Draft Account" : "—")}</p>
+                {isDraft && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                    Draft
+                  </span>
+                )}
+              </div>
               {lvlInfo && <p className={`text-[10px] tracking-widest uppercase mt-0.5 ${LEVEL_COLORS[member.level || "staff"].split(" ")[0]}`}>{isEN ? lvlInfo.label : lvlInfo.labelEs}</p>}
             </div>
           </div>
           <button onClick={onClose} className="text-cream/50 hover:text-cream"><X size={20} /></button>
         </div>
+
+        {/* Draft banner */}
+        {isDraft && (
+          <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/30 shrink-0">
+            <p className="text-amber-400 text-xs font-medium">
+              {isEN
+                ? "This is a draft account — only admins can see it. Add a name and email, then send the invitation to activate."
+                : "Esta es una cuenta borrador — solo los administradores pueden verla. Agrega nombre y correo, luego envía la invitación para activarla."}
+            </p>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-charcoal-light shrink-0">
