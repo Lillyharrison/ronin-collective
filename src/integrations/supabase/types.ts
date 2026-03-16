@@ -1789,6 +1789,7 @@ export type Database = {
         Returns: boolean
       }
       notify_ronin_overdue_tasks: { Args: never; Returns: undefined }
+      prune_old_notifications: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "master_admin" | "admin" | "manager" | "staff" | "principal"
