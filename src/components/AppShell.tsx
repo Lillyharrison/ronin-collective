@@ -178,6 +178,7 @@ export function AppShell() {
       <Sidebar />
       <Header title={showDetail ? undefined : title} />
       {user?.id && <PushPromptBanner userId={user.id} />}
+      <OfflineBanner />
 
       <main
         className={activeSection === "messages" ? "h-[100dvh] overflow-hidden" : "min-h-screen pb-20"}
