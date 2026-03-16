@@ -395,8 +395,8 @@ function PropertyTile({ property: p, isMasterAdmin, allProfiles, onClick, onEdit
           <button onClick={onEdit} className="p-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors">
             <Pencil size={14} />
           </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white hover:bg-destructive transition-colors">
-            <Trash2 size={14} />
+          <button onClick={onDelete} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-black/50 backdrop-blur-sm text-white hover:bg-destructive transition-colors">
+            <Trash2 size={16} />
           </button>
         </div>
       )}

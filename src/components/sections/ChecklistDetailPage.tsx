@@ -717,8 +717,8 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
 
                   {isMasterAdmin && editingProductId !== prod.id && (
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <button onClick={() => setEditingProductId(prod.id)} className="p-1 rounded hover:bg-muted text-muted-foreground"><Pencil size={12} /></button>
-                      <button onClick={() => removeProduct(prod.id)} className="p-1 rounded hover:bg-muted text-[hsl(var(--status-urgent))]"><Trash2 size={12} /></button>
+                      <button onClick={() => setEditingProductId(prod.id)} className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground"><Pencil size={14} /></button>
+                      <button onClick={() => removeProduct(prod.id)} className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 size={14} /></button>
                     </div>
                   )}
                 </div>
