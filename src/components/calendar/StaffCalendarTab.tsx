@@ -911,7 +911,7 @@ function ScheduleManagerDrawer({
             <h2 className="text-base font-semibold">Recurring Schedules</h2>
             {staffId && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                {profiles.find((p) => p.id === staffId)?.full_name ?? "Staff member"}
+                {getDisplayName(profiles.find((p) => p.id === staffId), "Staff member")}
               </p>
             )}
           </div>
