@@ -1346,7 +1346,7 @@ export function StaffCalendarTab({
       if (uniqueStaffIds.length > 0) {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, job_title, department")
+          .select("id, full_name, avatar_url, job_title, department, is_draft")
           .in("id", uniqueStaffIds)
           .order("full_name");
         setProfiles((profileData as Profile[]) ?? []);
