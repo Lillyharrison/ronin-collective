@@ -44,8 +44,14 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   "master-import":      ["master_admin"],
   rules:                ["master_admin", "admin", "manager", "staff"],
   // Feature visibility — defaults to admin/manager only; staff must be granted explicitly
-  "principal-location": ["master_admin", "admin", "manager", "principal"],
-  "family-calendar":    ["master_admin", "admin", "manager", "principal"],
+  "principal-location":   ["master_admin", "admin", "manager", "principal"],
+  // Calendar sub-tab visibility
+  "family-calendar":      ["master_admin", "admin", "manager", "principal"],
+  "calendar-travel":      ["master_admin", "admin", "manager", "staff", "principal"],
+  "calendar-birthdays":   ["master_admin", "admin", "manager", "staff", "principal"],
+  "calendar-maintenance": ["master_admin", "admin", "manager", "staff"],
+  "calendar-deliveries":  ["master_admin", "admin", "manager"],
+  "calendar-staff":       ["master_admin", "admin", "manager"],
 };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────

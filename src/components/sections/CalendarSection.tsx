@@ -1501,7 +1501,18 @@ export function CalendarSection() {
       {/* Ronin category tabs */}
       {mode === "ronin" && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][]).map(([key, cfg]) => {
+          {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][])
+            .filter(([key]) => {
+              if (isMasterAdmin) return true;
+              if (key === "all") return true;
+              if (key === "birthdays") return canSee("calendar-birthdays");
+              if (key === "maintenance") return canSee("calendar-maintenance");
+              if (key === "deliveries") return canSee("calendar-deliveries");
+              if (key === "travel") return canSee("calendar-travel");
+              if (key === "staff") return canSee("calendar-staff");
+              return true;
+            })
+            .map(([key, cfg]) => {
             const count = key === "all"
               ? roninEvents.length
               : roninEvents.filter((ev) => getRoninTabForEvent(ev) === key).length;

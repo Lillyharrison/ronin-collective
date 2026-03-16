@@ -65,7 +65,7 @@ interface AddUserForm {
 }
 
 // ─── All navigable sections in the app ────────────────────────────────────────
-const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; isFeature?: boolean }[] = [
+const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; isFeature?: boolean; isCalendarSub?: boolean }[] = [
   { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
   { key: "property",           label: "Property",            labelEs: "Propiedad",         hasEdit: true  },
   { key: "maintenance",        label: "Maintenance",         labelEs: "Mantenimiento",     hasEdit: true  },
@@ -83,8 +83,14 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
   // ── Feature visibility toggles (not full sections) ──
-  { key: "principal-location", label: "📍 Principal Location", labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
-  { key: "family-calendar",    label: "📅 Family Calendar",    labelEs: "📅 Calendario Familiar",     hasEdit: false, isFeature: true },
+  { key: "principal-location",   label: "📍 Principal Location",  labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
+  // ── Calendar sub-tabs ──
+  { key: "family-calendar",      label: "   ↳ Family Calendar",   labelEs: "   ↳ Calendario Familiar",   hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-travel",      label: "   ↳ Travel",            labelEs: "   ↳ Viajes",                hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-birthdays",   label: "   ↳ Birthdays",         labelEs: "   ↳ Cumpleaños",            hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-maintenance", label: "   ↳ Maintenance",       labelEs: "   ↳ Mantenimiento",         hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-deliveries",  label: "   ↳ Deliveries",        labelEs: "   ↳ Entregas",              hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "calendar-staff",       label: "   ↳ Staff Schedule",    labelEs: "   ↳ Horario del Personal",  hasEdit: false, isFeature: true, isCalendarSub: true },
 ];
 
 // ─── Quick actions available on the dashboard ─────────────────────────────────
@@ -143,10 +149,10 @@ const DEPT_COLORS: Record<string, string> = {
 // Default section permissions based on level
 function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
-    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
-    extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
-    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements"],
+    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays"],
+    extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","calendar-staff"],
+    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements","calendar-travel","calendar-birthdays","calendar-maintenance"],
   };
   const allowed = base[level] || base["staff"];
   const perms: SectionPermissions = {};
@@ -787,14 +793,24 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                 {ALL_SECTIONS.map((section, idx) => {
                   const sp = perms[section.key] || { view: false, edit: false, notifications: false };
                   const prevSection = ALL_SECTIONS[idx - 1];
-                  const showDivider = section.isFeature && prevSection && !prevSection.isFeature;
+                  const showFeatureDivider = section.isFeature && !section.isCalendarSub && prevSection && !prevSection.isFeature;
+                  const showCalSubDivider = section.isCalendarSub && prevSection && !prevSection.isCalendarSub;
                   return (
                     <div key={section.key}>
-                      {showDivider && (
+                      {showFeatureDivider && (
                         <div className="flex items-center gap-2 my-3">
                           <div className="flex-1 h-px bg-charcoal-light" />
                           <span className="text-[9px] uppercase tracking-widest text-gold/60 font-semibold">
                             {isEN ? "Feature Visibility" : "Visibilidad de funciones"}
+                          </span>
+                          <div className="flex-1 h-px bg-charcoal-light" />
+                        </div>
+                      )}
+                      {showCalSubDivider && (
+                        <div className="flex items-center gap-2 mt-3 mb-1.5">
+                          <div className="flex-1 h-px bg-charcoal-light" />
+                          <span className="text-[9px] uppercase tracking-widest text-blue-400/60 font-semibold">
+                            {isEN ? "Calendar Tabs" : "Pestañas del calendario"}
                           </span>
                           <div className="flex-1 h-px bg-charcoal-light" />
                         </div>
