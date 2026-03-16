@@ -39,11 +39,15 @@ const ACTION_WIDTH = 80; // px per action button
 interface SwipeRowProps {
   thread: ThreadWithMeta;
   isPinned: boolean;
+  isMuted: boolean;
+  isArchived: boolean;
   isActive: boolean;
   isAdmin?: boolean;
   canDelete: boolean;
   onSelect: () => void;
   onPin: () => void;
+  onMute: () => void;
+  onArchive: () => void;
   onDeleteRequest: () => void;
   getAvatar: (t: ThreadWithMeta) => React.ReactNode;
   getThreadName: (t: ThreadWithMeta) => string;
@@ -54,8 +58,8 @@ interface SwipeRowProps {
 }
 
 function SwipeRow({
-  thread, isPinned, isActive, isAdmin, canDelete,
-  onSelect, onPin, onDeleteRequest,
+  thread, isPinned, isMuted, isArchived, isActive, isAdmin, canDelete,
+  onSelect, onPin, onMute, onArchive, onDeleteRequest,
   getAvatar, getThreadName, language, locale,
   openSwipeId, setOpenSwipeId,
 }: SwipeRowProps) {
