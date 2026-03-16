@@ -201,7 +201,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
           </button>
           <button
             onClick={() => onDelete(item.id)}
-            className="p-1 rounded hover:bg-muted text-[hsl(var(--status-urgent))] hover:text-[hsl(var(--status-urgent))]"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive"
             title="Delete"
           >
             <Trash2 size={16} />
