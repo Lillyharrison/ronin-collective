@@ -2074,7 +2074,8 @@ export function StaffCalendarTab({
             );
           })
         )}
-      </div>
+        </div>
+      )}
 
       {/* ── Leave Panel ──────────────────────────────────────────── */}
       <LeavePanel
