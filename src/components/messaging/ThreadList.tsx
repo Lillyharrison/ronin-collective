@@ -223,11 +223,13 @@ export function ThreadList({
   onDeleteThread, searchQuery, onSearchChange,
 }: ThreadListProps) {
   const { language } = useLanguage();
+  const { getSettings, toggleMute, toggleArchive } = useThreadSettings(currentUserId);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() =>
     new Set(threads.filter(t => t.is_pinned).map(t => t.id))
   );
+  const [showArchived, setShowArchived] = useState(false);
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
 
   const locale = language === "es" ? es : undefined;
@@ -278,18 +280,26 @@ export function ThreadList({
     await supabase.from("chat_threads").update({ is_pinned: nowPinned } as never).eq("id", threadId);
   };
 
-  const filtered = threads.filter(t =>
+  const searchFiltered = threads.filter(t =>
     !searchQuery || getThreadName(t).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const sorted = [...filtered].sort((a, b) => {
-    const aPinned = pinnedIds.has(a.id) ? 1 : 0;
-    const bPinned = pinnedIds.has(b.id) ? 1 : 0;
-    if (bPinned !== aPinned) return bPinned - aPinned;
-    const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-    const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-    return bTime - aTime;
-  });
+  // Separate archived from active
+  const activeThreads = searchFiltered.filter(t => !getSettings(t.id).is_archived);
+  const archivedThreads = searchFiltered.filter(t => getSettings(t.id).is_archived);
+
+  const sortByPinAndTime = (arr: ThreadWithMeta[]) =>
+    [...arr].sort((a, b) => {
+      const aPinned = pinnedIds.has(a.id) ? 1 : 0;
+      const bPinned = pinnedIds.has(b.id) ? 1 : 0;
+      if (bPinned !== aPinned) return bPinned - aPinned;
+      const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return bTime - aTime;
+    });
+
+  const sorted = sortByPinAndTime(activeThreads);
+  const sortedArchived = sortByPinAndTime(archivedThreads);
 
   const handleConfirmDelete = async () => {
     if (!confirmDeleteId || !onDeleteThread) return;
@@ -334,7 +344,7 @@ export function ThreadList({
         className="flex-1 overflow-y-auto overflow-x-hidden"
         onClick={() => openSwipeId && setOpenSwipeId(null)}
       >
-        {sorted.length === 0 && (
+        {sorted.length === 0 && archivedThreads.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <MessageCircle size={40} className="text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
@@ -342,25 +352,70 @@ export function ThreadList({
             </p>
           </div>
         )}
-        {sorted.map((thread) => (
-          <SwipeRow
-            key={thread.id}
-            thread={thread}
-            isPinned={pinnedIds.has(thread.id)}
-            isActive={activeThreadId === thread.id}
-            isAdmin={isAdmin}
-            canDelete={!!onDeleteThread}
-            onSelect={() => onSelectThread(thread.id)}
-            onPin={() => handleTogglePin(thread.id)}
-            onDeleteRequest={() => setConfirmDeleteId(thread.id)}
-            getAvatar={getAvatar}
-            getThreadName={getThreadName}
-            language={language}
-            locale={locale}
-            openSwipeId={openSwipeId}
-            setOpenSwipeId={setOpenSwipeId}
-          />
-        ))}
+        {sorted.map((thread) => {
+          const s = getSettings(thread.id);
+          return (
+            <SwipeRow
+              key={thread.id}
+              thread={thread}
+              isPinned={pinnedIds.has(thread.id)}
+              isMuted={s.is_muted}
+              isArchived={s.is_archived}
+              isActive={activeThreadId === thread.id}
+              isAdmin={isAdmin}
+              canDelete={!!onDeleteThread}
+              onSelect={() => onSelectThread(thread.id)}
+              onPin={() => handleTogglePin(thread.id)}
+              onMute={() => toggleMute(thread.id)}
+              onArchive={() => toggleArchive(thread.id)}
+              onDeleteRequest={() => setConfirmDeleteId(thread.id)}
+              getAvatar={getAvatar}
+              getThreadName={getThreadName}
+              language={language}
+              locale={locale}
+              openSwipeId={openSwipeId}
+              setOpenSwipeId={setOpenSwipeId}
+            />
+          );
+        })}
+
+        {/* Archived section */}
+        {archivedThreads.length > 0 && (
+          <button
+            onClick={() => setShowArchived(v => !v)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition-colors border-t border-border"
+          >
+            <Archive size={15} />
+            <span>{language === "es" ? "Archivados" : "Archived"} ({archivedThreads.length})</span>
+            <span className="ml-auto text-xs">{showArchived ? "▲" : "▼"}</span>
+          </button>
+        )}
+        {showArchived && sortedArchived.map((thread) => {
+          const s = getSettings(thread.id);
+          return (
+            <SwipeRow
+              key={thread.id}
+              thread={thread}
+              isPinned={false}
+              isMuted={s.is_muted}
+              isArchived={s.is_archived}
+              isActive={activeThreadId === thread.id}
+              isAdmin={isAdmin}
+              canDelete={!!onDeleteThread}
+              onSelect={() => onSelectThread(thread.id)}
+              onPin={() => handleTogglePin(thread.id)}
+              onMute={() => toggleMute(thread.id)}
+              onArchive={() => toggleArchive(thread.id)}
+              onDeleteRequest={() => setConfirmDeleteId(thread.id)}
+              getAvatar={getAvatar}
+              getThreadName={getThreadName}
+              language={language}
+              locale={locale}
+              openSwipeId={openSwipeId}
+              setOpenSwipeId={setOpenSwipeId}
+            />
+          );
+        })}
       </div>
 
       {/* Confirm delete dialog */}
