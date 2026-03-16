@@ -669,7 +669,7 @@ export function ChatView({
                   : (language === "es" ? "Escribe un mensaje..." : "Type a message...")
               }
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => { setInput(e.target.value); if (!isAgentThread) sendTyping(); }}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               disabled={sending || recording || agentAnalyzing}
             />
