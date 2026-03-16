@@ -40,7 +40,7 @@ export function ChatView({
   threadId, threadTitle, threadType, participants, currentUserId, isAdmin, onBack, isAgentThread,
 }: ChatViewProps) {
   const { language } = useLanguage();
-  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, deleteMessage } = useMessages(threadId);
+  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, toggleStar, deleteMessage } = useMessages(threadId);
   const DRAFT_KEY = `chat_draft_${threadId}`;
   const [input, setInput] = useState(() => localStorage.getItem(DRAFT_KEY) ?? "");
   const [sending, setSending] = useState(false);
