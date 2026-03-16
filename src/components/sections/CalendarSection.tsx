@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   ChevronLeft, ChevronRight, Settings, RefreshCw, Plus, CalendarDays,
   MapPin, Clock, Tag, Globe, Lock, Plane, Users, Wrench, PartyPopper,
-  Calendar, X, Check, AlertTriangle, Cake, Package, UserCheck,
+  Calendar, X, Check, AlertTriangle, Cake, Package, UserCheck, HardHat,
 } from "lucide-react";
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
