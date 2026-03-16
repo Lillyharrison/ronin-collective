@@ -577,20 +577,23 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   }
 
   async function handleSubmit() {
-    if (!form.full_name || !form.level || !form.role) return;
-    if (!noLogin && !form.email) return;
+    // Allow draft save when no name (only for profile-only / no-login path)
+    const isDraft = !form.full_name;
+    if (!isDraft && !form.level) return;
+    if (!form.level || !form.role) return;
+    if (!noLogin && !form.email && !isDraft) return;
     setSaving(true);
     try {
       const finalPerms = Object.keys(perms).length > 0
         ? { ...perms, _quick_actions: quickActions as unknown as SectionPerm }
         : null;
 
-      if (noLogin) {
+      if (noLogin || isDraft) {
         // Create profile-only record via edge function (needs service role to bypass RLS)
         const { error: fnErr } = await supabase.functions.invoke("ronin-ai", {
           body: {
             action: "create_profile_only",
-            full_name: form.full_name,
+            full_name: form.full_name || null,
             job_title: form.job_title || null,
             phone: phone || null,
             level: form.level,
@@ -601,6 +604,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             notes: form.notes || null,
             assigned_property_ids: assignedProps,
             section_permissions: finalPerms as any,
+            is_draft: isDraft,
           },
         });
         if (fnErr) throw fnErr;
