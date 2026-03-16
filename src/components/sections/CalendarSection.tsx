@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type CalendarMode = "family" | "ronin";
-type RoninTab = "all" | "birthdays" | "maintenance" | "deliveries" | "staff";
+type RoninTab = "all" | "birthdays" | "maintenance" | "deliveries" | "travel" | "staff";
 
 interface CalEvent {
   id: string;
@@ -87,6 +87,7 @@ const RONIN_TAB_CONFIG: Record<RoninTab, { label: string; icon: React.ReactNode;
   birthdays:    { label: "Birthdays",   icon: <Cake size={12} />,        color: "text-pink-400",        bg: "bg-pink-500/15 border-pink-500/30" },
   maintenance:  { label: "Maintenance", icon: <Wrench size={12} />,      color: "text-amber-400",       bg: "bg-amber-500/15 border-amber-500/30" },
   deliveries:   { label: "Deliveries",  icon: <Package size={12} />,     color: "text-emerald-400",     bg: "bg-emerald-500/15 border-emerald-500/30" },
+  travel:       { label: "Travel",      icon: <Plane size={12} />,       color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
   staff:        { label: "Staff",       icon: <UserCheck size={12} />,   color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
 };
 
@@ -109,6 +110,8 @@ const EVENT_SOLID_COLORS: Record<string, string> = {
   birthdays:   "hsl(330 85% 60%)",
   delivery:    "hsl(142 71% 45%)",
   birthday:    "hsl(330 85% 60%)",
+  // ronin travel tab
+  ronin_travel: "hsl(217 91% 60%)",
 };
 
 function getFamilyTypeConfig(type: string) {
@@ -120,6 +123,7 @@ function getRoninTabForEvent(ev: CalEvent): RoninTab {
   if (ev._source === "birthday") return "birthdays";
   if (ev._source === "maintenance") return "maintenance";
   if (ev._source === "orders") return "deliveries";
+  if (ev.event_type === "travel") return "travel";
   return "all";
 }
 
@@ -1233,7 +1237,8 @@ export function CalendarSection() {
     const events: CalEvent[] = [];
 
     for (const ev of manualData ?? []) {
-      events.push({ ...ev, _source: "calendar_events", _is_draggable: true, _tab: "all" });
+      const tab: RoninTab = ev.event_type === "travel" ? "travel" : "all";
+      events.push({ ...ev, _source: "calendar_events", _is_draggable: true, _tab: tab });
     }
 
     for (const p of profiles ?? []) {
@@ -1436,6 +1441,7 @@ export function CalendarSection() {
                   const dotColor = k === "birthdays" ? EVENT_SOLID_COLORS.birthdays
                     : k === "maintenance" ? EVENT_SOLID_COLORS.maintenance
                     : k === "deliveries" ? EVENT_SOLID_COLORS.delivery
+                    : k === "travel" ? EVENT_SOLID_COLORS.travel
                     : "hsl(var(--accent))";
                   return (
                     <div key={k} className="flex items-center gap-2">
