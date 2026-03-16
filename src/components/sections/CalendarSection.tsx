@@ -110,6 +110,8 @@ const EVENT_SOLID_COLORS: Record<string, string> = {
   birthdays:   "hsl(330 85% 60%)",
   delivery:    "hsl(142 71% 45%)",
   birthday:    "hsl(330 85% 60%)",
+  // ronin travel tab
+  ronin_travel: "hsl(217 91% 60%)",
 };
 
 function getFamilyTypeConfig(type: string) {
