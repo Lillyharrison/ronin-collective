@@ -1441,6 +1441,7 @@ export function CalendarSection() {
                   const dotColor = k === "birthdays" ? EVENT_SOLID_COLORS.birthdays
                     : k === "maintenance" ? EVENT_SOLID_COLORS.maintenance
                     : k === "deliveries" ? EVENT_SOLID_COLORS.delivery
+                    : k === "travel" ? EVENT_SOLID_COLORS.travel
                     : "hsl(var(--accent))";
                   return (
                     <div key={k} className="flex items-center gap-2">
