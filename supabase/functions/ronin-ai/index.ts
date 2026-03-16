@@ -668,25 +668,90 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions } = body;
-      if (!full_name || !level || !role) {
-        return new Response(JSON.stringify({ error: "Missing required fields: full_name, level, role" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions, is_draft } = body;
+      // Allow saving without full_name when is_draft is true
+      if (!is_draft && !full_name) {
+        return new Response(JSON.stringify({ error: "Missing required fields: full_name" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (!level || !role) {
+        return new Response(JSON.stringify({ error: "Missing required fields: level, role" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       // Use a random UUID — no auth account is created
       const newId = crypto.randomUUID();
       const { error: profErr } = await adminClient.from("profiles").insert({
-        id: newId, full_name, job_title: job_title || null, level,
-        department: department || null, start_date: start_date || null,
-        birthday: birthday || null, notes: notes || null,
+        id: newId,
+        full_name: full_name || null,
+        job_title: job_title || null,
+        level,
+        department: department || null,
+        start_date: start_date || null,
+        birthday: birthday || null,
+        notes: notes || null,
         phone: phone || null,
         assigned_property_ids: assigned_property_ids || [],
         section_permissions: section_permissions || null,
+        is_draft: is_draft === true,
       });
       if (profErr) {
         return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       await adminClient.from("user_roles").insert({ user_id: newId, role });
       return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ─── SAVE DRAFT USER (update a draft profile once name is set, then optionally send invite) ─
+    if (action === "save_draft_user") {
+      if (!["master_admin", "admin"].includes(callerRole)) {
+        return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { profile_id, full_name, email, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions, send_invitation } = body;
+      if (!profile_id) return new Response(JSON.stringify({ error: "Missing profile_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // Update the profile
+      const { error: updateErr } = await adminClient.from("profiles").update({
+        full_name: full_name || null,
+        job_title: job_title || null,
+        level: level || undefined,
+        department: department || null,
+        start_date: start_date || null,
+        birthday: birthday || null,
+        notes: notes || null,
+        phone: phone || null,
+        assigned_property_ids: assigned_property_ids || [],
+        section_permissions: section_permissions || null,
+        // Only promote out of draft when sending invitation
+        is_draft: send_invitation ? false : true,
+      }).eq("id", profile_id);
+      if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // Update role if provided
+      if (role) {
+        const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", profile_id).maybeSingle();
+        if (!existingRole) await adminClient.from("user_roles").insert({ user_id: profile_id, role });
+        else await adminClient.from("user_roles").update({ role }).eq("user_id", profile_id);
+      }
+
+      // If send_invitation is true and email provided, send the invite email
+      if (send_invitation && email && full_name) {
+        const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://ronin-collective.lovable.app";
+        const redirectTo = `${origin}/reset-password`;
+        const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo });
+        if (inviteErr) return new Response(JSON.stringify({ error: inviteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        // Link the auth account to this existing profile
+        if (inviteData?.user?.id && inviteData.user.id !== profile_id) {
+          // Copy profile to the new auth uid and delete the old orphan profile
+          const { data: oldProfile } = await adminClient.from("profiles").select("*").eq("id", profile_id).maybeSingle();
+          if (oldProfile) {
+            await adminClient.from("profiles").insert({ ...oldProfile, id: inviteData.user.id, is_draft: false });
+            await adminClient.from("user_roles").update({ user_id: inviteData.user.id }).eq("user_id", profile_id);
+            await adminClient.from("profiles").delete().eq("id", profile_id);
+          }
+          return new Response(JSON.stringify({ success: true, user_id: inviteData.user.id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        return new Response(JSON.stringify({ success: true, user_id: profile_id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ success: true, user_id: profile_id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ─── RESEND INVITATION ────────────────────────────────────────────────────
