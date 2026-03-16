@@ -1400,10 +1400,12 @@ export function StaffCalendarTab({
     });
   }, []);
 
-  const weekDays = eachDayOfInterval({
-    start: weekStart,
-    end: endOfWeek(weekStart, { weekStartsOn: 1 }),
-  });
+  const weekDays = calView === "month"
+    ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
+    : eachDayOfInterval({
+        start: weekStart,
+        end: endOfWeek(weekStart, { weekStartsOn: 1 }),
+      });
 
   const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
 
