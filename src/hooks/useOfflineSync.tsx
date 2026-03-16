@@ -32,7 +32,7 @@ interface SyncCtx {
   notifyQueued: () => void;
 }
 
-const OfflineSyncContext = createContext<SyncCtx>({
+export const OfflineSyncContext = createContext<SyncCtx>({
   isOnline: navigator.onLine,
   pendingCount: 0,
   isSyncing: false,
