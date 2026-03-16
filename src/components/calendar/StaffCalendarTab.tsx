@@ -1523,8 +1523,9 @@ export function StaffCalendarTab({
 
   function buildExportRows() {
     return staffToShow.map((person) => {
+      // Staff column: name only — job title is drawn separately via didDrawCell
       const row: Record<string, string> = {
-        Staff: getDisplayName(person) + (person.job_title ? `\n${person.job_title}` : ""),
+        Staff: getDisplayName(person),
       };
       weekDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
