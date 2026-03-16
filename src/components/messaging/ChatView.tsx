@@ -10,6 +10,7 @@ import { es } from "date-fns/locale";
 import {
   ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
   Users, Bot, User, Plus, Image, ScanSearch, Smile, Search, X, ChevronUp,
+  Share2,
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
@@ -54,6 +55,9 @@ export function ChatView({
   const [recording, setRecording] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  // WhatsApp forward mode
+  const [forwardMode, setForwardMode] = useState(false);
+  const [forwardSender, setForwardSender] = useState("");
   const [agentAnalyzing, setAgentAnalyzing] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -176,8 +180,14 @@ export function ChatView({
   };
 
   const handleSend = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
+    const raw = input.trim();
+    if (!raw || sending) return;
+
+    // Build the actual message — wrap with forward prefix if in forward mode
+    const text = forwardMode && forwardSender.trim()
+      ? `FWDWA::${forwardSender.trim()}::${raw}`
+      : raw;
+
     clearDraft();
     clearTyping();
     setSending(true);
@@ -187,8 +197,8 @@ export function ChatView({
       const pendingTool = (lastAiMsg?.reactions as Record<string, unknown> | null)?.__pending_tool as
         { name: string; args: Record<string, unknown> } | undefined;
 
-      const isConfirmation = pendingTool && /^(yes|si|sí|proceed|confirm|do it|go ahead|adelante|hazlo|confirmar)/i.test(text);
-      const isCancellation = pendingTool && /^(no|cancel|cancelar|stop|nevermind|don't)/i.test(text);
+      const isConfirmation = pendingTool && /^(yes|si|sí|proceed|confirm|do it|go ahead|adelante|hazlo|confirmar)/i.test(raw);
+      const isCancellation = pendingTool && /^(no|cancel|cancelar|stop|nevermind|don't)/i.test(raw);
 
       await sendMessage(text, currentUserId);
       setAgentTyping(true);
@@ -625,6 +635,15 @@ export function ChatView({
               <Image size={18} className="text-accent" />
               {language === "es" ? "Foto o video" : "Photo or video"}
             </button>
+            {!isAgentThread && (
+              <button
+                onClick={() => { setForwardMode(v => !v); setShowAttachMenu(false); }}
+                className="flex items-center gap-3 w-full px-4 py-3 hover:bg-muted transition-colors text-sm text-foreground border-t border-border"
+              >
+                <Share2 size={18} className="text-[hsl(25,100%,50%)]" />
+                {language === "es" ? "Reenviar de WhatsApp" : "Forward from WhatsApp"}
+              </button>
+            )}
             {isAgentThread && (
               <button
                 onClick={() => { visionInputRef.current?.click(); setShowAttachMenu(false); }}
@@ -634,6 +653,29 @@ export function ChatView({
                 {language === "es" ? "Análisis de inventario" : "Inventory analysis"}
               </button>
             )}
+          </div>
+        )}
+
+        {/* WhatsApp forward mode strip */}
+        {forwardMode && !isAgentThread && (
+          <div className="flex items-center gap-2 mb-2 bg-[hsl(25,100%,50%)]/10 border border-[hsl(25,100%,50%)]/30 rounded-xl px-3 py-2">
+            <Share2 size={14} className="text-[hsl(25,100%,50%)] flex-shrink-0" />
+            <div className="flex-1 flex items-center gap-1.5 min-w-0">
+              <span className="text-[10px] text-muted-foreground flex-shrink-0 uppercase tracking-wide font-medium">From</span>
+              <input
+                className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none min-w-0"
+                style={{ fontSize: "14px" }}
+                placeholder={language === "es" ? "Nombre (ej. Papá)" : "Name (e.g. Dad)"}
+                value={forwardSender}
+                onChange={e => setForwardSender(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => { setForwardMode(false); setForwardSender(""); }}
+              className="text-muted-foreground hover:text-foreground flex-shrink-0"
+            >
+              <X size={13} />
+            </button>
           </div>
         )}
 
@@ -647,7 +689,9 @@ export function ChatView({
           {/* + attach button */}
           <button
             onClick={() => setShowAttachMenu(v => !v)}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"
+            className={`w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors flex-shrink-0 ${
+              forwardMode ? "text-[hsl(25,100%,50%)]" : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             <Plus size={22} />
           </button>

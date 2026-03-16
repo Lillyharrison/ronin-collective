@@ -3,10 +3,18 @@ import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import {
   Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle,
-  Copy, Reply, Forward, Info, Star, MoreHorizontal, X,
+  Copy, Reply, Forward, Info, Star, MoreHorizontal, X, Share2,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
+
+/** Parse a forwarded WhatsApp message: `FWDWA::SenderName::actual content` */
+function parseForwarded(text: string): { sender: string; body: string } | null {
+  if (!text.startsWith("FWDWA::")) return null;
+  const parts = text.slice(7).split("::");
+  if (parts.length < 2) return null;
+  return { sender: parts[0], body: parts.slice(1).join("::") };
+}
 
 /** Lazy-loaded image with a skeleton placeholder so layout doesn't jump */
 function ImageWithSkeleton({ src, onClick }: { src: string; onClick: () => void }) {
@@ -326,7 +334,9 @@ export function MessageBubble({
 
   const handleCopy = () => {
     if (message.content_text) {
-      navigator.clipboard.writeText(message.content_text).catch(() => {});
+      const fwd = parseForwarded(message.content_text);
+      const toCopy = fwd ? fwd.body : message.content_text;
+      navigator.clipboard.writeText(toCopy).catch(() => {});
     }
     setShowMenu(false);
   };
@@ -509,11 +519,26 @@ export function MessageBubble({
             )}
 
             {/* Text */}
-            {message.content_text && (
-              isAI
+            {message.content_text && (() => {
+              const fwd = parseForwarded(message.content_text);
+              if (fwd) {
+                return (
+                  <div>
+                    {/* Forwarded header */}
+                    <div className="flex items-center gap-1 mb-1 pb-1 border-b border-[hsl(25,100%,50%)]/25">
+                      <Share2 size={11} className="text-[hsl(25,100%,50%)] flex-shrink-0" />
+                      <span className="text-[10px] text-[hsl(25,100%,50%)] font-semibold uppercase tracking-wide truncate">
+                        {fwd.sender} · WhatsApp
+                      </span>
+                    </div>
+                    <span className="whitespace-pre-wrap">{fwd.body}</span>
+                  </div>
+                );
+              }
+              return isAI
                 ? <RenderAIText text={message.content_text} />
-                : <span className="whitespace-pre-wrap">{message.content_text}</span>
-            )}
+                : <span className="whitespace-pre-wrap">{message.content_text}</span>;
+            })()}
 
             {/* Loading state for AI */}
             {isAI && !message.content_text && (
