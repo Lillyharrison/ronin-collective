@@ -210,7 +210,7 @@ export function MeetTeamSection() {
   async function loadMembers() {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, section_permissions")
+      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, section_permissions, is_draft")
       .order("full_name");
 
     if (!profiles) return;
@@ -221,6 +221,7 @@ export function MeetTeamSection() {
       ...p,
       section_permissions: (p.section_permissions as unknown as SectionPermissions) || null,
       role: roleMap[p.id] || null,
+      is_draft: (p as { is_draft?: boolean }).is_draft ?? false,
     })));
   }
 
