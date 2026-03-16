@@ -55,7 +55,7 @@ export function MaintenanceSection() {
   const notifyingRef = useRef<Set<string>>(new Set());
 
   // filterProp stays client-side (property picker in the UI — no DB round-trip needed)
-  const [viewMode,    setViewMode]    = useState<ViewMode>("board");
+  const [viewMode,    setViewMode]    = useLocalStorage<ViewMode>("maintenance_view_mode", "board");
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
