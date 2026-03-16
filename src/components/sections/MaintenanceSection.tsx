@@ -400,8 +400,10 @@ export function MaintenanceSection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {STATUS_COLUMNS.map(col => {
               const colIssues = displayIssues.filter(i => i.status === col.key);
+              // On mobile: skip empty columns entirely to avoid wasted whitespace
+              const isEmpty = colIssues.length === 0;
               return (
-                <div key={col.key} className="min-w-0">
+                <div key={col.key} className={cn("min-w-0", isEmpty && "hidden sm:block")}>
                   <div className="flex items-center justify-between px-3 py-2 bg-muted/40 rounded-t-xl border-b border-border">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-foreground">
