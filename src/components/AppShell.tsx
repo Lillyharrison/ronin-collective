@@ -6,6 +6,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
 import { Bell, X } from "lucide-react";
