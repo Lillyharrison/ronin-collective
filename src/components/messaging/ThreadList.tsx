@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { ThreadWithMeta } from "@/hooks/useThreads";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useThreadSettings } from "@/hooks/useThreadSettings";
 import { format, isToday, isYesterday, isThisWeek, isThisYear } from "date-fns";
 import { es, type Locale } from "date-fns/locale";
-import { Bot, Users, Search, Plus, MessageCircle, Trash2, Pin, PinOff } from "lucide-react";
+import { Bot, Users, Search, Plus, MessageCircle, Trash2, Pin, PinOff, BellOff, Bell, Archive, ArchiveRestore } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
