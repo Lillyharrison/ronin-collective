@@ -1562,7 +1562,7 @@ export function StaffCalendarTab({
       {/* ── Schedule Grid ─────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         {/* Day headers */}
-        <div className="grid border-b border-border" style={{ gridTemplateColumns: "160px repeat(7, 1fr)" }}>
+        <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
           <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
           {weekDays.map((day) => (
             <div
