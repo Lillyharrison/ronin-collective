@@ -609,6 +609,7 @@ function ActionRow({
   return (
     <button
       onClick={onClick}
+      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onClick(); }}
       className={cn(
         "w-full flex items-center justify-between px-4 py-3.5 text-sm transition-colors",
         divider && "border-t border-border/50",
