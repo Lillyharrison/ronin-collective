@@ -46,12 +46,29 @@ export function useThreadSettings(userId: string | null) {
       return m;
     });
 
-    await supabase
-      .from("user_thread_settings" as never)
-      .upsert(
-        { user_id: userId, thread_id: threadId, ...next, updated_at: new Date().toISOString() },
-        { onConflict: "user_id,thread_id" },
-      );
+    // Use raw fetch since the types file doesn't yet know about this new table
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return;
+
+    await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_thread_settings`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Prefer: "resolution=merge-duplicates",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          thread_id: threadId,
+          ...next,
+          updated_at: new Date().toISOString(),
+        }),
+      },
+    );
   };
 
   const toggleMute = (threadId: string) => {
