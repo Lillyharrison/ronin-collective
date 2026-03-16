@@ -194,7 +194,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
           </button>
           <button
             onClick={() => setEditing(true)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
             title="Edit"
           >
             <Pencil size={13} />
