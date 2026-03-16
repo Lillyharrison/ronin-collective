@@ -63,7 +63,9 @@ function SwipeRow({
   getAvatar, getThreadName, language, locale,
   openSwipeId, setOpenSwipeId,
 }: SwipeRowProps) {
-  const totalActionWidth = canDelete ? ACTION_WIDTH * 2 : ACTION_WIDTH;
+  // Actions: mute + archive + pin + (delete if admin) = 3 or 4 buttons
+  const actionCount = canDelete ? 4 : 3;
+  const totalActionWidth = ACTION_WIDTH * actionCount;
   const isOpen = openSwipeId === thread.id;
   const offsetX = isOpen ? -totalActionWidth : 0;
 
