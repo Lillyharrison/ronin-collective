@@ -1421,22 +1421,35 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         {/* Footer */}
         {canEdit && (
           <div className="shrink-0 px-5 py-4 border-t border-charcoal-light space-y-2">
-            {/* Resend invitation */}
-            <Button
-              variant="outline"
-              disabled={resending || saving || deleting}
-              onClick={handleResendInvitation}
-              className="w-full bg-charcoal-light border border-gold/40 text-gold hover:bg-gold/10 hover:border-gold gap-2 font-semibold"
-            >
-              {resending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
-              {resending
-                ? (isEN ? "Sending…" : "Enviando…")
-                : (isEN ? "Resend Invitation" : "Reenviar Invitación")}
-            </Button>
+            {/* Draft: show Send Invitation CTA; non-draft: show Resend Invitation */}
+            {isDraft ? (
+              <Button
+                disabled={sendingInvite || saving || deleting || !fullName || !draftEmail}
+                onClick={handleSendInvitation}
+                className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold gap-2"
+              >
+                {sendingInvite ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                {sendingInvite
+                  ? (isEN ? "Sending…" : "Enviando…")
+                  : (isEN ? "Send Invitation" : "Enviar Invitación")}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                disabled={resending || saving || deleting}
+                onClick={handleResendInvitation}
+                className="w-full bg-charcoal-light border border-gold/40 text-gold hover:bg-gold/10 hover:border-gold gap-2 font-semibold"
+              >
+                {resending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                {resending
+                  ? (isEN ? "Sending…" : "Enviando…")
+                  : (isEN ? "Resend Invitation" : "Reenviar Invitación")}
+              </Button>
+            )}
 
             <Button onClick={handleSave} disabled={saving || deleting} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
               {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
-              {saving ? (isEN ? "Saving…" : "Guardando…") : (isEN ? "Save Changes" : "Guardar Cambios")}
+              {saving ? (isEN ? "Saving…" : "Guardando…") : (isDraft ? (isEN ? "Save Draft" : "Guardar Borrador") : (isEN ? "Save Changes" : "Guardar Cambios"))}
             </Button>
             {isMasterAdmin && (
               <AlertDialog>
