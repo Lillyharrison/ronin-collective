@@ -207,7 +207,7 @@ function SwipeRow({
         }}
       >
         <div className="flex items-center gap-3 px-4 py-3 w-full min-w-0 overflow-hidden">
-          {/* Avatar with pin indicator */}
+          {/* Avatar with pin/mute indicators */}
           <div className="relative flex-shrink-0">
             {getAvatar(thread)}
             {isPinned && (
@@ -215,17 +215,22 @@ function SwipeRow({
                 <Pin size={9} className="text-accent-foreground" />
               </div>
             )}
+            {isMuted && !isPinned && (
+              <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-muted-foreground/60 flex items-center justify-center">
+                <BellOff size={9} className="text-white" />
+              </div>
+            )}
           </div>
 
           {/* Text */}
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-foreground truncate leading-tight">
+              <span className={`text-sm font-semibold truncate leading-tight ${isMuted ? "text-muted-foreground" : "text-foreground"}`}>
                 {getThreadName(thread)}
               </span>
               {thread.last_message_at && (
                 <span className={`text-[11px] whitespace-nowrap flex-shrink-0 leading-tight ${
-                  thread.unread_count > 0 ? "text-accent font-medium" : "text-muted-foreground"
+                  thread.unread_count > 0 && !isMuted ? "text-accent font-medium" : "text-muted-foreground"
                 }`}>
                   {formatThreadTime(thread.last_message_at, locale)}
                 </span>
@@ -237,8 +242,13 @@ function SwipeRow({
                   ? thread.last_message.split("\n")[0]
                   : (language === "es" ? "Sin mensajes" : "No messages yet")}
               </p>
-              {thread.unread_count > 0 && (
+              {thread.unread_count > 0 && !isMuted && (
                 <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                  {thread.unread_count > 99 ? "99+" : thread.unread_count}
+                </span>
+              )}
+              {thread.unread_count > 0 && isMuted && (
+                <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-muted-foreground/30 text-muted-foreground text-[10px] font-bold flex items-center justify-center px-1">
                   {thread.unread_count > 99 ? "99+" : thread.unread_count}
                 </span>
               )}
