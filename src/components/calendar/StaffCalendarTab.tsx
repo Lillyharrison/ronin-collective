@@ -1577,12 +1577,27 @@ export function StaffCalendarTab({
                 >
                   {/* Staff name cell */}
                   <div className="px-3 py-2 border-r border-border flex items-center gap-2 min-w-0">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[10px] font-semibold text-primary">
-                      {(person.full_name ?? "?").charAt(0).toUpperCase()}
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
+                      person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
+                    )}>
+                      {getDisplayName(person, "?").charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate">{person.full_name ?? "—"}</p>
-                      {person.job_title && (
+                      <div className="flex items-center gap-1 min-w-0">
+                        <p className={cn(
+                          "text-xs font-medium truncate",
+                          person.is_draft && "italic text-muted-foreground"
+                        )}>
+                          {getDisplayName(person)}
+                        </p>
+                        {person.is_draft && (
+                          <span className="flex-shrink-0 text-[8px] font-semibold px-1 py-px rounded bg-amber-500/20 text-amber-400 leading-tight">
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                      {!person.is_draft && person.job_title && (
                         <p className="text-[9px] text-muted-foreground truncate">{person.job_title}</p>
                       )}
                     </div>
