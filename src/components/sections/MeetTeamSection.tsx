@@ -815,15 +815,15 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                 {ALL_SECTIONS.map((section, idx) => {
                   const sp = perms[section.key] || { view: false, edit: false, notifications: false };
                   const prevSection = ALL_SECTIONS[idx - 1];
-                  const showFeatureDivider = section.isFeature && !section.isCalendarSub && prevSection && !prevSection.isFeature;
+                  const showDashSubDivider = section.isDashboardSub && prevSection && !prevSection.isDashboardSub;
                   const showCalSubDivider = section.isCalendarSub && prevSection && !prevSection.isCalendarSub;
                   return (
                     <div key={section.key}>
-                      {showFeatureDivider && (
-                        <div className="flex items-center gap-2 my-3">
+                      {showDashSubDivider && (
+                        <div className="flex items-center gap-2 mt-1 mb-1">
                           <div className="flex-1 h-px bg-charcoal-light" />
-                          <span className="text-[9px] uppercase tracking-widest text-gold/60 font-semibold">
-                            {isEN ? "Feature Visibility" : "Visibilidad de funciones"}
+                          <span className="text-[9px] uppercase tracking-widest text-gold/50 font-semibold">
+                            {isEN ? "Dashboard Features" : "Funciones del panel"}
                           </span>
                           <div className="flex-1 h-px bg-charcoal-light" />
                         </div>
