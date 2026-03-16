@@ -694,12 +694,14 @@ export type Database = {
       }
       messages: {
         Row: {
+          audio_duration_sec: number | null
           content_media_url: string | null
           content_text: string | null
           created_at: string
           delivery_status: string
           id: string
           is_ai_generated: boolean
+          is_starred: boolean
           media_type: string | null
           reactions: Json | null
           reply_to_id: string | null
@@ -708,12 +710,14 @@ export type Database = {
           thread_id: string
         }
         Insert: {
+          audio_duration_sec?: number | null
           content_media_url?: string | null
           content_text?: string | null
           created_at?: string
           delivery_status?: string
           id?: string
           is_ai_generated?: boolean
+          is_starred?: boolean
           media_type?: string | null
           reactions?: Json | null
           reply_to_id?: string | null
@@ -722,12 +726,14 @@ export type Database = {
           thread_id: string
         }
         Update: {
+          audio_duration_sec?: number | null
           content_media_url?: string | null
           content_text?: string | null
           created_at?: string
           delivery_status?: string
           id?: string
           is_ai_generated?: boolean
+          is_starred?: boolean
           media_type?: string | null
           reactions?: Json | null
           reply_to_id?: string | null
@@ -1664,6 +1670,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_thread_settings: {
+        Row: {
+          id: string
+          is_archived: boolean
+          is_muted: boolean
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_archived?: boolean
+          is_muted?: boolean
+          thread_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_archived?: boolean
+          is_muted?: boolean
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_thread_settings_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_contacts: {
         Row: {
           created_at: string
@@ -1772,6 +1813,10 @@ export type Database = {
     Functions: {
       acknowledge_notification: {
         Args: { _notif_id: string }
+        Returns: undefined
+      }
+      batch_mark_messages_seen: {
+        Args: { _message_ids: string[]; _user_id: string }
         Returns: undefined
       }
       can_user_see_checklist: {

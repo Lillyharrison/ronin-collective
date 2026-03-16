@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { ThreadWithMeta } from "@/hooks/useThreads";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useThreadSettings } from "@/hooks/useThreadSettings";
 import { format, isToday, isYesterday, isThisWeek, isThisYear } from "date-fns";
 import { es, type Locale } from "date-fns/locale";
-import { Bot, Users, Search, Plus, MessageCircle, Trash2, Pin, PinOff } from "lucide-react";
+import { Bot, Users, Search, Plus, MessageCircle, Trash2, Pin, PinOff, BellOff, Bell, Archive, ArchiveRestore } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -38,11 +39,15 @@ const ACTION_WIDTH = 80; // px per action button
 interface SwipeRowProps {
   thread: ThreadWithMeta;
   isPinned: boolean;
+  isMuted: boolean;
+  isArchived: boolean;
   isActive: boolean;
   isAdmin?: boolean;
   canDelete: boolean;
   onSelect: () => void;
   onPin: () => void;
+  onMute: () => void;
+  onArchive: () => void;
   onDeleteRequest: () => void;
   getAvatar: (t: ThreadWithMeta) => React.ReactNode;
   getThreadName: (t: ThreadWithMeta) => string;
@@ -53,12 +58,14 @@ interface SwipeRowProps {
 }
 
 function SwipeRow({
-  thread, isPinned, isActive, isAdmin, canDelete,
-  onSelect, onPin, onDeleteRequest,
+  thread, isPinned, isMuted, isArchived, isActive, isAdmin, canDelete,
+  onSelect, onPin, onMute, onArchive, onDeleteRequest,
   getAvatar, getThreadName, language, locale,
   openSwipeId, setOpenSwipeId,
 }: SwipeRowProps) {
-  const totalActionWidth = canDelete ? ACTION_WIDTH * 2 : ACTION_WIDTH;
+  // Actions: mute + archive + pin + (delete if admin) = 3 or 4 buttons
+  const actionCount = canDelete ? 4 : 3;
+  const totalActionWidth = ACTION_WIDTH * actionCount;
   const isOpen = openSwipeId === thread.id;
   const offsetX = isOpen ? -totalActionWidth : 0;
 
@@ -117,15 +124,47 @@ function SwipeRow({
         className="absolute inset-y-0 right-0 flex"
         style={{ width: totalActionWidth }}
       >
+        {/* Mute button */}
+        <button
+          onClick={() => { onMute(); setOpenSwipeId(null); }}
+          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.4)]"
+          style={{ width: ACTION_WIDTH }}
+        >
+          {isMuted
+            ? <Bell size={20} className="text-white" />
+            : <BellOff size={20} className="text-white" />}
+          <span className="text-[11px] text-white font-medium">
+            {isMuted
+              ? (language === "es" ? "Activar" : "Unmute")
+              : (language === "es" ? "Silenciar" : "Mute")}
+          </span>
+        </button>
+
+        {/* Archive button */}
+        <button
+          onClick={() => { onArchive(); setOpenSwipeId(null); }}
+          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.55)]"
+          style={{ width: ACTION_WIDTH }}
+        >
+          {isArchived
+            ? <ArchiveRestore size={20} className="text-white" />
+            : <Archive size={20} className="text-white" />}
+          <span className="text-[11px] text-white font-medium">
+            {isArchived
+              ? (language === "es" ? "Restaurar" : "Unarchive")
+              : (language === "es" ? "Archivar" : "Archive")}
+          </span>
+        </button>
+
         {/* Pin button */}
         <button
           onClick={() => { onPin(); setOpenSwipeId(null); }}
-          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.5)]"
+          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.7)]"
           style={{ width: ACTION_WIDTH }}
         >
           {isPinned
-            ? <PinOff size={22} className="text-white" />
-            : <Pin size={22} className="text-white" />}
+            ? <PinOff size={20} className="text-white" />
+            : <Pin size={20} className="text-white" />}
           <span className="text-[11px] text-white font-medium">
             {isPinned
               ? (language === "es" ? "Desanclar" : "Unpin")
@@ -140,7 +179,7 @@ function SwipeRow({
             className="flex flex-col items-center justify-center gap-1 flex-1 bg-destructive"
             style={{ width: ACTION_WIDTH }}
           >
-            <Trash2 size={22} className="text-destructive-foreground" />
+            <Trash2 size={20} className="text-destructive-foreground" />
             <span className="text-[11px] text-destructive-foreground font-medium">
               {language === "es" ? "Eliminar" : "Delete"}
             </span>
@@ -168,7 +207,7 @@ function SwipeRow({
         }}
       >
         <div className="flex items-center gap-3 px-4 py-3 w-full min-w-0 overflow-hidden">
-          {/* Avatar with pin indicator */}
+          {/* Avatar with pin/mute indicators */}
           <div className="relative flex-shrink-0">
             {getAvatar(thread)}
             {isPinned && (
@@ -176,17 +215,22 @@ function SwipeRow({
                 <Pin size={9} className="text-accent-foreground" />
               </div>
             )}
+            {isMuted && !isPinned && (
+              <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-muted-foreground/60 flex items-center justify-center">
+                <BellOff size={9} className="text-white" />
+              </div>
+            )}
           </div>
 
           {/* Text */}
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-foreground truncate leading-tight">
+              <span className={`text-sm font-semibold truncate leading-tight ${isMuted ? "text-muted-foreground" : "text-foreground"}`}>
                 {getThreadName(thread)}
               </span>
               {thread.last_message_at && (
                 <span className={`text-[11px] whitespace-nowrap flex-shrink-0 leading-tight ${
-                  thread.unread_count > 0 ? "text-accent font-medium" : "text-muted-foreground"
+                  thread.unread_count > 0 && !isMuted ? "text-accent font-medium" : "text-muted-foreground"
                 }`}>
                   {formatThreadTime(thread.last_message_at, locale)}
                 </span>
@@ -198,8 +242,13 @@ function SwipeRow({
                   ? thread.last_message.split("\n")[0]
                   : (language === "es" ? "Sin mensajes" : "No messages yet")}
               </p>
-              {thread.unread_count > 0 && (
+              {thread.unread_count > 0 && !isMuted && (
                 <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                  {thread.unread_count > 99 ? "99+" : thread.unread_count}
+                </span>
+              )}
+              {thread.unread_count > 0 && isMuted && (
+                <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-muted-foreground/30 text-muted-foreground text-[10px] font-bold flex items-center justify-center px-1">
                   {thread.unread_count > 99 ? "99+" : thread.unread_count}
                 </span>
               )}
@@ -216,11 +265,13 @@ export function ThreadList({
   onDeleteThread, searchQuery, onSearchChange,
 }: ThreadListProps) {
   const { language } = useLanguage();
+  const { getSettings, toggleMute, toggleArchive } = useThreadSettings(currentUserId);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() =>
     new Set(threads.filter(t => t.is_pinned).map(t => t.id))
   );
+  const [showArchived, setShowArchived] = useState(false);
   const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
 
   const locale = language === "es" ? es : undefined;
@@ -271,18 +322,26 @@ export function ThreadList({
     await supabase.from("chat_threads").update({ is_pinned: nowPinned } as never).eq("id", threadId);
   };
 
-  const filtered = threads.filter(t =>
+  const searchFiltered = threads.filter(t =>
     !searchQuery || getThreadName(t).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const sorted = [...filtered].sort((a, b) => {
-    const aPinned = pinnedIds.has(a.id) ? 1 : 0;
-    const bPinned = pinnedIds.has(b.id) ? 1 : 0;
-    if (bPinned !== aPinned) return bPinned - aPinned;
-    const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-    const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-    return bTime - aTime;
-  });
+  // Separate archived from active
+  const activeThreads = searchFiltered.filter(t => !getSettings(t.id).is_archived);
+  const archivedThreads = searchFiltered.filter(t => getSettings(t.id).is_archived);
+
+  const sortByPinAndTime = (arr: ThreadWithMeta[]) =>
+    [...arr].sort((a, b) => {
+      const aPinned = pinnedIds.has(a.id) ? 1 : 0;
+      const bPinned = pinnedIds.has(b.id) ? 1 : 0;
+      if (bPinned !== aPinned) return bPinned - aPinned;
+      const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return bTime - aTime;
+    });
+
+  const sorted = sortByPinAndTime(activeThreads);
+  const sortedArchived = sortByPinAndTime(archivedThreads);
 
   const handleConfirmDelete = async () => {
     if (!confirmDeleteId || !onDeleteThread) return;
@@ -327,7 +386,7 @@ export function ThreadList({
         className="flex-1 overflow-y-auto overflow-x-hidden"
         onClick={() => openSwipeId && setOpenSwipeId(null)}
       >
-        {sorted.length === 0 && (
+        {sorted.length === 0 && archivedThreads.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <MessageCircle size={40} className="text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
@@ -335,25 +394,70 @@ export function ThreadList({
             </p>
           </div>
         )}
-        {sorted.map((thread) => (
-          <SwipeRow
-            key={thread.id}
-            thread={thread}
-            isPinned={pinnedIds.has(thread.id)}
-            isActive={activeThreadId === thread.id}
-            isAdmin={isAdmin}
-            canDelete={!!onDeleteThread}
-            onSelect={() => onSelectThread(thread.id)}
-            onPin={() => handleTogglePin(thread.id)}
-            onDeleteRequest={() => setConfirmDeleteId(thread.id)}
-            getAvatar={getAvatar}
-            getThreadName={getThreadName}
-            language={language}
-            locale={locale}
-            openSwipeId={openSwipeId}
-            setOpenSwipeId={setOpenSwipeId}
-          />
-        ))}
+        {sorted.map((thread) => {
+          const s = getSettings(thread.id);
+          return (
+            <SwipeRow
+              key={thread.id}
+              thread={thread}
+              isPinned={pinnedIds.has(thread.id)}
+              isMuted={s.is_muted}
+              isArchived={s.is_archived}
+              isActive={activeThreadId === thread.id}
+              isAdmin={isAdmin}
+              canDelete={!!onDeleteThread}
+              onSelect={() => onSelectThread(thread.id)}
+              onPin={() => handleTogglePin(thread.id)}
+              onMute={() => toggleMute(thread.id)}
+              onArchive={() => toggleArchive(thread.id)}
+              onDeleteRequest={() => setConfirmDeleteId(thread.id)}
+              getAvatar={getAvatar}
+              getThreadName={getThreadName}
+              language={language}
+              locale={locale}
+              openSwipeId={openSwipeId}
+              setOpenSwipeId={setOpenSwipeId}
+            />
+          );
+        })}
+
+        {/* Archived section */}
+        {archivedThreads.length > 0 && (
+          <button
+            onClick={() => setShowArchived(v => !v)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition-colors border-t border-border"
+          >
+            <Archive size={15} />
+            <span>{language === "es" ? "Archivados" : "Archived"} ({archivedThreads.length})</span>
+            <span className="ml-auto text-xs">{showArchived ? "▲" : "▼"}</span>
+          </button>
+        )}
+        {showArchived && sortedArchived.map((thread) => {
+          const s = getSettings(thread.id);
+          return (
+            <SwipeRow
+              key={thread.id}
+              thread={thread}
+              isPinned={false}
+              isMuted={s.is_muted}
+              isArchived={s.is_archived}
+              isActive={activeThreadId === thread.id}
+              isAdmin={isAdmin}
+              canDelete={!!onDeleteThread}
+              onSelect={() => onSelectThread(thread.id)}
+              onPin={() => handleTogglePin(thread.id)}
+              onMute={() => toggleMute(thread.id)}
+              onArchive={() => toggleArchive(thread.id)}
+              onDeleteRequest={() => setConfirmDeleteId(thread.id)}
+              getAvatar={getAvatar}
+              getThreadName={getThreadName}
+              language={language}
+              locale={locale}
+              openSwipeId={openSwipeId}
+              setOpenSwipeId={setOpenSwipeId}
+            />
+          );
+        })}
       </div>
 
       {/* Confirm delete dialog */}

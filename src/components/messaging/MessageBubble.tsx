@@ -66,7 +66,18 @@ function RenderAIText({ text }: { text: string }) {
   );
 }
 
-type Message = Tables<"messages"> & { sender_profile?: { full_name: string | null; avatar_url: string | null } };
+/** Format seconds as M:SS */
+function formatDuration(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+type Message = Tables<"messages"> & {
+  sender_profile?: { full_name: string | null; avatar_url: string | null };
+  is_starred?: boolean;
+  audio_duration_sec?: number | null;
+};
 
 interface MessageBubbleProps {
   message: Message;
@@ -76,6 +87,7 @@ interface MessageBubbleProps {
   onReact: (emoji: string) => void;
   onDelete?: (messageId: string) => void;
   onReply?: (message: Message) => void;
+  onToggleStar?: (messageId: string, currentlyStarred: boolean) => void;
   onConfirmTool?: (toolName: string, toolArgs: Record<string, unknown>) => void;
   onCancelTool?: () => void;
   quickEmojis: string[];
@@ -127,6 +139,12 @@ function MessageInfoModal({ message, onClose }: { message: Message; onClose: () 
               <p className="text-xs text-foreground">{seenBy.length} {seenBy.length === 1 ? "person" : "people"}</p>
             </div>
           )}
+          {message.audio_duration_sec != null && (
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Duration</p>
+              <p className="text-xs text-foreground">{formatDuration(message.audio_duration_sec)}</p>
+            </div>
+          )}
           {message.media_type && (
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Type</p>
@@ -139,13 +157,103 @@ function MessageInfoModal({ message, onClose }: { message: Message; onClose: () 
   );
 }
 
-export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact, onDelete, onReply, onConfirmTool, onCancelTool, quickEmojis }: MessageBubbleProps) {
+/** Voice note player with real duration + live progress */
+function VoiceNote({
+  url,
+  durationSec,
+  isOwn,
+}: {
+  url: string;
+  durationSec: number | null | undefined;
+  isOwn: boolean;
+}) {
+  const [playing, setPlaying] = useState(false);
+  const [currentSec, setCurrentSec] = useState(0);
+  const [totalSec, setTotalSec] = useState(durationSec ?? 0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+
+    audio.onloadedmetadata = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setTotalSec(audio.duration);
+      }
+    };
+    audio.onended = () => {
+      setPlaying(false);
+      setCurrentSec(0);
+      cancelAnimationFrame(rafRef.current);
+    };
+
+    return () => {
+      audio.pause();
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [url]);
+
+  const tick = () => {
+    if (audioRef.current) setCurrentSec(audioRef.current.currentTime);
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      cancelAnimationFrame(rafRef.current);
+      setPlaying(false);
+    } else {
+      audio.play();
+      rafRef.current = requestAnimationFrame(tick);
+      setPlaying(true);
+    }
+  };
+
+  const progress = totalSec > 0 ? currentSec / totalSec : 0;
+  const displayTime = playing ? formatDuration(currentSec) : formatDuration(totalSec);
+  const BAR_COUNT = 20;
+
+  return (
+    <button onClick={togglePlay} className="flex items-center gap-2 py-1 select-none">
+      {playing
+        ? <Pause size={16} className="flex-shrink-0" />
+        : <Play size={16} className="flex-shrink-0" />}
+      {/* Waveform bars — filled up to progress */}
+      <div className="flex gap-0.5 items-end" style={{ height: "20px" }}>
+        {Array.from({ length: BAR_COUNT }).map((_, i) => {
+          const filled = i / BAR_COUNT <= progress;
+          // Use a stable pseudo-random height seeded by index
+          const h = 4 + ((i * 7 + 3) % 13);
+          return (
+            <div
+              key={i}
+              className={`w-0.5 rounded-full transition-colors`}
+              style={{
+                height: `${h}px`,
+                backgroundColor: filled
+                  ? "hsl(var(--accent))"
+                  : isOwn ? "rgba(255,255,255,0.45)" : "hsl(var(--muted-foreground)/0.4)",
+              }}
+            />
+          );
+        })}
+      </div>
+      <span className="text-[10px] opacity-70 tabular-nums w-8 text-left">{displayTime}</span>
+    </button>
+  );
+}
+
+export function MessageBubble({
+  message, isOwn, currentUserId, isAdmin,
+  onReact, onDelete, onReply, onToggleStar, onConfirmTool, onCancelTool, quickEmojis,
+}: MessageBubbleProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left?: number; right?: number; flipDown?: boolean } | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [starred, setStarred] = useState(false);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const [toolExecuted, setToolExecuted] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressClick = useRef(false);
@@ -156,6 +264,8 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
   const isRead = (message.seen_by ?? []).length > 0;
   const status = message.delivery_status as string;
   const canDelete = isOwn || isAdmin;
+  // Use DB-persisted value — falls back gracefully for old rows
+  const starred = (message as Message).is_starred ?? false;
 
   const reactions = message.reactions as Record<string, unknown> | null;
   const pendingTool = reactions?.__pending_tool as { name: string; args: Record<string, unknown> } | undefined;
@@ -168,7 +278,7 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
     suppressClick.current = true;
     if (bubbleRef.current) {
       const rect = bubbleRef.current.getBoundingClientRect();
-      const menuHeight = 360; // approx max height of menu
+      const menuHeight = 360;
       const spaceAbove = rect.top;
       const spaceBelow = window.innerHeight - rect.bottom;
       const flipDown = spaceAbove < menuHeight && spaceBelow > spaceAbove;
@@ -194,22 +304,6 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
-    }
-  };
-
-  const toggleAudio = () => {
-    if (!audioRef) {
-      const a = new Audio(message.content_media_url!);
-      a.onended = () => setAudioPlaying(false);
-      a.play();
-      setAudioRef(a);
-      setAudioPlaying(true);
-    } else if (audioPlaying) {
-      audioRef.pause();
-      setAudioPlaying(false);
-    } else {
-      audioRef.play();
-      setAudioPlaying(true);
     }
   };
 
@@ -245,7 +339,7 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
   };
 
   const handleStar = () => {
-    setStarred(v => !v);
+    onToggleStar?.(message.id, starred);
     setShowMenu(false);
   };
 
@@ -260,16 +354,13 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
         <MessageInfoModal message={message} onClose={() => setShowInfoModal(false)} />
       )}
 
-      {/* ── Long-press context menu portal — renders above all content ─── */}
+      {/* ── Long-press context menu portal ─── */}
       {showMenu && menuPos && createPortal(
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-[3px]"
             onClick={() => setShowMenu(false)}
           />
-
-          {/* Floating menu — positioned via measured rect, flips if near top */}
           <div
             className="fixed z-[100] flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
             style={{
@@ -400,21 +491,13 @@ export function MessageBubble({ message, isOwn, currentUserId, isAdmin, onReact,
               />
             )}
 
-            {/* Audio / voice note */}
+            {/* Audio / voice note — real duration + live progress */}
             {message.media_type === "audio" && message.content_media_url && (
-              <button onClick={toggleAudio} className="flex items-center gap-2 py-1">
-                {audioPlaying ? <Pause size={16} /> : <Play size={16} />}
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 20 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-0.5 rounded-full ${audioPlaying ? "bg-accent" : isOwn ? "bg-white/60" : "bg-muted-foreground/40"}`}
-                      style={{ height: `${4 + Math.random() * 12}px` }}
-                    />
-                  ))}
-                </div>
-                <span className="text-[10px] opacity-70">0:00</span>
-              </button>
+              <VoiceNote
+                url={message.content_media_url}
+                durationSec={(message as Message).audio_duration_sec}
+                isOwn={isOwn}
+              />
             )}
 
             {/* Text */}

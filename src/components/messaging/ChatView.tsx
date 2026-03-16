@@ -12,6 +12,19 @@ import {
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
+/** Read the duration of an audio blob before upload */
+async function getAudioDurationSec(blob: Blob): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(isFinite(audio.duration) ? audio.duration : null);
+    };
+    audio.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+  });
+}
+
 interface ChatViewProps {
   threadId: string;
   threadTitle: string;
@@ -27,7 +40,7 @@ export function ChatView({
   threadId, threadTitle, threadType, participants, currentUserId, isAdmin, onBack, isAgentThread,
 }: ChatViewProps) {
   const { language } = useLanguage();
-  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, deleteMessage } = useMessages(threadId);
+  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, toggleStar, deleteMessage } = useMessages(threadId);
   const DRAFT_KEY = `chat_draft_${threadId}`;
   const [input, setInput] = useState(() => localStorage.getItem(DRAFT_KEY) ?? "");
   const [sending, setSending] = useState(false);
@@ -254,11 +267,13 @@ export function ChatView({
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setSending(true);
+        // Capture real duration BEFORE uploading
+        const durationSec = await getAudioDurationSec(blob);
         const path = `${currentUserId}/${Date.now()}_voice.webm`;
         const { data: uploaded } = await supabase.storage.from("chat-media").upload(path, blob);
         if (uploaded) {
           const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
-          await sendMediaMessage(urlData.publicUrl, "audio", currentUserId);
+          await sendMediaMessage(urlData.publicUrl, "audio", currentUserId, undefined, durationSec ?? undefined);
         }
         setSending(false);
       };
@@ -425,6 +440,7 @@ export function ChatView({
                 isAdmin={isAdmin}
                 onReact={(emoji) => toggleReaction(msg.id, currentUserId, emoji)}
                 onDelete={(id) => deleteMessage(id)}
+                onToggleStar={(id, currentlyStarred) => toggleStar(id, currentlyStarred)}
                 onConfirmTool={async (toolName, toolArgs) => {
                   setAgentTyping(true);
                   try {
