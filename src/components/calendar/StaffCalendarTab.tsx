@@ -243,18 +243,20 @@ function ShiftChip({
       onDoubleClick={onDoubleClick}
       title="Double-click to edit"
       className={cn(
-        "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none flex items-center gap-0.5 hover:opacity-80 transition-opacity",
+        "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight",
         virtualLoc && !prop
           ? "bg-muted/60 border-border text-muted-foreground"
           : `${col.bg} ${col.text}`
       )}
     >
-      <span className="truncate max-w-[64px]">{displayLabel}</span>
+      <div className="flex items-center gap-0.5">
+        <span className="truncate">{displayLabel}</span>
+        {shift.is_virtual && (
+          <span className="opacity-50 flex-shrink-0 text-[8px]">↻</span>
+        )}
+      </div>
       {shift.start_time && (
-        <span className="opacity-70 flex-shrink-0">{formatTime(shift.start_time)}</span>
-      )}
-      {shift.is_virtual && (
-        <span className="opacity-50 flex-shrink-0 text-[8px]">↻</span>
+        <div className="opacity-70 text-[9px]">{formatTime(shift.start_time)}</div>
       )}
     </div>
   );
