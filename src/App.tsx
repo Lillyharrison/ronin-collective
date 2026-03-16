@@ -66,6 +66,7 @@ const App = () => (
         <AuthProvider>
           {/* PermissionsProvider inside AuthProvider — runs ONE set of DB queries
               and shares results via context to all 30+ consuming components. */}
+          <OfflineSyncProvider>
           <PermissionsProvider>
             <Routes>
               <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
