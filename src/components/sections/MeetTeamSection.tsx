@@ -793,14 +793,24 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                 {ALL_SECTIONS.map((section, idx) => {
                   const sp = perms[section.key] || { view: false, edit: false, notifications: false };
                   const prevSection = ALL_SECTIONS[idx - 1];
-                  const showDivider = section.isFeature && prevSection && !prevSection.isFeature;
+                  const showFeatureDivider = section.isFeature && !section.isCalendarSub && prevSection && !prevSection.isFeature;
+                  const showCalSubDivider = section.isCalendarSub && prevSection && !prevSection.isCalendarSub;
                   return (
                     <div key={section.key}>
-                      {showDivider && (
+                      {showFeatureDivider && (
                         <div className="flex items-center gap-2 my-3">
                           <div className="flex-1 h-px bg-charcoal-light" />
                           <span className="text-[9px] uppercase tracking-widest text-gold/60 font-semibold">
                             {isEN ? "Feature Visibility" : "Visibilidad de funciones"}
+                          </span>
+                          <div className="flex-1 h-px bg-charcoal-light" />
+                        </div>
+                      )}
+                      {showCalSubDivider && (
+                        <div className="flex items-center gap-2 mt-3 mb-1.5">
+                          <div className="flex-1 h-px bg-charcoal-light" />
+                          <span className="text-[9px] uppercase tracking-widest text-blue-400/60 font-semibold">
+                            {isEN ? "Calendar Tabs" : "Pestañas del calendario"}
                           </span>
                           <div className="flex-1 h-px bg-charcoal-light" />
                         </div>
