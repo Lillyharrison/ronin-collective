@@ -926,6 +926,11 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [resending, setResending] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  // Draft state
+  const [isDraft, setIsDraft] = useState(member.is_draft ?? false);
+  const [draftEmail, setDraftEmail] = useState("");
 
   // Edit state
   const [fullName, setFullName] = useState(member.full_name || "");
