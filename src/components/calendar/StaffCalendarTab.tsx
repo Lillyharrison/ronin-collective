@@ -1523,7 +1523,9 @@ export function StaffCalendarTab({
 
   function buildExportRows() {
     return staffToShow.map((person) => {
-      const row: Record<string, string> = { Staff: getDisplayName(person) };
+      const row: Record<string, string> = {
+        Staff: getDisplayName(person) + (person.job_title ? `\n${person.job_title}` : ""),
+      };
       weekDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
         const dayShifts = displayShifts.filter(
@@ -1535,8 +1537,10 @@ export function StaffCalendarTab({
               if (s.is_leave) return "Leave";
               const prop = properties.find((p) => p.id === s.property_id);
               const name = prop?.name ?? "—";
-              const time = s.start_time ? formatTime(s.start_time) : "";
-              return time ? `${name}\n${time}` : name;
+              const timeStr = s.start_time && s.end_time
+                ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
+                : s.start_time ? formatTime(s.start_time) : "";
+              return timeStr ? `${name}\n${timeStr}` : name;
             }).join("\n");
       });
       return row;
@@ -1548,7 +1552,7 @@ export function StaffCalendarTab({
     const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
     // Excel: replace \n with space for cleaner single-line display
     const excelRows = rows.map((row) => {
-      const r: Record<string, string> = { Staff: row["Staff"] };
+      const r: Record<string, string> = { Staff: row["Staff"].replace(/\n/g, " – ") };
       dayHeaders.forEach((h) => { r[h] = (row[h] ?? "").replace(/\n/g, " "); });
       return r;
     });
@@ -1587,7 +1591,7 @@ export function StaffCalendarTab({
     const marginL = 10;
     const marginR = 10;
     const usableWidth = pageWidth - marginL - marginR;
-    const staffColW = 32;
+    const staffColW = 36; // slightly wider to fit name + title
     const dayColW = (usableWidth - staffColW) / 7;
 
     const doc = new jsPDF({ orientation: "landscape", format: "a4" });
@@ -1596,12 +1600,32 @@ export function StaffCalendarTab({
     doc.text(`Staff Schedule — ${weekLabel}`, marginL, 13);
 
     const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
-    const rows = buildExportRows();
 
-    // Build body as two-line cells: property name on line 1, time on line 2
-    const tableBody = rows.map((row) =>
-      ["Staff", ...dayHeaders].map((h) => row[h] ?? "")
-    );
+    // ── Build PDF body with department separator rows ─────────────────────────
+    // A separator row is a full-width empty row (white bg, minimal height)
+    // inserted whenever the department changes between consecutive staff members.
+    type PdfBodyRow = { cells: string[]; isSeparator: boolean; staffIndex: number };
+    const pdfRows: PdfBodyRow[] = [];
+    let lastDept: string | null | undefined = undefined;
+
+    staffToShow.forEach((person, idx) => {
+      const dept = person.department ?? null;
+      // Insert thin separator when department changes (not before very first row)
+      if (idx > 0 && dept !== lastDept) {
+        pdfRows.push({ cells: Array(8).fill(""), isSeparator: true, staffIndex: -1 });
+      }
+      lastDept = dept;
+
+      const exportRows = buildExportRows();
+      const row = exportRows[idx];
+      pdfRows.push({
+        cells: ["Staff", ...dayHeaders].map((h) => row[h] ?? ""),
+        isSeparator: false,
+        staffIndex: idx,
+      });
+    });
+
+    const tableBody = pdfRows.map((r) => r.cells);
 
     autoTable(doc, {
       startY: 18,
@@ -1622,30 +1646,75 @@ export function StaffCalendarTab({
         lineColor: [200, 200, 200],
       },
       columnStyles: {
-        0: { cellWidth: staffColW, fontStyle: "bold" },
+        0: { cellWidth: staffColW },
         ...Object.fromEntries(dayHeaders.map((_, i) => [i + 1, { cellWidth: dayColW }])),
       },
       didParseCell: (data) => {
-        if (data.section === "body" && data.column.index > 0) {
-          const person = staffToShow[data.row.index];
-          if (!person) return;
-          const day = weekDays[data.column.index - 1];
-          const dateStr = format(day, "yyyy-MM-dd");
-          const dayShifts = displayShifts.filter(
-            (s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave
-          );
-          if (dayShifts.length > 0) {
-            const col = getExportPropColor(dayShifts[0].property_id);
-            const r = parseInt(col.bg.slice(0, 2), 16);
-            const g = parseInt(col.bg.slice(2, 4), 16);
-            const b = parseInt(col.bg.slice(4, 6), 16);
-            data.cell.styles.fillColor = [r, g, b];
-            const tr = parseInt(col.text.slice(0, 2), 16);
-            const tg = parseInt(col.text.slice(2, 4), 16);
-            const tb = parseInt(col.text.slice(4, 6), 16);
-            data.cell.styles.textColor = [tr, tg, tb];
-          }
+        if (data.section !== "body") return;
+        const pdfRow = pdfRows[data.row.index];
+        if (!pdfRow) return;
+
+        // Separator row: white bg, minimal height, no borders
+        if (pdfRow.isSeparator) {
+          data.cell.styles.fillColor = [255, 255, 255];
+          data.cell.styles.textColor = [255, 255, 255];
+          data.cell.styles.fontSize = 3;
+          data.cell.styles.cellPadding = { top: 1, bottom: 1, left: 0, right: 0 };
+          data.cell.styles.lineWidth = 0;
+          return;
         }
+
+        // Staff name column (col 0): bold name, italic title in smaller font
+        if (data.column.index === 0) {
+          const person = staffToShow[pdfRow.staffIndex];
+          if (person?.job_title) {
+            // Name is rendered bold by column style; title will be added via didDrawCell
+            data.cell.styles.fontStyle = "bold";
+          }
+          return;
+        }
+
+        // Shift cells: apply property color
+        const person = staffToShow[pdfRow.staffIndex];
+        if (!person) return;
+        const day = weekDays[data.column.index - 1];
+        const dateStr = format(day, "yyyy-MM-dd");
+        const dayShifts = displayShifts.filter(
+          (s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave
+        );
+        if (dayShifts.length > 0) {
+          const col = getExportPropColor(dayShifts[0].property_id);
+          const r2 = parseInt(col.bg.slice(0, 2), 16);
+          const g2 = parseInt(col.bg.slice(2, 4), 16);
+          const b2 = parseInt(col.bg.slice(4, 6), 16);
+          data.cell.styles.fillColor = [r2, g2, b2];
+          const tr = parseInt(col.text.slice(0, 2), 16);
+          const tg = parseInt(col.text.slice(2, 4), 16);
+          const tb = parseInt(col.text.slice(4, 6), 16);
+          data.cell.styles.textColor = [tr, tg, tb];
+        }
+      },
+      didDrawCell: (data) => {
+        // Render job title in smaller italic text below the name in col 0
+        if (data.section !== "body" || data.column.index !== 0) return;
+        const pdfRow = pdfRows[data.row.index];
+        if (!pdfRow || pdfRow.isSeparator) return;
+        const person = staffToShow[pdfRow.staffIndex];
+        if (!person?.job_title) return;
+
+        const lines = getDisplayName(person).split("\n");
+        const nameLines = lines.length;
+        // Draw job title line below the name
+        const titleY = data.cell.y + 2 + nameLines * 3.2 + 1.5;
+        doc.setFontSize(5.5);
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(120, 120, 120);
+        doc.text(person.job_title, data.cell.x + 2, titleY, {
+          maxWidth: staffColW - 4,
+        });
+        // Reset font
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
       },
       margin: { left: marginL, right: marginR },
     });
