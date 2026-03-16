@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type CalendarMode = "family" | "ronin";
-type RoninTab = "all" | "birthdays" | "maintenance" | "deliveries" | "staff";
+type RoninTab = "all" | "birthdays" | "maintenance" | "deliveries" | "travel" | "staff";
 
 interface CalEvent {
   id: string;
