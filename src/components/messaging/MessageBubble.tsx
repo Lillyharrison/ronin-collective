@@ -382,6 +382,7 @@ export function MessageBubble({
                   <button
                     key={emoji}
                     onClick={() => { onReact(emoji); setShowMenu(false); }}
+                    onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onReact(emoji); setShowMenu(false); }}
                     className={cn(
                       "text-xl w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 active:scale-110",
                       iReacted ? "bg-accent/20 ring-1 ring-accent scale-110" : "hover:bg-muted"
