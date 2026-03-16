@@ -1799,11 +1799,6 @@ export function StaffCalendarTab({
                         )}>
                           {getDisplayName(person)}
                         </p>
-                        {person.is_draft && (
-                          <span className="flex-shrink-0 text-[8px] font-semibold px-1 py-px rounded bg-amber-500/20 text-amber-400 leading-tight">
-                            Draft
-                          </span>
-                        )}
                       </div>
                       {!person.is_draft && person.job_title && (
                         <p className="text-[9px] text-muted-foreground truncate">{person.job_title}</p>
