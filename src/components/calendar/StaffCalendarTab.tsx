@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Settings2,
   CalendarOff, UserCheck, X, Check, Clock, Pencil,
-  PlaneTakeoff, AlertCircle,
+  PlaneTakeoff, AlertCircle, GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -1312,6 +1312,14 @@ export function StaffCalendarTab({
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
 
   const dragRef = useRef<DisplayShift | null>(null);
+  const rowDragRef = useRef<string | null>(null); // staff_id being row-dragged
+  const [rowDragOver, setRowDragOver] = useState<string | null>(null); // staff_id hovered over
+
+  // Persistent staff order (localStorage)
+  const [staffOrder, setStaffOrder] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("ronin_staff_order") ?? "[]"); }
+    catch { return []; }
+  });
 
   const {
     schedules, shifts, leaveRequests, loading, refetch,
@@ -1378,10 +1386,35 @@ export function StaffCalendarTab({
         const allStaff = profiles.filter((p) =>
           filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff
         );
-        return allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10) : profiles.filter((p) => p.id === filterStaff));
+        const base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10) : profiles.filter((p) => p.id === filterStaff));
+        // Apply saved custom order
+        const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
+        return [...base].sort((a, b) => {
+          const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+          const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+          return ai - bi;
+        });
       })();
 
-  // ── Drag handlers ──────────────────────────────────────────────────────────
+  // ── Row reorder drag handlers ───────────────────────────────────────────────
+  const handleRowDragStart = (staffId: string) => { rowDragRef.current = staffId; };
+  const handleRowDrop = (targetStaffId: string) => {
+    const dragged = rowDragRef.current;
+    rowDragRef.current = null;
+    setRowDragOver(null);
+    if (!dragged || dragged === targetStaffId) return;
+    const ids = staffToShow.map((p) => p.id);
+    const fromIdx = ids.indexOf(dragged);
+    const toIdx = ids.indexOf(targetStaffId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const newOrder = [...ids];
+    newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, dragged);
+    setStaffOrder(newOrder);
+    try { localStorage.setItem("ronin_staff_order", JSON.stringify(newOrder)); } catch { /* noop */ }
+  };
+
+  // ── Shift drag handlers ──────────────────────────────────────────────────────
   const handleDragStart = (shift: DisplayShift) => {
     dragRef.current = shift;
   };
@@ -1570,13 +1603,33 @@ export function StaffCalendarTab({
             const personShifts = displayShifts.filter((s) => s.staff_id === person.id);
 
             return (
-              <div key={person.id} className="border-b border-border last:border-b-0">
+              <div
+                key={person.id}
+                className={cn(
+                  "border-b border-border last:border-b-0 transition-colors",
+                  rowDragOver === person.id && "bg-primary/5 ring-1 ring-inset ring-primary/30"
+                )}
+                onDragOver={(e) => { e.preventDefault(); setRowDragOver(person.id); }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setRowDragOver(null); }}
+                onDrop={(e) => { e.preventDefault(); handleRowDrop(person.id); }}
+              >
                 <div
                   className="grid"
                   style={{ gridTemplateColumns: "140px repeat(7, 1fr)" }}
                 >
                   {/* Staff name cell */}
-                  <div className="px-3 py-2 border-r border-border flex items-center gap-2 min-w-0">
+                  <div className="px-1.5 py-2 border-r border-border flex items-center gap-1.5 min-w-0">
+                    {canEdit && (
+                      <div
+                        draggable
+                        onDragStart={(e) => { e.stopPropagation(); handleRowDragStart(person.id); }}
+                        onDragEnd={() => { rowDragRef.current = null; setRowDragOver(null); }}
+                        className="flex-shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+                        title="Drag to reorder"
+                      >
+                        <GripVertical size={12} />
+                      </div>
+                    )}
                     <div className={cn(
                       "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
                       person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
