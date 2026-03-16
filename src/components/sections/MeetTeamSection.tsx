@@ -897,12 +897,14 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             {isEN ? "Cancel" : "Cancelar"}
           </Button>
           <Button onClick={handleSubmit} disabled={saving || !canSave}
-            className="flex-1 bg-gold hover:bg-gold/90 text-charcoal font-semibold">
+            className={`flex-1 font-semibold ${isDraft ? "bg-amber-500/80 hover:bg-amber-500 text-charcoal" : "bg-gold hover:bg-gold/90 text-charcoal"}`}>
             {saving
               ? <Loader2 size={16} className="animate-spin" />
-              : noLogin
-                ? (isEN ? "Save Profile" : "Guardar Perfil")
-                : (isEN ? "Send Invite" : "Invitar")}
+              : isDraft
+                ? (isEN ? "Save as Draft" : "Guardar Borrador")
+                : noLogin
+                  ? (isEN ? "Save Profile" : "Guardar Perfil")
+                  : (isEN ? "Send Invite" : "Invitar")}
           </Button>
         </div>
       </div>
