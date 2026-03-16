@@ -101,17 +101,17 @@ const FAMILY_TYPE_CONFIG: Record<string, { label: string; color: string; bg: str
   general:      { label: "General",            color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
 };
 
-// Solid background colors for multi-day bars (inline style, richer look)
 const EVENT_SOLID_COLORS: Record<string, string> = {
-  travel:      "hsl(217 91% 60%)",
-  guest_stay:  "hsl(271 91% 65%)",
-  event:       "hsl(330 85% 60%)",
-  maintenance: "hsl(38 92% 50%)",
-  general:     "hsl(var(--accent))",
+  travel:       "hsl(217 91% 60%)",
+  guest_stay:   "hsl(271 91% 65%)",
+  event:        "hsl(330 85% 60%)",
+  maintenance:  "hsl(38 92% 50%)",
+  construction: "hsl(24 94% 53%)",
+  general:      "hsl(var(--accent))",
   // ronin types
-  birthdays:   "hsl(330 85% 60%)",
-  delivery:    "hsl(142 71% 45%)",
-  birthday:    "hsl(330 85% 60%)",
+  birthdays:    "hsl(330 85% 60%)",
+  delivery:     "hsl(142 71% 45%)",
+  birthday:     "hsl(330 85% 60%)",
   // ronin travel tab
   ronin_travel: "hsl(217 91% 60%)",
 };
