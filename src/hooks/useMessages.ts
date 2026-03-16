@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -6,42 +6,82 @@ type Message = Tables<"messages"> & {
   sender_profile?: { full_name: string | null; avatar_url: string | null };
 };
 
+const PAGE_SIZE = 40;
+
+async function enrichMessages(data: Tables<"messages">[]): Promise<Message[]> {
+  const senderIds = [...new Set(data.filter(m => m.sender_id).map(m => m.sender_id!))];
+  if (!senderIds.length) return data as Message[];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url")
+    .in("id", senderIds);
+  const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
+  return data.map(m => ({
+    ...m,
+    sender_profile: m.sender_id
+      ? profileMap.get(m.sender_id) ?? { full_name: null, avatar_url: null }
+      : undefined,
+  }));
+}
+
 export function useMessages(threadId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  // cursor = created_at of the oldest loaded message
+  const oldestCursorRef = useRef<string | null>(null);
 
+  // ── Initial load: fetch newest PAGE_SIZE messages ─────────────────────────
   const fetchMessages = useCallback(async () => {
-    if (!threadId) { setMessages([]); return; }
+    if (!threadId) { setMessages([]); setHasMore(false); return; }
     setLoading(true);
+
     const { data } = await supabase
       .from("messages")
       .select("*")
       .eq("thread_id", threadId)
-      .order("created_at", { ascending: true })
-      .limit(200);
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
 
     if (data) {
-      const senderIds = [...new Set(data.filter(m => m.sender_id).map(m => m.sender_id!))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url")
-        .in("id", senderIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
-      const enriched = data.map(m => ({
-        ...m,
-        sender_profile: m.sender_id
-          ? profileMap.get(m.sender_id) ?? { full_name: null, avatar_url: null }
-          : undefined,
-      }));
+      const ordered = [...data].reverse(); // oldest → newest
+      const enriched = await enrichMessages(ordered);
       setMessages(enriched);
+      setHasMore(data.length === PAGE_SIZE);
+      oldestCursorRef.current = ordered[0]?.created_at ?? null;
     }
     setLoading(false);
   }, [threadId]);
 
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
-  // Realtime subscription
+  // ── Load older messages (cursor-based pagination) ─────────────────────────
+  const loadOlderMessages = useCallback(async () => {
+    if (!threadId || !hasMore || loadingOlder || !oldestCursorRef.current) return;
+    setLoadingOlder(true);
+
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("thread_id", threadId)
+      .lt("created_at", oldestCursorRef.current)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
+
+    if (data) {
+      const ordered = [...data].reverse();
+      const enriched = await enrichMessages(ordered);
+      setMessages(prev => [...enriched, ...prev]);
+      setHasMore(data.length === PAGE_SIZE);
+      if (ordered.length > 0) {
+        oldestCursorRef.current = ordered[0].created_at;
+      }
+    }
+    setLoadingOlder(false);
+  }, [threadId, hasMore, loadingOlder]);
+
+  // ── Realtime subscription ─────────────────────────────────────────────────
   useEffect(() => {
     if (!threadId) return;
     const channel = supabase
@@ -98,6 +138,7 @@ export function useMessages(threadId: string | null) {
     return () => { supabase.removeChannel(channel); };
   }, [threadId]);
 
+  // ── Send text message ─────────────────────────────────────────────────────
   const sendMessage = async (content: string, senderId: string) => {
     if (!threadId) return;
     const optimisticId = `optimistic-${Date.now()}`;
@@ -132,6 +173,7 @@ export function useMessages(threadId: string | null) {
     }
   };
 
+  // ── Send media message ────────────────────────────────────────────────────
   const sendMediaMessage = async (
     mediaUrl: string,
     mediaType: string,
@@ -197,7 +239,6 @@ export function useMessages(threadId: string | null) {
 
   /**
    * Batch markAsRead — single RPC call instead of N individual updates.
-   * Uses the batch_mark_messages_seen DB function created in migration.
    */
   const markAsRead = async (userId: string) => {
     if (!threadId) return;
@@ -215,7 +256,6 @@ export function useMessages(threadId: string | null) {
         : m
     ));
 
-    // Single batched RPC — replaces the previous N-query loop
     await supabase.rpc("batch_mark_messages_seen", {
       _message_ids: unreadIds,
       _user_id: userId,
@@ -238,10 +278,8 @@ export function useMessages(threadId: string | null) {
     }
   };
 
-  /** Toggle is_starred on a message — persisted to DB */
   const toggleStar = async (messageId: string, currentlyStarred: boolean) => {
     const next = !currentlyStarred;
-    // Optimistic
     setMessages(prev => prev.map(m => m.id === messageId ? { ...m, is_starred: next } : m));
     await supabase.from("messages").update({ is_starred: next } as never).eq("id", messageId);
   };
@@ -252,9 +290,10 @@ export function useMessages(threadId: string | null) {
   };
 
   return {
-    messages, loading,
+    messages, loading, loadingOlder, hasMore,
     sendMessage, sendMediaMessage,
     markAsRead, toggleReaction, toggleStar, deleteMessage,
+    loadOlderMessages,
     refetch: fetchMessages,
   };
 }
