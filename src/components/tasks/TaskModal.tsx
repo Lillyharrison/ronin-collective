@@ -183,7 +183,13 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     let savedTaskId = task?.id;
 
     if (task?.id) {
-      await supabase.from("tasks").update(payload as any).eq("id", task.id);
+      if (!navigator.onLine) {
+        // Optimistic local update — queue and close
+        await enqueue("tasks", "update", payload as Record<string, unknown>, { id: task.id });
+        syncCtx?.notifyQueued();
+      } else {
+        await supabase.from("tasks").update(payload as any).eq("id", task.id);
+      }
     } else {
       const { data } = await supabase.from("tasks").insert({ ...payload, created_by: userId } as any).select("id").single();
       savedTaskId = data?.id;
