@@ -1236,7 +1236,7 @@ function StaffDayCell({
   onCellClick: () => void;
   onDragStart: (shift: DisplayShift) => void;
   onDrop: (targetDateStr: string) => void;
-  onDeleteShift: (id: string) => void;
+  onDeleteShift: (shift: DisplayShift) => void;
   onShiftDoubleClick: (shift: DisplayShift) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
