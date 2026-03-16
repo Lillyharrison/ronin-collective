@@ -1190,8 +1190,9 @@ export function CalendarSection() {
   const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
 
-  const [mode, setMode] = useState<CalendarMode>((isFamilyUser && canSeeFamilyCal) ? "family" : "ronin");
-  const [roninTab, setRoninTab] = useState<RoninTab>("all");
+  const defaultMode: CalendarMode = (isFamilyUser && canSeeFamilyCal) ? "family" : "ronin";
+  const [mode, setMode] = useLocalStorage<CalendarMode>("cal_mode", defaultMode);
+  const [roninTab, setRoninTab] = useLocalStorage<RoninTab>("cal_ronin_tab", "all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [familyEvents, setFamilyEvents] = useState<CalEvent[]>([]);
   const [roninEvents, setRoninEvents] = useState<CalEvent[]>([]);
