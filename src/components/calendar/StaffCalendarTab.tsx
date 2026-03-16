@@ -85,7 +85,12 @@ function formatTime(t: string | null) {
 
 function propColor(propId: string | null, properties: Property[]) {
   if (!propId) return PROPERTY_COLORS[PROPERTY_COLORS.length - 1];
-  const idx = properties.findIndex((p) => p.id === propId);
+  const idxMontanan = properties.findIndex((p) => p.name.toLowerCase().includes("montan"));
+  const idxMoreno   = properties.findIndex((p) => p.name.toLowerCase().includes("moreno"));
+  let idx = properties.findIndex((p) => p.id === propId);
+  // Swap colors between Montanan and Moreno
+  if (idx === idxMontanan && idxMoreno !== -1) idx = idxMoreno;
+  else if (idx === idxMoreno && idxMontanan !== -1) idx = idxMontanan;
   return PROPERTY_COLORS[Math.abs(idx) % PROPERTY_COLORS.length];
 }
 
