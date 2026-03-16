@@ -93,11 +93,12 @@ const RONIN_TAB_CONFIG: Record<RoninTab, { label: string; icon: React.ReactNode;
 };
 
 const FAMILY_TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  travel:      { label: "Travel",       color: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30",    icon: <Plane size={10} /> },
-  guest_stay:  { label: "Guest Stay",   color: "text-purple-400", bg: "bg-purple-500/15 border-purple-500/30", icon: <Users size={10} /> },
-  event:       { label: "Event / Party",color: "text-pink-400",   bg: "bg-pink-500/15 border-pink-500/30",    icon: <PartyPopper size={10} /> },
-  maintenance: { label: "Maintenance",  color: "text-amber-400",  bg: "bg-amber-500/15 border-amber-500/30",  icon: <Wrench size={10} /> },
-  general:     { label: "General",      color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
+  travel:       { label: "Travel",             color: "text-blue-400",   bg: "bg-blue-500/15 border-blue-500/30",    icon: <Plane size={10} /> },
+  guest_stay:   { label: "Guest Stay",         color: "text-purple-400", bg: "bg-purple-500/15 border-purple-500/30", icon: <Users size={10} /> },
+  event:        { label: "Event / Party",      color: "text-pink-400",   bg: "bg-pink-500/15 border-pink-500/30",    icon: <PartyPopper size={10} /> },
+  maintenance:  { label: "Maintenance",        color: "text-amber-400",  bg: "bg-amber-500/15 border-amber-500/30",  icon: <Wrench size={10} /> },
+  construction: { label: "Construction / Design", color: "text-orange-400", bg: "bg-orange-500/15 border-orange-500/30", icon: <HardHat size={10} /> },
+  general:      { label: "General",            color: "text-accent",     bg: "bg-accent/15 border-accent/30",        icon: <Calendar size={10} /> },
 };
 
 // Solid background colors for multi-day bars (inline style, richer look)
