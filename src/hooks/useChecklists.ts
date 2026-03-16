@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { enqueue } from "@/lib/offlineDB";
-// Lazy import to avoid circular dep — read sync context only if available
 import { OfflineSyncContext } from "@/hooks/useOfflineSync";
 
 export interface ChecklistProduct {
