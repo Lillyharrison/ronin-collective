@@ -1386,10 +1386,35 @@ export function StaffCalendarTab({
         const allStaff = profiles.filter((p) =>
           filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff
         );
-        return allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10) : profiles.filter((p) => p.id === filterStaff));
+        const base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10) : profiles.filter((p) => p.id === filterStaff));
+        // Apply saved custom order
+        const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
+        return [...base].sort((a, b) => {
+          const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+          const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+          return ai - bi;
+        });
       })();
 
-  // ── Drag handlers ──────────────────────────────────────────────────────────
+  // ── Row reorder drag handlers ───────────────────────────────────────────────
+  const handleRowDragStart = (staffId: string) => { rowDragRef.current = staffId; };
+  const handleRowDrop = (targetStaffId: string) => {
+    const dragged = rowDragRef.current;
+    rowDragRef.current = null;
+    setRowDragOver(null);
+    if (!dragged || dragged === targetStaffId) return;
+    const ids = staffToShow.map((p) => p.id);
+    const fromIdx = ids.indexOf(dragged);
+    const toIdx = ids.indexOf(targetStaffId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const newOrder = [...ids];
+    newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, dragged);
+    setStaffOrder(newOrder);
+    try { localStorage.setItem("ronin_staff_order", JSON.stringify(newOrder)); } catch { /* noop */ }
+  };
+
+  // ── Shift drag handlers ──────────────────────────────────────────────────────
   const handleDragStart = (shift: DisplayShift) => {
     dragRef.current = shift;
   };
