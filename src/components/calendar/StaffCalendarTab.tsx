@@ -27,6 +27,15 @@ interface Profile {
   avatar_url: string | null;
   job_title: string | null;
   department: string | null;
+  is_draft?: boolean;
+}
+
+/** Returns a human-readable label for a profile, using job title for drafts. */
+function getDisplayName(p: Profile | undefined | null, fallback = "Staff"): string {
+  if (!p) return fallback;
+  if (p.full_name) return p.full_name;
+  if (p.is_draft) return p.job_title ? `[${p.job_title}]` : "[Draft]";
+  return fallback;
 }
 
 interface Property {
