@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -6,6 +6,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
 import { notifySection } from "@/lib/notifySection";
+import { enqueue } from "@/lib/offlineDB";
+import { OfflineSyncContext } from "@/hooks/useOfflineSync";
 import {
   X, MapPin, User, Calendar, Paperclip, BookOpen, Image as ImageIcon,
   ChevronDown, Check, Send, Trash2, Clock, AlertTriangle, Package,

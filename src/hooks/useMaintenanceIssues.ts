@@ -146,6 +146,20 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   }, [fetchCategories, fetchIssues]);
 
   const createIssue = async (payload: Omit<MaintenanceIssue, "id" | "created_at" | "updated_at" | "property_name" | "reporter_name" | "assignee_name" | "assignee_avatar" | "related_issue_title">) => {
+    if (!navigator.onLine) {
+      // Optimistic local insert with a temp id so the UI reflects it immediately
+      const tempId = crypto.randomUUID();
+      const optimistic: MaintenanceIssue = {
+        ...payload,
+        id: tempId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setIssues(prev => [optimistic, ...prev]);
+      await enqueue("maintenance_issues", "insert", payload as unknown as Record<string, unknown>);
+      syncCtx?.notifyQueued();
+      return { data: optimistic, error: null };
+    }
     const { data, error } = await supabase.from("maintenance_issues").insert(payload).select().single();
     if (!error) await fetchIssues(0);
     return { data, error };
