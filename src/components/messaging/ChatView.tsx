@@ -55,6 +55,9 @@ export function ChatView({
   const [recording, setRecording] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  // WhatsApp forward mode
+  const [forwardMode, setForwardMode] = useState(false);
+  const [forwardSender, setForwardSender] = useState("");
   const [agentAnalyzing, setAgentAnalyzing] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
