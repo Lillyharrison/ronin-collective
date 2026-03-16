@@ -45,6 +45,7 @@ interface TeamMember {
   assigned_property_ids: string[] | null;
   section_permissions: SectionPermissions | null;
   role?: AppRole | null;
+  is_draft?: boolean;
 }
 
 interface Property {
@@ -209,7 +210,7 @@ export function MeetTeamSection() {
   async function loadMembers() {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, section_permissions")
+      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, section_permissions, is_draft")
       .order("full_name");
 
     if (!profiles) return;
@@ -220,6 +221,7 @@ export function MeetTeamSection() {
       ...p,
       section_permissions: (p.section_permissions as unknown as SectionPermissions) || null,
       role: roleMap[p.id] || null,
+      is_draft: (p as { is_draft?: boolean }).is_draft ?? false,
     })));
   }
 
@@ -286,9 +288,12 @@ export function MeetTeamSection() {
   }
 
   const filtered = members.filter(m => {
+    // Non-admins never see draft profiles
+    if (m.is_draft && !isMasterAdmin && !isAdmin) return false;
     const matchSearch = !search ||
       m.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      m.job_title?.toLowerCase().includes(search.toLowerCase());
+      m.job_title?.toLowerCase().includes(search.toLowerCase()) ||
+      (m.is_draft && "draft".includes(search.toLowerCase()));
     const matchLevel = filterLevel === "all" || m.level === filterLevel;
     return matchSearch && matchLevel;
   });
@@ -368,31 +373,41 @@ export function MeetTeamSection() {
               </p>
               <div className="space-y-2">
                 {group.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelectedMember(m)}
-                    className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 hover:border-gold/30 transition-all text-left"
-                  >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.role === "master_admin" ? "master_admin" : (m.level || "staff")]}`}>
-                      {m.avatar_url ? (
-                        <img src={imageUrl(m.avatar_url, 80, 80)} alt={m.full_name || ""} loading="lazy" className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        <span className="font-display text-base text-foreground">{(m.full_name || "?")[0].toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-foreground text-sm font-medium truncate">{m.full_name || "—"}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {m.job_title && <span className="text-muted-foreground text-[11px] truncate">{m.job_title}</span>}
-                        {m.department && (
-                          <span className={`text-[10px] font-semibold ${DEPT_COLORS[m.department] || "text-cream/50"}`}>
-                            · {m.department}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-                  </button>
+                   <button
+                     key={m.id}
+                     onClick={() => setSelectedMember(m)}
+                     className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 hover:border-gold/30 transition-all text-left"
+                   >
+                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.role === "master_admin" ? "master_admin" : (m.level || "staff")]}`}>
+                       {m.avatar_url ? (
+                         <img src={imageUrl(m.avatar_url, 80, 80)} alt={m.full_name || ""} loading="lazy" className="w-full h-full rounded-full object-cover" />
+                       ) : (
+                         <span className="font-display text-base text-foreground">{(m.full_name || "?")[0].toUpperCase()}</span>
+                       )}
+                     </div>
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-center gap-2">
+                         <p className="text-foreground text-sm font-medium truncate">{m.full_name || (m.is_draft ? "Draft Account" : "—")}</p>
+                         {m.is_draft && (
+                           <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                             Draft
+                           </span>
+                         )}
+                       </div>
+                       <div className="flex items-center gap-2 mt-0.5">
+                         {m.job_title && <span className="text-muted-foreground text-[11px] truncate">{m.job_title}</span>}
+                         {m.department && (
+                           <span className={`text-[10px] font-semibold ${DEPT_COLORS[m.department] || "text-cream/50"}`}>
+                             · {m.department}
+                           </span>
+                         )}
+                         {m.is_draft && !m.full_name && (
+                           <span className="text-muted-foreground text-[11px]">Add name to send invitation</span>
+                         )}
+                       </div>
+                     </div>
+                     <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+                   </button>
                 ))}
               </div>
             </div>
@@ -562,20 +577,23 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   }
 
   async function handleSubmit() {
-    if (!form.full_name || !form.level || !form.role) return;
-    if (!noLogin && !form.email) return;
+    // Allow draft save when no name (only for profile-only / no-login path)
+    const isDraft = !form.full_name;
+    if (!isDraft && !form.level) return;
+    if (!form.level || !form.role) return;
+    if (!noLogin && !form.email && !isDraft) return;
     setSaving(true);
     try {
       const finalPerms = Object.keys(perms).length > 0
         ? { ...perms, _quick_actions: quickActions as unknown as SectionPerm }
         : null;
 
-      if (noLogin) {
+      if (noLogin || isDraft) {
         // Create profile-only record via edge function (needs service role to bypass RLS)
         const { error: fnErr } = await supabase.functions.invoke("ronin-ai", {
           body: {
             action: "create_profile_only",
-            full_name: form.full_name,
+            full_name: form.full_name || null,
             job_title: form.job_title || null,
             phone: phone || null,
             level: form.level,
@@ -586,6 +604,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             notes: form.notes || null,
             assigned_property_ids: assignedProps,
             section_permissions: finalPerms as any,
+            is_draft: isDraft,
           },
         });
         if (fnErr) throw fnErr;
@@ -619,7 +638,9 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     { key: "quickactions", label: isEN ? "Quick Actions" : "Acciones" },
   ] as const;
 
-  const canSave = form.full_name && form.level && (noLogin || form.email);
+  // Can always save if level+role are set — no name = saved as draft
+  const isDraft = !form.full_name;
+  const canSave = form.level && form.role && (isDraft || noLogin || form.email);
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
@@ -876,12 +897,14 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             {isEN ? "Cancel" : "Cancelar"}
           </Button>
           <Button onClick={handleSubmit} disabled={saving || !canSave}
-            className="flex-1 bg-gold hover:bg-gold/90 text-charcoal font-semibold">
+            className={`flex-1 font-semibold ${isDraft ? "bg-amber-500/80 hover:bg-amber-500 text-charcoal" : "bg-gold hover:bg-gold/90 text-charcoal"}`}>
             {saving
               ? <Loader2 size={16} className="animate-spin" />
-              : noLogin
-                ? (isEN ? "Save Profile" : "Guardar Perfil")
-                : (isEN ? "Send Invite" : "Invitar")}
+              : isDraft
+                ? (isEN ? "Save as Draft" : "Guardar Borrador")
+                : noLogin
+                  ? (isEN ? "Save Profile" : "Guardar Perfil")
+                  : (isEN ? "Send Invite" : "Invitar")}
           </Button>
         </div>
       </div>
@@ -903,6 +926,11 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [resending, setResending] = useState(false);
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  // Draft state
+  const [isDraft, setIsDraft] = useState(member.is_draft ?? false);
+  const [draftEmail, setDraftEmail] = useState("");
 
   // Edit state
   const [fullName, setFullName] = useState(member.full_name || "");
@@ -1008,28 +1036,88 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         _quick_actions: quickActions as unknown as SectionPerm,
       };
 
-      // Update profile
-      await supabase.from("profiles").update({
-        full_name: fullName,
-        job_title: jobTitle,
-        phone: phone || null,
-        level,
-        department: (level === "staff" || level === "manager") ? (department || null) : null,
-        start_date: startDate || null,
-        birthday: birthday || null,
-        notes: notes || null,
-        assigned_property_ids: assignedProps,
-        section_permissions: finalPerms as unknown as import("@/integrations/supabase/types").Json,
-      }).eq("id", member.id);
+      if (isDraft) {
+        // Draft profiles: save via edge function so is_draft flag is preserved
+        await supabase.functions.invoke("ronin-ai", {
+          body: {
+            action: "save_draft_user",
+            profile_id: member.id,
+            full_name: fullName || null,
+            job_title: jobTitle || null,
+            phone: phone || null,
+            level,
+            department: (level === "staff" || level === "manager") ? (department || null) : null,
+            start_date: startDate || null,
+            birthday: birthday || null,
+            notes: notes || null,
+            assigned_property_ids: assignedProps,
+            section_permissions: finalPerms as unknown,
+            role: roleToSet,
+            send_invitation: false,
+          },
+        });
+      } else {
+        // Regular (non-draft) profiles: update directly
+        await supabase.from("profiles").update({
+          full_name: fullName,
+          job_title: jobTitle,
+          phone: phone || null,
+          level,
+          department: (level === "staff" || level === "manager") ? (department || null) : null,
+          start_date: startDate || null,
+          birthday: birthday || null,
+          notes: notes || null,
+          assigned_property_ids: assignedProps,
+          section_permissions: finalPerms as unknown as import("@/integrations/supabase/types").Json,
+        }).eq("id", member.id);
 
-      // Update role if changed
-      if (roleToSet !== member.role) {
-        await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
+        // Update role if changed
+        if (roleToSet !== member.role) {
+          await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
+        }
       }
 
-      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: finalPerms, role: roleToSet });
+      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: finalPerms, role: roleToSet, is_draft: isDraft });
     } catch (e) { console.error(e); }
     setSaving(false);
+  }
+
+  async function handleSendInvitation() {
+    if (!fullName || !draftEmail) return;
+    setSendingInvite(true);
+    try {
+      const resolvedRole = level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff");
+      const finalPerms = { ...perms, _quick_actions: quickActions as unknown as SectionPerm };
+      const { error } = await supabase.functions.invoke("ronin-ai", {
+        body: {
+          action: "save_draft_user",
+          profile_id: member.id,
+          full_name: fullName,
+          email: draftEmail,
+          job_title: jobTitle || null,
+          phone: phone || null,
+          level,
+          department: (level === "staff" || level === "manager") ? (department || null) : null,
+          start_date: startDate || null,
+          birthday: birthday || null,
+          notes: notes || null,
+          assigned_property_ids: assignedProps,
+          section_permissions: finalPerms as unknown,
+          role: resolvedRole,
+          send_invitation: true,
+        },
+      });
+      if (error) throw error;
+      setIsDraft(false);
+      toast.success(isEN ? "Invitation sent!" : "¡Invitación enviada!", {
+        description: isEN ? `A login invite has been sent to ${draftEmail}` : `Se envió un enlace de invitación a ${draftEmail}`,
+      });
+      onSaved({ ...member, full_name: fullName, is_draft: false });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to send invitation.";
+      toast.error(msg);
+    }
+    setSendingInvite(false);
   }
 
   const lvlInfo = LEVEL_OPTIONS.find(l => l.value === (member.level as Level));
@@ -1072,12 +1160,30 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
               }
             </div>
             <div>
-              <p className="text-cream font-semibold text-sm leading-none">{member.full_name || "—"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-cream font-semibold text-sm leading-none">{member.full_name || (isDraft ? "Draft Account" : "—")}</p>
+                {isDraft && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                    Draft
+                  </span>
+                )}
+              </div>
               {lvlInfo && <p className={`text-[10px] tracking-widest uppercase mt-0.5 ${LEVEL_COLORS[member.level || "staff"].split(" ")[0]}`}>{isEN ? lvlInfo.label : lvlInfo.labelEs}</p>}
             </div>
           </div>
           <button onClick={onClose} className="text-cream/50 hover:text-cream"><X size={20} /></button>
         </div>
+
+        {/* Draft banner */}
+        {isDraft && (
+          <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/30 shrink-0">
+            <p className="text-amber-400 text-xs font-medium">
+              {isEN
+                ? "This is a draft account — only admins can see it. Add a name and email, then send the invitation to activate."
+                : "Esta es una cuenta borrador — solo los administradores pueden verla. Agrega nombre y correo, luego envía la invitación para activarla."}
+            </p>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-charcoal-light shrink-0">
@@ -1094,6 +1200,19 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
           {tab === "details" && (
             <div className="px-5 py-4 space-y-4">
               <EditField label={isEN ? "Full Name" : "Nombre"} value={fullName} onChange={setFullName} disabled={!canEdit} />
+              {/* Email field shown only for drafts — needed to send the invitation */}
+              {isDraft && canEdit && (
+                <div>
+                  <FieldLabel label={isEN ? "Email (required to send invitation)" : "Correo (requerido para invitar)"} />
+                  <Input
+                    type="email"
+                    value={draftEmail}
+                    onChange={e => setDraftEmail(e.target.value)}
+                    placeholder="jane@example.com"
+                    className="bg-charcoal-light border-charcoal-light text-cream"
+                  />
+                </div>
+              )}
               <EditField label={isEN ? "Job Title" : "Puesto"} value={jobTitle} onChange={setJobTitle} disabled={!canEdit} />
               <EditField label={isEN ? "Phone" : "Teléfono"} value={phone} onChange={setPhone} disabled={!canEdit} type="tel" />
 
@@ -1302,22 +1421,35 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         {/* Footer */}
         {canEdit && (
           <div className="shrink-0 px-5 py-4 border-t border-charcoal-light space-y-2">
-            {/* Resend invitation */}
-            <Button
-              variant="outline"
-              disabled={resending || saving || deleting}
-              onClick={handleResendInvitation}
-              className="w-full bg-charcoal-light border border-gold/40 text-gold hover:bg-gold/10 hover:border-gold gap-2 font-semibold"
-            >
-              {resending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
-              {resending
-                ? (isEN ? "Sending…" : "Enviando…")
-                : (isEN ? "Resend Invitation" : "Reenviar Invitación")}
-            </Button>
+            {/* Draft: show Send Invitation CTA; non-draft: show Resend Invitation */}
+            {isDraft ? (
+              <Button
+                disabled={sendingInvite || saving || deleting || !fullName || !draftEmail}
+                onClick={handleSendInvitation}
+                className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold gap-2"
+              >
+                {sendingInvite ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                {sendingInvite
+                  ? (isEN ? "Sending…" : "Enviando…")
+                  : (isEN ? "Send Invitation" : "Enviar Invitación")}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                disabled={resending || saving || deleting}
+                onClick={handleResendInvitation}
+                className="w-full bg-charcoal-light border border-gold/40 text-gold hover:bg-gold/10 hover:border-gold gap-2 font-semibold"
+              >
+                {resending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                {resending
+                  ? (isEN ? "Sending…" : "Enviando…")
+                  : (isEN ? "Resend Invitation" : "Reenviar Invitación")}
+              </Button>
+            )}
 
             <Button onClick={handleSave} disabled={saving || deleting} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
               {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
-              {saving ? (isEN ? "Saving…" : "Guardando…") : (isEN ? "Save Changes" : "Guardar Cambios")}
+              {saving ? (isEN ? "Saving…" : "Guardando…") : (isDraft ? (isEN ? "Save Draft" : "Guardar Borrador") : (isEN ? "Save Changes" : "Guardar Cambios"))}
             </Button>
             {isMasterAdmin && (
               <AlertDialog>

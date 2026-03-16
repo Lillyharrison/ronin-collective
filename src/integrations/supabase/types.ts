@@ -885,6 +885,7 @@ export type Database = {
           department: string | null
           full_name: string | null
           id: string
+          is_draft: boolean
           job_title: string | null
           language_pref: Database["public"]["Enums"]["language_pref"]
           level: string | null
@@ -902,6 +903,7 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id: string
+          is_draft?: boolean
           job_title?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
           level?: string | null
@@ -919,6 +921,7 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id?: string
+          is_draft?: boolean
           job_title?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
           level?: string | null
