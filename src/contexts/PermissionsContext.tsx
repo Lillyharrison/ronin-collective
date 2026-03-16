@@ -51,6 +51,7 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   "calendar-birthdays":   ["master_admin", "admin", "manager", "staff", "principal"],
   "calendar-maintenance": ["master_admin", "admin", "manager", "staff"],
   "calendar-deliveries":  ["master_admin", "admin", "manager"],
+  "calendar-construction":["master_admin", "admin", "manager"],
   "calendar-staff":       ["master_admin", "admin", "manager"],
 };
 
