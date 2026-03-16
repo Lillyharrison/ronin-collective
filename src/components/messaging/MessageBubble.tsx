@@ -13,19 +13,24 @@ function ImageWithSkeleton({ src, onClick }: { src: string; onClick: () => void 
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
   return (
-    <div className="relative rounded-lg overflow-hidden mb-1 cursor-pointer max-w-full" style={{ minHeight: loaded ? undefined : "120px" }} onClick={onClick}>
+    <div
+      className="relative rounded-xl overflow-hidden mb-1 cursor-pointer"
+      style={{ minHeight: loaded ? undefined : "120px", maxWidth: "220px" }}
+      onClick={onClick}
+    >
       {!loaded && !errored && (
-        <div className="absolute inset-0 bg-muted animate-pulse rounded-lg" />
+        <div className="absolute inset-0 bg-muted animate-pulse rounded-xl" style={{ minHeight: "120px" }} />
       )}
       <img
         src={src}
         alt=""
-        className={`rounded-lg max-w-full block transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`rounded-xl block w-full transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        style={{ maxHeight: "260px", objectFit: "cover" }}
         onLoad={() => setLoaded(true)}
         onError={() => { setLoaded(true); setErrored(true); }}
       />
       {errored && (
-        <div className="flex items-center justify-center p-4 text-xs text-muted-foreground bg-muted rounded-lg" style={{ minHeight: "80px" }}>
+        <div className="flex items-center justify-center p-4 text-xs text-muted-foreground bg-muted rounded-xl" style={{ minHeight: "80px" }}>
           📷 Image unavailable
         </div>
       )}
@@ -463,7 +468,9 @@ export function MessageBubble({
         <div className="max-w-[78%] relative group" ref={bubbleRef}>
           <div
             className={cn(
-              "rounded-2xl px-3 py-2 text-sm leading-relaxed select-none transition-transform active:scale-[0.97]",
+              "rounded-2xl text-sm leading-relaxed select-none transition-transform active:scale-[0.97]",
+              // Tighter padding for image-only messages
+              message.media_type === "image" && !message.content_text ? "p-1" : "px-3 py-2",
               isOwn
                 ? "bg-[hsl(var(--status-done))] text-primary-foreground rounded-br-sm"
                 : isAI
@@ -549,19 +556,20 @@ export function MessageBubble({
             )}
 
             {/* Time + delivery status */}
-            <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
+            <div className={cn(
+              "flex items-center gap-1 mt-0.5",
+              isOwn ? "justify-end" : "justify-start",
+              message.media_type === "image" && !message.content_text && "px-2 pb-1"
+            )}>
               <span className={`text-[9px] ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{time}</span>
               {isOwn && (() => {
                 const isOptimistic = message.id.startsWith("optimistic-");
                 const isReadMsg = status === "read" || isRead;
                 if (isOptimistic) {
-                  // Single grey tick — not yet confirmed by server
                   return <Check size={12} className="text-primary-foreground/50" />;
                 } else if (isReadMsg) {
-                  // Double blue tick — read
                   return <CheckCheck size={12} className="text-accent drop-shadow-sm" />;
                 } else {
-                  // Double grey tick — delivered (server confirmed)
                   return <CheckCheck size={12} className="text-primary-foreground/60" />;
                 }
               })()}
