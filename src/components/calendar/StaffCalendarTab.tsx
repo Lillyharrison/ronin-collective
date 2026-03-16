@@ -27,6 +27,15 @@ interface Profile {
   avatar_url: string | null;
   job_title: string | null;
   department: string | null;
+  is_draft?: boolean;
+}
+
+/** Returns a human-readable label for a profile, using job title for drafts. */
+function getDisplayName(p: Profile | undefined | null, fallback = "Staff"): string {
+  if (!p) return fallback;
+  if (p.full_name) return p.full_name;
+  if (p.is_draft) return p.job_title ? `[${p.job_title}]` : "[Draft]";
+  return fallback;
 }
 
 interface Property {
@@ -437,8 +446,8 @@ function ShiftModal({
               <SelectTrigger><SelectValue placeholder="Select staff…" /></SelectTrigger>
               <SelectContent>
                 {profiles.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.full_name ?? p.id}</SelectItem>
-                ))}
+                   <SelectItem key={p.id} value={p.id}>{getDisplayName(p)}</SelectItem>
+                 ))}
               </SelectContent>
             </Select>
           </div>
@@ -682,7 +691,7 @@ function LeaveModal({
                 <SelectTrigger><SelectValue placeholder="Select staff member…" /></SelectTrigger>
                 <SelectContent>
                   {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.full_name ?? p.id}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>{getDisplayName(p)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -902,7 +911,7 @@ function ScheduleManagerDrawer({
             <h2 className="text-base font-semibold">Recurring Schedules</h2>
             {staffId && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                {profiles.find((p) => p.id === staffId)?.full_name ?? "Staff member"}
+                {getDisplayName(profiles.find((p) => p.id === staffId), "Staff member")}
               </p>
             )}
           </div>
@@ -917,7 +926,7 @@ function ScheduleManagerDrawer({
                 <SelectTrigger><SelectValue placeholder="Select staff…" /></SelectTrigger>
                 <SelectContent>
                   {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.full_name ?? p.id}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>{getDisplayName(p)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1074,7 +1083,7 @@ function LeaveCard({
           <span className="text-xl flex-shrink-0">{typeConfig.emoji}</span>
           <div className="min-w-0">
             {canEdit && (
-              <p className="text-xs font-semibold truncate text-foreground">{person?.full_name ?? "Staff"}</p>
+              <p className="text-xs font-semibold truncate text-foreground">{getDisplayName(person, "Staff")}</p>
             )}
             <p className={cn("text-sm font-medium capitalize", typeConfig.color)}>{typeConfig.label}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -1337,7 +1346,7 @@ export function StaffCalendarTab({
       if (uniqueStaffIds.length > 0) {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, job_title, department")
+          .select("id, full_name, avatar_url, job_title, department, is_draft")
           .in("id", uniqueStaffIds)
           .order("full_name");
         setProfiles((profileData as Profile[]) ?? []);
@@ -1568,12 +1577,27 @@ export function StaffCalendarTab({
                 >
                   {/* Staff name cell */}
                   <div className="px-3 py-2 border-r border-border flex items-center gap-2 min-w-0">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-[10px] font-semibold text-primary">
-                      {(person.full_name ?? "?").charAt(0).toUpperCase()}
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
+                      person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
+                    )}>
+                      {getDisplayName(person, "?").charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate">{person.full_name ?? "—"}</p>
-                      {person.job_title && (
+                      <div className="flex items-center gap-1 min-w-0">
+                        <p className={cn(
+                          "text-xs font-medium truncate",
+                          person.is_draft && "italic text-muted-foreground"
+                        )}>
+                          {getDisplayName(person)}
+                        </p>
+                        {person.is_draft && (
+                          <span className="flex-shrink-0 text-[8px] font-semibold px-1 py-px rounded bg-amber-500/20 text-amber-400 leading-tight">
+                            Draft
+                          </span>
+                        )}
+                      </div>
+                      {!person.is_draft && person.job_title && (
                         <p className="text-[9px] text-muted-foreground truncate">{person.job_title}</p>
                       )}
                     </div>
