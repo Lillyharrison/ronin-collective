@@ -334,7 +334,9 @@ export function MessageBubble({
 
   const handleCopy = () => {
     if (message.content_text) {
-      navigator.clipboard.writeText(message.content_text).catch(() => {});
+      const fwd = parseForwarded(message.content_text);
+      const toCopy = fwd ? fwd.body : message.content_text;
+      navigator.clipboard.writeText(toCopy).catch(() => {});
     }
     setShowMenu(false);
   };
