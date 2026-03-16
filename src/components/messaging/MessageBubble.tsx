@@ -13,19 +13,24 @@ function ImageWithSkeleton({ src, onClick }: { src: string; onClick: () => void 
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
   return (
-    <div className="relative rounded-lg overflow-hidden mb-1 cursor-pointer max-w-full" style={{ minHeight: loaded ? undefined : "120px" }} onClick={onClick}>
+    <div
+      className="relative rounded-xl overflow-hidden mb-1 cursor-pointer"
+      style={{ minHeight: loaded ? undefined : "120px", maxWidth: "220px" }}
+      onClick={onClick}
+    >
       {!loaded && !errored && (
-        <div className="absolute inset-0 bg-muted animate-pulse rounded-lg" />
+        <div className="absolute inset-0 bg-muted animate-pulse rounded-xl" style={{ minHeight: "120px" }} />
       )}
       <img
         src={src}
         alt=""
-        className={`rounded-lg max-w-full block transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`rounded-xl block w-full transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+        style={{ maxHeight: "260px", objectFit: "cover" }}
         onLoad={() => setLoaded(true)}
         onError={() => { setLoaded(true); setErrored(true); }}
       />
       {errored && (
-        <div className="flex items-center justify-center p-4 text-xs text-muted-foreground bg-muted rounded-lg" style={{ minHeight: "80px" }}>
+        <div className="flex items-center justify-center p-4 text-xs text-muted-foreground bg-muted rounded-xl" style={{ minHeight: "80px" }}>
           📷 Image unavailable
         </div>
       )}
