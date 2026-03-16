@@ -1620,7 +1620,7 @@ export function StaffCalendarTab({
               >
                 <div
                   className="grid"
-                  style={{ gridTemplateColumns: "160px repeat(7, 1fr)" }}
+                  style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}
                 >
                   {/* Staff name cell */}
                   <div className="px-1.5 py-2 border-r border-border flex items-center gap-1.5 min-w-0">
