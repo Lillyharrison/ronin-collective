@@ -1237,7 +1237,8 @@ export function CalendarSection() {
     const events: CalEvent[] = [];
 
     for (const ev of manualData ?? []) {
-      events.push({ ...ev, _source: "calendar_events", _is_draggable: true, _tab: "all" });
+      const tab: RoninTab = ev.event_type === "travel" ? "travel" : "all";
+      events.push({ ...ev, _source: "calendar_events", _is_draggable: true, _tab: tab });
     }
 
     for (const p of profiles ?? []) {
