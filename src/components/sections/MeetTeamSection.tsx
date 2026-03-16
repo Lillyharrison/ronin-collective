@@ -638,7 +638,9 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     { key: "quickactions", label: isEN ? "Quick Actions" : "Acciones" },
   ] as const;
 
-  const canSave = form.full_name && form.level && (noLogin || form.email);
+  // Can always save if level+role are set — no name = saved as draft
+  const isDraft = !form.full_name;
+  const canSave = form.level && form.role && (isDraft || noLogin || form.email);
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
