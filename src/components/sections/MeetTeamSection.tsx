@@ -149,10 +149,10 @@ const DEPT_COLORS: Record<string, string> = {
 // Default section permissions based on level
 function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
-    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
-    extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
-    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements"],
+    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays"],
+    extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","calendar-staff"],
+    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements","calendar-travel","calendar-birthdays","calendar-maintenance"],
   };
   const allowed = base[level] || base["staff"];
   const perms: SectionPermissions = {};
