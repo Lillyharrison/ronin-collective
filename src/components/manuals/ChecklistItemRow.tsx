@@ -184,27 +184,27 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
 
       {/* Admin actions */}
       {isAdmin && !editing && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button
             onClick={() => fileRef.current?.click()}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
             title="Add photo"
           >
             {uploading ? <span className="text-xs">…</span> : <Camera size={13} />}
           </button>
           <button
             onClick={() => setEditing(true)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
             title="Edit"
           >
             <Pencil size={13} />
           </button>
           <button
             onClick={() => onDelete(item.id)}
-            className="p-1 rounded hover:bg-muted text-[hsl(var(--status-urgent))] hover:text-[hsl(var(--status-urgent))]"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive"
             title="Delete"
           >
-            <Trash2 size={13} />
+            <Trash2 size={16} />
           </button>
         </div>
       )}

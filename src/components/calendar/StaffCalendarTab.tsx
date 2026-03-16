@@ -951,9 +951,9 @@ function ScheduleManagerDrawer({
                       </button>
                       <button
                         onClick={async () => { await onDeactivate(s.id); }}
-                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
@@ -1119,9 +1119,9 @@ function LeaveCard({
       {(req.staff_id === userId || canEdit) && req.status !== "approved" && (
         <button
           onClick={() => onDelete(req.id)}
-          className="text-[10px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+          className="text-xs text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-destructive/10 min-h-[36px]"
         >
-          <Trash2 size={9} /> Withdraw request
+          <Trash2 size={13} /> Withdraw request
         </button>
       )}
     </div>

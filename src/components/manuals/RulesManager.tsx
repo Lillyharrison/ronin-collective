@@ -158,7 +158,7 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
             {isAdmin && (
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button onClick={() => startEdit(rule)} className="p-1.5 rounded-lg hover:bg-black/10"><Pencil size={13} /></button>
-                <button onClick={() => deleteRule(rule.id)} className="p-1.5 rounded-lg hover:bg-black/10"><Trash2 size={13} /></button>
+                <button onClick={() => deleteRule(rule.id)} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive transition-colors"><Trash2 size={16} /></button>
               </div>
             )}
           </div>

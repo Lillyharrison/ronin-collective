@@ -378,8 +378,8 @@ function SortableGuideItem({
               <Pencil size={12} />
             </button>
             <button onClick={() => onDelete(item.id)}
-              className="p-1.5 rounded-lg hover:bg-muted text-[hsl(var(--status-urgent))] transition-colors">
-              <Trash2 size={12} />
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+              <Trash2 size={16} />
             </button>
           </div>
         )}
