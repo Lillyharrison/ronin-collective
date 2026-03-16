@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMessages } from "@/hooks/useMessages";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInfoPanel } from "./ChatInfoPanel";
@@ -8,7 +9,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
-  Users, Bot, User, Plus, Image, ScanSearch, Smile, Search, X,
+  Users, Bot, User, Plus, Image, ScanSearch, Smile, Search, X, ChevronUp,
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
