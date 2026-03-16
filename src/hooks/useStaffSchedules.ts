@@ -43,13 +43,19 @@ export interface StaffLeaveRequest {
   created_by: string | null;
 }
 
-export function useStaffSchedules(weekStart: Date, currentUserId?: string | null, canEdit?: boolean) {
+export function useStaffSchedules(
+  weekStart: Date,
+  currentUserId?: string | null,
+  canEdit?: boolean,
+  /** Optional explicit end date — pass endOfMonth for month view */
+  endDateOverride?: Date
+) {
   const [schedules, setSchedules] = useState<StaffSchedule[]>([]);
   const [shifts, setShifts] = useState<StaffShift[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<StaffLeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+  const weekEnd = endDateOverride ?? endOfWeek(weekStart, { weekStartsOn: 1 });
   const weekStartStr = format(weekStart, "yyyy-MM-dd");
   const weekEndStr = format(weekEnd, "yyyy-MM-dd");
 
