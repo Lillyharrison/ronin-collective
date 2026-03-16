@@ -472,11 +472,33 @@ export function ChatView({
 
       {/* Messages area — fills remaining flex space, scrolls independently */}
       <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-3 py-3 space-y-1 min-h-0"
         style={{
           backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
         }}
       >
+        {/* Load older messages indicator */}
+        {loadingOlder && (
+          <div className="flex items-center justify-center py-3">
+            <Loader2 size={16} className="animate-spin text-muted-foreground" />
+            <span className="text-xs text-muted-foreground ml-2">
+              {language === "es" ? "Cargando mensajes..." : "Loading messages..."}
+            </span>
+          </div>
+        )}
+        {hasMore && !loadingOlder && (
+          <div className="flex justify-center py-2">
+            <button
+              onClick={loadOlderMessages}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-card/80 border border-border/60 rounded-full px-3 py-1.5 transition-colors"
+            >
+              <ChevronUp size={12} />
+              {language === "es" ? "Cargar mensajes anteriores" : "Load older messages"}
+            </button>
+          </div>
+        )}
         {loading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 size={20} className="animate-spin text-muted-foreground" />
@@ -528,6 +550,23 @@ export function ChatView({
             ))}
           </div>
         ))}
+
+        {/* Human typing indicator — other participants */}
+        {typingLabel && !isAgentThread && (
+          <div className="flex items-end gap-2 mb-1">
+            <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="text-[10px] text-muted-foreground italic">{typingLabel}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {(agentTyping || agentAnalyzing) && (
           <div className="flex items-end gap-2 mb-1">
             <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
