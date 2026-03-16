@@ -926,7 +926,7 @@ function ScheduleManagerDrawer({
                 <SelectTrigger><SelectValue placeholder="Select staff…" /></SelectTrigger>
                 <SelectContent>
                   {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.full_name ?? p.id}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>{getDisplayName(p)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
