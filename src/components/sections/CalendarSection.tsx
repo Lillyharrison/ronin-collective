@@ -1452,15 +1452,17 @@ export function CalendarSection() {
       {/* Mode toggle + property filter on the same row */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit">
-          <button
-            onClick={() => setMode("family")}
-            className={cn(
-              "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-              mode === "family" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Globe size={14} /> Family
-          </button>
+          {canSeeFamilyCal && (
+            <button
+              onClick={() => setMode("family")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+                mode === "family" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Globe size={14} /> Family
+            </button>
+          )}
           <button
             onClick={() => setMode("ronin")}
             className={cn(
