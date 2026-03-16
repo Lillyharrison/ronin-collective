@@ -1355,7 +1355,12 @@ export function StaffCalendarTab({
     createSchedule, editSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
-  } = useStaffSchedules(weekStart, userId, canEdit);
+  } = useStaffSchedules(
+    calView === "month" ? monthStart : weekStart,
+    userId,
+    canEdit,
+    calView === "month" ? endOfMonth(monthStart) : undefined
+  );
 
   // Load profiles (admin + staff only — exclude principal/extended_family) and properties once
   useEffect(() => {
