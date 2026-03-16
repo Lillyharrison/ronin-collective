@@ -3,6 +3,7 @@ import {
   format, startOfWeek, endOfWeek, eachDayOfInterval,
   addWeeks, subWeeks, isToday, getDay, isSameDay,
   differenceInCalendarDays, parseISO, isWeekend,
+  startOfMonth, endOfMonth, addMonths, subMonths,
 } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
