@@ -288,9 +288,12 @@ export function MeetTeamSection() {
   }
 
   const filtered = members.filter(m => {
+    // Non-admins never see draft profiles
+    if (m.is_draft && !isMasterAdmin && !isAdmin) return false;
     const matchSearch = !search ||
       m.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      m.job_title?.toLowerCase().includes(search.toLowerCase());
+      m.job_title?.toLowerCase().includes(search.toLowerCase()) ||
+      (m.is_draft && "draft".includes(search.toLowerCase()));
     const matchLevel = filterLevel === "all" || m.level === filterLevel;
     return matchSearch && matchLevel;
   });
