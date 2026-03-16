@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Settings2,
   CalendarOff, UserCheck, X, Check, Clock, Pencil,
-  PlaneTakeoff, AlertCircle,
+  PlaneTakeoff, AlertCircle, GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
