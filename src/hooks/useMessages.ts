@@ -263,6 +263,25 @@ export function useMessages(threadId: string | null) {
   };
 
   const toggleReaction = async (messageId: string, userId: string, emoji: string) => {
+    // Optimistically update local state immediately
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      const current = (m.reactions as Record<string, string[]> | null) ?? {};
+      const existing = current[emoji] ?? [];
+      const hasReacted = existing.includes(userId);
+      const updated = hasReacted
+        ? existing.filter(id => id !== userId)
+        : [...existing, userId];
+      const newReactions = { ...current };
+      if (updated.length === 0) {
+        delete newReactions[emoji];
+      } else {
+        newReactions[emoji] = updated;
+      }
+      return { ...m, reactions: newReactions };
+    }));
+
+    // Persist: toggle in message_reactions table
     const { data: existing } = await supabase
       .from("message_reactions")
       .select("id")
@@ -276,6 +295,19 @@ export function useMessages(threadId: string | null) {
     } else {
       await supabase.from("message_reactions").insert({ message_id: messageId, user_id: userId, emoji });
     }
+
+    // Sync the reactions JSON column on the messages row so other clients see it via realtime
+    const { data: allReactions } = await supabase
+      .from("message_reactions")
+      .select("emoji, user_id")
+      .eq("message_id", messageId);
+
+    const reactionsMap: Record<string, string[]> = {};
+    for (const r of allReactions ?? []) {
+      if (!reactionsMap[r.emoji]) reactionsMap[r.emoji] = [];
+      reactionsMap[r.emoji].push(r.user_id);
+    }
+    await supabase.from("messages").update({ reactions: reactionsMap } as never).eq("id", messageId);
   };
 
   const toggleStar = async (messageId: string, currentlyStarred: boolean) => {
