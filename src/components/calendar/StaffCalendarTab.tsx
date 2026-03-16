@@ -1305,9 +1305,11 @@ export function StaffCalendarTab({
   canEdit: boolean;
   userId: string | null;
 }) {
+  const [calView, setCalView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
+  const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()));
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
