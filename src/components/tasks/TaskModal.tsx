@@ -253,10 +253,18 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     setCompleting(true);
 
     // Mark the task complete
-    await supabase.from("tasks").update({
+    const completionPatch = {
       status: "completed",
       completed_at: new Date().toISOString(),
-    } as any).eq("id", task.id);
+    };
+    if (!navigator.onLine) {
+      // Optimistic — update local state visually, queue the write
+      setCompleted(true);
+      await enqueue("tasks", "update", completionPatch as Record<string, unknown>, { id: task.id });
+      syncCtx?.notifyQueued();
+    } else {
+      await supabase.from("tasks").update(completionPatch as any).eq("id", task.id);
+    }
 
     // Notify task completion
     await notifySection("tasks", {
