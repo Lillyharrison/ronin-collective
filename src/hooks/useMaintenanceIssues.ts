@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { enqueue } from "@/lib/offlineDB";
+import { OfflineSyncContext } from "@/hooks/useOfflineSync";
 
 export type IssuePriority = "urgent" | "high" | "medium" | "low";
 export type IssueStatus = "reported" | "approved" | "assigned" | "scheduled" | "in_progress" | "resolved";
