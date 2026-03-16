@@ -143,9 +143,9 @@ const DEPT_COLORS: Record<string, string> = {
 // Default section permissions based on level
 function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
-    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location"],
-    extended_family: ["dashboard","messages","calendar","profile","achievements"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location"],
+    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
+    extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
     staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements"],
   };
   const allowed = base[level] || base["staff"];
