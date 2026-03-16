@@ -41,7 +41,12 @@ export function ChatView({
   threadId, threadTitle, threadType, participants, currentUserId, isAdmin, onBack, isAgentThread,
 }: ChatViewProps) {
   const { language } = useLanguage();
-  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, toggleStar, deleteMessage } = useMessages(threadId);
+  const { messages, loading, loadingOlder, hasMore, sendMessage, sendMediaMessage, markAsRead, toggleReaction, toggleStar, deleteMessage, loadOlderMessages } = useMessages(threadId);
+
+  // Resolve current user's display name for typing indicator
+  const currentUserName = participants.find(p => p.id === currentUserId)?.full_name ?? null;
+  const { typingLabel, sendTyping, clearTyping } = useTypingIndicator(threadId, currentUserId, currentUserName);
+
   const DRAFT_KEY = `chat_draft_${threadId}`;
   const [input, setInput] = useState(() => localStorage.getItem(DRAFT_KEY) ?? "");
   const [sending, setSending] = useState(false);
@@ -59,13 +64,64 @@ export function ChatView({
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  // Track scroll position to avoid jumping when older messages prepended
+  const prevScrollHeightRef = useRef<number>(0);
+  const prevScrollTopRef = useRef<number>(0);
+
+  // Scroll to bottom on initial load only
+  useEffect(() => {
+    if (!loading && messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+    }
+  }, [loading]);
+
+  // Smooth scroll to bottom when NEW messages arrive (not older ones prepended)
+  const prevLengthRef = useRef(0);
+  useEffect(() => {
+    if (messages.length > prevLengthRef.current) {
+      const added = messages.length - prevLengthRef.current;
+      // If only 1 new message at the end (real-time or sent), scroll down
+      if (added <= 2) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+    prevLengthRef.current = messages.length;
+  }, [messages.length]);
+
+  // Preserve scroll position after older messages prepended
+  useEffect(() => {
+    if (loadingOlder) {
+      const el = scrollContainerRef.current;
+      if (el) {
+        prevScrollHeightRef.current = el.scrollHeight;
+        prevScrollTopRef.current = el.scrollTop;
+      }
+    }
+  }, [loadingOlder]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!loadingOlder) {
+      const el = scrollContainerRef.current;
+      if (el && prevScrollHeightRef.current > 0) {
+        const newScrollHeight = el.scrollHeight;
+        el.scrollTop = prevScrollTopRef.current + (newScrollHeight - prevScrollHeightRef.current);
+        prevScrollHeightRef.current = 0;
+      }
+    }
+  }, [loadingOlder, messages]);
+
+  // Infinite scroll — trigger load when user scrolls near the top
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    if (el.scrollTop < 80 && hasMore && !loadingOlder) {
+      loadOlderMessages();
+    }
+  }, [hasMore, loadingOlder, loadOlderMessages]);
 
   useEffect(() => {
     if (currentUserId && messages.length > 0) {
