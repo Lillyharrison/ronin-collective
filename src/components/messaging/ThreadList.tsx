@@ -124,15 +124,47 @@ function SwipeRow({
         className="absolute inset-y-0 right-0 flex"
         style={{ width: totalActionWidth }}
       >
+        {/* Mute button */}
+        <button
+          onClick={() => { onMute(); setOpenSwipeId(null); }}
+          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.4)]"
+          style={{ width: ACTION_WIDTH }}
+        >
+          {isMuted
+            ? <Bell size={20} className="text-white" />
+            : <BellOff size={20} className="text-white" />}
+          <span className="text-[11px] text-white font-medium">
+            {isMuted
+              ? (language === "es" ? "Activar" : "Unmute")
+              : (language === "es" ? "Silenciar" : "Mute")}
+          </span>
+        </button>
+
+        {/* Archive button */}
+        <button
+          onClick={() => { onArchive(); setOpenSwipeId(null); }}
+          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.55)]"
+          style={{ width: ACTION_WIDTH }}
+        >
+          {isArchived
+            ? <ArchiveRestore size={20} className="text-white" />
+            : <Archive size={20} className="text-white" />}
+          <span className="text-[11px] text-white font-medium">
+            {isArchived
+              ? (language === "es" ? "Restaurar" : "Unarchive")
+              : (language === "es" ? "Archivar" : "Archive")}
+          </span>
+        </button>
+
         {/* Pin button */}
         <button
           onClick={() => { onPin(); setOpenSwipeId(null); }}
-          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.5)]"
+          className="flex flex-col items-center justify-center gap-1 flex-1 bg-[hsl(var(--muted-foreground)/0.7)]"
           style={{ width: ACTION_WIDTH }}
         >
           {isPinned
-            ? <PinOff size={22} className="text-white" />
-            : <Pin size={22} className="text-white" />}
+            ? <PinOff size={20} className="text-white" />
+            : <Pin size={20} className="text-white" />}
           <span className="text-[11px] text-white font-medium">
             {isPinned
               ? (language === "es" ? "Desanclar" : "Unpin")
@@ -147,7 +179,7 @@ function SwipeRow({
             className="flex flex-col items-center justify-center gap-1 flex-1 bg-destructive"
             style={{ width: ACTION_WIDTH }}
           >
-            <Trash2 size={22} className="text-destructive-foreground" />
+            <Trash2 size={20} className="text-destructive-foreground" />
             <span className="text-[11px] text-destructive-foreground font-medium">
               {language === "es" ? "Eliminar" : "Delete"}
             </span>
