@@ -87,6 +87,7 @@ const RONIN_TAB_CONFIG: Record<RoninTab, { label: string; icon: React.ReactNode;
   birthdays:    { label: "Birthdays",   icon: <Cake size={12} />,        color: "text-pink-400",        bg: "bg-pink-500/15 border-pink-500/30" },
   maintenance:  { label: "Maintenance", icon: <Wrench size={12} />,      color: "text-amber-400",       bg: "bg-amber-500/15 border-amber-500/30" },
   deliveries:   { label: "Deliveries",  icon: <Package size={12} />,     color: "text-emerald-400",     bg: "bg-emerald-500/15 border-emerald-500/30" },
+  travel:       { label: "Travel",      icon: <Plane size={12} />,       color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
   staff:        { label: "Staff",       icon: <UserCheck size={12} />,   color: "text-blue-400",        bg: "bg-blue-500/15 border-blue-500/30" },
 };
 
