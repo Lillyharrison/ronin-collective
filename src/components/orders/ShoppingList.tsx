@@ -268,9 +268,9 @@ export function ShoppingList() {
                     {canDelete && (
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-1 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>

@@ -246,9 +246,9 @@ export function NotificationsPanel({ open, onClose }: Props) {
 
                     <button
                       onClick={(e) => deleteNotification(n.id, e)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-foreground flex-shrink-0 mt-0.5"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 );

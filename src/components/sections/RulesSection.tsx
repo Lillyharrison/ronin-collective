@@ -342,8 +342,8 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
               <Pencil size={13} />
             </button>
             {isMasterAdmin && (
-              <button onClick={() => onDelete(rule.id)} className="p-1.5 rounded-lg hover:bg-black/10 transition-colors text-destructive">
-                <Trash2 size={13} />
+              <button onClick={() => onDelete(rule.id)} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors text-destructive">
+                <Trash2 size={16} />
               </button>
             )}
           </div>
