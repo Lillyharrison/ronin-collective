@@ -179,6 +179,7 @@ export function ChatView({
     const text = input.trim();
     if (!text || sending) return;
     clearDraft();
+    clearTyping();
     setSending(true);
 
     if (isAgentThread) {
