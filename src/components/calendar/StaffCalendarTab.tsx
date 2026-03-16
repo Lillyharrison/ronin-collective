@@ -1644,10 +1644,11 @@ export function StaffCalendarTab({
       },
       bodyStyles: {
         fontSize: 7.5,
-        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+        cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
         overflow: "linebreak",
         lineWidth: 0.1,
         lineColor: [200, 200, 200],
+        minCellHeight: 14,
       },
       columnStyles: {
         0: { cellWidth: staffColW },
@@ -1658,27 +1659,24 @@ export function StaffCalendarTab({
         const pdfRow = pdfRows[data.row.index];
         if (!pdfRow) return;
 
-        // Separator row: white bg, minimal height, no borders
+        // Separator row: white bg, 3pt height, no borders
         if (pdfRow.isSeparator) {
           data.cell.styles.fillColor = [255, 255, 255];
           data.cell.styles.textColor = [255, 255, 255];
-          data.cell.styles.fontSize = 3;
+          data.cell.styles.fontSize = 1;
           data.cell.styles.cellPadding = { top: 1, bottom: 1, left: 0, right: 0 };
           data.cell.styles.lineWidth = 0;
+          data.cell.styles.minCellHeight = 3;
           return;
         }
 
-        // Staff name column (col 0): bold name, italic title in smaller font
+        // Staff name column (col 0): bold name — title drawn via didDrawCell
         if (data.column.index === 0) {
-          const person = staffToShow[pdfRow.staffIndex];
-          if (person?.job_title) {
-            // Name is rendered bold by column style; title will be added via didDrawCell
-            data.cell.styles.fontStyle = "bold";
-          }
+          data.cell.styles.fontStyle = "bold";
           return;
         }
 
-        // Shift cells: apply property color
+        // Shift cells: apply property bg + text color
         const person = staffToShow[pdfRow.staffIndex];
         if (!person) return;
         const day = weekDays[data.column.index - 1];
@@ -1688,36 +1686,37 @@ export function StaffCalendarTab({
         );
         if (dayShifts.length > 0) {
           const col = getExportPropColor(dayShifts[0].property_id);
-          const r2 = parseInt(col.bg.slice(0, 2), 16);
-          const g2 = parseInt(col.bg.slice(2, 4), 16);
-          const b2 = parseInt(col.bg.slice(4, 6), 16);
-          data.cell.styles.fillColor = [r2, g2, b2];
-          const tr = parseInt(col.text.slice(0, 2), 16);
-          const tg = parseInt(col.text.slice(2, 4), 16);
-          const tb = parseInt(col.text.slice(4, 6), 16);
-          data.cell.styles.textColor = [tr, tg, tb];
+          data.cell.styles.fillColor = [
+            parseInt(col.bg.slice(0, 2), 16),
+            parseInt(col.bg.slice(2, 4), 16),
+            parseInt(col.bg.slice(4, 6), 16),
+          ];
+          data.cell.styles.textColor = [
+            parseInt(col.text.slice(0, 2), 16),
+            parseInt(col.text.slice(2, 4), 16),
+            parseInt(col.text.slice(4, 6), 16),
+          ];
         }
       },
       didDrawCell: (data) => {
-        // Render job title in smaller italic text below the name in col 0
+        // Draw job title in smaller italic grey text directly below the bold name
         if (data.section !== "body" || data.column.index !== 0) return;
         const pdfRow = pdfRows[data.row.index];
         if (!pdfRow || pdfRow.isSeparator) return;
         const person = staffToShow[pdfRow.staffIndex];
         if (!person?.job_title) return;
 
-        const lines = getDisplayName(person).split("\n");
-        const nameLines = lines.length;
-        // Draw job title line below the name
-        const titleY = data.cell.y + 2 + nameLines * 3.2 + 1.5;
+        // Name baseline is at y + top-padding + font-size-in-mm
+        // 7.5pt ≈ 2.6mm; top padding = 2.5mm
+        const nameBaselineY = data.cell.y + 2.5 + 2.6;
+        const titleY = nameBaselineY + 3.5; // 3.5mm gap below name baseline
         doc.setFontSize(5.5);
         doc.setFont("helvetica", "italic");
-        doc.setTextColor(120, 120, 120);
-        doc.text(person.job_title, data.cell.x + 2, titleY, {
-          maxWidth: staffColW - 4,
-        });
-        // Reset font
+        doc.setTextColor(110, 110, 110);
+        doc.text(person.job_title, data.cell.x + 2, titleY, { maxWidth: staffColW - 4 });
+        // Reset
         doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
         doc.setFontSize(7.5);
       },
       margin: { left: marginL, right: marginR },
