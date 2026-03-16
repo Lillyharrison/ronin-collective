@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMessages } from "@/hooks/useMessages";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInfoPanel } from "./ChatInfoPanel";
@@ -8,7 +9,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   ArrowLeft, Send, Loader2, Camera, Mic, MicOff,
-  Users, Bot, User, Plus, Image, ScanSearch, Smile, Search, X,
+  Users, Bot, User, Plus, Image, ScanSearch, Smile, Search, X, ChevronUp,
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
@@ -40,7 +41,12 @@ export function ChatView({
   threadId, threadTitle, threadType, participants, currentUserId, isAdmin, onBack, isAgentThread,
 }: ChatViewProps) {
   const { language } = useLanguage();
-  const { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, toggleStar, deleteMessage } = useMessages(threadId);
+  const { messages, loading, loadingOlder, hasMore, sendMessage, sendMediaMessage, markAsRead, toggleReaction, toggleStar, deleteMessage, loadOlderMessages } = useMessages(threadId);
+
+  // Resolve current user's display name for typing indicator
+  const currentUserName = participants.find(p => p.id === currentUserId)?.full_name ?? null;
+  const { typingLabel, sendTyping, clearTyping } = useTypingIndicator(threadId, currentUserId, currentUserName);
+
   const DRAFT_KEY = `chat_draft_${threadId}`;
   const [input, setInput] = useState(() => localStorage.getItem(DRAFT_KEY) ?? "");
   const [sending, setSending] = useState(false);
@@ -58,13 +64,64 @@ export function ChatView({
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  // Track scroll position to avoid jumping when older messages prepended
+  const prevScrollHeightRef = useRef<number>(0);
+  const prevScrollTopRef = useRef<number>(0);
+
+  // Scroll to bottom on initial load only
+  useEffect(() => {
+    if (!loading && messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+    }
+  }, [loading]);
+
+  // Smooth scroll to bottom when NEW messages arrive (not older ones prepended)
+  const prevLengthRef = useRef(0);
+  useEffect(() => {
+    if (messages.length > prevLengthRef.current) {
+      const added = messages.length - prevLengthRef.current;
+      // If only 1 new message at the end (real-time or sent), scroll down
+      if (added <= 2) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+    prevLengthRef.current = messages.length;
+  }, [messages.length]);
+
+  // Preserve scroll position after older messages prepended
+  useEffect(() => {
+    if (loadingOlder) {
+      const el = scrollContainerRef.current;
+      if (el) {
+        prevScrollHeightRef.current = el.scrollHeight;
+        prevScrollTopRef.current = el.scrollTop;
+      }
+    }
+  }, [loadingOlder]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!loadingOlder) {
+      const el = scrollContainerRef.current;
+      if (el && prevScrollHeightRef.current > 0) {
+        const newScrollHeight = el.scrollHeight;
+        el.scrollTop = prevScrollTopRef.current + (newScrollHeight - prevScrollHeightRef.current);
+        prevScrollHeightRef.current = 0;
+      }
+    }
+  }, [loadingOlder, messages]);
+
+  // Infinite scroll — trigger load when user scrolls near the top
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    if (el.scrollTop < 80 && hasMore && !loadingOlder) {
+      loadOlderMessages();
+    }
+  }, [hasMore, loadingOlder, loadOlderMessages]);
 
   useEffect(() => {
     if (currentUserId && messages.length > 0) {
@@ -122,6 +179,7 @@ export function ChatView({
     const text = input.trim();
     if (!text || sending) return;
     clearDraft();
+    clearTyping();
     setSending(true);
 
     if (isAgentThread) {
@@ -414,11 +472,33 @@ export function ChatView({
 
       {/* Messages area — fills remaining flex space, scrolls independently */}
       <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-3 py-3 space-y-1 min-h-0"
         style={{
           backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
         }}
       >
+        {/* Load older messages indicator */}
+        {loadingOlder && (
+          <div className="flex items-center justify-center py-3">
+            <Loader2 size={16} className="animate-spin text-muted-foreground" />
+            <span className="text-xs text-muted-foreground ml-2">
+              {language === "es" ? "Cargando mensajes..." : "Loading messages..."}
+            </span>
+          </div>
+        )}
+        {hasMore && !loadingOlder && (
+          <div className="flex justify-center py-2">
+            <button
+              onClick={loadOlderMessages}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-card/80 border border-border/60 rounded-full px-3 py-1.5 transition-colors"
+            >
+              <ChevronUp size={12} />
+              {language === "es" ? "Cargar mensajes anteriores" : "Load older messages"}
+            </button>
+          </div>
+        )}
         {loading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 size={20} className="animate-spin text-muted-foreground" />
@@ -470,6 +550,23 @@ export function ChatView({
             ))}
           </div>
         ))}
+
+        {/* Human typing indicator — other participants */}
+        {typingLabel && !isAgentThread && (
+          <div className="flex items-end gap-2 mb-1">
+            <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="text-[10px] text-muted-foreground italic">{typingLabel}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {(agentTyping || agentAnalyzing) && (
           <div className="flex items-end gap-2 mb-1">
             <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
@@ -572,7 +669,7 @@ export function ChatView({
                   : (language === "es" ? "Escribe un mensaje..." : "Type a message...")
               }
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => { setInput(e.target.value); if (!isAgentThread) sendTyping(); }}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               disabled={sending || recording || agentAnalyzing}
             />
