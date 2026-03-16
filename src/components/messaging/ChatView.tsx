@@ -12,6 +12,19 @@ import {
 } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
+/** Read the duration of an audio blob before upload */
+async function getAudioDurationSec(blob: Blob): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(isFinite(audio.duration) ? audio.duration : null);
+    };
+    audio.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+  });
+}
+
 interface ChatViewProps {
   threadId: string;
   threadTitle: string;
