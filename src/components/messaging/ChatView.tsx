@@ -267,11 +267,13 @@ export function ChatView({
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setSending(true);
+        // Capture real duration BEFORE uploading
+        const durationSec = await getAudioDurationSec(blob);
         const path = `${currentUserId}/${Date.now()}_voice.webm`;
         const { data: uploaded } = await supabase.storage.from("chat-media").upload(path, blob);
         if (uploaded) {
           const { data: urlData } = supabase.storage.from("chat-media").getPublicUrl(uploaded.path);
-          await sendMediaMessage(urlData.publicUrl, "audio", currentUserId);
+          await sendMediaMessage(urlData.publicUrl, "audio", currentUserId, undefined, durationSec ?? undefined);
         }
         setSending(false);
       };
