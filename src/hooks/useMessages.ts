@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
-type Message = Tables<"messages"> & { sender_profile?: { full_name: string | null; avatar_url: string | null } };
+type Message = Tables<"messages"> & {
+  sender_profile?: { full_name: string | null; avatar_url: string | null };
+};
 
 export function useMessages(threadId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -17,18 +19,20 @@ export function useMessages(threadId: string | null) {
       .eq("thread_id", threadId)
       .order("created_at", { ascending: true })
       .limit(200);
-    
+
     if (data) {
       const senderIds = [...new Set(data.filter(m => m.sender_id).map(m => m.sender_id!))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, avatar_url")
         .in("id", senderIds);
-      
+
       const profileMap = new Map(profiles?.map(p => [p.id, p]) ?? []);
       const enriched = data.map(m => ({
         ...m,
-        sender_profile: m.sender_id ? profileMap.get(m.sender_id) ?? { full_name: null, avatar_url: null } : undefined,
+        sender_profile: m.sender_id
+          ? profileMap.get(m.sender_id) ?? { full_name: null, avatar_url: null }
+          : undefined,
       }));
       setMessages(enriched);
     }
@@ -58,9 +62,7 @@ export function useMessages(threadId: string | null) {
           if (profile) newMsg.sender_profile = profile;
         }
         setMessages(prev => {
-          // Exact duplicate guard
           if (prev.find(m => m.id === newMsg.id)) return prev;
-          // Replace optimistic placeholder if it matches (same sender + same text within a few seconds)
           const optimisticIdx = prev.findIndex(m =>
             m.id.startsWith("optimistic-") &&
             m.sender_id === newMsg.sender_id &&
@@ -98,7 +100,6 @@ export function useMessages(threadId: string | null) {
 
   const sendMessage = async (content: string, senderId: string) => {
     if (!threadId) return;
-    // Optimistically add to local state immediately — realtime deduplication handles the real insert
     const optimisticId = `optimistic-${Date.now()}`;
     setMessages(prev => [...prev, {
       id: optimisticId,
@@ -108,11 +109,13 @@ export function useMessages(threadId: string | null) {
       delivery_status: "sent",
       created_at: new Date().toISOString(),
       is_ai_generated: false,
+      is_starred: false,
       reactions: null,
       seen_by: null,
       content_media_url: null,
       media_type: null,
       reply_to_id: null,
+      audio_duration_sec: null,
     } as Message]);
 
     const { data: msg } = await supabase.from("messages").insert({
@@ -123,14 +126,19 @@ export function useMessages(threadId: string | null) {
     }).select("id").single();
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
 
-    // Replace optimistic entry with real DB id once we get it back
     if (msg) {
       setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, id: msg.id } : m));
       triggerPushForThread(threadId, senderId, content);
     }
   };
 
-  const sendMediaMessage = async (mediaUrl: string, mediaType: string, senderId: string, caption?: string): Promise<string | null> => {
+  const sendMediaMessage = async (
+    mediaUrl: string,
+    mediaType: string,
+    senderId: string,
+    caption?: string,
+    audioDurationSec?: number,
+  ): Promise<string | null> => {
     if (!threadId) return null;
     const { data: msg } = await supabase.from("messages").insert({
       thread_id: threadId,
@@ -139,13 +147,14 @@ export function useMessages(threadId: string | null) {
       content_text: caption || null,
       sender_id: senderId,
       delivery_status: "sent",
-    }).select("id").single();
+      ...(audioDurationSec != null ? { audio_duration_sec: audioDurationSec } : {}),
+    } as never).select("id").single();
     await supabase.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
     if (msg) triggerPushForThread(threadId, senderId, caption ?? "📎 Media");
     return msg?.id ?? null;
   };
 
-  /** Fire-and-forget: fetch thread participants and call the push edge function */
+  /** Fire-and-forget push notification */
   async function triggerPushForThread(tId: string, senderId: string, text: string) {
     try {
       const { data: thread } = await supabase
@@ -186,29 +195,31 @@ export function useMessages(threadId: string | null) {
     } catch {/* non-critical */}
   }
 
+  /**
+   * Batch markAsRead — single RPC call instead of N individual updates.
+   * Uses the batch_mark_messages_seen DB function created in migration.
+   */
   const markAsRead = async (userId: string) => {
     if (!threadId) return;
-    const unread = messages.filter(m => m.sender_id !== userId && !(m.seen_by ?? []).includes(userId));
+    const unread = messages.filter(
+      m => m.sender_id !== userId && !(m.seen_by ?? []).includes(userId)
+    );
     if (!unread.length) return;
-    const unreadIds = unread.map(m => m.id);
-    // Single batch update instead of one per message
-    await supabase
-      .from("messages")
-      .update({ delivery_status: "read" })
-      .in("id", unreadIds);
-    // Update seen_by for each optimistically in state
+    const unreadIds = unread.map(m => m.id).filter(id => !id.startsWith("optimistic-"));
+    if (!unreadIds.length) return;
+
+    // Optimistic local update immediately
     setMessages(prev => prev.map(m =>
       unreadIds.includes(m.id)
         ? { ...m, seen_by: [...(m.seen_by ?? []), userId], delivery_status: "read" }
         : m
     ));
-    // Best-effort DB seen_by update (array_append isn't available via JS client, so update each)
-    // But we batch them in parallel rather than serially
-    await Promise.all(unread.map(msg =>
-      supabase.from("messages").update({
-        seen_by: [...(msg.seen_by ?? []), userId],
-      }).eq("id", msg.id)
-    ));
+
+    // Single batched RPC — replaces the previous N-query loop
+    await supabase.rpc("batch_mark_messages_seen", {
+      _message_ids: unreadIds,
+      _user_id: userId,
+    });
   };
 
   const toggleReaction = async (messageId: string, userId: string, emoji: string) => {
@@ -219,7 +230,7 @@ export function useMessages(threadId: string | null) {
       .eq("user_id", userId)
       .eq("emoji", emoji)
       .maybeSingle();
-    
+
     if (existing) {
       await supabase.from("message_reactions").delete().eq("id", existing.id);
     } else {
@@ -227,11 +238,23 @@ export function useMessages(threadId: string | null) {
     }
   };
 
+  /** Toggle is_starred on a message — persisted to DB */
+  const toggleStar = async (messageId: string, currentlyStarred: boolean) => {
+    const next = !currentlyStarred;
+    // Optimistic
+    setMessages(prev => prev.map(m => m.id === messageId ? { ...m, is_starred: next } : m));
+    await supabase.from("messages").update({ is_starred: next } as never).eq("id", messageId);
+  };
+
   const deleteMessage = async (messageId: string) => {
-    // Optimistically remove from UI immediately
     setMessages(prev => prev.filter(m => m.id !== messageId));
     await supabase.from("messages").delete().eq("id", messageId);
   };
 
-  return { messages, loading, sendMessage, sendMediaMessage, markAsRead, toggleReaction, deleteMessage, refetch: fetchMessages };
+  return {
+    messages, loading,
+    sendMessage, sendMediaMessage,
+    markAsRead, toggleReaction, toggleStar, deleteMessage,
+    refetch: fetchMessages,
+  };
 }
