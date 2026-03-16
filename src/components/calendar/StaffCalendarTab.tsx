@@ -1312,6 +1312,14 @@ export function StaffCalendarTab({
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
 
   const dragRef = useRef<DisplayShift | null>(null);
+  const rowDragRef = useRef<string | null>(null); // staff_id being row-dragged
+  const [rowDragOver, setRowDragOver] = useState<string | null>(null); // staff_id hovered over
+
+  // Persistent staff order (localStorage)
+  const [staffOrder, setStaffOrder] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("ronin_staff_order") ?? "[]"); }
+    catch { return []; }
+  });
 
   const {
     schedules, shifts, leaveRequests, loading, refetch,
