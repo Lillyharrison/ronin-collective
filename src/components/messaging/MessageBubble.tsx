@@ -3,10 +3,18 @@ import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import {
   Check, CheckCheck, Bot, Play, Pause, Trash2, CheckCircle, XCircle,
-  Copy, Reply, Forward, Info, Star, MoreHorizontal, X,
+  Copy, Reply, Forward, Info, Star, MoreHorizontal, X, Share2,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
+
+/** Parse a forwarded WhatsApp message: `FWDWA::SenderName::actual content` */
+function parseForwarded(text: string): { sender: string; body: string } | null {
+  if (!text.startsWith("FWDWA::")) return null;
+  const parts = text.slice(7).split("::");
+  if (parts.length < 2) return null;
+  return { sender: parts[0], body: parts.slice(1).join("::") };
+}
 
 /** Lazy-loaded image with a skeleton placeholder so layout doesn't jump */
 function ImageWithSkeleton({ src, onClick }: { src: string; onClick: () => void }) {
