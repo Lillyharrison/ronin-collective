@@ -468,7 +468,9 @@ export function MessageBubble({
         <div className="max-w-[78%] relative group" ref={bubbleRef}>
           <div
             className={cn(
-              "rounded-2xl px-3 py-2 text-sm leading-relaxed select-none transition-transform active:scale-[0.97]",
+              "rounded-2xl text-sm leading-relaxed select-none transition-transform active:scale-[0.97]",
+              // Tighter padding for image-only messages
+              message.media_type === "image" && !message.content_text ? "p-1" : "px-3 py-2",
               isOwn
                 ? "bg-[hsl(var(--status-done))] text-primary-foreground rounded-br-sm"
                 : isAI
