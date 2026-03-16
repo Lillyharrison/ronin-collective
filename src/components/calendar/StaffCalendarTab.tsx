@@ -1492,7 +1492,11 @@ export function StaffCalendarTab({
 
   function getExportPropColor(propId: string | null) {
     if (!propId) return EXPORT_PROP_COLORS[EXPORT_PROP_COLORS.length - 1];
-    const idx = properties.findIndex((p) => p.id === propId);
+    const idxMontanan = properties.findIndex((p) => p.name.toLowerCase().includes("montan"));
+    const idxMoreno   = properties.findIndex((p) => p.name.toLowerCase().includes("moreno"));
+    let idx = properties.findIndex((p) => p.id === propId);
+    if (idx === idxMontanan && idxMoreno !== -1) idx = idxMoreno;
+    else if (idx === idxMoreno && idxMontanan !== -1) idx = idxMontanan;
     return EXPORT_PROP_COLORS[Math.abs(idx) % EXPORT_PROP_COLORS.length];
   }
 
@@ -1511,8 +1515,8 @@ export function StaffCalendarTab({
               const prop = properties.find((p) => p.id === s.property_id);
               const name = prop?.name ?? "—";
               const time = s.start_time ? formatTime(s.start_time) : "";
-              return time ? `${name} ${time}` : name;
-            }).join(", ");
+              return time ? `${name}\n${time}` : name;
+            }).join("\n");
       });
       return row;
     });
@@ -1521,10 +1525,15 @@ export function StaffCalendarTab({
   const handleExportExcel = () => {
     const rows = buildExportRows();
     const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
-    const ws = XLSX.utils.json_to_sheet(rows, { header: ["Staff", ...dayHeaders] });
+    // Excel: replace \n with space for cleaner single-line display
+    const excelRows = rows.map((row) => {
+      const r: Record<string, string> = { Staff: row["Staff"] };
+      dayHeaders.forEach((h) => { r[h] = (row[h] ?? "").replace(/\n/g, " "); });
+      return r;
+    });
+    const ws = XLSX.utils.json_to_sheet(excelRows, { header: ["Staff", ...dayHeaders] });
 
     // Style header row
-    const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: "1C1D20" } }, font2: { color: { rgb: "F5F0E8" } } };
     ["A1", ...dayHeaders.map((_, i) => `${String.fromCharCode(66 + i)}1`)].forEach((cell) => {
       if (ws[cell]) ws[cell].s = { font: { bold: true, color: { rgb: "F5F0E8" } }, fill: { patternType: "solid", fgColor: { rgb: "1C1D20" } } };
     });
@@ -1544,7 +1553,6 @@ export function StaffCalendarTab({
       });
     });
 
-    // Column widths
     ws["!cols"] = [{ wch: 22 }, ...dayHeaders.map(() => ({ wch: 18 }))];
 
     const wb = XLSX.utils.book_new();
@@ -1554,21 +1562,48 @@ export function StaffCalendarTab({
   };
 
   const handleExportPDF = () => {
+    const pageWidth = 297; // A4 landscape mm
+    const marginL = 10;
+    const marginR = 10;
+    const usableWidth = pageWidth - marginL - marginR;
+    const staffColW = 32;
+    const dayColW = (usableWidth - staffColW) / 7;
+
     const doc = new jsPDF({ orientation: "landscape", format: "a4" });
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.text(`Staff Schedule — ${weekLabel}`, 14, 14);
+    doc.setFontSize(12);
+    doc.text(`Staff Schedule — ${weekLabel}`, marginL, 13);
 
     const dayHeaders = weekDays.map((d) => format(d, "EEE d/M"));
     const rows = buildExportRows();
 
+    // Build body as two-line cells: property name on line 1, time on line 2
+    const tableBody = rows.map((row) =>
+      ["Staff", ...dayHeaders].map((h) => row[h] ?? "")
+    );
+
     autoTable(doc, {
-      startY: 20,
+      startY: 18,
       head: [["Staff", ...dayHeaders]],
-      body: rows.map((row) => ["Staff", ...dayHeaders].map((h) => row[h] ?? "")),
-      headStyles: { fillColor: [28, 29, 32], textColor: [245, 240, 232], fontStyle: "bold", fontSize: 8 },
-      bodyStyles: { fontSize: 8 },
-      columnStyles: { 0: { cellWidth: 36 } },
+      body: tableBody,
+      headStyles: {
+        fillColor: [28, 29, 32],
+        textColor: [245, 240, 232],
+        fontStyle: "bold",
+        fontSize: 7.5,
+        cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+        overflow: "linebreak",
+        lineWidth: 0.1,
+        lineColor: [200, 200, 200],
+      },
+      columnStyles: {
+        0: { cellWidth: staffColW, fontStyle: "bold" },
+        ...Object.fromEntries(dayHeaders.map((_, i) => [i + 1, { cellWidth: dayColW }])),
+      },
       didParseCell: (data) => {
         if (data.section === "body" && data.column.index > 0) {
           const person = staffToShow[data.row.index];
@@ -1591,21 +1626,33 @@ export function StaffCalendarTab({
           }
         }
       },
-      margin: { left: 10, right: 10 },
+      margin: { left: marginL, right: marginR },
     });
 
-    // Legend
+    // ── Legend — wrap into 2 rows of ~half the properties each ──────────────
     const finalY = (doc as any).lastAutoTable?.finalY ?? 180;
-    doc.setFontSize(7);
+    const legendY = finalY + 7;
+    const itemsPerRow = Math.ceil(properties.length / 2);
+    const itemW = usableWidth / itemsPerRow;
+
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
+
     properties.forEach((p, i) => {
-      const col = EXPORT_PROP_COLORS[i % EXPORT_PROP_COLORS.length];
-      const x = 10 + i * 40;
-      const y = finalY + 8;
-      doc.setFillColor(parseInt(col.bg.slice(0, 2), 16), parseInt(col.bg.slice(2, 4), 16), parseInt(col.bg.slice(4, 6), 16));
-      doc.rect(x, y - 3, 5, 3, "F");
+      const row = Math.floor(i / itemsPerRow);
+      const col2 = i % itemsPerRow;
+      const x = marginL + col2 * itemW;
+      const y = legendY + row * 7;
+
+      const exportCol = EXPORT_PROP_COLORS[i % EXPORT_PROP_COLORS.length];
+      doc.setFillColor(
+        parseInt(exportCol.bg.slice(0, 2), 16),
+        parseInt(exportCol.bg.slice(2, 4), 16),
+        parseInt(exportCol.bg.slice(4, 6), 16)
+      );
+      doc.roundedRect(x, y - 3, 5, 3.5, 0.5, 0.5, "F");
       doc.setTextColor(60, 60, 60);
-      doc.text(p.name, x + 6, y);
+      doc.text(p.name, x + 6.5, y);
     });
 
     doc.save(`staff-schedule-${format(weekStart, "yyyy-MM-dd")}.pdf`);
