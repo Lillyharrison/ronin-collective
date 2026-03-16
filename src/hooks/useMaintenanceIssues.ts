@@ -58,6 +58,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
+  const syncCtx = useContext(OfflineSyncContext);
 
   const fetchCategories = useCallback(async () => {
     const { data } = await supabase
