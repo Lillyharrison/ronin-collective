@@ -1083,7 +1083,7 @@ function LeaveCard({
           <span className="text-xl flex-shrink-0">{typeConfig.emoji}</span>
           <div className="min-w-0">
             {canEdit && (
-              <p className="text-xs font-semibold truncate text-foreground">{person?.full_name ?? "Staff"}</p>
+              <p className="text-xs font-semibold truncate text-foreground">{getDisplayName(person, "Staff")}</p>
             )}
             <p className={cn("text-sm font-medium capitalize", typeConfig.color)}>{typeConfig.label}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
