@@ -45,6 +45,7 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   rules:                ["master_admin", "admin", "manager", "staff"],
   // Feature visibility — defaults to admin/manager only; staff must be granted explicitly
   "principal-location": ["master_admin", "admin", "manager", "principal"],
+  "family-calendar":    ["master_admin", "admin", "manager", "principal"],
 };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────

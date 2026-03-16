@@ -84,6 +84,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
   // ── Feature visibility toggles (not full sections) ──
   { key: "principal-location", label: "📍 Principal Location", labelEs: "📍 Ubicación del Principal", hasEdit: false, isFeature: true },
+  { key: "family-calendar",    label: "📅 Family Calendar",    labelEs: "📅 Calendario Familiar",     hasEdit: false, isFeature: true },
 ];
 
 // ─── Quick actions available on the dashboard ─────────────────────────────────
@@ -142,9 +143,9 @@ const DEPT_COLORS: Record<string, string> = {
 // Default section permissions based on level
 function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
-    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location"],
-    extended_family: ["dashboard","messages","calendar","profile","achievements"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location"],
+    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
+    extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location","family-calendar"],
     staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements"],
   };
   const allowed = base[level] || base["staff"];

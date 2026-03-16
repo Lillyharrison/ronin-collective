@@ -1172,11 +1172,12 @@ function RightPanel({
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
 export function CalendarSection() {
-  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee } = usePermissions();
   // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
+  const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
 
-  const [mode, setMode] = useState<CalendarMode>(isFamilyUser ? "family" : "ronin");
+  const [mode, setMode] = useState<CalendarMode>((isFamilyUser && canSeeFamilyCal) ? "family" : "ronin");
   const [roninTab, setRoninTab] = useState<RoninTab>("all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [familyEvents, setFamilyEvents] = useState<CalEvent[]>([]);
@@ -1451,15 +1452,17 @@ export function CalendarSection() {
       {/* Mode toggle + property filter on the same row */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit">
-          <button
-            onClick={() => setMode("family")}
-            className={cn(
-              "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-              mode === "family" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Globe size={14} /> Family
-          </button>
+          {canSeeFamilyCal && (
+            <button
+              onClick={() => setMode("family")}
+              className={cn(
+                "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+                mode === "family" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Globe size={14} /> Family
+            </button>
+          )}
           <button
             onClick={() => setMode("ronin")}
             className={cn(
