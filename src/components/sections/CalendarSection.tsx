@@ -1010,14 +1010,13 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
             <Select value={form.event_type} onValueChange={(v) => f("event_type", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>
-                    <span className="flex items-center gap-2">
-                      <span className={v.color}>{v.icon}</span>
-                      {v.label}
-                    </span>
-                  </SelectItem>
-                ))}
+                <SelectItem value="general">📅 General</SelectItem>
+                <SelectItem value="travel">✈️ Travel</SelectItem>
+                <SelectItem value="guest_stay">🏠 Guest Stay</SelectItem>
+                <SelectItem value="event">🎉 Event / Party</SelectItem>
+                <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
+                <SelectItem value="delivery">📦 Delivery</SelectItem>
+                <SelectItem value="birthday">🎂 Birthday</SelectItem>
               </SelectContent>
             </Select>
           </div>
