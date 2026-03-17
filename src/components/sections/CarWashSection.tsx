@@ -74,9 +74,10 @@ function fmtTime(t: string | null) {
 // ── Vehicle Card ──────────────────────────────────────────────────────────────
 
 function VehicleCard({
-  vehicle, onWash, onEdit, canEdit,
+  vehicle, nextBooking, onWash, onEdit, canEdit,
 }: {
   vehicle: Vehicle;
+  nextBooking: Booking | null;
   onWash: (v: Vehicle) => void;
   onEdit: (v: Vehicle) => void;
   canEdit: boolean;
@@ -84,6 +85,18 @@ function VehicleCard({
   const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 160) : null;
   const owner = vehicle.ownerProfile?.full_name ?? null;
   const location = vehicle.locationProperty?.name ?? null;
+
+  // Format the next scheduled wash date for the button label
+  const washLabel = nextBooking
+    ? format(parseISO(nextBooking.requested_date), "MMM d")
+    : null;
+  const washStatus = nextBooking?.status ?? null;
+
+  const btnStyle = washStatus === "confirmed"
+    ? "bg-blue-500/15 border-blue-500/30 text-blue-400"
+    : washStatus === "requested"
+    ? "bg-amber-500/15 border-amber-500/30 text-amber-400"
+    : "bg-gold/15 border-gold/30 text-gold";
 
   return (
     <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-3 py-3 group">
@@ -130,9 +143,10 @@ function VehicleCard({
         )}
         <button
           onClick={e => { e.stopPropagation(); onWash(vehicle); }}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold/15 hover:bg-gold/25 text-gold text-xs font-semibold border border-gold/30 transition-colors"
+          className={`flex flex-col items-center px-2.5 py-1.5 rounded-lg border transition-colors text-xs font-semibold leading-tight ${btnStyle}`}
         >
-          <Droplets size={12} /> Wash
+          <span className="flex items-center gap-1"><Droplets size={12} /> Wash</span>
+          {washLabel && <span className="text-[10px] font-normal opacity-80">{washLabel}</span>}
         </button>
       </div>
     </div>
