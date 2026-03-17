@@ -941,15 +941,23 @@ export function CarWashSection() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {vehicles.map(v => (
-              <VehicleCard
-                key={v.id}
-                vehicle={v}
-                onWash={setBookingVehicle}
-                onEdit={setEditVehicle}
-                canEdit={canEdit}
-              />
-            ))}
+            {vehicles.map(v => {
+              // Find the next upcoming/active booking for this vehicle
+              const today = format(new Date(), "yyyy-MM-dd");
+              const nextBooking = bookings
+                .filter(b => b.vehicle_id === v.id && (b.status === "requested" || b.status === "confirmed") && b.requested_date >= today)
+                .sort((a, b) => a.requested_date.localeCompare(b.requested_date))[0] ?? null;
+              return (
+                <VehicleCard
+                  key={v.id}
+                  vehicle={v}
+                  nextBooking={nextBooking}
+                  onWash={setBookingVehicle}
+                  onEdit={setEditVehicle}
+                  canEdit={canEdit}
+                />
+              );
+            })}
           </div>
         )}
       </div>
