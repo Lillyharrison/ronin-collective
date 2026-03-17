@@ -167,6 +167,7 @@ function BookWashDrawer({
   const [washType, setWashType] = useState<"quick_wash" | "full_detail">("quick_wash");
   const [date, setDate] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [time, setTime] = useState("10:00");
+  const [locationPropId, setLocationPropId] = useState(vehicle.property_id ?? "");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -179,7 +180,7 @@ function BookWashDrawer({
       requested_date: date,
       requested_time: time || null,
       wash_type: washType,
-      location_property_id: vehicle.property_id || null,
+      location_property_id: locationPropId || null,
       status: "requested",
       notes: notes || null,
       requested_by: userId,
@@ -190,6 +191,143 @@ function BookWashDrawer({
     onSaved();
     onClose();
   }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-2xl animate-slide-in-bottom"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        <div className="flex flex-col h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden">
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted border border-border flex items-center justify-center">
+                {img ? <img src={img} alt="" className="w-full h-full object-cover" /> : <Car size={20} className="text-muted-foreground" />}
+              </div>
+              <div>
+                <p className="font-semibold text-foreground text-sm">Book a Wash</p>
+                <p className="text-muted-foreground text-xs">{vehicle.year ? `${vehicle.year} ` : ""}{vehicle.make} {vehicle.model}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted transition-colors">
+              <X size={18} className="text-muted-foreground" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+            {/* Wash type */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Service Type</p>
+              <div className="grid grid-cols-2 gap-2">
+                {WASH_TYPES.map(wt => (
+                  <button
+                    key={wt.key}
+                    onClick={() => setWashType(wt.key as "quick_wash" | "full_detail")}
+                    className={`flex flex-col items-start gap-1 p-3 rounded-xl border transition-all text-left ${
+                      washType === wt.key
+                        ? "border-gold/60 bg-gold/10 text-gold"
+                        : "border-border bg-muted/30 text-muted-foreground hover:border-gold/30"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-semibold text-sm">
+                      {wt.icon} {wt.label}
+                    </span>
+                    <span className="text-[11px] opacity-70">{wt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Wash Location */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Wash Location
+              </label>
+              <p className="text-[11px] text-muted-foreground mb-2">Where will the car be washed? Select a different property if bringing it elsewhere.</p>
+              <div className="grid gap-2">
+                {properties.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setLocationPropId(p.id)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                      locationPropId === p.id
+                        ? "border-gold/60 bg-gold/10"
+                        : "border-border bg-muted/20 hover:border-gold/30"
+                    }`}
+                  >
+                    <MapPin size={14} className={locationPropId === p.id ? "text-gold" : "text-muted-foreground"} />
+                    <span className={`text-sm font-medium ${locationPropId === p.id ? "text-gold" : "text-foreground"}`}>{p.name}</span>
+                    {vehicle.property_id === p.id && (
+                      <span className="ml-auto text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">Home</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date & Time */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Preferred Date
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Preferred Time
+                </label>
+                <input
+                  type="time"
+                  value={time}
+                  onChange={e => setTime(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Notes (optional)
+              </label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Any special instructions…"
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gold/40 placeholder:text-muted-foreground"
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-4 border-t border-border">
+            <Button
+              onClick={handleSave}
+              disabled={saving || !date}
+              className="w-full bg-gold hover:bg-gold/90 text-charcoal font-bold h-11"
+            >
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <><Droplets size={16} /> Request Wash</>}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
   return (
     <>
