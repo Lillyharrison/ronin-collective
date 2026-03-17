@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from "date-fns";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Property { id: string; name: string; }
