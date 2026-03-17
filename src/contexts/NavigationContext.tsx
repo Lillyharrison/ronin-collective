@@ -49,6 +49,7 @@ const SECTION_TO_PATH: Record<ActiveSection, string> = {
   memory:          "/memory",
   alerts:          "/alerts",
   rules:           "/rules",
+  "car-wash":      "/car-wash",
 };
 
 const PATH_TO_SECTION: Record<string, ActiveSection> = Object.fromEntries(
