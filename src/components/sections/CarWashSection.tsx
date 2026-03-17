@@ -78,7 +78,7 @@ function VehicleCard({
   onEdit: (v: Vehicle) => void;
   canEdit: boolean;
 }) {
-  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url) : null;
+  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 128) : null;
   const owner = vehicle.ownerProfile?.full_name ?? "—";
   const location = vehicle.locationProperty?.name ?? "—";
 
