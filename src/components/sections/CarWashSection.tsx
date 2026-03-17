@@ -782,8 +782,8 @@ export function CarWashSection() {
         </div>
       </div>
 
-      {/* Vehicle list */}
-      <div className="px-4 space-y-2">
+      {/* Vehicle grid */}
+      <div className="px-4">
         {vehicles.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-20 h-20 rounded-full bg-muted/40 flex items-center justify-center mx-auto mb-4">
@@ -798,15 +798,17 @@ export function CarWashSection() {
             )}
           </div>
         ) : (
-          vehicles.map(v => (
-            <VehicleCard
-              key={v.id}
-              vehicle={v}
-              onWash={setBookingVehicle}
-              onEdit={setEditVehicle}
-              canEdit={canEdit}
-            />
-          ))
+          <div className="grid grid-cols-2 gap-3">
+            {vehicles.map(v => (
+              <VehicleCard
+                key={v.id}
+                vehicle={v}
+                onWash={setBookingVehicle}
+                onEdit={setEditVehicle}
+                canEdit={canEdit}
+              />
+            ))}
+          </div>
         )}
       </div>
 
