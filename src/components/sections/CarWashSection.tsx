@@ -788,7 +788,7 @@ export function CarWashSection() {
             )}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
             {vehicles.map(v => (
               <VehicleCard
                 key={v.id}
