@@ -538,15 +538,70 @@ function ScheduleView({
     const { error } = await db.from("car_wash_bookings").update(update).eq("id", booking.id);
     if (error) { toast.error("Failed to update"); return; }
     toast.success(status === "completed" ? "Marked complete! 🚗✨" : "Status updated");
+
+    // On completion — notify managers and all admins
+    if (status === "completed") {
+      const vehicleName = booking.vehicle
+        ? `${booking.vehicle.year ? booking.vehicle.year + " " : ""}${booking.vehicle.make} ${booking.vehicle.model}`
+        : "Vehicle";
+      const locationName = booking.locationProperty?.name ?? null;
+      const staffName = booking.assignedStaff?.full_name ?? "Staff";
+      const notifTitle = `🚗✨ Car Wash Complete`;
+      const notifBody = `${vehicleName} has been washed${locationName ? ` at ${locationName}` : ""} by ${staffName}.`;
+
+      // Fetch all admins, master_admins, managers to notify
+      const { data: roleRows } = await db
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["master_admin", "admin", "manager"]);
+
+      const uniqueIds = [...new Set<string>((roleRows ?? []).map((r: { user_id: string }) => r.user_id))];
+      if (uniqueIds.length > 0) {
+        const notifs = uniqueIds.map((uid: string) => ({
+          user_id: uid,
+          title: notifTitle,
+          body: notifBody,
+          type: "car_wash",
+          action_url: "car-wash",
+          entity_id: booking.id,
+          entity_type: "car_wash_booking",
+          property_id: booking.locationProperty
+            ? booking.location_property_id
+            : (booking.vehicle?.property_id ?? null),
+        }));
+        await db.from("notifications").insert(notifs);
+      }
+    }
+
     onRefresh();
   }
 
-  async function handleAssignStaff(bookingId: string, staffId: string) {
+  async function handleAssignStaff(bookingId: string, staffId: string, booking: Booking) {
     const { error } = await db.from("car_wash_bookings")
-      .update({ assigned_staff_id: staffId || null, status: "confirmed" })
+      .update({ assigned_staff_id: staffId || null, status: staffId ? "confirmed" : "requested" })
       .eq("id", bookingId);
     if (error) { toast.error("Failed to assign"); return; }
-    toast.success("Staff assigned & confirmed");
+    toast.success(staffId ? "Staff assigned & confirmed" : "Staff removed");
+
+    // Notify the assigned staff member
+    if (staffId) {
+      const vehicleName = booking.vehicle
+        ? `${booking.vehicle.year ? booking.vehicle.year + " " : ""}${booking.vehicle.make} ${booking.vehicle.model}`
+        : "a vehicle";
+      const dateStr = format(parseISO(booking.requested_date), "EEE, MMM d");
+      const locationName = booking.locationProperty?.name ?? null;
+      await db.from("notifications").insert({
+        user_id: staffId,
+        title: `🚿 Car Wash Assigned`,
+        body: `You've been assigned to wash ${vehicleName} on ${dateStr}${locationName ? ` at ${locationName}` : ""}.`,
+        type: "car_wash",
+        action_url: "car-wash",
+        entity_id: bookingId,
+        entity_type: "car_wash_booking",
+        property_id: booking.location_property_id ?? booking.vehicle?.property_id ?? null,
+      });
+    }
+
     onRefresh();
   }
 
@@ -658,7 +713,7 @@ function ScheduleView({
                             <div className="relative">
                               <select
                                 value={booking.assigned_staff_id ?? ""}
-                                onChange={e => handleAssignStaff(booking.id, e.target.value)}
+                                onChange={e => handleAssignStaff(booking.id, e.target.value, booking)}
                                 className="w-full h-8 pl-3 pr-7 rounded-lg border border-border bg-background text-foreground text-xs appearance-none focus:outline-none focus:ring-1 focus:ring-gold/40"
                               >
                                 <option value="">Assign staff…</option>
