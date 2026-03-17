@@ -155,7 +155,7 @@ function BookWashDrawer({
 
   async function handleSave() {
     setSaving(true);
-    const { error } = await supabase.from("car_wash_bookings" as never).insert({
+    const { error } = await db.from("car_wash_bookings").insert({
       vehicle_id: vehicle.id,
       requested_date: date,
       requested_time: time || null,
