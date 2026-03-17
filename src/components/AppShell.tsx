@@ -110,6 +110,7 @@ function ActiveSection() {
     case "memory":        return gated("memory",        <MemorySection />);
     case "alerts":        return <AlertsSection />;
     case "rules":         return gated("rules",         <RulesSection />);
+    case "car-wash":      return gated("car-wash",      <CarWashSection />);
     default:              return <Dashboard />;
   }
 }
