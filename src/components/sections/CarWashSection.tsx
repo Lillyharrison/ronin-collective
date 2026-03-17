@@ -494,7 +494,7 @@ function ScheduleView({
   }
 
   async function handleAssignStaff(bookingId: string, staffId: string) {
-    const { error } = await supabase.from("car_wash_bookings" as never)
+    const { error } = await db.from("car_wash_bookings")
       .update({ assigned_staff_id: staffId || null, status: "confirmed" })
       .eq("id", bookingId);
     if (error) { toast.error("Failed to assign"); return; }
