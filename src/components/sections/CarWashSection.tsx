@@ -151,7 +151,7 @@ function BookWashDrawer({
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url) : null;
+  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 128) : null;
 
   async function handleSave() {
     setSaving(true);
