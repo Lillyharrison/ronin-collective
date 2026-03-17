@@ -1928,7 +1928,8 @@ export function StaffCalendarTab({
       const x = marginL + col2 * itemW;
       const y = legendY + row * 7;
 
-      const exportCol = EXPORT_PROP_COLORS[i % EXPORT_PROP_COLORS.length];
+      // Use the same swap-aware function so legend matches the actual cell colors
+      const exportCol = getExportPropColor(p.id);
       doc.setFillColor(
         parseInt(exportCol.bg.slice(0, 2), 16),
         parseInt(exportCol.bg.slice(2, 4), 16),
