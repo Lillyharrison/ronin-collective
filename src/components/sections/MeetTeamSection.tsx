@@ -91,6 +91,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "calendar-deliveries",  label: "   ↳ Deliveries",           labelEs: "   ↳ Entregas",               hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-construction",label: "   ↳ Construction / Design",labelEs: "   ↳ Construcción / Diseño",  hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-staff",       label: "   ↳ Staff Schedule",       labelEs: "   ↳ Horario del Personal",   hasEdit: false, isFeature: true, isCalendarSub: true },
+  { key: "car-wash",             label: "   ↳ Car Wash",              labelEs: "   ↳ Lavado de Autos",        hasEdit: true,  isFeature: true, isCalendarSub: true },
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
 ];
