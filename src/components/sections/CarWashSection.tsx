@@ -249,25 +249,20 @@ function BookWashDrawer({
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
                 Wash Location
               </label>
-              <p className="text-[11px] text-muted-foreground mb-2">Where will the car be washed? Select a different property if bringing it elsewhere.</p>
-              <div className="grid gap-2">
-                {properties.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setLocationPropId(p.id)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
-                      locationPropId === p.id
-                        ? "border-gold/60 bg-gold/10"
-                        : "border-border bg-muted/20 hover:border-gold/30"
-                    }`}
-                  >
-                    <MapPin size={14} className={locationPropId === p.id ? "text-gold" : "text-muted-foreground"} />
-                    <span className={`text-sm font-medium ${locationPropId === p.id ? "text-gold" : "text-foreground"}`}>{p.name}</span>
-                    {vehicle.property_id === p.id && (
-                      <span className="ml-auto text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">Home</span>
-                    )}
-                  </button>
-                ))}
+              <div className="relative">
+                <select
+                  value={locationPropId}
+                  onChange={e => setLocationPropId(e.target.value)}
+                  className="w-full h-10 pl-3 pr-8 rounded-lg border border-border bg-background text-foreground text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-gold/40"
+                >
+                  <option value="">Select location…</option>
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{vehicle.property_id === p.id ? " (Home)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               </div>
             </div>
 
