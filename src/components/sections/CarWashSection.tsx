@@ -881,7 +881,7 @@ export function CarWashSection() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {vehicles.map(v => {
               // Find the next upcoming/active booking for this vehicle
               const today = format(new Date(), "yyyy-MM-dd");
