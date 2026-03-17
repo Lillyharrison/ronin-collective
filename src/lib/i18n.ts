@@ -62,6 +62,7 @@ export const translations = {
     memory: "Ronin's Memory",
     rules: "Rules",
     alerts: "Alerts",
+    carWash: "Car Wash",
 
     // Maintenance
     reportIssueTitle: "Report Issue",
