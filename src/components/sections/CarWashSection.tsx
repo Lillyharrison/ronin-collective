@@ -555,7 +555,7 @@ function ScheduleView({
                   const vehicleName = booking.vehicle
                     ? `${booking.vehicle.year ? booking.vehicle.year + " " : ""}${booking.vehicle.make} ${booking.vehicle.model}`
                     : "Unknown Vehicle";
-                  const vehicleImg = booking.vehicle?.photo_url ? imageUrl(booking.vehicle.photo_url) : null;
+                  const vehicleImg = booking.vehicle?.photo_url ? imageUrl(booking.vehicle.photo_url, 96) : null;
                   return (
                     <div key={booking.id} className="bg-card border border-border rounded-xl overflow-hidden">
                       <div className="flex items-center gap-3 px-4 py-3">
