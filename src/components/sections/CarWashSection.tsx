@@ -81,70 +81,58 @@ function VehicleCard({
   onEdit: (v: Vehicle) => void;
   canEdit: boolean;
 }) {
-  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 800, 440) : null;
+  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 160) : null;
   const owner = vehicle.ownerProfile?.full_name ?? null;
   const location = vehicle.locationProperty?.name ?? null;
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden group" style={{ height: 220 }}>
-      {/* Photo or placeholder */}
-      {img ? (
-        <img
-          src={img}
-          alt={`${vehicle.make} ${vehicle.model}`}
-          loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-          <Car size={48} className="text-muted-foreground/40" />
+    <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-3 py-3 group">
+      {/* Square thumbnail */}
+      <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden bg-muted border border-border flex items-center justify-center">
+        {img
+          ? <img src={img} alt={`${vehicle.make} ${vehicle.model}`} className="w-full h-full object-cover" />
+          : <Car size={24} className="text-muted-foreground/50" />
+        }
+      </div>
+
+      {/* Text details */}
+      <div className="flex-1 min-w-0">
+        <p className="text-foreground font-semibold text-sm leading-tight truncate">
+          {vehicle.make} {vehicle.model}
+          {vehicle.year ? <span className="text-muted-foreground font-normal text-xs"> {vehicle.year}</span> : null}
+        </p>
+        {vehicle.colour && (
+          <p className="text-muted-foreground text-xs mt-0.5 truncate">{vehicle.colour}</p>
+        )}
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {owner && (
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+              <User size={9} className="shrink-0" /> {owner}
+            </span>
+          )}
+          {location && (
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+              <MapPin size={9} className="shrink-0" /> {location}
+            </span>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-      {/* Admin edit button */}
-      {canEdit && (
-        <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {canEdit && (
           <button
             onClick={e => { e.stopPropagation(); onEdit(vehicle); }}
-            className="p-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
           >
             <Pencil size={13} />
           </button>
-        </div>
-      )}
-
-      {/* Bottom content */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-8 flex items-end justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-white font-bold text-sm leading-tight truncate">
-            {vehicle.make} {vehicle.model}
-            {vehicle.year ? <span className="font-normal opacity-60 ml-1 text-xs">{vehicle.year}</span> : null}
-          </p>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            {vehicle.colour && (
-              <span className="text-white/60 text-[11px]">{vehicle.colour}</span>
-            )}
-            {owner && (
-              <span className="flex items-center gap-1 text-[11px] text-white/60">
-                <User size={9} /> {owner}
-              </span>
-            )}
-            {location && (
-              <span className="flex items-center gap-1 text-[11px] text-white/60">
-                <MapPin size={9} /> {location}
-              </span>
-            )}
-          </div>
-        </div>
-
+        )}
         <button
           onClick={e => { e.stopPropagation(); onWash(vehicle); }}
-          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold/90 hover:bg-gold text-charcoal text-xs font-bold transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold/15 hover:bg-gold/25 text-gold text-xs font-semibold border border-gold/30 transition-colors"
         >
-          <Droplets size={11} /> Wash
+          <Droplets size={12} /> Wash
         </button>
       </div>
     </div>
@@ -800,7 +788,7 @@ export function CarWashSection() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
             {vehicles.map(v => (
               <VehicleCard
                 key={v.id}
