@@ -487,7 +487,7 @@ function ScheduleView({
   async function handleStatusChange(booking: Booking, status: string) {
     const update: Record<string, unknown> = { status };
     if (status === "completed") update.completed_at = new Date().toISOString();
-    const { error } = await supabase.from("car_wash_bookings" as never).update(update).eq("id", booking.id);
+    const { error } = await db.from("car_wash_bookings").update(update).eq("id", booking.id);
     if (error) { toast.error("Failed to update"); return; }
     toast.success(status === "completed" ? "Marked complete! 🚗✨" : "Status updated");
     onRefresh();
