@@ -713,7 +713,7 @@ function ScheduleView({
                             <div className="relative">
                               <select
                                 value={booking.assigned_staff_id ?? ""}
-                                onChange={e => handleAssignStaff(booking.id, e.target.value)}
+                                onChange={e => handleAssignStaff(booking.id, e.target.value, booking)}
                                 className="w-full h-8 pl-3 pr-7 rounded-lg border border-border bg-background text-foreground text-xs appearance-none focus:outline-none focus:ring-1 focus:ring-gold/40"
                               >
                                 <option value="">Assign staff…</option>
