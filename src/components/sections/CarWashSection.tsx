@@ -670,8 +670,8 @@ export function CarWashSection() {
   async function loadAll() {
     setLoading(true);
     const [{ data: vData }, { data: bData }, { data: pData }, { data: prData }] = await Promise.all([
-      supabase.from("vehicles" as never).select("*").order("sort_order").order("created_at"),
-      supabase.from("car_wash_bookings" as never).select("*").gte("requested_date", format(subWeeks(new Date(), 4), "yyyy-MM-dd")).order("requested_date"),
+      db.from("vehicles").select("*").order("sort_order").order("created_at"),
+      db.from("car_wash_bookings").select("*").gte("requested_date", format(subWeeks(new Date(), 4), "yyyy-MM-dd")).order("requested_date"),
       supabase.from("properties").select("id, name, is_primary").order("sort_order"),
       supabase.from("profiles").select("id, full_name, avatar_url, job_title").order("full_name"),
     ]);
