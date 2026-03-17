@@ -368,7 +368,7 @@ function VehicleFormModal({
                 className="w-full h-36 rounded-xl border-2 border-dashed border-border bg-muted/20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-gold/40 transition-colors overflow-hidden"
               >
                 {photoUrl ? (
-                  <img src={imageUrl(photoUrl)} alt="" className="w-full h-full object-cover" />
+                  <img src={imageUrl(photoUrl, 800)} alt="" className="w-full h-full object-cover" />
                 ) : uploading ? (
                   <Loader2 size={24} className="animate-spin text-muted-foreground" />
                 ) : (
