@@ -81,53 +81,68 @@ function VehicleCard({
   onEdit: (v: Vehicle) => void;
   canEdit: boolean;
 }) {
-  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 128) : null;
-  const owner = vehicle.ownerProfile?.full_name ?? "—";
-  const location = vehicle.locationProperty?.name ?? "—";
+  const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 600) : null;
+  const owner = vehicle.ownerProfile?.full_name ?? null;
+  const location = vehicle.locationProperty?.name ?? null;
 
   return (
-    <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 group">
-      {/* Thumbnail */}
-      <div className="w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center border border-border">
-        {img
-          ? <img src={img} alt={`${vehicle.make} ${vehicle.model}`} className="w-full h-full object-cover" />
-          : <Car size={28} className="text-muted-foreground" />
-        }
-      </div>
+    <div className="relative rounded-2xl overflow-hidden bg-muted aspect-[4/3] group cursor-pointer border border-border">
+      {/* Full-bleed photo or placeholder */}
+      {img ? (
+        <img
+          src={img}
+          alt={`${vehicle.make} ${vehicle.model}`}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/60">
+          <Car size={48} className="text-muted-foreground/40" />
+        </div>
+      )}
 
-      {/* Details */}
-      <div className="flex-1 min-w-0">
-        <p className="text-foreground font-semibold text-sm leading-tight truncate">
-          {vehicle.year ? `${vehicle.year} ` : ""}{vehicle.make} {vehicle.model}
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+      {/* Admin actions top-right */}
+      {canEdit && (
+        <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={e => { e.stopPropagation(); onEdit(vehicle); }}
+            className="p-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-colors"
+          >
+            <Pencil size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* Bottom info overlay */}
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6">
+        <p className="text-white font-bold text-sm leading-tight truncate">
+          {vehicle.make} {vehicle.model}
+          {vehicle.year ? <span className="font-normal opacity-70 ml-1 text-xs">{vehicle.year}</span> : null}
         </p>
         {vehicle.colour && (
-          <p className="text-muted-foreground text-xs mt-0.5">{vehicle.colour}</p>
+          <p className="text-white/70 text-xs mt-0.5">{vehicle.colour}</p>
         )}
-        <div className="flex items-center gap-3 mt-1.5">
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <User size={10} /> {owner}
-          </span>
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
-            <MapPin size={10} /> {location}
-          </span>
+        <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+          {owner && (
+            <span className="flex items-center gap-1 text-[11px] text-white/70">
+              <User size={10} /> {owner}
+            </span>
+          )}
+          {location && (
+            <span className="flex items-center gap-1 text-[11px] text-white/70">
+              <MapPin size={10} /> {location}
+            </span>
+          )}
         </div>
-      </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 shrink-0">
-        {canEdit && (
-          <button
-            onClick={() => onEdit(vehicle)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
-          >
-            <Pencil size={14} />
-          </button>
-        )}
+        {/* Wash button */}
         <button
-          onClick={() => onWash(vehicle)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold/20 hover:bg-gold/30 text-gold text-xs font-semibold border border-gold/30 transition-colors"
+          onClick={e => { e.stopPropagation(); onWash(vehicle); }}
+          className="mt-2.5 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold/90 hover:bg-gold text-charcoal text-xs font-bold transition-colors"
         >
-          <Droplets size={13} /> Wash
+          <Droplets size={12} /> Wash
         </button>
       </div>
     </div>
