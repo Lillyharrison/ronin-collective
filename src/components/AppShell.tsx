@@ -71,6 +71,7 @@ const sectionTitles: Record<string, string> = {
   "master-import": "Master Import",
   alerts:          "Alerts",
   rules:           "Property Rules",
+  "car-wash":      "Car Wash",
 };
 
 function ActiveSection() {
