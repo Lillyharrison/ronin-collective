@@ -189,6 +189,69 @@ export type Database = {
           },
         ]
       }
+      car_wash_bookings: {
+        Row: {
+          assigned_staff_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          location_property_id: string | null
+          notes: string | null
+          requested_by: string | null
+          requested_date: string
+          requested_time: string | null
+          status: string
+          updated_at: string
+          vehicle_id: string
+          wash_type: string
+        }
+        Insert: {
+          assigned_staff_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          location_property_id?: string | null
+          notes?: string | null
+          requested_by?: string | null
+          requested_date: string
+          requested_time?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id: string
+          wash_type?: string
+        }
+        Update: {
+          assigned_staff_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          location_property_id?: string | null
+          notes?: string | null
+          requested_by?: string | null
+          requested_date?: string
+          requested_time?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id?: string
+          wash_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_wash_bookings_location_property_id_fkey"
+            columns: ["location_property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "car_wash_bookings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_threads: {
         Row: {
           created_at: string
@@ -1704,6 +1767,62 @@ export type Database = {
             columns: ["thread_id"]
             isOneToOne: false
             referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          colour: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          make: string
+          model: string
+          notes: string | null
+          owner_profile_id: string | null
+          photo_url: string | null
+          property_id: string | null
+          sort_order: number
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          colour?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          make: string
+          model: string
+          notes?: string | null
+          owner_profile_id?: string | null
+          photo_url?: string | null
+          property_id?: string | null
+          sort_order?: number
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          colour?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          make?: string
+          model?: string
+          notes?: string | null
+          owner_profile_id?: string | null
+          photo_url?: string | null
+          property_id?: string | null
+          sort_order?: number
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]

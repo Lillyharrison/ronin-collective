@@ -62,6 +62,7 @@ export const translations = {
     memory: "Ronin's Memory",
     rules: "Rules",
     alerts: "Alerts",
+    carWash: "Car Wash",
 
     // Maintenance
     reportIssueTitle: "Report Issue",
@@ -293,6 +294,7 @@ export const translations = {
     memory: "Memoria de Ronin",
     rules: "Reglas",
     alerts: "Alertas",
+    carWash: "Lavado de Autos",
 
     // Maintenance
     reportIssueTitle: "Reportar Problema",

@@ -105,6 +105,7 @@ const ALL_QUICK_ACTIONS: { key: string; label: string; labelEs: string; icon: st
   { key: "maintenance", label: "Maintenance",    labelEs: "Mantenimiento",     icon: "🔧" },
   { key: "messages",    label: "Messages",       labelEs: "Mensajes",          icon: "💬" },
   { key: "inventory",   label: "Inventory",      labelEs: "Inventario",        icon: "📦" },
+  { key: "carWash",     label: "Car Wash",       labelEs: "Lavado de Autos",   icon: "🚗" },
 ];
 
 const LEVEL_OPTIONS: { value: Level; label: string; labelEs: string }[] = [

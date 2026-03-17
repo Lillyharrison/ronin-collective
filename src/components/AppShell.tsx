@@ -34,6 +34,7 @@ const MasterImportSection= lazy(() => import("@/components/sections/MasterImport
 const MemorySection      = lazy(() => import("@/components/sections/MemorySection"));
 const AlertsSection      = lazy(() => import("@/components/sections/AlertsSection").then(m => ({ default: m.AlertsSection })));
 const RulesSection       = lazy(() => import("@/components/sections/RulesSection").then(m => ({ default: m.RulesSection })));
+const CarWashSection     = lazy(() => import("@/components/sections/CarWashSection").then(m => ({ default: m.CarWashSection })));
 const ChecklistDetailPage= lazy(() => import("@/components/sections/ChecklistDetailPage").then(m => ({ default: m.ChecklistDetailPage })));
 
 // ── Section loading skeleton ──────────────────────────────────────────────────
@@ -70,6 +71,7 @@ const sectionTitles: Record<string, string> = {
   "master-import": "Master Import",
   alerts:          "Alerts",
   rules:           "Property Rules",
+  "car-wash":      "Car Wash",
 };
 
 function ActiveSection() {
@@ -108,6 +110,7 @@ function ActiveSection() {
     case "memory":        return gated("memory",        <MemorySection />);
     case "alerts":        return <AlertsSection />;
     case "rules":         return gated("rules",         <RulesSection />);
+    case "car-wash":      return gated("car-wash",      <CarWashSection />);
     default:              return <Dashboard />;
   }
 }

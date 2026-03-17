@@ -54,7 +54,7 @@ const SECTION_PATHS = [
   "/", "/property", "/maintenance", "/messages", "/profile",
   "/manuals", "/checklists", "/tasks", "/contacts", "/vendors", "/inventory",
   "/laundry", "/orders", "/meet-team", "/travel", "/calendar",
-  "/achievements", "/master-import", "/memory", "/alerts", "/rules",
+  "/achievements", "/master-import", "/memory", "/alerts", "/rules", "/car-wash",
 ];
 
 const App = () => (
