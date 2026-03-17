@@ -294,6 +294,7 @@ export const translations = {
     memory: "Memoria de Ronin",
     rules: "Reglas",
     alerts: "Alertas",
+    carWash: "Lavado de Autos",
 
     // Maintenance
     reportIssueTitle: "Reportar Problema",

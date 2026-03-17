@@ -33,7 +33,7 @@ const CalendarSection    = lazy(() => import("@/components/sections/CalendarSect
 const MasterImportSection= lazy(() => import("@/components/sections/MasterImportSection").then(m => ({ default: m.MasterImportSection })));
 const MemorySection      = lazy(() => import("@/components/sections/MemorySection"));
 const AlertsSection      = lazy(() => import("@/components/sections/AlertsSection").then(m => ({ default: m.AlertsSection })));
-const RulesSection       = lazy(() => import("@/components/sections/RulesSection").then(m => ({ default: m.RulesSection })));
+const CarWashSection = lazy(() => import("@/components/sections/CarWashSection").then(m => ({ default: m.CarWashSection })));
 const ChecklistDetailPage= lazy(() => import("@/components/sections/ChecklistDetailPage").then(m => ({ default: m.ChecklistDetailPage })));
 
 // ── Section loading skeleton ──────────────────────────────────────────────────
