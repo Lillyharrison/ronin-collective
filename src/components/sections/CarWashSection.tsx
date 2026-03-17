@@ -503,7 +503,7 @@ function ScheduleView({
   }
 
   async function handleDelete(bookingId: string) {
-    await supabase.from("car_wash_bookings" as never).delete().eq("id", bookingId);
+    await db.from("car_wash_bookings").delete().eq("id", bookingId);
     onRefresh();
   }
 
