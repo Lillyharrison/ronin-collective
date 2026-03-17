@@ -332,9 +332,9 @@ function VehicleFormModal({
     };
     let error;
     if (vehicle) {
-      ({ error } = await supabase.from("vehicles" as never).update(payload).eq("id", vehicle.id));
+      ({ error } = await db.from("vehicles").update(payload).eq("id", vehicle.id));
     } else {
-      ({ error } = await supabase.from("vehicles" as never).insert(payload));
+      ({ error } = await db.from("vehicles").insert(payload));
     }
     setSaving(false);
     if (error) { toast.error("Failed to save vehicle"); return; }
