@@ -74,9 +74,10 @@ function fmtTime(t: string | null) {
 // ── Vehicle Card ──────────────────────────────────────────────────────────────
 
 function VehicleCard({
-  vehicle, onWash, onEdit, canEdit,
+  vehicle, nextBooking, onWash, onEdit, canEdit,
 }: {
   vehicle: Vehicle;
+  nextBooking: Booking | null;
   onWash: (v: Vehicle) => void;
   onEdit: (v: Vehicle) => void;
   canEdit: boolean;
@@ -84,6 +85,18 @@ function VehicleCard({
   const img = vehicle.photo_url ? imageUrl(vehicle.photo_url, 160) : null;
   const owner = vehicle.ownerProfile?.full_name ?? null;
   const location = vehicle.locationProperty?.name ?? null;
+
+  // Format the next scheduled wash date for the button label
+  const washLabel = nextBooking
+    ? format(parseISO(nextBooking.requested_date), "MMM d")
+    : null;
+  const washStatus = nextBooking?.status ?? null;
+
+  const btnStyle = washStatus === "confirmed"
+    ? "bg-blue-500/15 border-blue-500/30 text-blue-400"
+    : washStatus === "requested"
+    ? "bg-amber-500/15 border-amber-500/30 text-amber-400"
+    : "bg-gold/15 border-gold/30 text-gold";
 
   return (
     <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-3 py-3 group">
@@ -130,9 +143,10 @@ function VehicleCard({
         )}
         <button
           onClick={e => { e.stopPropagation(); onWash(vehicle); }}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gold/15 hover:bg-gold/25 text-gold text-xs font-semibold border border-gold/30 transition-colors"
+          className={`flex flex-col items-center px-2.5 py-1.5 rounded-lg border transition-colors text-xs font-semibold leading-tight ${btnStyle}`}
         >
-          <Droplets size={12} /> Wash
+          <span className="flex items-center gap-1"><Droplets size={12} /> Wash</span>
+          {washLabel && <span className="text-[10px] font-normal opacity-80">{washLabel}</span>}
         </button>
       </div>
     </div>
@@ -153,6 +167,7 @@ function BookWashDrawer({
   const [washType, setWashType] = useState<"quick_wash" | "full_detail">("quick_wash");
   const [date, setDate] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [time, setTime] = useState("10:00");
+  const [locationPropId, setLocationPropId] = useState(vehicle.property_id ?? "");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -165,7 +180,7 @@ function BookWashDrawer({
       requested_date: date,
       requested_time: time || null,
       wash_type: washType,
-      location_property_id: vehicle.property_id || null,
+      location_property_id: locationPropId || null,
       status: "requested",
       notes: notes || null,
       requested_by: userId,
@@ -224,6 +239,33 @@ function BookWashDrawer({
                       {wt.icon} {wt.label}
                     </span>
                     <span className="text-[11px] opacity-70">{wt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Wash Location */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Wash Location
+              </label>
+              <p className="text-[11px] text-muted-foreground mb-2">Where will the car be washed? Select a different property if bringing it elsewhere.</p>
+              <div className="grid gap-2">
+                {properties.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setLocationPropId(p.id)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                      locationPropId === p.id
+                        ? "border-gold/60 bg-gold/10"
+                        : "border-border bg-muted/20 hover:border-gold/30"
+                    }`}
+                  >
+                    <MapPin size={14} className={locationPropId === p.id ? "text-gold" : "text-muted-foreground"} />
+                    <span className={`text-sm font-medium ${locationPropId === p.id ? "text-gold" : "text-foreground"}`}>{p.name}</span>
+                    {vehicle.property_id === p.id && (
+                      <span className="ml-auto text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">Home</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -288,6 +330,7 @@ function BookWashDrawer({
 }
 
 // ── Vehicle Form Modal ─────────────────────────────────────────────────────────
+
 
 function VehicleFormModal({
   vehicle, properties, profiles, onClose, onSaved,
@@ -789,15 +832,23 @@ export function CarWashSection() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {vehicles.map(v => (
-              <VehicleCard
-                key={v.id}
-                vehicle={v}
-                onWash={setBookingVehicle}
-                onEdit={setEditVehicle}
-                canEdit={canEdit}
-              />
-            ))}
+            {vehicles.map(v => {
+              // Find the next upcoming/active booking for this vehicle
+              const today = format(new Date(), "yyyy-MM-dd");
+              const nextBooking = bookings
+                .filter(b => b.vehicle_id === v.id && (b.status === "requested" || b.status === "confirmed") && b.requested_date >= today)
+                .sort((a, b) => a.requested_date.localeCompare(b.requested_date))[0] ?? null;
+              return (
+                <VehicleCard
+                  key={v.id}
+                  vehicle={v}
+                  nextBooking={nextBooking}
+                  onWash={setBookingVehicle}
+                  onEdit={setEditVehicle}
+                  canEdit={canEdit}
+                />
+              );
+            })}
           </div>
         )}
       </div>
