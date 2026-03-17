@@ -63,6 +63,7 @@ const ALL_QUICK_ACTIONS_DASHBOARD = [
   { key: "maintenance", labelKey: "maintenance" as const,  labelEs: "Mantenimiento",     icon: <Zap size={26} />,          section: "maintenance" as const },
   { key: "messages",    labelKey: "messages" as const,     labelEs: "Mensajes",          icon: <Activity size={26} />,     section: "messages" as const },
   { key: "inventory",   labelKey: "inventory" as const,    labelEs: "Inventario",        icon: <ShoppingBag size={26} />,  section: "inventory" as const },
+  { key: "carWash",     labelKey: "carWash" as const,      labelEs: "Lavado de Autos",   icon: <Car size={26} />,          section: "car-wash" as const },
 ];
 
 const TYPE_STYLES: Record<string, { dot: string; border: string }> = {

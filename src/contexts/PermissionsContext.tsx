@@ -43,6 +43,7 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   calendar:             ["master_admin", "admin", "manager", "staff", "principal"],
   "master-import":      ["master_admin"],
   rules:                ["master_admin", "admin", "manager", "staff"],
+  "car-wash":           ["master_admin", "admin", "manager", "staff", "principal"],
   // Feature visibility — defaults to admin/manager only; staff must be granted explicitly
   "principal-location":   ["master_admin", "admin", "manager", "principal"],
   // Calendar sub-tab visibility
