@@ -55,7 +55,7 @@ export function MaintenanceSection() {
   }), [debouncedSearch, filterCat, filterPri]);
 
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
-  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
+  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef, activePropertyId, setActivePropertyId } = useNavigation();
 
   // Planned maintenance
   const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
