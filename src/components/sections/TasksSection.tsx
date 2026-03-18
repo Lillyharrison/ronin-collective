@@ -276,17 +276,26 @@ export function TasksSection() {
         </p>
       </div>
 
-      {/* Top bar: new task button */}
-      {canManageTasks && (
-        <div className="flex justify-end px-4 py-3 border-b border-border">
+      {/* Top bar: new task button + property filter chip */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border gap-3">
+        {filterPropId ? (
+          <button
+            onClick={() => setFilterPropId(null)}
+            className="flex items-center gap-1.5 text-xs bg-[hsl(var(--gold)/0.12)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-2.5 py-1 rounded-full"
+          >
+            <span className="truncate max-w-[160px]">{tasks.find(t => t.property_id === filterPropId)?.property?.name ?? "Property"}</span>
+            <span className="text-[hsl(var(--gold)/0.6)] hover:text-[hsl(var(--gold))]">✕</span>
+          </button>
+        ) : <div />}
+        {canManageTasks && (
           <button
             onClick={() => openNew("pending")}
             className="flex items-center gap-1.5 bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
           >
             <Plus size={13} /> {isL ? "Nueva" : "New"}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Draft tasks banner */}
       {draftCount > 0 && (isAdmin || isMasterAdmin) && (
