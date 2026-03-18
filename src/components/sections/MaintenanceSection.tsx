@@ -57,6 +57,12 @@ export function MaintenanceSection() {
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
   const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
+  // Planned maintenance
+  const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
+  const [plannedModalOpen, setPlannedModalOpen] = useState(false);
+  const [editPlanned, setEditPlanned] = useState<PlannedMaintenanceEntry | null>(null);
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+
   // Guard against double-firing notifications on rapid re-renders / StrictMode
   const notifyingRef = useRef<Set<string>>(new Set());
 
@@ -80,6 +86,8 @@ export function MaintenanceSection() {
       .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
+    supabase.from("vendors").select("id, name").eq("is_active", true).order("name")
+      .then(({ data }) => setVendors(data ?? []));
   }, []);
 
   // Deep-link: open specific issue when arriving from a notification click.
