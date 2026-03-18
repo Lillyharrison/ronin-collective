@@ -517,7 +517,9 @@ Be direct and professional.`;
         }
       }
 
-      if (masterAdminId && classification !== "general") {
+      // Only create a draft task for manually added calendar events (not auto-generated ones)
+      const isSystemGenerated = ["planned_maintenance", "import", "ical_sync"].includes(event.calendar_source ?? "");
+      if (masterAdminId && classification !== "general" && !isSystemGenerated) {
         const taskTitleMap: Record<string, string> = {
           travel: `Prepare for trip: ${event.title}`,
           guest_stay: `Guest arrival prep: ${event.title}`,
