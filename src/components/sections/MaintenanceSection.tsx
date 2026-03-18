@@ -442,70 +442,86 @@ export function MaintenanceSection() {
               />
             </div>
 
-        {/* Filter/sort bar */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          <button onClick={() => setShowFilters(!showFilters)}
-            className={cn("flex-shrink-0 flex items-center gap-1.5 text-xs rounded-full border px-3 py-1.5 font-medium transition-colors",
-              showFilters ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
-            )}>
-            <Filter size={11} /> {isL ? "Filtros" : "Filters"} {(filterProp || filterCat || filterPri) ? "●" : ""}
-          </button>
+            {/* Filter/sort bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <button onClick={() => setShowFilters(!showFilters)}
+                className={cn("flex-shrink-0 flex items-center gap-1.5 text-xs rounded-full border px-3 py-1.5 font-medium transition-colors",
+                  showFilters ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
+                )}>
+                <Filter size={11} /> {isL ? "Filtros" : "Filters"} {(filterProp || filterCat || filterPri) ? "●" : ""}
+              </button>
 
-          <div className="relative flex-shrink-0">
-            <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer">
-              <option value="newest">{t("newestFirst")}</option>
-              <option value="oldest">{t("oldestFirst")}</option>
-              <option value="priority">{t("byPriority")}</option>
-              <option value="status">{t("byStatus")}</option>
-            </select>
-            <SortAsc size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
+              <div className="relative flex-shrink-0">
+                <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                  className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer">
+                  <option value="newest">{t("newestFirst")}</option>
+                  <option value="oldest">{t("oldestFirst")}</option>
+                  <option value="priority">{t("byPriority")}</option>
+                  <option value="status">{t("byStatus")}</option>
+                </select>
+                <SortAsc size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
 
-          {/* View toggle */}
-          <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden ml-auto">
-            <button onClick={() => setViewMode("board")} title="Kanban board"
-              className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
-              <LayoutGrid size={13} />
-            </button>
-            <button onClick={() => setViewMode("table")} title="Spreadsheet"
-              className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
-              <Table2 size={13} />
-            </button>
-            <button onClick={() => setViewMode("list")} title="List"
-              className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
-              <Filter size={13} />
-            </button>
-          </div>
-        </div>
+              {/* View toggle */}
+              <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden ml-auto">
+                <button onClick={() => setViewMode("board")} title="Kanban board"
+                  className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                  <LayoutGrid size={13} />
+                </button>
+                <button onClick={() => setViewMode("table")} title="Spreadsheet"
+                  className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                  <Table2 size={13} />
+                </button>
+                <button onClick={() => setViewMode("list")} title="List"
+                  className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                  <Filter size={13} />
+                </button>
+              </div>
+            </div>
 
-        {/* Expanded filters */}
-        {showFilters && (
-          <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
-            <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
-              className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-              <option value="">{t("allPropertiesFilter")}</option>
-              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
-              className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-              <option value="">{t("allCategories")}</option>
-              {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
-            </select>
-            <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
-              className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-              <option value="">{t("allPriorities")}</option>
-              <option value="urgent">🔴 {isL ? "Urgente" : "Urgent"}</option>
-              <option value="high">🟠 {isL ? "Alto" : "High"}</option>
-              <option value="medium">🟡 {isL ? "Medio" : "Medium"}</option>
-              <option value="low">⚪ {isL ? "Bajo" : "Low"}</option>
-            </select>
-          </div>
+            {/* Expanded filters */}
+            {showFilters && (
+              <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
+                <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
+                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
+                  <option value="">{t("allPropertiesFilter")}</option>
+                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
+                  <option value="">{t("allCategories")}</option>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
+                </select>
+                <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
+                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
+                  <option value="">{t("allPriorities")}</option>
+                  <option value="urgent">🔴 {isL ? "Urgente" : "Urgent"}</option>
+                  <option value="high">🟠 {isL ? "Alto" : "High"}</option>
+                  <option value="medium">🟡 {isL ? "Medio" : "Medium"}</option>
+                  <option value="low">⚪ {isL ? "Bajo" : "Low"}</option>
+                </select>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* ─── Content ─── */}
+      {/* ─── Planned tab content ─── */}
+      {activeTab === "planned" ? (
+        <PlannedMaintenanceList
+          entries={plannedEntries}
+          loading={plannedLoading}
+          canManage={canManage}
+          onAdd={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
+          onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
+          onDelete={deleteEntry}
+          onStatusChange={async (id, status) => { await updateEntry(id, { status }); }}
+          refetch={refetchPlanned}
+        />
+      ) : (
+      <>
+      {/* ─── Repairs content ─── */}
       {loading ? (
         <div className="px-4 grid grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
