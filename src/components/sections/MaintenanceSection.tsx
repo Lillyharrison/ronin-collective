@@ -660,7 +660,10 @@ export function MaintenanceSection() {
           </table>
         </div>
       )}
+      </>
+      )}
 
+      {/* ─── Shared modals ─── */}
       <IssueModal
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditIssue(null); }}
@@ -684,6 +687,17 @@ export function MaintenanceSection() {
           categories={categories}
         />
       )}
+
+      <PlannedMaintenanceModal
+        open={plannedModalOpen}
+        onClose={() => { setPlannedModalOpen(false); setEditPlanned(null); }}
+        onSave={editPlanned ? handleUpdatePlanned : handleCreatePlanned}
+        initial={editPlanned}
+        vendors={vendors}
+        properties={properties}
+        profiles={profiles}
+        userId={userId}
+      />
     </div>
   );
 }
