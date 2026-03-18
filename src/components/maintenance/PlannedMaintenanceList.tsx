@@ -31,12 +31,27 @@ interface Props {
   refetch: () => void;
 }
 
-export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onEdit, onDelete, onStatusChange, refetch }: Props) {
+export function PlannedMaintenanceList({ entries, loading, canManage, properties, onAdd, onEdit, onDelete, onStatusChange, refetch }: Props) {
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterProp, setFilterProp] = useState("");
+  const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "tile");
 
-  const filtered = filterStatus ? entries.filter(e => e.status === filterStatus) : entries;
+  const filtered = entries.filter(e => {
+    if (filterStatus && e.status !== filterStatus) return false;
+    if (filterProp && e.property_id !== filterProp) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        e.title.toLowerCase().includes(q) ||
+        (e.description ?? "").toLowerCase().includes(q) ||
+        (e.vendor_name ?? "").toLowerCase().includes(q) ||
+        (e.property_name ?? "").toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   function formatDate(entry: PlannedMaintenanceEntry) {
     if (entry.date_type === "specific" && entry.scheduled_date) {
