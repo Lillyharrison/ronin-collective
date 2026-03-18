@@ -1069,6 +1069,17 @@ export function CarWashSection() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Book All button */}
+          {vehicles.length > 1 && userId && (
+            <button
+              onClick={() => setBookAllOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground text-xs font-medium border border-border transition-colors"
+            >
+              <Layers size={14} />
+              Book All
+            </button>
+          )}
+
           {/* Schedule button */}
           <button
             onClick={() => setView("schedule")}
@@ -1113,7 +1124,6 @@ export function CarWashSection() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {vehicles.map(v => {
-              // Find the next upcoming/active booking for this vehicle
               const today = format(new Date(), "yyyy-MM-dd");
               const nextBooking = bookings
                 .filter(b => b.vehicle_id === v.id && (b.status === "requested" || b.status === "confirmed") && b.requested_date >= today)
@@ -1132,6 +1142,17 @@ export function CarWashSection() {
           </div>
         )}
       </div>
+
+      {/* Book All Drawer */}
+      {bookAllOpen && userId && (
+        <BookAllDrawer
+          vehicles={vehicles}
+          properties={properties}
+          onClose={() => setBookAllOpen(false)}
+          onSaved={loadAll}
+          userId={userId}
+        />
+      )}
 
       {/* Book Wash Drawer */}
       {bookingVehicle && userId && (
