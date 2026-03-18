@@ -991,6 +991,7 @@ export function CarWashSection() {
   const [view, setView] = useState<"fleet" | "schedule">("fleet");
   const [bookingVehicle, setBookingVehicle] = useState<Vehicle | null>(null);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null | undefined>(undefined); // undefined = closed, null = new
+  const [bookAllOpen, setBookAllOpen] = useState(false);
 
   // ── Load data ───────────────────────────────────────────────────────────────
 
