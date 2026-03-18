@@ -22,11 +22,12 @@ type ManualTab = "care_guides" | "rules";
 export function ManualsSection() {
   const { language, t } = useLanguage();
   const { isAdmin, assignedPropertyIds } = usePermissions();
-  const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail } = useNavigation();
+  const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail, activePropertyId, setActivePropertyId } = useNavigation();
   const [tab, setTab] = useState<ManualTab>("care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
+  const [selectedPropId, setSelectedPropId] = useState<string | null>(activePropertyId ?? null);
   const [showPropPicker, setShowPropPicker] = useState(false);
+
 
   const TABS: { id: ManualTab; icon: React.ReactNode; label: string; labelEs: string }[] = [
     { id: "care_guides", icon: <BookOpen size={14} />, label: "Care Guides", labelEs: t("careGuides") },

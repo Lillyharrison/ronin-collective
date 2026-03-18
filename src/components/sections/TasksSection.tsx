@@ -150,6 +150,7 @@ export function TasksSection() {
   const { language } = useLanguage();
   const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
   const canManageTasks = isMasterAdmin || isAdmin || isManager || canEdit("tasks");
+  const { activePropertyId, setActivePropertyId } = useNavigation();
   const isL = language === "es";
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
@@ -158,6 +159,9 @@ export function TasksSection() {
   const [page, setPage] = useState(0);
   const [showDrafts, setShowDrafts] = useState(false);
   const [draftCount, setDraftCount] = useState(0);
+  // Pre-filter: if arriving from a property deep-link, pre-set property filter
+  const [filterPropId, setFilterPropId] = useState<string | null>(() => activePropertyId);
+
 
   const [modalTask, setModalTask]   = useState<FullTask | null | undefined>(undefined);
   const [newStatus, setNewStatus]   = useState<TaskStatus>("pending");
