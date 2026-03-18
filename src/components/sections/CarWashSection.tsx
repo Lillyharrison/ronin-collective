@@ -5,10 +5,11 @@ import { imageUrl } from "@/lib/imageUrl";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   CalendarDays, ChevronLeft, ChevronRight, Car, Plus, X,
   Droplets, Sparkles, MapPin, User, Clock, CheckCircle2,
-  Loader2, Upload, Pencil, Trash2, ChevronDown, Calendar,
+  Loader2, Upload, Pencil, Trash2, ChevronDown, Calendar, Layers,
 } from "lucide-react";
 import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from "date-fns";
 
