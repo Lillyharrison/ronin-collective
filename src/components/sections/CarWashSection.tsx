@@ -325,6 +325,234 @@ function BookWashDrawer({
   );
 }
 
+// ── Book All Drawer ───────────────────────────────────────────────────────────
+
+function BookAllDrawer({
+  vehicles, properties, onClose, onSaved, userId,
+}: {
+  vehicles: Vehicle[];
+  properties: Property[];
+  onClose: () => void;
+  onSaved: () => void;
+  userId: string;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(vehicles.map(v => v.id)));
+  const [washType, setWashType] = useState<"quick_wash" | "full_detail">("quick_wash");
+  const [date, setDate] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+  const [time, setTime] = useState("10:00");
+  const [locationPropId, setLocationPropId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function toggleVehicle(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setSelected(prev =>
+      prev.size === vehicles.length ? new Set() : new Set(vehicles.map(v => v.id))
+    );
+  }
+
+  async function handleSave() {
+    if (selected.size === 0) { toast.error("Select at least one vehicle"); return; }
+    setSaving(true);
+    const rows = [...selected].map(vid => {
+      const vehicle = vehicles.find(v => v.id === vid);
+      return {
+        vehicle_id: vid,
+        requested_date: date,
+        requested_time: time || null,
+        wash_type: washType,
+        location_property_id: locationPropId || vehicle?.property_id || null,
+        status: "requested",
+        notes: notes || null,
+        requested_by: userId,
+      };
+    });
+    const { error } = await db.from("car_wash_bookings").insert(rows);
+    setSaving(false);
+    if (error) { toast.error("Failed to book washes"); return; }
+    toast.success(`${rows.length} wash${rows.length > 1 ? "es" : ""} requested! 🚗`);
+    onSaved();
+    onClose();
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-2xl animate-slide-in-bottom"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        <div className="flex flex-col h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden">
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Layers size={18} className="text-gold" />
+              <div>
+                <p className="font-semibold text-foreground text-sm">Book Multiple Washes</p>
+                <p className="text-muted-foreground text-xs">{selected.size} of {vehicles.length} selected</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted transition-colors">
+              <X size={18} className="text-muted-foreground" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+            {/* Vehicle selector */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicles</p>
+                <button onClick={toggleAll} className="text-xs text-gold hover:text-gold/80 font-medium transition-colors">
+                  {selected.size === vehicles.length ? "Deselect all" : "Select all"}
+                </button>
+              </div>
+              <div className="space-y-2">
+                {vehicles.map(v => {
+                  const img = v.photo_url ? imageUrl(v.photo_url, 80) : null;
+                  const isChecked = selected.has(v.id);
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => toggleVehicle(v.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${
+                        isChecked
+                          ? "border-gold/50 bg-gold/8"
+                          : "border-border bg-muted/20 opacity-60"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => toggleVehicle(v.id)}
+                        className="border-gold/50 data-[state=checked]:bg-gold data-[state=checked]:border-gold shrink-0"
+                        onClick={e => e.stopPropagation()}
+                      />
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
+                        {img
+                          ? <img src={img} alt="" className="w-full h-full object-cover" />
+                          : <Car size={16} className="text-muted-foreground/50" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-foreground text-sm font-semibold truncate">
+                          {v.make} {v.model}
+                          {v.year ? <span className="text-muted-foreground font-normal text-xs"> {v.year}</span> : null}
+                        </p>
+                        {v.colour && <p className="text-muted-foreground text-xs truncate">{v.colour}</p>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Wash type */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Service Type</p>
+              <div className="grid grid-cols-2 gap-2">
+                {WASH_TYPES.map(wt => (
+                  <button
+                    key={wt.key}
+                    onClick={() => setWashType(wt.key as "quick_wash" | "full_detail")}
+                    className={`flex flex-col items-start gap-1 p-3 rounded-xl border transition-all text-left ${
+                      washType === wt.key
+                        ? "border-gold/60 bg-gold/10 text-gold"
+                        : "border-border bg-muted/30 text-muted-foreground hover:border-gold/30"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-semibold text-sm">{wt.icon} {wt.label}</span>
+                    <span className="text-[11px] opacity-70">{wt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Wash Location <span className="font-normal normal-case">(defaults to each vehicle's home)</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={locationPropId}
+                  onChange={e => setLocationPropId(e.target.value)}
+                  className="w-full h-10 pl-3 pr-8 rounded-lg border border-border bg-background text-foreground text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-gold/40"
+                >
+                  <option value="">Each vehicle's home property</option>
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Date & Time */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">Preferred Date</label>
+                <input
+                  type="date"
+                  value={date}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">Preferred Time</label>
+                <input
+                  type="time"
+                  value={time}
+                  onChange={e => setTime(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">Notes (optional)</label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Any special instructions for all vehicles…"
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gold/40 placeholder:text-muted-foreground"
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-4 border-t border-border">
+            <Button
+              onClick={handleSave}
+              disabled={saving || !date || selected.size === 0}
+              className="w-full bg-gold hover:bg-gold/90 text-charcoal font-bold h-11"
+            >
+              {saving
+                ? <Loader2 size={16} className="animate-spin" />
+                : <><Layers size={16} /> Book {selected.size} Wash{selected.size !== 1 ? "es" : ""}</>
+              }
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Vehicle Form Modal ─────────────────────────────────────────────────────────
 
 
