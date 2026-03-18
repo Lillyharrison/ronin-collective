@@ -26,11 +26,13 @@ import { toast } from "sonner";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 type ViewMode = "board" | "list" | "table";
+type MaintenanceTab = "repairs" | "planned";
 
 export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
   const { t, language } = useLanguage();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
+  const [activeTab, setActiveTab] = useLocalStorage<MaintenanceTab>("maintenance_tab", "repairs");
   // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
   const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager) ? undefined : assignedPropertyIds;
 
