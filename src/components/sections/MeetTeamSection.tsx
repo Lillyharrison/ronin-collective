@@ -595,11 +595,9 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
   }
 
   async function handleSubmit() {
-    // Allow draft save when no name (only for profile-only / no-login path)
-    const isDraft = !form.full_name;
-    if (!isDraft && !form.level) return;
     if (!form.level || !form.role) return;
-    if (!noLogin && !form.email && !isDraft) return;
+    // isDraft = no email provided and not a no-login profile
+    const isDraft = !noLogin && !form.email;
     setSaving(true);
     try {
       const finalPerms = Object.keys(perms).length > 0
@@ -631,7 +629,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
           body: {
             action: "invite_user",
             email: form.email,
-            full_name: form.full_name,
+            full_name: form.full_name || null,
             job_title: form.job_title,
             level: form.level,
             department: form.department || null,
@@ -656,9 +654,9 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     { key: "quickactions", label: isEN ? "Quick Actions" : "Acciones" },
   ] as const;
 
-  // Can always save if level+role are set — no name = saved as draft
-  const isDraft = !form.full_name;
-  const canSave = form.level && form.role && (isDraft || noLogin || form.email);
+  // Draft = no email and not no-login. Can always save as long as level+role are set.
+  const isDraft = !noLogin && !form.email;
+  const canSave = !!(form.level && form.role);
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
@@ -702,13 +700,13 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
           {tab === "details" && (
             <div className="px-5 py-4 space-y-4">
               <div>
-                <FieldLabel label={isEN ? "Full Name *" : "Nombre Completo *"} />
+                <FieldLabel label={isEN ? "Full Name" : "Nombre Completo"} />
                 <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={isEN ? "Jane Smith" : "Ana García"} className="bg-charcoal-light border-charcoal-light text-cream" />
               </div>
 
               {!noLogin && (
                 <div>
-                  <FieldLabel label={isEN ? "Email *" : "Correo *"} />
+                  <FieldLabel label={isEN ? "Email — required to send invite" : "Correo — necesario para invitar"} />
                   <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" className="bg-charcoal-light border-charcoal-light text-cream" />
                 </div>
               )}
