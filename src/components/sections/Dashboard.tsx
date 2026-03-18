@@ -608,11 +608,8 @@ export function Dashboard() {
                   <div className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", styles.dot)} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-foreground leading-snug truncate">{n.title}</p>
-                    {n.body && (
-                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5 truncate">{n.body}</p>
-                    )}
-                    <p className="text-[10px] text-muted-foreground/60 leading-none mt-0.5">
-                      Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    <p className="text-[10px] text-muted-foreground leading-none mt-0.5 truncate">
+                      {n.body ? `${n.body} · ` : ""}Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
                   </div>
                   <button
