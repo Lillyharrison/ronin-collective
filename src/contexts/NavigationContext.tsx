@@ -104,6 +104,13 @@ interface NavigationContextType {
   /** Total unread message count — set by MessagesSection from useThreads data */
   totalUnread: number;
   setTotalUnread: (count: number) => void;
+  /**
+   * Register a local back handler for sections that manage their own sub-views
+   * (e.g. PropertySection detail, MeetTeam member panel, MessagesSection chat).
+   * Pass null to clear the handler.
+   * The handler should return true if it handled the back action, false to fall through.
+   */
+  registerBackHandler: (handler: (() => boolean) | null) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType>({
@@ -135,6 +142,7 @@ const NavigationContext = createContext<NavigationContextType>({
   setIsChatOpen: () => {},
   totalUnread: 0,
   setTotalUnread: () => {},
+  registerBackHandler: () => {},
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -160,6 +168,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   // In-memory breadcrumb stack for the back button (sections only, not browser history)
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
+  // Local back handler registered by individual sections (e.g. for in-section sub-views)
+  const localBackHandlerRef = useRef<(() => boolean) | null>(null);
+
+  const registerBackHandler = useCallback((handler: (() => boolean) | null) => {
+    localBackHandlerRef.current = handler;
+  }, []);
+
   const setPendingMaintenanceIssueId = (id: string | null) => {
     pendingMaintenanceIssueIdRef.current = id;
     setPendingMaintenanceIssueIdState(id);
@@ -170,6 +185,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
     setChecklistDetailId(null);
     setSidebarOpen(false);
+    // Clear any registered local back handler when navigating to a new section
+    localBackHandlerRef.current = null;
     // Preserve activePropertyId for sections that use it as a deep-link filter
     const PROPERTY_FILTERED_SECTIONS: ActiveSection[] = ["maintenance", "tasks", "manuals", "checklists", "calendar"];
     if (section !== "property" && !PROPERTY_FILTERED_SECTIONS.includes(section)) {
@@ -199,9 +216,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setHistory(h => h.slice(0, -1));
   };
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
+    // 1. Let section-local handler go first (e.g. property detail, member panel, chat view)
+    if (localBackHandlerRef.current) {
+      const handled = localBackHandlerRef.current();
+      if (handled) return;
+    }
+    // 2. Care guide detail (manuals section sub-view)
     if (careGuideDetailId) { setCareGuideDetailId(null); return; }
+    // 3. Checklist detail
     if (checklistDetailId) { setChecklistDetailId(null); setChecklistDetailPropId(null); return; }
+    // 4. Pop navigation history stack
     if (history.length > 0) {
       const prev = history[history.length - 1];
       setHistory(h => h.slice(0, -1));
@@ -212,9 +237,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       navigate(SECTION_TO_PATH[prev.section] ?? "/");
       return;
     }
-    // Fall back to browser history
+    // 5. Fall back to browser history
     navigate(-1);
-  };
+  }, [careGuideDetailId, checklistDetailId, history, navigate]);
 
   const openChecklistDetail = (templateId: string, propertyId: string | null) => {
     setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
@@ -224,7 +249,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const closeChecklistDetail = () => { goBack(); };
 
-  const canGoBack = history.length > 0 || !!checklistDetailId || !!careGuideDetailId;
+  // canGoBack is true if there's anything to go back to — including a registered local handler
+  const [hasLocalHandler, setHasLocalHandler] = useState(false);
+
+  // We can't reactively read a ref, so we expose a setter that sections call
+  const registerBackHandlerWithState = useCallback((handler: (() => boolean) | null) => {
+    localBackHandlerRef.current = handler;
+    setHasLocalHandler(handler !== null);
+  }, []);
+
+  const canGoBack = hasLocalHandler || history.length > 0 || !!checklistDetailId || !!careGuideDetailId;
 
   return (
     <NavigationContext.Provider
@@ -257,6 +291,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         setIsChatOpen,
         totalUnread,
         setTotalUnread,
+        registerBackHandler: registerBackHandlerWithState,
       }}
     >
       {children}
