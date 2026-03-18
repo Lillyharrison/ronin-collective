@@ -700,13 +700,13 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
           {tab === "details" && (
             <div className="px-5 py-4 space-y-4">
               <div>
-                <FieldLabel label={isEN ? "Full Name *" : "Nombre Completo *"} />
+                <FieldLabel label={isEN ? "Full Name" : "Nombre Completo"} />
                 <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={isEN ? "Jane Smith" : "Ana García"} className="bg-charcoal-light border-charcoal-light text-cream" />
               </div>
 
               {!noLogin && (
                 <div>
-                  <FieldLabel label={isEN ? "Email *" : "Correo *"} />
+                  <FieldLabel label={isEN ? "Email — required to send invite" : "Correo — necesario para invitar"} />
                   <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" className="bg-charcoal-light border-charcoal-light text-cream" />
                 </div>
               )}
