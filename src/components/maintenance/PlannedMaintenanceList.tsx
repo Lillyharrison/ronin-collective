@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin } from "lucide-react";
+import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search } from "lucide-react";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -23,6 +23,7 @@ interface Props {
   entries: PlannedMaintenanceEntry[];
   loading: boolean;
   canManage: boolean;
+  properties: { id: string; name: string }[];
   onAdd: () => void;
   onEdit: (entry: PlannedMaintenanceEntry) => void;
   onDelete: (id: string) => void;
@@ -30,12 +31,27 @@ interface Props {
   refetch: () => void;
 }
 
-export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onEdit, onDelete, onStatusChange, refetch }: Props) {
+export function PlannedMaintenanceList({ entries, loading, canManage, properties, onAdd, onEdit, onDelete, onStatusChange, refetch }: Props) {
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterProp, setFilterProp] = useState("");
+  const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "tile");
 
-  const filtered = filterStatus ? entries.filter(e => e.status === filterStatus) : entries;
+  const filtered = entries.filter(e => {
+    if (filterStatus && e.status !== filterStatus) return false;
+    if (filterProp && e.property_id !== filterProp) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        e.title.toLowerCase().includes(q) ||
+        (e.description ?? "").toLowerCase().includes(q) ||
+        (e.vendor_name ?? "").toLowerCase().includes(q) ||
+        (e.property_name ?? "").toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   function formatDate(entry: PlannedMaintenanceEntry) {
     if (entry.date_type === "specific" && entry.scheduled_date) {
@@ -50,35 +66,53 @@ export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onE
   return (
     <div className="animate-fade-in">
       {/* Top bar */}
-      <div className="px-4 pt-2 pb-3 flex items-center justify-between gap-2">
+      <div className="px-4 pt-2 pb-3 space-y-2.5">
+        {/* Search */}
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search planned maintenance…"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+          />
+        </div>
+
+        {/* Controls row */}
+        <div className="flex items-center gap-2">
+          {/* Property filter */}
+          {properties.length > 0 && (
+            <select
+              value={filterProp}
+              onChange={e => setFilterProp(e.target.value)}
+              className="flex-1 text-xs rounded-xl border border-input bg-background px-3 py-2 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30"
+            >
+              <option value="">All Properties</option>
+              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+          <div className="flex items-center gap-2 ml-auto">
+            {/* View toggle */}
+            <div className="flex items-center border border-border rounded-full overflow-hidden">
+              <button onClick={() => setViewMode("tile")} title="Tile view"
+                className={cn("p-1.5 transition-colors", viewMode === "tile" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                <LayoutGrid size={13} />
+              </button>
+              <button onClick={() => setViewMode("list")} title="List view"
+                className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                <Table2 size={13} />
+              </button>
+            </div>
+            <button onClick={refetch}
+              className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground", loading && "text-amber-400")}>
+              <RefreshCw size={15} className={cn(loading && "animate-spin")} />
+            </button>
+          </div>
+        </div>
+
         <p className="text-xs text-muted-foreground">
           {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
         </p>
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex items-center border border-border rounded-full overflow-hidden">
-            <button
-              onClick={() => setViewMode("tile")}
-              title="Tile view"
-              className={cn("p-1.5 transition-colors", viewMode === "tile" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}
-            >
-              <LayoutGrid size={13} />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              title="List view"
-              className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}
-            >
-              <Table2 size={13} />
-            </button>
-          </div>
-          <button
-            onClick={refetch}
-            className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground", loading && "text-amber-400")}
-          >
-            <RefreshCw size={15} className={cn(loading && "animate-spin")} />
-          </button>
-        </div>
       </div>
 
       {/* Status filter pills */}
