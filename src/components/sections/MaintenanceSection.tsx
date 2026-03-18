@@ -90,6 +90,15 @@ export function MaintenanceSection() {
       .then(({ data }) => setVendors(data ?? []));
   }, []);
 
+  // Pre-filter by property when arriving from Property section deep-link
+  useEffect(() => {
+    if (activePropertyId) {
+      setFilterProp(activePropertyId);
+      setActivePropertyId(null);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   // Deep-link: open specific issue when arriving from a notification click.
   // Reads from the ref (always current) so we don't miss the value when
   // the section first mounts in the same render cycle as navigation.
