@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
-import { DraftTasksWidget } from "@/components/tasks/DraftTasksWidget";
+
 import { IssueModal } from "@/components/maintenance/IssueModal";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
 
@@ -558,8 +558,6 @@ export function Dashboard() {
 
       </div>
 
-      {/* Draft Tasks widget — Ronin AI suggested tasks awaiting approval */}
-      <DraftTasksWidget />
 
       {/* Notifications widget — always visible, shows "all clear" when empty */}
       <div className="mx-4 mt-4 rounded-xl bg-card border border-border overflow-hidden">
