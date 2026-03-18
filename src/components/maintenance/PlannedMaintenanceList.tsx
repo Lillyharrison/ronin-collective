@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin } from "lucide-react";
+import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search } from "lucide-react";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -23,6 +23,7 @@ interface Props {
   entries: PlannedMaintenanceEntry[];
   loading: boolean;
   canManage: boolean;
+  properties: { id: string; name: string }[];
   onAdd: () => void;
   onEdit: (entry: PlannedMaintenanceEntry) => void;
   onDelete: (id: string) => void;
