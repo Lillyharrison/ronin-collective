@@ -18,6 +18,7 @@ import { VendorDetailPanel } from "@/components/vendors/VendorDetailPanel";
 export function VendorsSection() {
   const { t } = useLanguage();
   const { isMasterAdmin, isAdmin, isManager } = usePermissions();
+  const { registerBackHandler } = useNavigation();
   const canEdit = isMasterAdmin || isAdmin || isManager;
   const { vendors, loading, createVendor, updateVendor, deleteVendor, createContact, updateContact, deleteContact } = useVendors();
 
@@ -26,6 +27,19 @@ export function VendorsSection() {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+
+  // Register back handler when a vendor detail panel is open
+  useEffect(() => {
+    if (selectedVendor) {
+      registerBackHandler(() => {
+        setSelectedVendor(null);
+        return true;
+      });
+    } else {
+      registerBackHandler(null);
+    }
+    return () => { registerBackHandler(null); };
+  }, [selectedVendor, registerBackHandler]);
 
   const filtered = vendors.filter((v) => {
     const q = search.toLowerCase();
