@@ -4,6 +4,7 @@ import { imageUrl } from "@/lib/imageUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { toast } from "sonner";
 import {
   UsersRound, Plus, Search, ChevronRight,
@@ -186,6 +187,7 @@ function defaultQuickActionsForLevel(level: Level | string): string[] {
 export function MeetTeamSection() {
   const { language } = useLanguage();
   const { isMasterAdmin, isAdmin } = usePermissions();
+  const { registerBackHandler } = useNavigation();
   const isEN = language === "en";
 
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -209,6 +211,19 @@ export function MeetTeamSection() {
     loadJobTitles();
     loadProperties();
   }, []);
+
+  // Register back handler when a member detail panel is open
+  useEffect(() => {
+    if (selectedMember) {
+      registerBackHandler(() => {
+        setSelectedMember(null);
+        return true;
+      });
+    } else {
+      registerBackHandler(null);
+    }
+    return () => { registerBackHandler(null); };
+  }, [selectedMember, registerBackHandler]);
 
   async function loadMembers() {
     const { data: profiles } = await supabase

@@ -68,6 +68,7 @@ export function PropertySection() {
     targetPropertyId, setTargetPropertyId,
     setChecklistsForPropertyId,
     activePropertyId, setActivePropertyId,
+    registerBackHandler,
   } = useNavigation();
 
   const [properties, setProperties] = useState<Property[]>([]);
@@ -107,6 +108,22 @@ export function PropertySection() {
       }
     }
   }, [targetPropertyId, activePropertyId, properties]);
+
+  // Register back handler whenever a property detail is open so the header
+  // back arrow returns to the property list instead of jumping to dashboard.
+  useEffect(() => {
+    if (selectedProperty) {
+      registerBackHandler(() => {
+        setSelectedProperty(null);
+        setActivePropertyId(null);
+        return true;
+      });
+    } else {
+      registerBackHandler(null);
+    }
+    return () => { registerBackHandler(null); };
+  }, [selectedProperty, registerBackHandler]);
+
 
   async function fetchProperties() {
     setLoading(true);
