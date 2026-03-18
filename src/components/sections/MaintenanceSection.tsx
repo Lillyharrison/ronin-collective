@@ -3,10 +3,13 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
-  Flag, Tag, Clock, CheckCircle2,
+  Flag, Tag, Clock, CheckCircle2, CalendarClock,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMaintenanceIssues, MaintenanceIssue, IssueStatus, MaintenanceFilters } from "@/hooks/useMaintenanceIssues";
+import { usePlannedMaintenance, PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
+import { PlannedMaintenanceModal } from "@/components/maintenance/PlannedMaintenanceModal";
+import { PlannedMaintenanceList } from "@/components/maintenance/PlannedMaintenanceList";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IssueCard } from "@/components/maintenance/IssueCard";
@@ -16,17 +19,20 @@ import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
 import { notifySection } from "@/lib/notifySection";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useBatchTranslation } from "@/hooks/useEntryTranslation";
 import { sortProperties } from "@/hooks/useScopedProperties";
+import { toast } from "sonner";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 type ViewMode = "board" | "list" | "table";
+type MaintenanceTab = "repairs" | "planned";
 
 export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
   const { t, language } = useLanguage();
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
+  const [activeTab, setActiveTab] = useLocalStorage<MaintenanceTab>("maintenance_tab", "repairs");
   // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
   const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager) ? undefined : assignedPropertyIds;
 
@@ -51,6 +57,12 @@ export function MaintenanceSection() {
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
   const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
 
+  // Planned maintenance
+  const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
+  const [plannedModalOpen, setPlannedModalOpen] = useState(false);
+  const [editPlanned, setEditPlanned] = useState<PlannedMaintenanceEntry | null>(null);
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+
   // Guard against double-firing notifications on rapid re-renders / StrictMode
   const notifyingRef = useRef<Set<string>>(new Set());
 
@@ -74,6 +86,8 @@ export function MaintenanceSection() {
       .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
+    supabase.from("vendors").select("id, name").eq("is_active", true).order("name")
+      .then(({ data }) => setVendors(data ?? []));
   }, []);
 
   // Deep-link: open specific issue when arriving from a notification click.
@@ -182,6 +196,73 @@ export function MaintenanceSection() {
   };
 
   const handleApprove = (issue: MaintenanceIssue) => handleStatusChange(issue, "approved");
+
+  // ─── Planned maintenance ──────────────────────────────────────────────────────
+  const handleCreatePlanned = async (payload: Parameters<typeof createEntry>[0]) => {
+    const entry = await createEntry(payload);
+    if (!entry) return;
+
+    // Build a calendar event (place month-only entries on the 1st of the month)
+    let calStartDate: string;
+    if (payload.date_type === "specific" && payload.scheduled_date) {
+      calStartDate = `${payload.scheduled_date}T09:00:00`;
+    } else if (payload.date_type === "month_only" && payload.scheduled_month && payload.scheduled_year) {
+      const mm = String(payload.scheduled_month).padStart(2, "0");
+      calStartDate = `${payload.scheduled_year}-${mm}-01T09:00:00`;
+    } else {
+      calStartDate = new Date().toISOString();
+    }
+
+    const calTitle = `🔧 ${payload.title}`;
+    const { data: calEvent } = await supabase
+      .from("calendar_events")
+      .insert({
+        title: calTitle,
+        description: payload.description ?? undefined,
+        event_type: "maintenance",
+        start_date: calStartDate,
+        property_id: payload.property_id ?? undefined,
+        status: payload.date_type === "month_only" ? "unconfirmed" : "upcoming",
+        calendar_source: "planned_maintenance",
+        created_by: userId ?? undefined,
+      })
+      .select()
+      .single();
+
+    // Link calendar event back to the entry
+    if (calEvent) {
+      await supabase
+        .from("planned_maintenance")
+        .update({ calendar_event_id: calEvent.id })
+        .eq("id", entry.id);
+    }
+
+    // Notify section
+    if (userId) {
+      const key = `planned-create-${entry.id}`;
+      if (!notifyingRef.current.has(key)) {
+        notifyingRef.current.add(key);
+        await notifySection("maintenance", {
+          title: `🔧 Planned maintenance scheduled: ${payload.title}`,
+          body: payload.description ?? undefined,
+          type: "info",
+          action_url: "maintenance",
+          entity_id: entry.id,
+          entity_type: "planned_maintenance",
+          property_id: payload.property_id ?? undefined,
+        }, userId);
+        setTimeout(() => notifyingRef.current.delete(key), 5000);
+      }
+    }
+
+    refetchPlanned();
+  };
+
+  const handleUpdatePlanned = async (payload: Parameters<typeof updateEntry>[1]) => {
+    if (!editPlanned) return;
+    await updateEntry(editPlanned.id, payload);
+    setEditPlanned(null);
+  };
 
   const isL = language === "es";
 
@@ -293,100 +374,154 @@ export function MaintenanceSection() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-xl text-foreground">{t("maintenance")}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {openCount} {isL ? "abiertos" : "open"} · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
-              {reportedCount > 0 && (
-                <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
-              )}
-            </p>
+            {activeTab === "repairs" && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {openCount} {isL ? "abiertos" : "open"} · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
+                {reportedCount > 0 && (
+                  <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
+                )}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchIssues}
-              className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors", loading ? "text-gold" : "text-muted-foreground")}>
-              <RefreshCw size={15} className={cn(loading && "animate-spin")} />
-            </button>
-            <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
-              className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-              <Plus size={14} /> {t("reportIssueTitle")}
-            </button>
+            {activeTab === "repairs" ? (
+              <>
+                <button onClick={fetchIssues}
+                  className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors", loading ? "text-gold" : "text-muted-foreground")}>
+                  <RefreshCw size={15} className={cn(loading && "animate-spin")} />
+                </button>
+                <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
+                  className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                  <Plus size={14} /> {t("reportIssueTitle")}
+                </button>
+              </>
+            ) : (
+              <button onClick={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
+                className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                <Plus size={14} /> Add Entry
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={t("searchIssues")}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
-          />
-        </div>
-
-        {/* Filter/sort bar */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          <button onClick={() => setShowFilters(!showFilters)}
-            className={cn("flex-shrink-0 flex items-center gap-1.5 text-xs rounded-full border px-3 py-1.5 font-medium transition-colors",
-              showFilters ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
+        {/* Tab switcher */}
+        <div className="flex rounded-xl border border-border overflow-hidden">
+          <button
+            onClick={() => setActiveTab("repairs")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors",
+              activeTab === "repairs"
+                ? "bg-amber-500/15 text-amber-400 border-r border-amber-500/30"
+                : "text-muted-foreground hover:bg-muted border-r border-border"
             )}>
-            <Filter size={11} /> {isL ? "Filtros" : "Filters"} {(filterProp || filterCat || filterPri) ? "●" : ""}
+            <Wrench size={12} /> Repairs
           </button>
-
-          <div className="relative flex-shrink-0">
-            <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer">
-              <option value="newest">{t("newestFirst")}</option>
-              <option value="oldest">{t("oldestFirst")}</option>
-              <option value="priority">{t("byPriority")}</option>
-              <option value="status">{t("byStatus")}</option>
-            </select>
-            <SortAsc size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          </div>
-
-          {/* View toggle */}
-          <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden ml-auto">
-            <button onClick={() => setViewMode("board")} title="Kanban board"
-              className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
-              <LayoutGrid size={13} />
-            </button>
-            <button onClick={() => setViewMode("table")} title="Spreadsheet"
-              className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
-              <Table2 size={13} />
-            </button>
-            <button onClick={() => setViewMode("list")} title="List"
-              className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
-              <Filter size={13} />
-            </button>
-          </div>
+          <button
+            onClick={() => setActiveTab("planned")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors",
+              activeTab === "planned"
+                ? "bg-blue-500/15 text-blue-400"
+                : "text-muted-foreground hover:bg-muted"
+            )}>
+            <CalendarClock size={12} /> Planned
+          </button>
         </div>
 
-        {/* Expanded filters */}
-        {showFilters && (
-          <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
-            <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
-              className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-              <option value="">{t("allPropertiesFilter")}</option>
-              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
-              className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-              <option value="">{t("allCategories")}</option>
-              {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
-            </select>
-            <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
-              className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-              <option value="">{t("allPriorities")}</option>
-              <option value="urgent">🔴 {isL ? "Urgente" : "Urgent"}</option>
-              <option value="high">🟠 {isL ? "Alto" : "High"}</option>
-              <option value="medium">🟡 {isL ? "Medio" : "Medium"}</option>
-              <option value="low">⚪ {isL ? "Bajo" : "Low"}</option>
-            </select>
-          </div>
+        {/* Repairs-only controls */}
+        {activeTab === "repairs" && (
+          <>
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t("searchIssues")}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+              />
+            </div>
+
+            {/* Filter/sort bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <button onClick={() => setShowFilters(!showFilters)}
+                className={cn("flex-shrink-0 flex items-center gap-1.5 text-xs rounded-full border px-3 py-1.5 font-medium transition-colors",
+                  showFilters ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
+                )}>
+                <Filter size={11} /> {isL ? "Filtros" : "Filters"} {(filterProp || filterCat || filterPri) ? "●" : ""}
+              </button>
+
+              <div className="relative flex-shrink-0">
+                <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                  className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer">
+                  <option value="newest">{t("newestFirst")}</option>
+                  <option value="oldest">{t("oldestFirst")}</option>
+                  <option value="priority">{t("byPriority")}</option>
+                  <option value="status">{t("byStatus")}</option>
+                </select>
+                <SortAsc size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
+
+              {/* View toggle */}
+              <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden ml-auto">
+                <button onClick={() => setViewMode("board")} title="Kanban board"
+                  className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                  <LayoutGrid size={13} />
+                </button>
+                <button onClick={() => setViewMode("table")} title="Spreadsheet"
+                  className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                  <Table2 size={13} />
+                </button>
+                <button onClick={() => setViewMode("list")} title="List"
+                  className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
+                  <Filter size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* Expanded filters */}
+            {showFilters && (
+              <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
+                <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
+                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
+                  <option value="">{t("allPropertiesFilter")}</option>
+                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
+                  <option value="">{t("allCategories")}</option>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
+                </select>
+                <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
+                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
+                  <option value="">{t("allPriorities")}</option>
+                  <option value="urgent">🔴 {isL ? "Urgente" : "Urgent"}</option>
+                  <option value="high">🟠 {isL ? "Alto" : "High"}</option>
+                  <option value="medium">🟡 {isL ? "Medio" : "Medium"}</option>
+                  <option value="low">⚪ {isL ? "Bajo" : "Low"}</option>
+                </select>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* ─── Content ─── */}
+      {/* ─── Planned tab content ─── */}
+      {activeTab === "planned" ? (
+        <PlannedMaintenanceList
+          entries={plannedEntries}
+          loading={plannedLoading}
+          canManage={canManage}
+          onAdd={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
+          onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
+          onDelete={deleteEntry}
+          onStatusChange={async (id, status) => { await updateEntry(id, { status }); }}
+          refetch={refetchPlanned}
+        />
+      ) : (
+      <>
+      {/* ─── Repairs content ─── */}
       {loading ? (
         <div className="px-4 grid grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
@@ -525,7 +660,10 @@ export function MaintenanceSection() {
           </table>
         </div>
       )}
+      </>
+      )}
 
+      {/* ─── Shared modals ─── */}
       <IssueModal
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditIssue(null); }}
@@ -549,6 +687,17 @@ export function MaintenanceSection() {
           categories={categories}
         />
       )}
+
+      <PlannedMaintenanceModal
+        open={plannedModalOpen}
+        onClose={() => { setPlannedModalOpen(false); setEditPlanned(null); }}
+        onSave={editPlanned ? handleUpdatePlanned : handleCreatePlanned}
+        initial={editPlanned}
+        vendors={vendors}
+        properties={properties}
+        profiles={profiles}
+        userId={userId}
+      />
     </div>
   );
 }

@@ -939,6 +939,81 @@ export type Database = {
           },
         ]
       }
+      planned_maintenance: {
+        Row: {
+          assigned_to: string | null
+          calendar_event_id: string | null
+          created_at: string
+          created_by: string | null
+          date_type: string
+          description: string | null
+          id: string
+          property_id: string | null
+          recurrence_months: number | null
+          reminder_days: number
+          scheduled_date: string | null
+          scheduled_month: number | null
+          scheduled_year: number | null
+          status: string
+          title: string
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          calendar_event_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_type?: string
+          description?: string | null
+          id?: string
+          property_id?: string | null
+          recurrence_months?: number | null
+          reminder_days?: number
+          scheduled_date?: string | null
+          scheduled_month?: number | null
+          scheduled_year?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          calendar_event_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_type?: string
+          description?: string | null
+          id?: string
+          property_id?: string | null
+          recurrence_months?: number | null
+          reminder_days?: number
+          scheduled_date?: string | null
+          scheduled_month?: number | null
+          scheduled_year?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planned_maintenance_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planned_maintenance_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           assigned_property_ids: string[] | null
