@@ -18,7 +18,7 @@ export function MessagesSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { level, userId, isMasterAdmin } = usePermissions();
-  const { setIsChatOpen, setTotalUnread } = useNavigation();
+  const { setIsChatOpen, setTotalUnread, registerBackHandler } = useNavigation();
   const [view, setView] = useState<View>("threads");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,6 +40,24 @@ export function MessagesSection() {
     const total = threads.reduce((sum, t) => sum + t.unread_count, 0);
     setTotalUnread(total);
   }, [threads, setTotalUnread]);
+
+  // Register back handler when in chat or address-book sub-view
+  useEffect(() => {
+    if (view === "chat" || view === "address-book") {
+      registerBackHandler(() => {
+        if (view === "chat") {
+          setActiveThreadId(null);
+          setView("threads");
+        } else {
+          setView("threads");
+        }
+        return true;
+      });
+    } else {
+      registerBackHandler(null);
+    }
+    return () => { registerBackHandler(null); };
+  }, [view, registerBackHandler]);
 
 
 
