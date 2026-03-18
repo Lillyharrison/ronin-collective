@@ -197,6 +197,73 @@ export function MaintenanceSection() {
 
   const handleApprove = (issue: MaintenanceIssue) => handleStatusChange(issue, "approved");
 
+  // ─── Planned maintenance ──────────────────────────────────────────────────────
+  const handleCreatePlanned = async (payload: Parameters<typeof createEntry>[0]) => {
+    const entry = await createEntry(payload);
+    if (!entry) return;
+
+    // Build a calendar event (place month-only entries on the 1st of the month)
+    let calStartDate: string;
+    if (payload.date_type === "specific" && payload.scheduled_date) {
+      calStartDate = `${payload.scheduled_date}T09:00:00`;
+    } else if (payload.date_type === "month_only" && payload.scheduled_month && payload.scheduled_year) {
+      const mm = String(payload.scheduled_month).padStart(2, "0");
+      calStartDate = `${payload.scheduled_year}-${mm}-01T09:00:00`;
+    } else {
+      calStartDate = new Date().toISOString();
+    }
+
+    const calTitle = `🔧 ${payload.title}`;
+    const { data: calEvent } = await supabase
+      .from("calendar_events")
+      .insert({
+        title: calTitle,
+        description: payload.description ?? undefined,
+        event_type: "maintenance",
+        start_date: calStartDate,
+        property_id: payload.property_id ?? undefined,
+        status: payload.date_type === "month_only" ? "unconfirmed" : "upcoming",
+        calendar_source: "planned_maintenance",
+        created_by: userId ?? undefined,
+      })
+      .select()
+      .single();
+
+    // Link calendar event back to the entry
+    if (calEvent) {
+      await supabase
+        .from("planned_maintenance")
+        .update({ calendar_event_id: calEvent.id })
+        .eq("id", entry.id);
+    }
+
+    // Notify section
+    if (userId) {
+      const key = `planned-create-${entry.id}`;
+      if (!notifyingRef.current.has(key)) {
+        notifyingRef.current.add(key);
+        await notifySection("maintenance", {
+          title: `🔧 Planned maintenance scheduled: ${payload.title}`,
+          body: payload.description ?? undefined,
+          type: "info",
+          action_url: "maintenance",
+          entity_id: entry.id,
+          entity_type: "planned_maintenance",
+          property_id: payload.property_id ?? undefined,
+        }, userId);
+        setTimeout(() => notifyingRef.current.delete(key), 5000);
+      }
+    }
+
+    refetchPlanned();
+  };
+
+  const handleUpdatePlanned = async (payload: Parameters<typeof updateEntry>[1]) => {
+    if (!editPlanned) return;
+    await updateEntry(editPlanned.id, payload);
+    setEditPlanned(null);
+  };
+
   const isL = language === "es";
 
   // ─── Family read-only ─────────────────────────────────────────────────────────
