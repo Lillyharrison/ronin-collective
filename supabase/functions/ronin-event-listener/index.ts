@@ -458,6 +458,16 @@ Be direct and professional.`;
     if (["calendar_entry", "travel_event", "guest_arrival", "guest_departure"].includes(eventType) ||
         event.title || event.start_date) {
 
+      // If this calendar event was auto-created as a byproduct of another entry
+      // (e.g. planned maintenance), skip all AI briefing and draft task creation
+      // to avoid duplicate notifications. The source entry already sent its own alert.
+      if (event.calendar_source === "planned_maintenance") {
+        console.log("ronin-event-listener: skipping planned_maintenance calendar event — notifications handled by source entry");
+        return new Response(JSON.stringify({ success: true, skipped: "planned_maintenance" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const classification = classifyEvent(
         event.title ?? payload?.title ?? "",
         event.description ?? payload?.description ?? "",
