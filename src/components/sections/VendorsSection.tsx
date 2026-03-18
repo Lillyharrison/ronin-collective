@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { useVendors, VENDOR_CATEGORIES, type Vendor, type VendorContact } from "@/hooks/useVendors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
