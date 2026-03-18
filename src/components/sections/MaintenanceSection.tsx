@@ -374,35 +374,73 @@ export function MaintenanceSection() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-xl text-foreground">{t("maintenance")}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {openCount} {isL ? "abiertos" : "open"} · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
-              {reportedCount > 0 && (
-                <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
-              )}
-            </p>
+            {activeTab === "repairs" && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {openCount} {isL ? "abiertos" : "open"} · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
+                {reportedCount > 0 && (
+                  <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
+                )}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchIssues}
-              className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors", loading ? "text-gold" : "text-muted-foreground")}>
-              <RefreshCw size={15} className={cn(loading && "animate-spin")} />
-            </button>
-            <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
-              className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-              <Plus size={14} /> {t("reportIssueTitle")}
-            </button>
+            {activeTab === "repairs" ? (
+              <>
+                <button onClick={fetchIssues}
+                  className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors", loading ? "text-gold" : "text-muted-foreground")}>
+                  <RefreshCw size={15} className={cn(loading && "animate-spin")} />
+                </button>
+                <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
+                  className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                  <Plus size={14} /> {t("reportIssueTitle")}
+                </button>
+              </>
+            ) : (
+              <button onClick={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
+                className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                <Plus size={14} /> Add Entry
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={t("searchIssues")}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
-          />
+        {/* Tab switcher */}
+        <div className="flex rounded-xl border border-border overflow-hidden">
+          <button
+            onClick={() => setActiveTab("repairs")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors",
+              activeTab === "repairs"
+                ? "bg-amber-500/15 text-amber-400 border-r border-amber-500/30"
+                : "text-muted-foreground hover:bg-muted border-r border-border"
+            )}>
+            <Wrench size={12} /> Repairs
+          </button>
+          <button
+            onClick={() => setActiveTab("planned")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors",
+              activeTab === "planned"
+                ? "bg-blue-500/15 text-blue-400"
+                : "text-muted-foreground hover:bg-muted"
+            )}>
+            <CalendarClock size={12} /> Planned
+          </button>
         </div>
+
+        {/* Repairs-only controls */}
+        {activeTab === "repairs" && (
+          <>
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t("searchIssues")}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
+              />
+            </div>
 
         {/* Filter/sort bar */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
