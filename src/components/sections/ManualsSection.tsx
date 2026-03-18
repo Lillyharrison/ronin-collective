@@ -22,16 +22,18 @@ type ManualTab = "care_guides" | "rules";
 export function ManualsSection() {
   const { language, t } = useLanguage();
   const { isAdmin, assignedPropertyIds } = usePermissions();
-  const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail } = useNavigation();
+  const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail, activePropertyId, setActivePropertyId } = useNavigation();
   const [tab, setTab] = useState<ManualTab>("care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
+  const [selectedPropId, setSelectedPropId] = useState<string | null>(activePropertyId ?? null);
   const [showPropPicker, setShowPropPicker] = useState(false);
+
 
   const TABS: { id: ManualTab; icon: React.ReactNode; label: string; labelEs: string }[] = [
     { id: "care_guides", icon: <BookOpen size={14} />, label: "Care Guides", labelEs: t("careGuides") },
     { id: "rules",       icon: <Shield size={14} />,   label: "Rules",       labelEs: t("rules") },
   ];
+
 
   useEffect(() => {
     let q = supabase.from("properties").select("id, name, is_primary");
@@ -41,9 +43,13 @@ export function ManualsSection() {
     q.then(({ data }) => {
       const props = sortProperties((data as Property[]) ?? []);
       setProperties(props);
-      if (props.length > 0) setSelectedPropId(props[0].id);
+      // Only default to first property if NOT arriving from a property deep-link
+      if (!activePropertyId && props.length > 0) setSelectedPropId(props[0].id);
+      // Consume and clear the deep-link value
+      if (activePropertyId) setActivePropertyId(null);
     });
-  }, [isAdmin, assignedPropertyIds]);
+  }, [isAdmin, assignedPropertyIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const selectedProp = properties.find(p => p.id === selectedPropId);
 

@@ -170,7 +170,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     setHistory(prev => [...prev, { section: activeSection, propertyId: activePropertyId }].slice(-20));
     setChecklistDetailId(null);
     setSidebarOpen(false);
-    if (section !== "property") setActivePropertyId(null);
+    // Preserve activePropertyId for sections that use it as a deep-link filter
+    const PROPERTY_FILTERED_SECTIONS: ActiveSection[] = ["maintenance", "tasks", "manuals", "checklists", "calendar"];
+    if (section !== "property" && !PROPERTY_FILTERED_SECTIONS.includes(section)) {
+      setActivePropertyId(null);
+    }
     navigate(path);
   }, [navigate, activeSection, activePropertyId]);
 

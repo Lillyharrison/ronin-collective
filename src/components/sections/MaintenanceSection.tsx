@@ -55,7 +55,7 @@ export function MaintenanceSection() {
   }), [debouncedSearch, filterCat, filterPri]);
 
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
-  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef } = useNavigation();
+  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef, activePropertyId, setActivePropertyId } = useNavigation();
 
   // Planned maintenance
   const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
@@ -89,6 +89,15 @@ export function MaintenanceSection() {
     supabase.from("vendors").select("id, name").eq("is_active", true).order("name")
       .then(({ data }) => setVendors(data ?? []));
   }, []);
+
+  // Pre-filter by property when arriving from Property section deep-link
+  useEffect(() => {
+    if (activePropertyId) {
+      setFilterProp(activePropertyId);
+      setActivePropertyId(null);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // Deep-link: open specific issue when arriving from a notification click.
   // Reads from the ref (always current) so we don't miss the value when
