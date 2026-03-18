@@ -226,7 +226,12 @@ export function TasksSection() {
     if (!permLoading) fetchTasks(0);
   }, [permLoading, userId, isAdmin, isManager, isMasterAdmin, department, JSON.stringify(assignedPropertyIds)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const liveTasks = tasks.filter(t => !t.is_draft);
+  // Consume property deep-link once on mount
+  useEffect(() => {
+    if (activePropertyId) setActivePropertyId(null);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const liveTasks = tasks.filter(t => !t.is_draft && (!filterPropId || t.property_id === filterPropId));
   const draftTasks = tasks.filter(t => t.is_draft);
 
   const columns: TaskStatus[] = ["urgent", "pending", "in_progress", "completed"];
