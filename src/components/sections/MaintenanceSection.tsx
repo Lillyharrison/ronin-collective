@@ -3,10 +3,13 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
-  Flag, Tag, Clock, CheckCircle2,
+  Flag, Tag, Clock, CheckCircle2, CalendarClock,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMaintenanceIssues, MaintenanceIssue, IssueStatus, MaintenanceFilters } from "@/hooks/useMaintenanceIssues";
+import { usePlannedMaintenance, PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
+import { PlannedMaintenanceModal } from "@/components/maintenance/PlannedMaintenanceModal";
+import { PlannedMaintenanceList } from "@/components/maintenance/PlannedMaintenanceList";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { IssueCard } from "@/components/maintenance/IssueCard";
@@ -16,9 +19,10 @@ import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
 import { notifySection } from "@/lib/notifySection";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useBatchTranslation } from "@/hooks/useEntryTranslation";
 import { sortProperties } from "@/hooks/useScopedProperties";
+import { toast } from "sonner";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 type ViewMode = "board" | "list" | "table";
