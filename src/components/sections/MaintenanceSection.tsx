@@ -242,9 +242,18 @@ export function MaintenanceSection() {
       const key = `planned-create-${entry.id}`;
       if (!notifyingRef.current.has(key)) {
         notifyingRef.current.add(key);
+        // Build a human-readable scheduled date for the notification body
+        let scheduledLabel: string | undefined;
+        if (payload.date_type === "specific" && payload.scheduled_date) {
+          scheduledLabel = `Scheduled: ${new Date(payload.scheduled_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+        } else if (payload.date_type === "month_only" && payload.scheduled_month && payload.scheduled_year) {
+          const monthName = new Date(payload.scheduled_year, payload.scheduled_month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+          scheduledLabel = `Scheduled: ${monthName} (date TBC)`;
+        }
+        const notifBody = [scheduledLabel, payload.description].filter(Boolean).join(" · ") || undefined;
         await notifySection("maintenance", {
           title: `🔧 Planned maintenance scheduled: ${payload.title}`,
-          body: payload.description ?? undefined,
+          body: notifBody,
           type: "info",
           action_url: "maintenance",
           entity_id: entry.id,
