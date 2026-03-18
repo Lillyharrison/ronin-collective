@@ -4,6 +4,7 @@ import { imageUrl } from "@/lib/imageUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { toast } from "sonner";
 import {
   UsersRound, Plus, Search, ChevronRight,
