@@ -68,6 +68,7 @@ export function PropertySection() {
     targetPropertyId, setTargetPropertyId,
     setChecklistsForPropertyId,
     activePropertyId, setActivePropertyId,
+    registerBackHandler,
   } = useNavigation();
 
   const [properties, setProperties] = useState<Property[]>([]);
