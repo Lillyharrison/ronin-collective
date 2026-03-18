@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Plus, RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, CheckCircle2, Trash2, Edit2 } from "lucide-react";
+import { Plus, RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin } from "lucide-react";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -15,6 +16,8 @@ const STATUS_CONFIG = {
   completed:   { label: "Completed",   color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
   cancelled:   { label: "Cancelled",   color: "bg-muted text-muted-foreground border-border" },
 };
+
+type PlannedViewMode = "tile" | "list";
 
 interface Props {
   entries: PlannedMaintenanceEntry[];
@@ -30,6 +33,7 @@ interface Props {
 export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onEdit, onDelete, onStatusChange, refetch }: Props) {
   const [filterStatus, setFilterStatus] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "tile");
 
   const filtered = filterStatus ? entries.filter(e => e.status === filterStatus) : entries;
 
@@ -46,23 +50,34 @@ export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onE
   return (
     <div className="animate-fade-in">
       {/* Top bar */}
-      <div className="px-4 pt-4 pb-3 flex items-center justify-between gap-2">
-        <div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
-          </p>
-        </div>
+      <div className="px-4 pt-2 pb-3 flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+        </p>
         <div className="flex items-center gap-2">
-          <button onClick={refetch}
-            className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground", loading && "text-amber-400")}>
+          {/* View toggle */}
+          <div className="flex items-center border border-border rounded-full overflow-hidden">
+            <button
+              onClick={() => setViewMode("tile")}
+              title="Tile view"
+              className={cn("p-1.5 transition-colors", viewMode === "tile" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}
+            >
+              <LayoutGrid size={13} />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              title="List view"
+              className={cn("p-1.5 transition-colors", viewMode === "list" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}
+            >
+              <Table2 size={13} />
+            </button>
+          </div>
+          <button
+            onClick={refetch}
+            className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground", loading && "text-amber-400")}
+          >
             <RefreshCw size={15} className={cn(loading && "animate-spin")} />
           </button>
-          {canManage && (
-            <button onClick={onAdd}
-              className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-              <Plus size={14} /> Add Entry
-            </button>
-          )}
         </div>
       </div>
 
@@ -90,13 +105,13 @@ export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onE
           <Wrench size={40} className="text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground">No planned maintenance entries</p>
           {canManage && (
-            <button onClick={onAdd}
-              className="text-xs text-gold hover:underline font-medium">
+            <button onClick={onAdd} className="text-xs text-gold hover:underline font-medium">
               + Add the first entry
             </button>
           )}
         </div>
-      ) : (
+      ) : viewMode === "tile" ? (
+        /* ── Tile view ── */
         <div className="px-4 pb-4 space-y-3">
           {filtered.map(entry => (
             <div key={entry.id} className="bg-card border border-border rounded-xl p-3.5 space-y-2.5">
@@ -108,13 +123,11 @@ export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onE
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{entry.description}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                    STATUS_CONFIG[entry.status]?.color ?? "bg-muted text-muted-foreground border-border"
-                  )}>
-                    {STATUS_CONFIG[entry.status]?.label ?? entry.status}
-                  </span>
-                </div>
+                <span className={cn("flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                  STATUS_CONFIG[entry.status]?.color ?? "bg-muted text-muted-foreground border-border"
+                )}>
+                  {STATUS_CONFIG[entry.status]?.label ?? entry.status}
+                </span>
               </div>
 
               {/* Meta row */}
@@ -153,7 +166,6 @@ export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onE
               {/* Actions */}
               {canManage && (
                 <div className="flex items-center gap-2 pt-0.5 border-t border-border/50">
-                  {/* Status quick-change */}
                   <select
                     value={entry.status}
                     onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
@@ -190,6 +202,115 @@ export function PlannedMaintenanceList({ entries, loading, canManage, onAdd, onE
               )}
             </div>
           ))}
+        </div>
+      ) : (
+        /* ── List / table view ── */
+        <div className="overflow-x-auto px-4 pb-4">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                {["Title", "Status", "Contractor", "Property", "Assigned", "Date", "Reminder", "Recurrence"].map((h, i) => (
+                  <th key={i} className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+                {canManage && <th className="px-3 py-2.5" />}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(entry => (
+                <tr key={entry.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                  <td className="px-3 py-2.5">
+                    <p className="font-medium text-foreground truncate max-w-[200px]">{entry.title}</p>
+                    {entry.description && (
+                      <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">{entry.description}</p>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    {canManage ? (
+                      <select
+                        value={entry.status}
+                        onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
+                        onClick={e => e.stopPropagation()}
+                        className="h-7 text-[11px] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <option value="unconfirmed">Unconfirmed</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    ) : (
+                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                        STATUS_CONFIG[entry.status]?.color ?? "bg-muted text-muted-foreground border-border"
+                      )}>
+                        {STATUS_CONFIG[entry.status]?.label ?? entry.status}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    {entry.vendor_name
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><Wrench size={9} /> {entry.vendor_name}</span>
+                      : <span className="text-xs text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    {entry.property_name
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={9} /> {entry.property_name}</span>
+                      : <span className="text-xs text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    {entry.assignee_name
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {entry.assignee_name}</span>
+                      : <span className="text-xs text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar size={9} /> {formatDate(entry)}
+                      {entry.date_type === "month_only" && (
+                        <span className="text-[9px] text-amber-400/70 font-medium ml-0.5">(est.)</span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Bell size={9} /> {entry.reminder_days}d
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    {entry.recurrence_months
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><RotateCcw size={9} /> Every {entry.recurrence_months}mo</span>
+                      : <span className="text-xs text-muted-foreground/40">—</span>}
+                  </td>
+                  {canManage && (
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => onEdit(entry)}
+                          className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                          <Edit2 size={12} />
+                        </button>
+                        {confirmDelete === entry.id ? (
+                          <>
+                            <button onClick={() => { onDelete(entry.id); setConfirmDelete(null); }}
+                              className="text-[10px] bg-destructive text-destructive-foreground px-2 py-0.5 rounded font-medium">
+                              Confirm
+                            </button>
+                            <button onClick={() => setConfirmDelete(null)}
+                              className="text-[10px] text-muted-foreground px-1 py-0.5 rounded hover:bg-muted">
+                              ✕
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => setConfirmDelete(entry.id)}
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
