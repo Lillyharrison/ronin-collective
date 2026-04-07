@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   X, Search, Image, Link2, FileText, Pencil, Check,
-  Users, Bot, User, ChevronRight,
+  Users, Bot, User, ChevronRight, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -34,6 +34,7 @@ interface Props {
   isAgentThread?: boolean;
   onRenameGroup: (newName: string) => Promise<void>;
   onSearchOpen: () => void;
+  onAddMember?: (userId: string) => Promise<void>;
 }
 
 type Tab = "media" | "links" | "docs";
@@ -43,18 +44,33 @@ const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
 export function ChatInfoPanel({
   open, onClose, threadId, threadTitle, threadType, participants,
   currentUserId, isAdmin, isAgentThread, onRenameGroup, onSearchOpen,
+  onAddMember,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("media");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(threadTitle);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [allProfiles, setAllProfiles] = useState<Participant[]>([]);
+  const [addMemberSearch, setAddMemberSearch] = useState("");
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setNewName(threadTitle);
     loadMessages();
   }, [open, threadId, threadTitle]);
+
+  // Load all profiles when add-member panel opens
+  useEffect(() => {
+    if (!showAddMember) return;
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .order("full_name")
+      .then(({ data }) => setAllProfiles(data ?? []));
+  }, [showAddMember]);
 
   const loadMessages = async () => {
     setLoading(true);
@@ -92,13 +108,30 @@ export function ChatInfoPanel({
     setRenaming(false);
   };
 
+  const handleAddMember = async (userId: string) => {
+    if (!onAddMember) return;
+    setAddingId(userId);
+    await onAddMember(userId);
+    setAddingId(null);
+    setShowAddMember(false);
+    setAddMemberSearch("");
+  };
+
   const getParticipantName = (id: string | null) => {
     if (!id) return "Unknown";
     const p = participants.find(p => p.id === id);
     return p?.full_name ?? "Unknown";
   };
 
-  const canRename = isAdmin && threadType === "group" && !isAgentThread;
+  const canRename = isAdmin && (threadType === "group" || threadType === "system_ai");
+  const canAddMembers = isAdmin && (threadType === "group" || threadType === "system_ai");
+
+  const participantIds = new Set(participants.map(p => p.id));
+  const addableProfiles = allProfiles.filter(p => {
+    if (participantIds.has(p.id)) return false;
+    if (!addMemberSearch) return true;
+    return (p.full_name || "").toLowerCase().includes(addMemberSearch.toLowerCase());
+  });
 
   const getHeaderAvatar = () => {
     if (isAgentThread) return (
@@ -121,6 +154,9 @@ export function ChatInfoPanel({
       </div>
     );
   };
+
+  const getInitials = (name: string | null) =>
+    (name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   if (!open) return null;
 
@@ -213,7 +249,7 @@ export function ChatInfoPanel({
               <ChevronRight size={16} className="text-muted-foreground" />
             </button>
 
-            {/* Rename group — only for group chats + admins */}
+            {/* Rename group */}
             {canRename && (
               <button
                 onClick={() => setRenaming(true)}
@@ -228,12 +264,68 @@ export function ChatInfoPanel({
             )}
           </div>
 
-          {/* ── Participants (group only) ── */}
-          {threadType === "group" && !isAgentThread && (
+          {/* ── Participants (group & system_ai threads) ── */}
+          {(threadType === "group" || threadType === "system_ai") && (
             <div className="border-b border-border">
               <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground px-4 pt-4 pb-2">
                 Members
               </p>
+
+              {/* Add member button */}
+              {canAddMembers && (
+                <button
+                  onClick={() => setShowAddMember(!showAddMember)}
+                  className="flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted/50 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">
+                    <UserPlus size={14} className="text-accent" />
+                  </div>
+                  <span className="text-sm text-accent font-medium">Add Member</span>
+                </button>
+              )}
+
+              {/* Add member search dropdown */}
+              {showAddMember && (
+                <div className="mx-4 mb-2 border border-border rounded-lg bg-muted/30 overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50">
+                    <Search size={14} className="text-muted-foreground" />
+                    <input
+                      autoFocus
+                      className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                      placeholder="Search contacts..."
+                      value={addMemberSearch}
+                      onChange={e => setAddMemberSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {addableProfiles.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">No contacts to add</p>
+                    ) : (
+                      addableProfiles.slice(0, 20).map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => handleAddMember(p.id)}
+                          disabled={addingId === p.id}
+                          className="flex items-center gap-3 px-3 py-2 w-full hover:bg-muted/50 transition-colors text-left"
+                        >
+                          {p.avatar_url ? (
+                            <img src={p.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <span className="text-[9px] font-semibold text-muted-foreground">{getInitials(p.full_name)}</span>
+                            </div>
+                          )}
+                          <span className="text-sm text-foreground truncate">{p.full_name || "Unknown"}</span>
+                          {addingId === p.id && (
+                            <div className="ml-auto w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
               {participants.map(p => (
                 <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                   {p.avatar_url ? (

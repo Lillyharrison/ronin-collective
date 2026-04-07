@@ -79,14 +79,7 @@ export function MessagesSection() {
     if (!currentUserId) return;
 
     if (contactId === "agent-ronin") {
-      // Find or create AI thread
-      const existing = threads.find(t => t.type === "system_ai" || t.title === AGENT_RONIN_TITLE);
-      if (existing) {
-        setActiveThreadId(existing.id);
-        setView("chat");
-        return;
-      }
-      // Create system_ai thread
+      // Always create a new AI thread — allows multiple named Ronin conversations
       const { data } = await supabase
         .from("chat_threads")
         .insert({

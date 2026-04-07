@@ -165,6 +165,21 @@ export function ChatView({
     setLocalTitle(newName);
   };
 
+  const handleAddMember = async (userId: string) => {
+    // Read current participant_ids, append new user, update
+    const { data: thread } = await supabase
+      .from("chat_threads")
+      .select("participant_ids")
+      .eq("id", threadId)
+      .single();
+    const current: string[] = (thread?.participant_ids as string[]) ?? [];
+    if (current.includes(userId)) return;
+    await supabase
+      .from("chat_threads")
+      .update({ participant_ids: [...current, userId] } as never)
+      .eq("id", threadId);
+  };
+
   // Filter messages by in-chat search query
   const filteredMessages = searchQuery
     ? messages.filter(m =>
@@ -423,6 +438,7 @@ export function ChatView({
         isAgentThread={isAgentThread}
         onRenameGroup={handleRenameGroup}
         onSearchOpen={() => setSearchOpen(true)}
+        onAddMember={handleAddMember}
       />
 
       {/* ── Sticky chat sub-header — stays pinned inside the flex column ── */}
