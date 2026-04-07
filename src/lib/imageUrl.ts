@@ -20,30 +20,12 @@ type ImageFormat = "origin" | "webp" | "avif";
 
 export function imageUrl(
   src: string | null | undefined,
-  width: number,
-  height?: number,
-  format: ImageFormat = "webp",
+  _width?: number,
+  _height?: number,
+  _format?: ImageFormat,
 ): string | undefined {
   if (!src) return undefined;
-  // Already an external URL or data URI — serve as-is
-  if (src.startsWith("blob:") || src.startsWith("data:")) return src;
-
-  // Only transform URLs that live in our Supabase storage
-  if (!src.includes(SUPABASE_URL) && !src.startsWith("/")) return src;
-
-  // Append transform params; the Supabase Storage transform endpoint accepts
-  // width, height, resize (cover/contain/fill), and format query params.
-  try {
-    const url = new URL(src);
-    // Don't double-transform
-    if (url.searchParams.has("width")) return src;
-
-    url.searchParams.set("width", String(width));
-    if (height) url.searchParams.set("height", String(height));
-    url.searchParams.set("resize", "cover");
-    if (format !== "origin") url.searchParams.set("format", format);
-    return url.toString();
-  } catch {
-    return src;
-  }
+  // Image transformations are not available on this project's storage plan.
+  // Return the original URL as-is to avoid 400 errors.
+  return src;
 }
