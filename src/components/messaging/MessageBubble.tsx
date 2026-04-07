@@ -46,7 +46,38 @@ function ImageWithSkeleton({ src, onClick }: { src: string; onClick: () => void 
   );
 }
 
-/** Render **bold**, *italic*, and `code` markdown inline */
+/** Turn plain URLs into clickable links */
+function linkify(text: string): React.ReactNode[] {
+  const urlRegex = /(https?:\/\/[^\s)<>]+)/g;
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let match;
+  let key = 0;
+  while ((match = urlRegex.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    const url = match[1];
+    // Extract a friendly label from the domain
+    let label = url;
+    try {
+      const host = new URL(url).hostname.replace("www.", "");
+      if (host.includes("amazon")) label = "🛒 Shop on Amazon";
+      else if (host.includes("walmart")) label = "🏬 Shop on Walmart";
+      else if (host.includes("instacart")) label = "🥬 Shop on Instacart";
+      else label = host;
+    } catch { /* keep raw url */ }
+    parts.push(
+      <a key={key++} href={url} target="_blank" rel="noopener noreferrer"
+        className="text-primary underline underline-offset-2 hover:opacity-80 break-all">
+        {label}
+      </a>
+    );
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+/** Render **bold**, *italic*, and `code` markdown inline, plus auto-link URLs */
 function renderMarkdown(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
@@ -54,13 +85,13 @@ function renderMarkdown(text: string): React.ReactNode[] {
   let match;
   let key = 0;
   while ((match = regex.exec(text)) !== null) {
-    if (match.index > last) parts.push(text.slice(last, match.index));
-    if (match[2]) parts.push(<strong key={key++} className="font-semibold">{match[2]}</strong>);
-    else if (match[3]) parts.push(<em key={key++}>{match[3]}</em>);
-    else if (match[4]) parts.push(<code key={key++} className="text-[11px] bg-muted px-1 py-0.5 rounded font-mono">{match[4]}</code>);
+    if (match.index > last) parts.push(...linkify(text.slice(last, match.index)));
+    if (match[2]) parts.push(<strong key={`md${key++}`} className="font-semibold">{match[2]}</strong>);
+    else if (match[3]) parts.push(<em key={`md${key++}`}>{match[3]}</em>);
+    else if (match[4]) parts.push(<code key={`md${key++}`} className="text-[11px] bg-muted px-1 py-0.5 rounded font-mono">{match[4]}</code>);
     last = match.index + match[0].length;
   }
-  if (last < text.length) parts.push(text.slice(last));
+  if (last < text.length) parts.push(...linkify(text.slice(last)));
   return parts;
 }
 
