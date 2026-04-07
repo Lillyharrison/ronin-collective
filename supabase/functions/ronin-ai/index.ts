@@ -486,10 +486,7 @@ async function executeObservationTool(
     const query = args.query as string;
     const category = (args.category as string) ?? "general";
     
-    // Build deep links for major retailers
-    const amazonQuery = encodeURIComponent(query);
-    const walmartQuery = encodeURIComponent(query);
-    const instacartQuery = encodeURIComponent(query);
+    const encoded = encodeURIComponent(query);
     
     // Determine if this is a grocery item (better for Instacart) vs general merchandise
     const groceryCategories = ["grocery", "household", "cleaning"];
@@ -501,24 +498,24 @@ async function executeObservationTool(
       retailers: [
         {
           name: "Amazon",
-          search_url: `https://www.amazon.com/s?k=${amazonQuery}`,
+          search_url: `https://www.amazon.com/s?k=${encoded}`,
           icon: "🛒",
           note: "Wide selection, Prime delivery",
         },
         {
           name: "Walmart",
-          search_url: `https://www.walmart.com/search?q=${walmartQuery}`,
+          search_url: `https://www.walmart.com/search?q=${encoded}`,
           icon: "🏬",
           note: "In-store pickup or delivery",
         },
         ...(isGrocery ? [{
           name: "Instacart",
-          search_url: `https://www.instacart.com/store/search/${instacartQuery}`,
+          search_url: `https://www.instacart.com/store/search_v3/search?search_term=${encoded}`,
           icon: "🥬",
           note: "Same-day grocery delivery",
         }] : []),
       ],
-      tip: "Tap any link to search for this product on that retailer's site and add it to your cart directly.",
+      instruction: "Present each retailer link on its own line with the full URL visible so the user can tap it. Use this format: **Amazon**: <url> — note. Do NOT hide URLs behind markdown link syntax.",
     };
     
     return results;
