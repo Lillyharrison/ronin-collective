@@ -230,30 +230,22 @@ serve(async (req) => {
         .eq("type", "system_ai")
         .contains("participant_ids", [masterAdminId]);
 
-      if (!threads?.length) return null;
-
-      // Prefer: a thread titled "Agent Ronin" that contains ONLY the master admin
-      // (i.e. participant_ids has exactly 1 entry — the master admin themselves,
-      // since Ronin AI has no real user row).
-      const dedicated = threads.find(
+      // Look for a dedicated "Agent Ronin" thread (the proactive alerts channel)
+      const dedicated = threads?.find(
         (t: { participant_ids: string[] | null; title: string | null }) =>
-          (t.title === "Agent Ronin") &&
-          (t.participant_ids?.length === 1)
+          t.title === "Agent Ronin" && (t.participant_ids?.length === 1)
       );
       if (dedicated) return dedicated.id;
 
-      // Fallback: any system_ai thread where master admin is the ONLY participant
-      const solo = threads.find(
-        (t: { participant_ids: string[] | null }) => t.participant_ids?.length === 1
-      );
-      if (solo) return solo.id;
+      // No dedicated thread exists — create one automatically
+      const { data: newThread } = await adminClient.from("chat_threads").insert({
+        title: "Agent Ronin",
+        type: "system_ai",
+        participant_ids: [masterAdminId],
+        created_by: masterAdminId,
+      }).select("id").single();
 
-      // Last resort: smallest participant list (i.e. most private channel)
-      const sorted = [...threads].sort(
-        (a: { participant_ids: string[] | null }, b: { participant_ids: string[] | null }) =>
-          (a.participant_ids?.length ?? 99) - (b.participant_ids?.length ?? 99)
-      );
-      return sorted[0]?.id ?? null;
+      return newThread?.id ?? null;
     }
 
     // Helper: post message to master admin's Ronin thread
