@@ -1458,6 +1458,16 @@ When anyone reports a physical problem with a property (broken item, damage, lea
         contextSections.push("RONIN'S LONG-TERM MEMORY: Empty. Use save_memory to build your knowledge base as you learn.");
       }
 
+      // Fetch thread title for topic awareness
+      let threadTopicNote = "";
+      if (thread_id) {
+        const { data: threadData } = await adminClient.from("chat_threads").select("title").eq("id", thread_id).single();
+        const threadTitle = threadData?.title;
+        if (threadTitle && threadTitle !== "Agent Ronin") {
+          threadTopicNote = `\n\n## THREAD TOPIC: "${threadTitle}"\nThis conversation is about "${threadTitle}". Stay focused on this topic. Do NOT proactively bring up unrelated platform data (maintenance issues, tasks, etc.) unless the user explicitly asks about them or they are directly relevant to "${threadTitle}".`;
+        }
+      }
+
       const contextNote = "\n\n=== LIVE PLATFORM DATA ===\n" + contextSections.join("\n\n") + "\n=== END LIVE DATA ===";
 
       const visionAddition = isVisionRequest ? `
