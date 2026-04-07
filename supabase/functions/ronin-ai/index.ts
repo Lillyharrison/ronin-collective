@@ -1484,7 +1484,7 @@ Analyse the photo carefully:
         ? { role: "user", content: [{ type: "text", text: content || "Please analyse this image." }, { type: "image_url", image_url: { url: image_url } }] }
         : { role: "user", content };
 
-      const baseSystemMsg = { role: "system", content: systemPrompt + visionAddition + contextNote };
+      const baseSystemMsg = { role: "system", content: systemPrompt + threadTopicNote + visionAddition + contextNote };
 
       // ── ReAct Loop (thread_id: non-streaming, synchronous) ─────────────────
       if (thread_id) {
