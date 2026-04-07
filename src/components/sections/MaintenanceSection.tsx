@@ -181,7 +181,11 @@ export function MaintenanceSection() {
     if (issue.status === "reported" && newStatus === "approved" && !isAdmin && !isMasterAdmin) return;
     const patch: Partial<MaintenanceIssue> = { status: newStatus };
     if (newStatus === "resolved") patch.resolved_at = new Date().toISOString();
-    if (newStatus === "scheduled" && scheduledDate) patch.scheduled_date = scheduledDate;
+    if (newStatus === "scheduled" && scheduledDate) {
+      patch.scheduled_date = scheduledDate;
+    } else if (newStatus !== "scheduled") {
+      patch.scheduled_date = null;
+    }
     await updateIssue(issue.id, patch);
     // Sync the detail drawer so the dropdown doesn't revert to the old status
     setDetailIssue(prev => prev?.id === issue.id ? { ...prev, ...patch } : prev);
