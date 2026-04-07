@@ -1247,7 +1247,13 @@ export function CalendarSection() {
     const events: CalEvent[] = [];
 
     for (const ev of manualData ?? []) {
-      const tab: RoninTab = ev.event_type === "travel" ? "travel" : "all";
+      const tab: RoninTab =
+        ev.event_type === "travel" ? "travel"
+        : ev.event_type === "maintenance" || ev.event_type === "repair" ? "maintenance"
+        : ev.event_type === "delivery" || ev.event_type === "order" ? "deliveries"
+        : ev.event_type === "birthday" ? "birthdays"
+        : ev.event_type === "construction" ? "construction"
+        : "all";
       events.push({ ...ev, _source: "calendar_events", _is_draggable: true, _tab: tab });
     }
 
