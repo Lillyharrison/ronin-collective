@@ -482,6 +482,48 @@ async function executeObservationTool(
     };
   }
 
+  if (name === "search_product") {
+    const query = args.query as string;
+    const category = (args.category as string) ?? "general";
+    
+    // Build deep links for major retailers
+    const amazonQuery = encodeURIComponent(query);
+    const walmartQuery = encodeURIComponent(query);
+    const instacartQuery = encodeURIComponent(query);
+    
+    // Determine if this is a grocery item (better for Instacart) vs general merchandise
+    const groceryCategories = ["grocery", "household", "cleaning"];
+    const isGrocery = groceryCategories.includes(category);
+    
+    const results = {
+      query,
+      category,
+      retailers: [
+        {
+          name: "Amazon",
+          search_url: `https://www.amazon.com/s?k=${amazonQuery}`,
+          icon: "🛒",
+          note: "Wide selection, Prime delivery",
+        },
+        {
+          name: "Walmart",
+          search_url: `https://www.walmart.com/search?q=${walmartQuery}`,
+          icon: "🏬",
+          note: "In-store pickup or delivery",
+        },
+        ...(isGrocery ? [{
+          name: "Instacart",
+          search_url: `https://www.instacart.com/store/search/${instacartQuery}`,
+          icon: "🥬",
+          note: "Same-day grocery delivery",
+        }] : []),
+      ],
+      tip: "Tap any link to search for this product on that retailer's site and add it to your cart directly.",
+    };
+    
+    return results;
+  }
+
   return { error: `Unknown observation tool: ${name}` };
 }
 
