@@ -438,6 +438,7 @@ export function ChatView({
         isAgentThread={isAgentThread}
         onRenameGroup={handleRenameGroup}
         onSearchOpen={() => setSearchOpen(true)}
+        onAddMember={handleAddMember}
       />
 
       {/* ── Sticky chat sub-header — stays pinned inside the flex column ── */}
