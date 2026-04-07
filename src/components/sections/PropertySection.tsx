@@ -838,14 +838,19 @@ const CITY_ALIASES: Record<string, string> = {
   jacksonville: "America/New_York", tampa: "America/New_York", atlanta: "America/New_York",
   boston: "America/New_York", "new york": "America/New_York", nyc: "America/New_York",
   philadelphia: "America/New_York", washington: "America/New_York", dc: "America/New_York",
-  charlotte: "America/New_York", detroit: "America/Detroit",
+  charlotte: "America/New_York", detroit: "America/Detroit", richmond: "America/New_York",
+  pittsburgh: "America/New_York", raleigh: "America/New_York", nashville: "America/Chicago",
   chicago: "America/Chicago", houston: "America/Chicago", dallas: "America/Chicago",
   "new orleans": "America/Chicago", minneapolis: "America/Chicago", milwaukee: "America/Chicago",
+  "san antonio": "America/Chicago", austin: "America/Chicago", memphis: "America/Chicago",
+  "kansas city": "America/Chicago", "st louis": "America/Chicago", "oklahoma city": "America/Chicago",
+  omaha: "America/Chicago", "des moines": "America/Chicago", madison: "America/Chicago",
   denver: "America/Denver", "salt lake city": "America/Denver", boise: "America/Boise",
+  albuquerque: "America/Denver", "colorado springs": "America/Denver",
   phoenix: "America/Phoenix", tucson: "America/Phoenix",
   "los angeles": "America/Los_Angeles", la: "America/Los_Angeles", "san francisco": "America/Los_Angeles",
   seattle: "America/Los_Angeles", portland: "America/Los_Angeles", "las vegas": "America/Los_Angeles",
-  "san diego": "America/Los_Angeles",
+  "san diego": "America/Los_Angeles", sacramento: "America/Los_Angeles",
   anchorage: "America/Anchorage", honolulu: "Pacific/Honolulu", hawaii: "Pacific/Honolulu",
   toronto: "America/Toronto", montreal: "America/Toronto", ottawa: "America/Toronto",
   vancouver: "America/Vancouver", calgary: "America/Edmonton", edmonton: "America/Edmonton",
@@ -877,6 +882,35 @@ const CITY_ALIASES: Record<string, string> = {
   cairo: "Africa/Cairo", johannesburg: "Africa/Johannesburg",
   "cape town": "Africa/Johannesburg", lagos: "Africa/Lagos", nairobi: "Africa/Nairobi",
 };
+
+const STATE_ALIASES: Record<string, string> = {
+  alabama: "America/Chicago", alaska: "America/Anchorage", arizona: "America/Phoenix",
+  arkansas: "America/Chicago", california: "America/Los_Angeles", colorado: "America/Denver",
+  connecticut: "America/New_York", delaware: "America/New_York",
+  florida: "America/New_York", georgia: "America/New_York", hawaii: "Pacific/Honolulu",
+  idaho: "America/Boise", illinois: "America/Chicago", indiana: "America/Indiana/Indianapolis",
+  iowa: "America/Chicago", kansas: "America/Chicago", kentucky: "America/New_York",
+  louisiana: "America/Chicago", maine: "America/New_York", maryland: "America/New_York",
+  massachusetts: "America/New_York", michigan: "America/Detroit", minnesota: "America/Chicago",
+  mississippi: "America/Chicago", missouri: "America/Chicago", montana: "America/Denver",
+  nebraska: "America/Chicago", nevada: "America/Los_Angeles", "new hampshire": "America/New_York",
+  "new jersey": "America/New_York", "new mexico": "America/Denver", "new york": "America/New_York",
+  "north carolina": "America/New_York", "north dakota": "America/Chicago",
+  ohio: "America/New_York", oklahoma: "America/Chicago", oregon: "America/Los_Angeles",
+  pennsylvania: "America/New_York", "rhode island": "America/New_York",
+  "south carolina": "America/New_York", "south dakota": "America/Chicago",
+  tennessee: "America/Chicago", texas: "America/Chicago", utah: "America/Denver",
+  vermont: "America/New_York", virginia: "America/New_York",
+  washington: "America/Los_Angeles", "west virginia": "America/New_York",
+  wisconsin: "America/Chicago", wyoming: "America/Denver",
+  "washington state": "America/Los_Angeles", "washington dc": "America/New_York",
+};
+
+const US_TIMEZONES = [
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Phoenix", "America/Anchorage", "Pacific/Honolulu",
+  "America/Detroit", "America/Indiana/Indianapolis", "America/Boise",
+];
 
 const ALL_TIMEZONES: string[] = (() => {
   try { return (Intl as any).supportedValuesOf("timeZone") as string[]; } catch {
@@ -911,7 +945,27 @@ const ALL_TIMEZONES: string[] = (() => {
   }
 })();
 
+const US_TZ_LABELS: Record<string, string> = {
+  "America/New_York": "Eastern Time",
+  "America/Chicago": "Central Time",
+  "America/Denver": "Mountain Time",
+  "America/Los_Angeles": "Pacific Time",
+  "America/Phoenix": "Arizona (no DST)",
+  "America/Anchorage": "Alaska Time",
+  "Pacific/Honolulu": "Hawaii Time",
+  "America/Detroit": "Eastern (Detroit)",
+  "America/Indiana/Indianapolis": "Eastern (Indiana)",
+  "America/Boise": "Mountain (Boise)",
+};
+
 function formatTzLabel(tz: string): string {
+  if (US_TZ_LABELS[tz]) {
+    try {
+      const offset = new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" })
+        .formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value ?? "";
+      return `${US_TZ_LABELS[tz]}  ·  ${offset}`;
+    } catch { return US_TZ_LABELS[tz]; }
+  }
   const city = tz.split("/").pop()?.replace(/_/g, " ") ?? tz;
   try {
     const offset = new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" })
@@ -926,17 +980,37 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: stri
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = (() => {
-    if (!search.trim()) return ALL_TIMEZONES;
     const q = search.trim().toLowerCase();
-    const aliasMatch = CITY_ALIASES[q];
+    if (!q) {
+      const rest = ALL_TIMEZONES.filter(tz => !US_TIMEZONES.includes(tz));
+      return { us: US_TIMEZONES, other: rest };
+    }
+    const aliasMatch = CITY_ALIASES[q] || STATE_ALIASES[q];
     const matches = ALL_TIMEZONES.filter(tz =>
       tz.toLowerCase().includes(q) ||
       tz.split("/").pop()?.toLowerCase().replace(/_/g, " ").includes(q)
     );
-    if (aliasMatch && !matches.includes(aliasMatch)) return [aliasMatch, ...matches];
-    if (aliasMatch && matches[0] !== aliasMatch) return [aliasMatch, ...matches.filter(m => m !== aliasMatch)];
-    return matches;
+    if (aliasMatch && !matches.includes(aliasMatch)) matches.unshift(aliasMatch);
+    else if (aliasMatch && matches[0] !== aliasMatch) {
+      const idx = matches.indexOf(aliasMatch);
+      if (idx > 0) { matches.splice(idx, 1); matches.unshift(aliasMatch); }
+    }
+    return { us: [] as string[], other: matches };
   })();
+
+  const renderItem = (tz: string, label?: string) => (
+    <button
+      key={tz}
+      type="button"
+      onClick={() => { onChange(tz); setSearch(""); setOpen(false); }}
+      className={`w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center justify-between ${tz === value ? "bg-accent text-accent-foreground font-medium" : "text-foreground"}`}
+    >
+      <span>{label || (US_TZ_LABELS[tz] ? `${US_TZ_LABELS[tz]}` : tz.replace(/_/g, " "))}</span>
+      <span className="text-muted-foreground text-[10px]">{
+        (() => { try { return new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" }).formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value ?? ""; } catch { return ""; } })()
+      }</span>
+    </button>
+  );
 
   return (
     <div className="relative">
@@ -951,25 +1025,24 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: stri
       {open && (
         <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-lg overflow-hidden">
           <div className="p-2 border-b">
-            <Input ref={inputRef} placeholder="Search city or timezone…" value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs" />
+            <Input ref={inputRef} placeholder="Search city, state, or timezone…" value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs" />
           </div>
           <div className="max-h-56 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {filtered.us.length === 0 && filtered.other.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">No timezones found</p>
             ) : (
-              filtered.slice(0, 150).map(tz => (
-                <button
-                  key={tz}
-                  type="button"
-                  onClick={() => { onChange(tz); setSearch(""); setOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center justify-between ${tz === value ? "bg-accent text-accent-foreground font-medium" : "text-foreground"}`}
-                >
-                  <span>{tz.replace(/_/g, " ")}</span>
-                  <span className="text-muted-foreground text-[10px]">{
-                    (() => { try { return new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" }).formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value ?? ""; } catch { return ""; } })()
-                  }</span>
-                </button>
-              ))
+              <>
+                {filtered.us.length > 0 && (
+                  <>
+                    <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50 border-b">United States</div>
+                    {filtered.us.map(tz => renderItem(tz))}
+                    {filtered.other.length > 0 && (
+                      <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50 border-y">All Timezones</div>
+                    )}
+                  </>
+                )}
+                {filtered.other.slice(0, 150).map(tz => renderItem(tz))}
+              </>
             )}
           </div>
         </div>
