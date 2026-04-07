@@ -986,7 +986,7 @@ serve(async (req) => {
           category: tool_args.category,
           priority,
           status: priority === 1 ? "urgent" : "pending",
-          assigned_to: resolveStaffId(tool_args.assigned_to_name),
+          assigned_to: resolveStaffId(tool_args.assigned_to_name) ?? callerUserId,
           property_id: resolvePropertyId(tool_args.property_name),
           due_date: tool_args.due_date ?? null,
           created_by: callerUserId,
