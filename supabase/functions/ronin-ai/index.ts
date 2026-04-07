@@ -9,7 +9,7 @@ const corsHeaders = {
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
-const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors"];
+const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors", "search_product"];
 const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message", "log_maintenance_issue", "log_vendor", "update_occupancy"];
 const SILENT_TOOL_NAMES = ["save_memory", "add_shopping_list_item"];
 
@@ -93,6 +93,21 @@ const RONIN_TOOLS = [
           category: { type: "string", description: "Filter by category (e.g. cleaning, maintenance, security)" },
         },
         required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_product",
+      description: "Search for a product online and return direct purchase links to Amazon, Walmart, and Instacart. Use this when a user wants to buy something, find a product, compare prices, or needs a link to purchase an item. Returns product name suggestions with deep links to major retailers so the user can add to cart with one tap.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Product search query, e.g. 'Dyson V15 cordless vacuum', 'organic laundry detergent', '4K security camera'" },
+          category: { type: "string", enum: ["general", "grocery", "household", "electronics", "appliance", "outdoor", "cleaning"], description: "Product category to help refine results" },
+        },
+        required: ["query"],
       },
     },
   },
@@ -465,6 +480,48 @@ async function executeObservationTool(
         description: v.description ?? "—", is_active: v.is_active,
       })),
     };
+  }
+
+  if (name === "search_product") {
+    const query = args.query as string;
+    const category = (args.category as string) ?? "general";
+    
+    // Build deep links for major retailers
+    const amazonQuery = encodeURIComponent(query);
+    const walmartQuery = encodeURIComponent(query);
+    const instacartQuery = encodeURIComponent(query);
+    
+    // Determine if this is a grocery item (better for Instacart) vs general merchandise
+    const groceryCategories = ["grocery", "household", "cleaning"];
+    const isGrocery = groceryCategories.includes(category);
+    
+    const results = {
+      query,
+      category,
+      retailers: [
+        {
+          name: "Amazon",
+          search_url: `https://www.amazon.com/s?k=${amazonQuery}`,
+          icon: "🛒",
+          note: "Wide selection, Prime delivery",
+        },
+        {
+          name: "Walmart",
+          search_url: `https://www.walmart.com/search?q=${walmartQuery}`,
+          icon: "🏬",
+          note: "In-store pickup or delivery",
+        },
+        ...(isGrocery ? [{
+          name: "Instacart",
+          search_url: `https://www.instacart.com/store/search/${instacartQuery}`,
+          icon: "🥬",
+          note: "Same-day grocery delivery",
+        }] : []),
+      ],
+      tip: "Tap any link to search for this product on that retailer's site and add it to your cart directly.",
+    };
+    
+    return results;
   }
 
   return { error: `Unknown observation tool: ${name}` };
