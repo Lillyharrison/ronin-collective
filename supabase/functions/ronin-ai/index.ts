@@ -976,11 +976,15 @@ serve(async (req) => {
 
       // ── create_task ───────────────────────────────────────────────────────
       } else if (tool_name === "create_task") {
+        // Coerce priority: AI sometimes sends string labels instead of numbers
+        const priorityMap: Record<string, number> = { urgent: 1, high: 1, normal: 2, medium: 2, low: 3 };
+        const rawPri = tool_args.priority;
+        const priority: number = typeof rawPri === "number" ? rawPri : (priorityMap[String(rawPri).toLowerCase()] ?? 2);
         const { data: task, error: taskErr } = await adminClient.from("tasks").insert({
           title_en: tool_args.title_en,
           description_en: tool_args.description_en ?? null,
           category: tool_args.category,
-          priority: tool_args.priority,
+          priority,
           status: tool_args.priority === 1 ? "urgent" : "pending",
           assigned_to: resolveStaffId(tool_args.assigned_to_name),
           property_id: resolvePropertyId(tool_args.property_name),
