@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search } from "lucide-react";
+import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -49,7 +49,14 @@ export function PlannedMaintenanceList({
   const [filterStatus, setFilterStatus] = useState("");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "tile");
+  const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "list");
+  const [sortCol, setSortCol] = useState<string>("Title");
+  const [sortAsc, setSortAsc] = useState(true);
+
+  function handleSort(col: string) {
+    if (sortCol === col) { setSortAsc(!sortAsc); }
+    else { setSortCol(col); setSortAsc(true); }
+  }
 
   const filtered = entries.filter(e => {
     if (filterStatus && e.status !== filterStatus) return false;
@@ -64,6 +71,26 @@ export function PlannedMaintenanceList({
       );
     }
     return true;
+  });
+
+  function getSortValue(entry: PlannedMaintenanceEntry, col: string): string {
+    switch (col) {
+      case "Title": return entry.title.toLowerCase();
+      case "Status": return entry.status;
+      case "Contractor": return (entry.vendor_name ?? "").toLowerCase();
+      case "Property": return (entry.property_name ?? "").toLowerCase();
+      case "Assigned": return (entry.assignee_name ?? "").toLowerCase();
+      case "Date": return entry.scheduled_date ?? `${entry.scheduled_year ?? 9999}-${String(entry.scheduled_month ?? 99).padStart(2, "0")}`;
+      case "Reminder": return String(entry.reminder_days).padStart(5, "0");
+      case "Recurrence": return String(entry.recurrence_months ?? 0).padStart(5, "0");
+      default: return "";
+    }
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    const av = getSortValue(a, sortCol);
+    const bv = getSortValue(b, sortCol);
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
   });
 
   function formatDate(entry: PlannedMaintenanceEntry) {
@@ -160,7 +187,7 @@ export function PlannedMaintenanceList({
       ) : viewMode === "tile" ? (
         /* ── Tile view ── */
         <div className="px-4 pb-4 space-y-3">
-          {filtered.map(entry => (
+          {sorted.map(entry => (
             <div key={entry.id} className="bg-card border border-border rounded-xl p-3.5 space-y-2.5">
               {/* Header row */}
               <div className="flex items-start justify-between gap-2">
@@ -257,15 +284,20 @@ export function PlannedMaintenanceList({
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 {["Title", "Status", "Contractor", "Property", "Assigned", "Date", "Reminder", "Recurrence"].map((h, i) => (
-                  <th key={i} className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    {h}
+                  <th key={i}
+                    onClick={() => handleSort(h)}
+                    className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
+                    <span className="inline-flex items-center gap-1">
+                      {h}
+                      {sortCol === h ? (sortAsc ? <ArrowUp size={10} /> : <ArrowDown size={10} />) : <ArrowUpDown size={10} className="opacity-30" />}
+                    </span>
                   </th>
                 ))}
                 {canManage && <th className="px-3 py-2.5" />}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(entry => (
+              {sorted.map(entry => (
                 <tr key={entry.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                   <td className="px-3 py-2.5">
                     <p className="font-medium text-foreground truncate max-w-[200px]">{entry.title}</p>
