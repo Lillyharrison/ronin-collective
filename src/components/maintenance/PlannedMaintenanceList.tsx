@@ -383,7 +383,7 @@ export function PlannedMaintenanceList({
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.last_service_date
-                      ? <span className="text-xs text-muted-foreground">{format(parseISO(entry.last_service_date), "dd MMM yyyy")}</span>
+                      ? <span className={cn("text-xs", entry.status === "completed" ? "text-emerald-400 font-medium" : "text-muted-foreground")}>{format(parseISO(entry.last_service_date), "dd MMM yyyy")}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">

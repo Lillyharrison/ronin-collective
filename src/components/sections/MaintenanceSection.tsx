@@ -283,6 +283,13 @@ export function MaintenanceSection() {
   const handleUpdatePlanned = async (payload: Parameters<typeof updateEntry>[1]) => {
     if (!editPlanned) return;
     await updateEntry(editPlanned.id, payload);
+
+    // Sync linked calendar event with updated dates
+    await syncCalendarForPlanned(editPlanned.id, editPlanned.calendar_event_id, {
+      ...editPlanned,
+      ...payload,
+    } as PlannedMaintenanceEntry);
+
     setEditPlanned(null);
   };
 
