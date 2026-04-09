@@ -1422,69 +1422,41 @@ export function CalendarSection() {
   };
 
   return (
-    <div className="animate-fade-in space-y-4 px-4 py-4">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Calendar</h1>
-          <p className="text-sm text-muted-foreground">
+    <div className="animate-fade-in space-y-2 px-4 py-2">
+      {/* Header — single compact row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold leading-tight">Calendar</h1>
+          <p className="text-xs text-muted-foreground leading-tight">
             {mode === "family" ? "Family calendar · synced from iCal" : "Ronin calendar · smart & operational"}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            {/* Staff schedule — separate from calendar tabs, lives up here */}
-            {(isMasterAdmin || isAdmin || canSee("calendar-staff")) && (
-              <Button
-                variant={roninTab === "staff" && mode === "ronin" ? "default" : "outline"}
-                size="sm"
-                onClick={() => { setMode("ronin"); setRoninTab(roninTab === "staff" ? "all" : "staff"); }}
-                className="gap-1.5 h-8 text-xs"
-              >
-                <UserCheck size={13} /> Staff
-              </Button>
-            )}
-            {isMasterAdmin && (
-              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
-                <Settings size={18} />
-              </Button>
-            )}
-            {(isMasterAdmin || isAdmin) && (
-              <Button size="sm" onClick={() => setShowNewEvent(true)} className="gap-2">
-                <Plus size={14} /> Add
-              </Button>
-            )}
-          </div>
-          {/* Compact legend box — top right */}
-          <div className="rounded-xl border border-border bg-card px-3 py-2 flex flex-col gap-1.5">
-            {mode === "family"
-              ? Object.entries(FAMILY_TYPE_CONFIG).map(([k, v]) => (
-                  <div key={k} className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: EVENT_SOLID_COLORS[k] ?? "hsl(var(--accent))" }} />
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{v.label}</span>
-                  </div>
-                ))
-              : Object.entries(RONIN_TAB_CONFIG).filter(([k]) => k !== "all" && k !== "staff").map(([k, v]) => {
-                  const dotColor = k === "birthdays" ? EVENT_SOLID_COLORS.birthdays
-                    : k === "maintenance" ? EVENT_SOLID_COLORS.maintenance
-                    : k === "deliveries" ? EVENT_SOLID_COLORS.delivery
-                    : k === "travel" ? EVENT_SOLID_COLORS.travel
-                    : k === "construction" ? EVENT_SOLID_COLORS.construction
-                    : "hsl(var(--accent))";
-                  return (
-                    <div key={k} className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
-                      <span className={cn("text-[10px] whitespace-nowrap", v.color)}>{v.label}</span>
-                    </div>
-                  );
-                })
-            }
-          </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {(isMasterAdmin || isAdmin || canSee("calendar-staff")) && (
+            <Button
+              variant={roninTab === "staff" && mode === "ronin" ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setMode("ronin"); setRoninTab(roninTab === "staff" ? "all" : "staff"); }}
+              className="gap-1.5 h-7 text-xs"
+            >
+              <UserCheck size={13} /> Staff
+            </Button>
+          )}
+          {isMasterAdmin && (
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSettings(true)}>
+              <Settings size={16} />
+            </Button>
+          )}
+          {(isMasterAdmin || isAdmin) && (
+            <Button size="sm" className="gap-1.5 h-7 text-xs" onClick={() => setShowNewEvent(true)}>
+              <Plus size={13} /> Add
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Mode toggle + property filter on the same row */}
-      <div className="flex items-center gap-3">
+      {/* Mode toggle + property filter */}
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit">
           {canSeeFamilyCal && (
             <button
