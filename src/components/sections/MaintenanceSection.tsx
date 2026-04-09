@@ -606,7 +606,22 @@ export function MaintenanceSection() {
           onAdd={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
           onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
           onDelete={deleteEntry}
-          onStatusChange={async (id, status) => { await updateEntry(id, { status }); }}
+          onStatusChange={async (id, status) => {
+            const entry = plannedEntries.find(e => e.id === id);
+            await updateEntry(id, { status });
+            // After updateEntry (which may have rolled dates forward), refetch and sync calendar
+            if (entry) {
+              // Re-read the updated entry to get rolled-forward dates
+              const { data: updated } = await supabase
+                .from("planned_maintenance")
+                .select("*")
+                .eq("id", id)
+                .single();
+              if (updated) {
+                await syncCalendarForPlanned(id, updated.calendar_event_id, updated as PlannedMaintenanceEntry);
+              }
+            }
+          }}
           refetch={refetchPlanned}
         />
       ) : (
