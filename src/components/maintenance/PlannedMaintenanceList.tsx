@@ -187,7 +187,7 @@ export function PlannedMaintenanceList({
       ) : viewMode === "tile" ? (
         /* ── Tile view ── */
         <div className="px-4 pb-4 space-y-3">
-          {filtered.map(entry => (
+          {sorted.map(entry => (
             <div key={entry.id} className="bg-card border border-border rounded-xl p-3.5 space-y-2.5">
               {/* Header row */}
               <div className="flex items-start justify-between gap-2">
@@ -284,15 +284,20 @@ export function PlannedMaintenanceList({
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 {["Title", "Status", "Contractor", "Property", "Assigned", "Date", "Reminder", "Recurrence"].map((h, i) => (
-                  <th key={i} className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    {h}
+                  <th key={i}
+                    onClick={() => handleSort(h)}
+                    className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
+                    <span className="inline-flex items-center gap-1">
+                      {h}
+                      {sortCol === h ? (sortAsc ? <ArrowUp size={10} /> : <ArrowDown size={10} />) : <ArrowUpDown size={10} className="opacity-30" />}
+                    </span>
                   </th>
                 ))}
                 {canManage && <th className="px-3 py-2.5" />}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(entry => (
+              {sorted.map(entry => (
                 <tr key={entry.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                   <td className="px-3 py-2.5">
                     <p className="font-medium text-foreground truncate max-w-[200px]">{entry.title}</p>
