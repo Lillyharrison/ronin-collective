@@ -16,6 +16,7 @@ export interface PlannedMaintenanceEntry {
   reminder_days: number;
   recurrence_months: number | null;
   status: "to_be_booked" | "booked" | "initiated_by_vendor" | "completed" | "cancelled";
+  last_service_date: string | null;
   calendar_event_id: string | null;
   created_by: string | null;
   created_at: string;

@@ -948,6 +948,7 @@ export type Database = {
           date_type: string
           description: string | null
           id: string
+          last_service_date: string | null
           property_id: string | null
           recurrence_months: number | null
           reminder_days: number
@@ -967,6 +968,7 @@ export type Database = {
           date_type?: string
           description?: string | null
           id?: string
+          last_service_date?: string | null
           property_id?: string | null
           recurrence_months?: number | null
           reminder_days?: number
@@ -986,6 +988,7 @@ export type Database = {
           date_type?: string
           description?: string | null
           id?: string
+          last_service_date?: string | null
           property_id?: string | null
           recurrence_months?: number | null
           reminder_days?: number

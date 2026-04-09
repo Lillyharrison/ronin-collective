@@ -2,7 +2,7 @@ import { useState } from "react";
 import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInDays, isPast } from "date-fns";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const MONTHS = [
@@ -74,6 +74,30 @@ export function PlannedMaintenanceList({
     return true;
   });
 
+  function getDateUrgencyClass(entry: PlannedMaintenanceEntry): string {
+    if (entry.status === "completed" || entry.status === "cancelled") return "text-muted-foreground";
+    const targetDate = getTargetDate(entry);
+    if (!targetDate) return "text-muted-foreground";
+    const now = new Date();
+    const days = differenceInDays(targetDate, now);
+    if (days < 0) return "text-[hsl(var(--status-urgent))] font-semibold"; // overdue = red
+    if (days <= 14) return "text-orange-400 font-semibold"; // ≤2 weeks = orange
+    if (days <= 30) return "text-amber-400 font-medium"; // ≤1 month = amber
+    return "text-muted-foreground";
+  }
+
+  function getTargetDate(entry: PlannedMaintenanceEntry): Date | null {
+    if (entry.date_type === "specific" && entry.scheduled_date) return parseISO(entry.scheduled_date);
+    if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year)
+      return new Date(entry.scheduled_year, entry.scheduled_month - 1, 1);
+    return null;
+  }
+
+  function firstName(name: string | undefined | null): string {
+    if (!name) return "";
+    return name.split(" ")[0];
+  }
+
   function getSortValue(entry: PlannedMaintenanceEntry, col: string): string {
     switch (col) {
       case "Title": return entry.title.toLowerCase();
@@ -81,6 +105,7 @@ export function PlannedMaintenanceList({
       case "Contractor": return (entry.vendor_name ?? "").toLowerCase();
       case "Property": return (entry.property_name ?? "").toLowerCase();
       case "Assigned": return (entry.assignee_name ?? "").toLowerCase();
+      case "Last Service": return entry.last_service_date ?? "9999-12-31";
       case "Date": return entry.scheduled_date ?? `${entry.scheduled_year ?? 9999}-${String(entry.scheduled_month ?? 99).padStart(2, "0")}`;
       case "Reminder": return String(entry.reminder_days).padStart(5, "0");
       case "Recurrence": return String(entry.recurrence_months ?? 0).padStart(5, "0");
@@ -219,13 +244,13 @@ export function PlannedMaintenanceList({
                 )}
                 {entry.assignee_name && (
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <User size={10} /> {entry.assignee_name}
+                    <User size={10} /> {firstName(entry.assignee_name)}
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className={cn("flex items-center gap-1 text-[11px]", getDateUrgencyClass(entry))}>
                   <Calendar size={10} /> {formatDate(entry)}
                   {entry.date_type === "month_only" && (
-                    <span className="text-[9px] text-amber-400/70 font-medium ml-0.5">(approx.)</span>
+                    <span className="text-[9px] opacity-70 font-medium ml-0.5">(approx.)</span>
                   )}
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -285,7 +310,7 @@ export function PlannedMaintenanceList({
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Title", "Status", "Contractor", "Property", "Assigned", "Date", "Reminder", "Recurrence"].map((h, i) => (
+                {["Title", "Status", "Contractor", "Property", "Assigned", "Last Service", "Date", "Reminder", "Recurrence"].map((h, i) => (
                   <th key={i}
                     onClick={() => handleSort(h)}
                     className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
@@ -341,14 +366,19 @@ export function PlannedMaintenanceList({
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.assignee_name
-                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {entry.assignee_name}</span>
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {firstName(entry.assignee_name)}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {entry.last_service_date
+                      ? <span className="text-xs text-muted-foreground">{format(parseISO(entry.last_service_date), "dd MMM yyyy")}</span>
+                      : <span className="text-xs text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <span className={cn("flex items-center gap-1 text-xs", getDateUrgencyClass(entry))}>
                       <Calendar size={9} /> {formatDate(entry)}
                       {entry.date_type === "month_only" && (
-                        <span className="text-[9px] text-amber-400/70 font-medium ml-0.5">(est.)</span>
+                        <span className="text-[9px] opacity-70 font-medium ml-0.5">(est.)</span>
                       )}
                     </span>
                   </td>

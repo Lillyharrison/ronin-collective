@@ -54,6 +54,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [recurrence, setRecurrence] = useState("");
   const [customMonths, setCustomMonths] = useState("");
   const [saving, setSaving] = useState(false);
+  const [lastServiceDate, setLastServiceDate] = useState("");
 
   // Populate from initial
   useEffect(() => {
@@ -69,6 +70,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setMonth(initial.scheduled_month ?? new Date().getMonth() + 1);
       setYear(initial.scheduled_year ?? new Date().getFullYear());
       setReminderDays(initial.reminder_days);
+      setLastServiceDate(initial.last_service_date ?? "");
       const rec = initial.recurrence_months;
       if (!rec) setRecurrence("");
       else if ([3,6,12].includes(rec)) setRecurrence(String(rec));
@@ -77,7 +79,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setTitle(""); setDescription(""); setVendorId(""); setPropertyId("");
       setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined);
       setMonth(new Date().getMonth() + 1); setYear(new Date().getFullYear());
-      setReminderDays(90); setRecurrence(""); setCustomMonths("");
+      setReminderDays(90); setRecurrence(""); setCustomMonths(""); setLastServiceDate("");
     }
   }, [open, initial]);
 
@@ -104,6 +106,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       reminder_days: reminderDays,
       recurrence_months: recurrenceMonths,
       status: initial?.status ?? "to_be_booked",
+      last_service_date: lastServiceDate || null,
       calendar_event_id: initial?.calendar_event_id ?? null,
       created_by: initial?.created_by ?? userId,
     });
@@ -163,7 +166,17 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
             </select>
           </div>
 
-          {/* Date type toggle */}
+          {/* Last Service Date */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last Service Date</Label>
+            <input
+              type="date"
+              value={lastServiceDate}
+              onChange={e => setLastServiceDate(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date</Label>
             <div className="flex rounded-lg border border-border overflow-hidden">
