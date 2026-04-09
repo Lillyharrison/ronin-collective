@@ -348,6 +348,7 @@ export function MaintenanceSection() {
       ...payload,
     } as PlannedMaintenanceEntry);
 
+    refetchPlanned();
     setEditPlanned(null);
   };
 
