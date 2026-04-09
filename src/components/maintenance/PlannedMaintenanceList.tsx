@@ -366,14 +366,19 @@ export function PlannedMaintenanceList({
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.assignee_name
-                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {entry.assignee_name}</span>
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {firstName(entry.assignee_name)}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    {entry.last_service_date
+                      ? <span className="text-xs text-muted-foreground">{format(parseISO(entry.last_service_date), "dd MMM yyyy")}</span>
+                      : <span className="text-xs text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <span className={cn("flex items-center gap-1 text-xs", getDateUrgencyClass(entry))}>
                       <Calendar size={9} /> {formatDate(entry)}
                       {entry.date_type === "month_only" && (
-                        <span className="text-[9px] text-amber-400/70 font-medium ml-0.5">(est.)</span>
+                        <span className="text-[9px] opacity-70 font-medium ml-0.5">(est.)</span>
                       )}
                     </span>
                   </td>
