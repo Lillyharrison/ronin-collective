@@ -1455,8 +1455,8 @@ export function CalendarSection() {
         </div>
       </div>
 
-      {/* Mode toggle + property filter on the same row */}
-      <div className="flex items-center gap-3">
+      {/* Mode toggle + property filter */}
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit">
           {canSeeFamilyCal && (
             <button
