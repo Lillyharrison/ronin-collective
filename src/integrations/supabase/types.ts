@@ -954,6 +954,7 @@ export type Database = {
           reminder_days: number
           scheduled_date: string | null
           scheduled_month: number | null
+          scheduled_time: string | null
           scheduled_year: number | null
           status: string
           title: string
@@ -974,6 +975,7 @@ export type Database = {
           reminder_days?: number
           scheduled_date?: string | null
           scheduled_month?: number | null
+          scheduled_time?: string | null
           scheduled_year?: number | null
           status?: string
           title: string
@@ -994,6 +996,7 @@ export type Database = {
           reminder_days?: number
           scheduled_date?: string | null
           scheduled_month?: number | null
+          scheduled_time?: string | null
           scheduled_year?: number | null
           status?: string
           title?: string
