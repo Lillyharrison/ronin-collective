@@ -103,7 +103,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       scheduled_year: dateType === "month_only" ? year : null,
       reminder_days: reminderDays,
       recurrence_months: recurrenceMonths,
-      status: initial?.status ?? "unconfirmed",
+      status: initial?.status ?? "to_be_booked",
       calendar_event_id: initial?.calendar_event_id ?? null,
       created_by: initial?.created_by ?? userId,
     });

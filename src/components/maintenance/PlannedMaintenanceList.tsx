@@ -225,7 +225,7 @@ export function PlannedMaintenanceList({
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Calendar size={10} /> {formatDate(entry)}
                   {entry.date_type === "month_only" && (
-                    <span className="text-[9px] text-amber-400/70 font-medium ml-0.5">(unconfirmed)</span>
+                    <span className="text-[9px] text-amber-400/70 font-medium ml-0.5">(approx.)</span>
                   )}
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
