@@ -106,7 +106,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       reminder_days: reminderDays,
       recurrence_months: recurrenceMonths,
       status: initial?.status ?? "to_be_booked",
-      last_service_date: initial?.last_service_date ?? null,
+      last_service_date: lastServiceDate || null,
       calendar_event_id: initial?.calendar_event_id ?? null,
       created_by: initial?.created_by ?? userId,
     });
