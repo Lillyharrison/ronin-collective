@@ -75,12 +75,13 @@ export function PlannedMaintenanceList({
   });
 
   function getDateUrgencyClass(entry: PlannedMaintenanceEntry): string {
-    if (entry.status === "completed") return "text-emerald-400 font-medium"; // green
     if (entry.status === "cancelled") return "text-muted-foreground";
+    // Completed entries: the Date column shows the NEXT service date — use normal urgency, not green
     const targetDate = getTargetDate(entry);
     if (!targetDate) return "text-muted-foreground";
     const now = new Date();
     const days = differenceInDays(targetDate, now);
+    if (entry.status === "completed") return "text-muted-foreground"; // future next-service = neutral
     if (days < 0) return "text-[hsl(var(--status-urgent))] font-semibold"; // overdue = red
     if (days <= 14) return "text-orange-400 font-semibold"; // ≤2 weeks = orange
     if (days <= 30) return "text-amber-400 font-medium"; // ≤1 month = amber
