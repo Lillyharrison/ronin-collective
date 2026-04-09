@@ -49,7 +49,14 @@ export function PlannedMaintenanceList({
   const [filterStatus, setFilterStatus] = useState("");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "tile");
+  const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "list");
+  const [sortCol, setSortCol] = useState<string>("Title");
+  const [sortAsc, setSortAsc] = useState(true);
+
+  function handleSort(col: string) {
+    if (sortCol === col) { setSortAsc(!sortAsc); }
+    else { setSortCol(col); setSortAsc(true); }
+  }
 
   const filtered = entries.filter(e => {
     if (filterStatus && e.status !== filterStatus) return false;
