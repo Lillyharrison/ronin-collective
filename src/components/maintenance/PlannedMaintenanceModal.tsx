@@ -70,6 +70,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setMonth(initial.scheduled_month ?? new Date().getMonth() + 1);
       setYear(initial.scheduled_year ?? new Date().getFullYear());
       setReminderDays(initial.reminder_days);
+      setLastServiceDate(initial.last_service_date ?? "");
       const rec = initial.recurrence_months;
       if (!rec) setRecurrence("");
       else if ([3,6,12].includes(rec)) setRecurrence(String(rec));
@@ -78,7 +79,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setTitle(""); setDescription(""); setVendorId(""); setPropertyId("");
       setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined);
       setMonth(new Date().getMonth() + 1); setYear(new Date().getFullYear());
-      setReminderDays(90); setRecurrence(""); setCustomMonths("");
+      setReminderDays(90); setRecurrence(""); setCustomMonths(""); setLastServiceDate("");
     }
   }, [open, initial]);
 
