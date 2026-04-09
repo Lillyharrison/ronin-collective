@@ -24,6 +24,8 @@ interface Props {
   loading: boolean;
   canManage: boolean;
   properties: { id: string; name: string }[];
+  propertyFilter: string;
+  onPropertyFilterChange: (value: string) => void;
   onAdd: () => void;
   onEdit: (entry: PlannedMaintenanceEntry) => void;
   onDelete: (id: string) => void;
@@ -31,16 +33,27 @@ interface Props {
   refetch: () => void;
 }
 
-export function PlannedMaintenanceList({ entries, loading, canManage, properties, onAdd, onEdit, onDelete, onStatusChange, refetch }: Props) {
+export function PlannedMaintenanceList({
+  entries,
+  loading,
+  canManage,
+  properties,
+  propertyFilter,
+  onPropertyFilterChange,
+  onAdd,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  refetch,
+}: Props) {
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterProp, setFilterProp] = useState("");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "tile");
 
   const filtered = entries.filter(e => {
     if (filterStatus && e.status !== filterStatus) return false;
-    if (filterProp && e.property_id !== filterProp) return false;
+    if (propertyFilter && e.property_id !== propertyFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -83,8 +96,8 @@ export function PlannedMaintenanceList({ entries, loading, canManage, properties
           {/* Property filter */}
           {properties.length > 0 && (
             <select
-              value={filterProp}
-              onChange={e => setFilterProp(e.target.value)}
+              value={propertyFilter}
+              onChange={e => onPropertyFilterChange(e.target.value)}
               className="flex-1 text-xs rounded-xl border border-input bg-background px-3 py-2 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30"
             >
               <option value="">All Properties</option>
