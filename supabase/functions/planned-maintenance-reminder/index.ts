@@ -16,7 +16,38 @@ Deno.serve(async (req) => {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  // Fetch all non-completed planned maintenance entries
+  // ── Phase 1: Auto-flip completed recurring entries back to "to_be_booked" ──
+  let autoFlipped = 0;
+
+  const { data: completedEntries } = await supabase
+    .from("planned_maintenance")
+    .select("*")
+    .eq("status", "completed")
+    .not("recurrence_months", "is", null);
+
+  for (const entry of completedEntries ?? []) {
+    let targetDate: Date | null = null;
+    if (entry.date_type === "specific" && entry.scheduled_date) {
+      targetDate = new Date(entry.scheduled_date);
+    } else if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year) {
+      targetDate = new Date(entry.scheduled_year, entry.scheduled_month - 1, 1);
+    }
+    if (!targetDate) continue;
+
+    // Check if we're within the reminder window for the NEXT service
+    const daysUntilNext = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const reminderDays = entry.reminder_days ?? 90;
+
+    if (daysUntilNext <= reminderDays) {
+      await supabase
+        .from("planned_maintenance")
+        .update({ status: "to_be_booked" })
+        .eq("id", entry.id);
+      autoFlipped++;
+    }
+  }
+
+  // ── Phase 2: Send reminders for upcoming entries ──
   const { data: entries, error } = await supabase
     .from("planned_maintenance")
     .select("*")
@@ -30,7 +61,6 @@ Deno.serve(async (req) => {
   let remindersTriggered = 0;
 
   for (const entry of entries ?? []) {
-    // Determine target date: specific date or 1st of the month
     let targetDate: Date | null = null;
     if (entry.date_type === "specific" && entry.scheduled_date) {
       targetDate = new Date(entry.scheduled_date);
@@ -46,8 +76,7 @@ Deno.serve(async (req) => {
 
     if (reminderStr !== todayStr) continue;
 
-    // Build human-readable date
-    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const dateLabel = entry.date_type === "specific"
       ? new Date(entry.scheduled_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
       : `${months[entry.scheduled_month - 1]} ${entry.scheduled_year}`;
@@ -74,12 +103,11 @@ Deno.serve(async (req) => {
       ])
     ];
 
-    // Apply property scoping — only notify users assigned to this property
+    // Apply property scoping
     const filteredRecipients = entry.property_id
       ? await (async () => {
           const filtered: string[] = [];
           for (const uid of recipientIds) {
-            // Master admins always receive
             const isMaster = (masterAdmins ?? []).some((u: any) => u.user_id === uid);
             if (isMaster) { filtered.push(uid); continue; }
             const { data: prof } = await supabase
@@ -128,7 +156,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ ok: true, remindersTriggered }),
+    JSON.stringify({ ok: true, autoFlipped, remindersTriggered }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });

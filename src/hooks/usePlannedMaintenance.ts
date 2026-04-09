@@ -92,6 +92,37 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
   };
 
   const updateEntry = async (id: string, patch: Partial<PlannedMaintenanceEntry>) => {
+    // Auto-roll dates when marking as completed on a recurring entry
+    if (patch.status === "completed") {
+      const entry = entries.find(e => e.id === id);
+      if (entry && entry.recurrence_months) {
+        // Set last_service_date to the current target date
+        let currentTarget: string | null = null;
+        if (entry.date_type === "specific" && entry.scheduled_date) {
+          currentTarget = entry.scheduled_date;
+        } else if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year) {
+          // Use 1st of the scheduled month as the reference
+          const d = new Date(entry.scheduled_year, entry.scheduled_month - 1, 1);
+          currentTarget = d.toISOString().split("T")[0];
+        }
+
+        if (currentTarget) {
+          patch.last_service_date = currentTarget;
+
+          // Calculate next target date
+          const base = new Date(currentTarget);
+          base.setMonth(base.getMonth() + entry.recurrence_months);
+
+          if (entry.date_type === "specific") {
+            patch.scheduled_date = base.toISOString().split("T")[0];
+          } else {
+            patch.scheduled_month = base.getMonth() + 1;
+            patch.scheduled_year = base.getFullYear();
+          }
+        }
+      }
+    }
+
     const { error } = await supabase.from("planned_maintenance").update(patch).eq("id", id);
     if (error) { toast.error("Failed to update entry"); return false; }
     toast.success("Entry updated");
