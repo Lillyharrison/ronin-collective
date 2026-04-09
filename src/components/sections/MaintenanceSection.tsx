@@ -72,8 +72,9 @@ export function MaintenanceSection() {
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
   const [detailIssue, setDetailIssue] = useState<MaintenanceIssue | null>(null);
-  const [allProperties, setAllProperties] = useState<{ id: string; name: string }[]>([]);
+  const [allProperties, setAllProperties] = useState<{ id: string; name: string; is_primary?: boolean }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [defaultPropApplied, setDefaultPropApplied] = useState(false);
 
   const properties = (isMasterAdmin || isAdmin || isManager)
     ? allProperties
@@ -89,6 +90,18 @@ export function MaintenanceSection() {
     supabase.from("vendors").select("id, name").eq("is_active", true).order("name")
       .then(({ data }) => setVendors(data ?? []));
   }, []);
+
+  // Default to the primary property if the user has access; only once on load
+  useEffect(() => {
+    if (defaultPropApplied || properties.length === 0) return;
+    // Don't override if a deep-link already set the filter
+    if (filterProp) { setDefaultPropApplied(true); return; }
+    const primary = properties.find(p => p.is_primary);
+    if (primary) {
+      setFilterProp(primary.id);
+    }
+    setDefaultPropApplied(true);
+  }, [properties, defaultPropApplied, filterProp]);
 
   // Pre-filter by property when arriving from Property section deep-link
   useEffect(() => {
