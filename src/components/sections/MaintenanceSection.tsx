@@ -91,6 +91,18 @@ export function MaintenanceSection() {
       .then(({ data }) => setVendors(data ?? []));
   }, []);
 
+  // Default to the primary property if the user has access; only once on load
+  useEffect(() => {
+    if (defaultPropApplied || properties.length === 0) return;
+    // Don't override if a deep-link already set the filter
+    if (filterProp) { setDefaultPropApplied(true); return; }
+    const primary = properties.find(p => p.is_primary);
+    if (primary) {
+      setFilterProp(primary.id);
+    }
+    setDefaultPropApplied(true);
+  }, [properties, defaultPropApplied, filterProp]);
+
   // Pre-filter by property when arriving from Property section deep-link
   useEffect(() => {
     if (activePropertyId) {
