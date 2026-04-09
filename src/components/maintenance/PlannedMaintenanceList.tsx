@@ -11,10 +11,11 @@ const MONTHS = [
 ];
 
 const STATUS_CONFIG = {
-  unconfirmed: { label: "Unconfirmed", color: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  confirmed:   { label: "Confirmed",   color: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-  completed:   { label: "Completed",   color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  cancelled:   { label: "Cancelled",   color: "bg-muted text-muted-foreground border-border" },
+  to_be_booked:        { label: "To Be Booked",        color: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
+  booked:              { label: "Booked",               color: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
+  initiated_by_vendor: { label: "Initiated by Vendor",  color: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
+  completed:           { label: "Completed",            color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
+  cancelled:           { label: "Cancelled",            color: "bg-muted text-muted-foreground border-border" },
 };
 
 type PlannedViewMode = "tile" | "list";
@@ -157,7 +158,7 @@ export function PlannedMaintenanceList({
 
       {/* Status filter pills */}
       <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-        {["", "unconfirmed", "confirmed", "completed", "cancelled"].map(s => (
+        {["", "to_be_booked", "booked", "initiated_by_vendor", "completed", "cancelled"].map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
               filterStatus === s
@@ -246,8 +247,9 @@ export function PlannedMaintenanceList({
                     onClick={e => e.stopPropagation()}
                     className="flex-1 h-7 text-[11px] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
                   >
-                    <option value="unconfirmed">Unconfirmed</option>
-                    <option value="confirmed">Confirmed</option>
+                    <option value="to_be_booked">To Be Booked</option>
+                    <option value="booked">Booked</option>
+                    <option value="initiated_by_vendor">Initiated by Vendor</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
@@ -313,8 +315,9 @@ export function PlannedMaintenanceList({
                         onClick={e => e.stopPropagation()}
                         className="h-7 text-[11px] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
                       >
-                        <option value="unconfirmed">Unconfirmed</option>
-                        <option value="confirmed">Confirmed</option>
+                        <option value="to_be_booked">To Be Booked</option>
+                        <option value="booked">Booked</option>
+                        <option value="initiated_by_vendor">Initiated by Vendor</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
