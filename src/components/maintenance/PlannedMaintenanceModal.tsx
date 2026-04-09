@@ -166,7 +166,17 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
             </select>
           </div>
 
-          {/* Date type toggle */}
+          {/* Last Service Date */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last Service Date</Label>
+            <input
+              type="date"
+              value={lastServiceDate}
+              onChange={e => setLastServiceDate(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date</Label>
             <div className="flex rounded-lg border border-border overflow-hidden">
