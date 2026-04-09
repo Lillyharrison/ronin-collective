@@ -74,6 +74,30 @@ export function PlannedMaintenanceList({
     return true;
   });
 
+  function getDateUrgencyClass(entry: PlannedMaintenanceEntry): string {
+    if (entry.status === "completed" || entry.status === "cancelled") return "text-muted-foreground";
+    const targetDate = getTargetDate(entry);
+    if (!targetDate) return "text-muted-foreground";
+    const now = new Date();
+    const days = differenceInDays(targetDate, now);
+    if (days < 0) return "text-[hsl(var(--status-urgent))] font-semibold"; // overdue = red
+    if (days <= 14) return "text-orange-400 font-semibold"; // ≤2 weeks = orange
+    if (days <= 30) return "text-amber-400 font-medium"; // ≤1 month = amber
+    return "text-muted-foreground";
+  }
+
+  function getTargetDate(entry: PlannedMaintenanceEntry): Date | null {
+    if (entry.date_type === "specific" && entry.scheduled_date) return parseISO(entry.scheduled_date);
+    if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year)
+      return new Date(entry.scheduled_year, entry.scheduled_month - 1, 1);
+    return null;
+  }
+
+  function firstName(name: string | undefined | null): string {
+    if (!name) return "";
+    return name.split(" ")[0];
+  }
+
   function getSortValue(entry: PlannedMaintenanceEntry, col: string): string {
     switch (col) {
       case "Title": return entry.title.toLowerCase();
@@ -81,6 +105,7 @@ export function PlannedMaintenanceList({
       case "Contractor": return (entry.vendor_name ?? "").toLowerCase();
       case "Property": return (entry.property_name ?? "").toLowerCase();
       case "Assigned": return (entry.assignee_name ?? "").toLowerCase();
+      case "Last Service": return entry.last_service_date ?? "9999-12-31";
       case "Date": return entry.scheduled_date ?? `${entry.scheduled_year ?? 9999}-${String(entry.scheduled_month ?? 99).padStart(2, "0")}`;
       case "Reminder": return String(entry.reminder_days).padStart(5, "0");
       case "Recurrence": return String(entry.recurrence_months ?? 0).padStart(5, "0");
