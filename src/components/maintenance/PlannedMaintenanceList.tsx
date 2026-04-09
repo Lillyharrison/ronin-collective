@@ -73,6 +73,26 @@ export function PlannedMaintenanceList({
     return true;
   });
 
+  function getSortValue(entry: PlannedMaintenanceEntry, col: string): string {
+    switch (col) {
+      case "Title": return entry.title.toLowerCase();
+      case "Status": return entry.status;
+      case "Contractor": return (entry.vendor_name ?? "").toLowerCase();
+      case "Property": return (entry.property_name ?? "").toLowerCase();
+      case "Assigned": return (entry.assignee_name ?? "").toLowerCase();
+      case "Date": return entry.scheduled_date ?? `${entry.scheduled_year ?? 9999}-${String(entry.scheduled_month ?? 99).padStart(2, "0")}`;
+      case "Reminder": return String(entry.reminder_days).padStart(5, "0");
+      case "Recurrence": return String(entry.recurrence_months ?? 0).padStart(5, "0");
+      default: return "";
+    }
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    const av = getSortValue(a, sortCol);
+    const bv = getSortValue(b, sortCol);
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+
   function formatDate(entry: PlannedMaintenanceEntry) {
     if (entry.date_type === "specific" && entry.scheduled_date) {
       return format(parseISO(entry.scheduled_date), "dd MMM yyyy");
