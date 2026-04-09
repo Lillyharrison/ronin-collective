@@ -72,8 +72,9 @@ export function MaintenanceSection() {
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
   const [detailIssue, setDetailIssue] = useState<MaintenanceIssue | null>(null);
-  const [allProperties, setAllProperties] = useState<{ id: string; name: string }[]>([]);
+  const [allProperties, setAllProperties] = useState<{ id: string; name: string; is_primary?: boolean }[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
+  const [defaultPropApplied, setDefaultPropApplied] = useState(false);
 
   const properties = (isMasterAdmin || isAdmin || isManager)
     ? allProperties
