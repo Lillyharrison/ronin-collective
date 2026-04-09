@@ -25,7 +25,7 @@ export function ManualsSection() {
   const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail, activePropertyId, setActivePropertyId } = useNavigation();
   const [tab, setTab] = useState<ManualTab>("care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropId, setSelectedPropId] = useState<string | null>(activePropertyId ?? null);
+  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
   const [showPropPicker, setShowPropPicker] = useState(false);
 
 
@@ -43,12 +43,17 @@ export function ManualsSection() {
     q.then(({ data }) => {
       const props = sortProperties((data as Property[]) ?? []);
       setProperties(props);
-      // Only default to first property if NOT arriving from a property deep-link
-      if (!activePropertyId && props.length > 0) setSelectedPropId(props[0].id);
-      // Consume and clear the deep-link value
-      if (activePropertyId) setActivePropertyId(null);
+      if (props.length > 0 && !activePropertyId) setSelectedPropId(props[0].id);
     });
   }, [isAdmin, assignedPropertyIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Consume property deep-link
+  useEffect(() => {
+    if (activePropertyId) {
+      setSelectedPropId(activePropertyId);
+      setActivePropertyId(null);
+    }
+  }, [activePropertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const selectedProp = properties.find(p => p.id === selectedPropId);

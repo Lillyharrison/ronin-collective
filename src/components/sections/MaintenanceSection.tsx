@@ -96,7 +96,7 @@ export function MaintenanceSection() {
       setFilterProp(activePropertyId);
       setActivePropertyId(null);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activePropertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Deep-link: open specific issue when arriving from a notification click.

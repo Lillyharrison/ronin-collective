@@ -160,7 +160,7 @@ export function TasksSection() {
   const [showDrafts, setShowDrafts] = useState(false);
   const [draftCount, setDraftCount] = useState(0);
   // Pre-filter: if arriving from a property deep-link, pre-set property filter
-  const [filterPropId, setFilterPropId] = useState<string | null>(() => activePropertyId);
+  const [filterPropId, setFilterPropId] = useState<string | null>(null);
 
 
   const [modalTask, setModalTask]   = useState<FullTask | null | undefined>(undefined);
@@ -226,10 +226,13 @@ export function TasksSection() {
     if (!permLoading) fetchTasks(0);
   }, [permLoading, userId, isAdmin, isManager, isMasterAdmin, department, JSON.stringify(assignedPropertyIds)]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Consume property deep-link once on mount
+  // Consume property deep-link
   useEffect(() => {
-    if (activePropertyId) setActivePropertyId(null);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (activePropertyId) {
+      setFilterPropId(activePropertyId);
+      setActivePropertyId(null);
+    }
+  }, [activePropertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const liveTasks = tasks.filter(t => !t.is_draft && (!filterPropId || t.property_id === filterPropId));
   const draftTasks = tasks.filter(t => t.is_draft);
