@@ -54,6 +54,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [recurrence, setRecurrence] = useState("");
   const [customMonths, setCustomMonths] = useState("");
   const [saving, setSaving] = useState(false);
+  const [lastServiceDate, setLastServiceDate] = useState("");
 
   // Populate from initial
   useEffect(() => {
