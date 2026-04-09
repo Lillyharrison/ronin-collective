@@ -244,13 +244,13 @@ export function PlannedMaintenanceList({
                 )}
                 {entry.assignee_name && (
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <User size={10} /> {entry.assignee_name}
+                    <User size={10} /> {firstName(entry.assignee_name)}
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className={cn("flex items-center gap-1 text-[11px]", getDateUrgencyClass(entry))}>
                   <Calendar size={10} /> {formatDate(entry)}
                   {entry.date_type === "month_only" && (
-                    <span className="text-[9px] text-amber-400/70 font-medium ml-0.5">(approx.)</span>
+                    <span className="text-[9px] opacity-70 font-medium ml-0.5">(approx.)</span>
                   )}
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
