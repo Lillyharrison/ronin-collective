@@ -310,7 +310,7 @@ export function PlannedMaintenanceList({
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Title", "Status", "Contractor", "Property", "Assigned", "Date", "Reminder", "Recurrence"].map((h, i) => (
+                {["Title", "Status", "Contractor", "Property", "Assigned", "Last Service", "Date", "Reminder", "Recurrence"].map((h, i) => (
                   <th key={i}
                     onClick={() => handleSort(h)}
                     className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
