@@ -1,0 +1,1 @@
+ALTER TABLE planned_maintenance ADD COLUMN last_service_date date;
