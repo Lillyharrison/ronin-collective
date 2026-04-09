@@ -11,6 +11,7 @@ export interface PlannedMaintenanceEntry {
   assigned_to: string | null;
   date_type: "specific" | "month_only";
   scheduled_date: string | null;
+  scheduled_time: string | null;
   scheduled_month: number | null;
   scheduled_year: number | null;
   reminder_days: number;
