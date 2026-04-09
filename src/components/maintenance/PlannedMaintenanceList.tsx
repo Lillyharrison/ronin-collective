@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInDays, isPast } from "date-fns";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
-const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December"
+const MONTHS_SHORT = [
+  "Jan","Feb","Mar","Apr","May","Jun",
+  "Jul","Aug","Sep","Oct","Nov","Dec"
 ];
 
 const STATUS_CONFIG = {
@@ -125,9 +125,20 @@ export function PlannedMaintenanceList({
       return format(parseISO(entry.scheduled_date), "dd MMM yyyy");
     }
     if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year) {
-      return `${MONTHS[entry.scheduled_month - 1]} ${entry.scheduled_year}`;
+      return `${MONTHS_SHORT[entry.scheduled_month - 1]} ${entry.scheduled_year}`;
     }
     return "—";
+  }
+
+  function getReminderUrgencyClass(entry: PlannedMaintenanceEntry): string {
+    if (entry.status !== "to_be_booked") return "text-muted-foreground";
+    const targetDate = getTargetDate(entry);
+    if (!targetDate) return "text-muted-foreground";
+    const days = differenceInDays(targetDate, new Date());
+    if (days < 0) return "text-[hsl(var(--status-urgent))] font-semibold";
+    if (days <= entry.reminder_days / 2) return "text-[hsl(var(--status-urgent))] font-semibold"; // imminent = red
+    if (days <= entry.reminder_days) return "text-orange-400 font-semibold"; // within reminder window = orange
+    return "text-muted-foreground";
   }
 
   return (
@@ -384,7 +395,7 @@ export function PlannedMaintenanceList({
                     </span>
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className={cn("flex items-center gap-1 text-xs", getReminderUrgencyClass(entry))}>
                       <Bell size={9} /> {entry.reminder_days}d
                     </span>
                   </td>
