@@ -229,13 +229,20 @@ export function MaintenanceSection() {
     calendarEventId: string | null,
     entry: Partial<PlannedMaintenanceEntry>,
   ) => {
-    // Build calendar start date from the entry's current date fields
+    // Build calendar start/end date from the entry's current date fields
     let calStartDate: string | null = null;
+    let calEndDate: string | null = null;
     if (entry.date_type === "specific" && entry.scheduled_date) {
-      calStartDate = `${entry.scheduled_date}T09:00:00`;
+      const time = (entry as any).scheduled_time ? (entry as any).scheduled_time.slice(0, 5) : "09:00";
+      calStartDate = `${entry.scheduled_date}T${time}:00`;
+      // End = start + 1 hour
+      const [h, m] = time.split(":").map(Number);
+      const endH = String(Math.min(h + 1, 23)).padStart(2, "0");
+      calEndDate = `${entry.scheduled_date}T${endH}:${String(m).padStart(2, "0")}:00`;
     } else if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year) {
       const mm = String(entry.scheduled_month).padStart(2, "0");
       calStartDate = `${entry.scheduled_year}-${mm}-01T09:00:00`;
+      calEndDate = `${entry.scheduled_year}-${mm}-01T17:00:00`;
     }
 
     if (!calStartDate) return;
@@ -251,6 +258,7 @@ export function MaintenanceSection() {
           title: calTitle,
           description: entry.description ?? undefined,
           start_date: calStartDate,
+          end_date: calEndDate,
           property_id: entry.property_id ?? undefined,
           status: calStatus,
         })
@@ -264,6 +272,7 @@ export function MaintenanceSection() {
           description: entry.description ?? undefined,
           event_type: "maintenance",
           start_date: calStartDate,
+          end_date: calEndDate,
           property_id: entry.property_id ?? undefined,
           status: calStatus,
           calendar_source: "planned_maintenance",
