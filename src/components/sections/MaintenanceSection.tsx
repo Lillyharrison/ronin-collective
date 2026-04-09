@@ -536,6 +536,8 @@ export function MaintenanceSection() {
           loading={plannedLoading}
           canManage={canManage}
           properties={properties}
+          propertyFilter={filterProp}
+          onPropertyFilterChange={setFilterProp}
           onAdd={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
           onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
           onDelete={deleteEntry}
