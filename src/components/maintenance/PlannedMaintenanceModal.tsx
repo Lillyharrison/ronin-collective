@@ -47,6 +47,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [assignedTo, setAssignedTo] = useState("");
   const [dateType, setDateType] = useState<"specific" | "month_only">("month_only");
   const [specificDate, setSpecificDate] = useState<Date | undefined>();
+  const [specificTime, setSpecificTime] = useState("");
   const [calOpen, setCalOpen] = useState(false);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -67,6 +68,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setAssignedTo(initial.assigned_to ?? "");
       setDateType(initial.date_type);
       setSpecificDate(initial.scheduled_date ? parseISO(initial.scheduled_date) : undefined);
+      setSpecificTime(initial.scheduled_time ? initial.scheduled_time.slice(0, 5) : "");
       setMonth(initial.scheduled_month ?? new Date().getMonth() + 1);
       setYear(initial.scheduled_year ?? new Date().getFullYear());
       setReminderDays(initial.reminder_days);
@@ -77,7 +79,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       else { setRecurrence("custom"); setCustomMonths(String(rec)); }
     } else {
       setTitle(""); setDescription(""); setVendorId(""); setPropertyId("");
-      setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined);
+      setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined); setSpecificTime("");
       setMonth(new Date().getMonth() + 1); setYear(new Date().getFullYear());
       setReminderDays(90); setRecurrence(""); setCustomMonths(""); setLastServiceDate("");
     }
@@ -101,6 +103,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       assigned_to: assignedTo || null,
       date_type: dateType,
       scheduled_date: dateType === "specific" && specificDate ? format(specificDate, "yyyy-MM-dd") : null,
+      scheduled_time: dateType === "specific" && specificTime ? specificTime + ":00" : null,
       scheduled_month: dateType === "month_only" ? month : null,
       scheduled_year: dateType === "month_only" ? year : null,
       reminder_days: reminderDays,
@@ -210,23 +213,35 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
                 </select>
               </div>
             ) : (
-              <Popover open={calOpen} onOpenChange={setCalOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start font-normal", !specificDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {specificDate ? format(specificDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={specificDate}
-                    onSelect={d => { setSpecificDate(d); setCalOpen(false); }}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
+              <div className="space-y-2">
+                <Popover open={calOpen} onOpenChange={setCalOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start font-normal", !specificDate && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {specificDate ? format(specificDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={specificDate}
+                      onSelect={d => { setSpecificDate(d); setCalOpen(false); }}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Time (optional)</Label>
+                  <Input
+                    type="time"
+                    value={specificTime}
+                    onChange={e => setSpecificTime(e.target.value)}
+                    className="w-full"
+                    placeholder="HH:MM"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
             )}
           </div>
 
