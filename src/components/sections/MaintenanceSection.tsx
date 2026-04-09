@@ -297,13 +297,20 @@ export function MaintenanceSection() {
 
     // Build a calendar event (place month-only entries on the 1st of the month)
     let calStartDate: string;
+    let calEndDate: string;
     if (payload.date_type === "specific" && payload.scheduled_date) {
-      calStartDate = `${payload.scheduled_date}T09:00:00`;
+      const time = (payload as any).scheduled_time ? (payload as any).scheduled_time.slice(0, 5) : "09:00";
+      calStartDate = `${payload.scheduled_date}T${time}:00`;
+      const [h, m] = time.split(":").map(Number);
+      const endH = String(Math.min(h + 1, 23)).padStart(2, "0");
+      calEndDate = `${payload.scheduled_date}T${endH}:${String(m).padStart(2, "0")}:00`;
     } else if (payload.date_type === "month_only" && payload.scheduled_month && payload.scheduled_year) {
       const mm = String(payload.scheduled_month).padStart(2, "0");
       calStartDate = `${payload.scheduled_year}-${mm}-01T09:00:00`;
+      calEndDate = `${payload.scheduled_year}-${mm}-01T17:00:00`;
     } else {
       calStartDate = new Date().toISOString();
+      calEndDate = new Date().toISOString();
     }
 
     const calTitle = `🔧 ${payload.title}`;
@@ -314,6 +321,7 @@ export function MaintenanceSection() {
         description: payload.description ?? undefined,
         event_type: "maintenance",
         start_date: calStartDate,
+        end_date: calEndDate,
         property_id: payload.property_id ?? undefined,
         status: payload.date_type === "month_only" ? "unconfirmed" : "upcoming",
         calendar_source: "planned_maintenance",
