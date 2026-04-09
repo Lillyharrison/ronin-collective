@@ -75,7 +75,8 @@ export function PlannedMaintenanceList({
   });
 
   function getDateUrgencyClass(entry: PlannedMaintenanceEntry): string {
-    if (entry.status === "completed" || entry.status === "cancelled") return "text-muted-foreground";
+    if (entry.status === "completed") return "text-emerald-400 font-medium"; // green
+    if (entry.status === "cancelled") return "text-muted-foreground";
     const targetDate = getTargetDate(entry);
     if (!targetDate) return "text-muted-foreground";
     const now = new Date();
