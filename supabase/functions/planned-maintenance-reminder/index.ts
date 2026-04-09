@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   const { data: entries, error } = await supabase
     .from("planned_maintenance")
     .select("*")
-    .in("status", ["unconfirmed", "confirmed"]);
+    .in("status", ["to_be_booked", "booked", "initiated_by_vendor"]);
 
   if (error) {
     console.error("Error fetching planned maintenance:", error);
