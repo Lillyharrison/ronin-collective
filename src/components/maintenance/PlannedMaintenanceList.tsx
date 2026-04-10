@@ -407,6 +407,12 @@ export function PlannedMaintenanceList({
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
+                    ) : (
+                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                        getStatusColorClass(entry)
+                      )}>
+                        {STATUS_LABELS[entry.status] ?? entry.status}
+                      </span>
                     )}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
