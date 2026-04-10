@@ -392,9 +392,9 @@ export function PlannedMaintenanceList({
                       </select>
                     ) : (
                       <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                        STATUS_CONFIG[entry.status]?.color ?? "bg-muted text-muted-foreground border-border"
+                        getStatusColorClass(entry)
                       )}>
-                        {STATUS_CONFIG[entry.status]?.label ?? entry.status}
+                        {STATUS_LABELS[entry.status] ?? entry.status}
                       </span>
                     )}
                   </td>
