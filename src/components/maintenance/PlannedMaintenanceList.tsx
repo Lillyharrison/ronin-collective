@@ -122,6 +122,7 @@ export function PlannedMaintenanceList({
   });
 
   function formatDate(entry: PlannedMaintenanceEntry) {
+    if (entry.recurrence_months === -1) return "Weekly";
     if (entry.date_type === "specific" && entry.scheduled_date) {
       return format(parseISO(entry.scheduled_date), "dd MMM yyyy");
     }
@@ -267,11 +268,11 @@ export function PlannedMaintenanceList({
                   )}
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Bell size={10} /> {entry.reminder_days}d reminder
+                  <Bell size={10} /> {entry.reminder_days > 0 ? `${entry.reminder_days}d reminder` : "No reminder"}
                 </span>
                 {entry.recurrence_months && (
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <RotateCcw size={10} /> Every {entry.recurrence_months}mo
+                    <RotateCcw size={10} /> {entry.recurrence_months === -1 ? "Weekly" : `Every ${entry.recurrence_months}mo`}
                   </span>
                 )}
               </div>
@@ -396,13 +397,13 @@ export function PlannedMaintenanceList({
                     </span>
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
-                    <span className={cn("flex items-center gap-1 text-xs", getReminderUrgencyClass(entry))}>
-                      <Bell size={9} /> {entry.reminder_days}d
+                    <span className={cn("flex items-center gap-1 text-xs", entry.reminder_days > 0 ? getReminderUrgencyClass(entry) : "text-muted-foreground/40")}>
+                      <Bell size={9} /> {entry.reminder_days > 0 ? `${entry.reminder_days}d` : "Off"}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.recurrence_months
-                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><RotateCcw size={9} /> Every {entry.recurrence_months}mo</span>
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><RotateCcw size={9} /> {entry.recurrence_months === -1 ? "Weekly" : `Every ${entry.recurrence_months}mo`}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
                   </td>
                   {canManage && (

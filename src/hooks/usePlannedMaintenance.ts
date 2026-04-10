@@ -96,7 +96,7 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
     // Auto-roll dates only when status is CHANGING to completed (not already completed)
     if (patch.status === "completed") {
       const entry = entries.find(e => e.id === id);
-      if (entry && entry.status !== "completed" && entry.recurrence_months) {
+      if (entry && entry.status !== "completed" && entry.recurrence_months && entry.recurrence_months > 0) {
         // Set last_service_date to the current target date
         let currentTarget: string | null = null;
         if (entry.date_type === "specific" && entry.scheduled_date) {
