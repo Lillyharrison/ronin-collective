@@ -1274,6 +1274,8 @@ export function CalendarSection() {
       const isLinkedPlanned = ev.calendar_source === "planned_maintenance" || linkedPlannedIds.has(ev.id);
       events.push({
         ...ev,
+        end_date: isLinkedPlanned ? ev.start_date : ev.end_date,
+        calendar_source: isLinkedPlanned ? "planned_maintenance" : ev.calendar_source,
         _source: isLinkedPlanned ? "planned_maintenance" : "calendar_events",
         _is_draggable: !isLinkedPlanned,
         _tab: tab,
