@@ -383,7 +383,7 @@ export function PlannedMaintenanceList({
                         onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
                         onClick={e => e.stopPropagation()}
                         className={cn(
-                          "h-5 text-[10px] rounded-full border px-2 pr-4 font-semibold focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer",
+                          "h-5 min-w-[90px] text-[10px] rounded-full border px-2 pr-4 font-semibold focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer",
                           getStatusColorClass(entry)
                         )}
                       >
