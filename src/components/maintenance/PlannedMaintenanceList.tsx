@@ -383,8 +383,22 @@ export function PlannedMaintenanceList({
                         onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
                         onClick={e => e.stopPropagation()}
                         className={cn(
-                          "h-6 text-[10px] rounded-full border pl-2 pr-5 font-semibold focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer bg-[length:10px] bg-[right_4px_center] bg-no-repeat",
-                          getStatusColorClass(entry)
+                          "h-7 text-[11px] rounded border px-1.5 font-medium focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer",
+                          entry.status === "completed" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10" :
+                          entry.status === "cancelled" ? "border-border text-muted-foreground bg-muted" :
+                          entry.status === "booked" ? "border-orange-500/40 text-orange-400 bg-orange-500/10" :
+                          entry.status === "initiated_by_vendor" ? "border-purple-500/40 text-purple-400 bg-purple-500/10" :
+                          entry.status === "to_be_booked" ? (() => {
+                            const target = getTargetDate(entry);
+                            if (!target || entry.recurrence_months === -1 || entry.recurrence_months === -2)
+                              return "border-amber-500/40 text-amber-400 bg-amber-500/10";
+                            const days = differenceInDays(target, new Date());
+                            if (days < 0 || days <= Math.floor(entry.reminder_days / 2))
+                              return "border-red-500/40 text-red-400 bg-red-500/10";
+                            if (days <= entry.reminder_days)
+                              return "border-orange-500/40 text-orange-400 bg-orange-500/10";
+                            return "border-amber-500/40 text-amber-400 bg-amber-500/10";
+                          })() : "border-border text-muted-foreground bg-muted"
                         )}
                       >
                         <option value="to_be_booked">To Be Booked</option>
@@ -393,12 +407,6 @@ export function PlannedMaintenanceList({
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
-                    ) : (
-                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                        getStatusColorClass(entry)
-                      )}>
-                        {STATUS_LABELS[entry.status] ?? entry.status}
-                      </span>
                     )}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
