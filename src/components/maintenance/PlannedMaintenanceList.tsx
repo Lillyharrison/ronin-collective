@@ -76,6 +76,7 @@ export function PlannedMaintenanceList({
 
   function getDateUrgencyClass(entry: PlannedMaintenanceEntry): string {
     if (entry.status === "cancelled") return "text-muted-foreground";
+    if (entry.recurrence_months === -1) return "text-muted-foreground"; // weekly = neutral
     // Completed entries: the Date column shows the NEXT service date — use normal urgency, not green
     const targetDate = getTargetDate(entry);
     if (!targetDate) return "text-muted-foreground";
