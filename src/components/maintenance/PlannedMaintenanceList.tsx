@@ -97,6 +97,26 @@ export function PlannedMaintenanceList({
     return "text-muted-foreground";
   }
 
+  function getStatusColorClass(entry: PlannedMaintenanceEntry): string {
+    if (entry.status === "completed") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+    if (entry.status === "cancelled") return "bg-muted text-muted-foreground border-border";
+    if (entry.status === "booked") return "bg-orange-500/15 text-orange-400 border-orange-500/30";
+    if (entry.status === "initiated_by_vendor") return "bg-purple-500/15 text-purple-400 border-purple-500/30";
+    // to_be_booked: use reminder-window urgency
+    if (entry.status === "to_be_booked") {
+      if (entry.recurrence_months === -1 || entry.recurrence_months === -2) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+      const targetDate = getTargetDate(entry);
+      if (!targetDate) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+      const days = differenceInDays(targetDate, new Date());
+      if (days < 0) return "bg-red-500/15 text-red-400 border-red-500/30"; // overdue
+      const halfReminder = Math.floor(entry.reminder_days / 2);
+      if (days <= halfReminder) return "bg-red-500/15 text-red-400 border-red-500/30"; // imminent
+      if (days <= entry.reminder_days) return "bg-orange-500/15 text-orange-400 border-orange-500/30"; // in reminder window
+      return "bg-amber-500/15 text-amber-400 border-amber-500/30"; // normal
+    }
+    return STATUS_BASE_COLOR[entry.status] ?? "bg-muted text-muted-foreground border-border";
+  }
+
   function getTargetDate(entry: PlannedMaintenanceEntry): Date | null {
     if (entry.date_type === "specific" && entry.scheduled_date) return parseISO(entry.scheduled_date);
     if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year)
