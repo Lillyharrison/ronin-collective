@@ -102,22 +102,30 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
         if (entry.date_type === "specific" && entry.scheduled_date) {
           currentTarget = entry.scheduled_date;
         } else if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year) {
-          const d = new Date(entry.scheduled_year, entry.scheduled_month - 1, 1);
-          currentTarget = d.toISOString().split("T")[0];
+          // Use UTC-safe string formatting to avoid timezone day-shift
+          const mm = String(entry.scheduled_month).padStart(2, "0");
+          currentTarget = `${entry.scheduled_year}-${mm}-01`;
         }
 
         if (currentTarget) {
           patch.last_service_date = currentTarget;
 
-          // Calculate next target date
-          const base = new Date(currentTarget);
-          base.setMonth(base.getMonth() + entry.recurrence_months);
+          // Parse date parts directly to avoid timezone issues
+          const [yStr, mStr, dStr] = currentTarget.split("-");
+          let y = Number(yStr), m = Number(mStr) - 1, d = Number(dStr);
+
+          // Add recurrence months
+          m += entry.recurrence_months;
+          while (m > 11) { y++; m -= 12; }
 
           if (entry.date_type === "specific") {
-            patch.scheduled_date = base.toISOString().split("T")[0];
+            // Clamp day to valid range for the target month
+            const maxDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+            const clampedDay = Math.min(d, maxDay);
+            patch.scheduled_date = `${y}-${String(m + 1).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
           } else {
-            patch.scheduled_month = base.getMonth() + 1;
-            patch.scheduled_year = base.getFullYear();
+            patch.scheduled_month = m + 1;
+            patch.scheduled_year = y;
           }
         }
       }
