@@ -33,6 +33,7 @@ const MONTHS = [
 
 const RECURRENCE_OPTIONS = [
   { value: "", label: "One-off (no repeat)" },
+  { value: "weekly", label: "Weekly" },
   { value: "3", label: "Every 3 months (Quarterly)" },
   { value: "6", label: "Every 6 months (Semi-annual)" },
   { value: "12", label: "Every year (Annual)" },
@@ -52,6 +53,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [reminderDays, setReminderDays] = useState(90);
+  const [reminderEnabled, setReminderEnabled] = useState(true);
   const [recurrence, setRecurrence] = useState("");
   const [customMonths, setCustomMonths] = useState("");
   const [saving, setSaving] = useState(false);
@@ -71,17 +73,19 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setSpecificTime(initial.scheduled_time ? initial.scheduled_time.slice(0, 5) : "");
       setMonth(initial.scheduled_month ?? new Date().getMonth() + 1);
       setYear(initial.scheduled_year ?? new Date().getFullYear());
-      setReminderDays(initial.reminder_days);
+      setReminderDays(initial.reminder_days > 0 ? initial.reminder_days : 90);
+      setReminderEnabled(initial.reminder_days > 0);
       setLastServiceDate(initial.last_service_date ?? "");
       const rec = initial.recurrence_months;
       if (!rec) setRecurrence("");
+      else if (rec === -1) setRecurrence("weekly");
       else if ([3,6,12].includes(rec)) setRecurrence(String(rec));
       else { setRecurrence("custom"); setCustomMonths(String(rec)); }
     } else {
       setTitle(""); setDescription(""); setVendorId(""); setPropertyId("");
       setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined); setSpecificTime("");
       setMonth(new Date().getMonth() + 1); setYear(new Date().getFullYear());
-      setReminderDays(90); setRecurrence(""); setCustomMonths(""); setLastServiceDate("");
+      setReminderDays(90); setReminderEnabled(true); setRecurrence(""); setCustomMonths(""); setLastServiceDate("");
     }
   }, [open, initial]);
 
@@ -91,9 +95,11 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const handleSave = async () => {
     if (!title.trim()) return;
     setSaving(true);
-    const recurrenceMonths = recurrence === "custom"
-      ? (parseInt(customMonths) || null)
-      : recurrence ? parseInt(recurrence) : null;
+    const recurrenceMonths = recurrence === "weekly"
+      ? -1
+      : recurrence === "custom"
+        ? (parseInt(customMonths) || null)
+        : recurrence ? parseInt(recurrence) : null;
 
     await onSave({
       title: title.trim(),
@@ -106,7 +112,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       scheduled_time: dateType === "specific" && specificTime ? specificTime + ":00" : null,
       scheduled_month: dateType === "month_only" ? month : null,
       scheduled_year: dateType === "month_only" ? year : null,
-      reminder_days: reminderDays,
+      reminder_days: reminderEnabled ? reminderDays : 0,
       recurrence_months: recurrenceMonths,
       status: initial?.status ?? "to_be_booked",
       last_service_date: lastServiceDate || null,
@@ -248,18 +254,37 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
           {/* Reminder */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Reminder — days before
+              Reminder
             </Label>
             <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={1}
-                max={365}
-                value={reminderDays}
-                onChange={e => setReminderDays(parseInt(e.target.value) || 90)}
-                className="w-24"
-              />
-              <span className="text-sm text-muted-foreground">days before scheduled date</span>
+              <button
+                type="button"
+                onClick={() => setReminderEnabled(!reminderEnabled)}
+                className={cn(
+                  "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                  reminderEnabled ? "bg-primary" : "bg-muted border border-border"
+                )}
+              >
+                <span className={cn(
+                  "inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform",
+                  reminderEnabled ? "translate-x-4" : "translate-x-0.5"
+                )} />
+              </button>
+              {reminderEnabled ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={reminderDays}
+                    onChange={e => setReminderDays(parseInt(e.target.value) || 90)}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">days before</span>
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">Off</span>
+              )}
             </div>
           </div>
 
