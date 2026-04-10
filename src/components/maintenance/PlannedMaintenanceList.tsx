@@ -382,7 +382,10 @@ export function PlannedMaintenanceList({
                         value={entry.status}
                         onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
                         onClick={e => e.stopPropagation()}
-                        className="h-7 text-[11px] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+                        className={cn(
+                          "h-7 text-[11px] rounded-full border px-2.5 font-semibold focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer",
+                          getStatusColorClass(entry)
+                        )}
                       >
                         <option value="to_be_booked">To Be Booked</option>
                         <option value="booked">Booked</option>
