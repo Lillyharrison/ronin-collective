@@ -326,7 +326,7 @@ export function PlannedMaintenanceList({
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Title", "Status", "Contractor", "Property", "Assigned", "Last Service", "Date", "Reminder", "Recurrence"].map((h, i) => (
+                {["Title", "Status", "Last Service", "Date", "Contractor", "Property", "Assigned", "Reminder", "Recurrence"].map((h, i) => (
                   <th key={i}
                     onClick={() => handleSort(h)}
                     className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
@@ -371,6 +371,19 @@ export function PlannedMaintenanceList({
                     )}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
+                    {entry.last_service_date
+                      ? <span className={cn("text-xs", entry.status === "completed" ? "text-emerald-400 font-medium" : "text-muted-foreground")}>{format(parseISO(entry.last_service_date), "dd MMM yyyy")}</span>
+                      : <span className="text-xs text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <span className={cn("flex items-center gap-1 text-xs", getDateUrgencyClass(entry))}>
+                      <Calendar size={9} /> {formatDate(entry)}
+                      {entry.date_type === "month_only" && (
+                        <span className="text-[9px] opacity-70 font-medium ml-0.5">(est.)</span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.vendor_name
                       ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><Wrench size={9} /> {entry.vendor_name}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
@@ -384,19 +397,6 @@ export function PlannedMaintenanceList({
                     {entry.assignee_name
                       ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {firstName(entry.assignee_name)}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
-                  </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    {entry.last_service_date
-                      ? <span className={cn("text-xs", entry.status === "completed" ? "text-emerald-400 font-medium" : "text-muted-foreground")}>{format(parseISO(entry.last_service_date), "dd MMM yyyy")}</span>
-                      : <span className="text-xs text-muted-foreground/40">—</span>}
-                  </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <span className={cn("flex items-center gap-1 text-xs", getDateUrgencyClass(entry))}>
-                      <Calendar size={9} /> {formatDate(entry)}
-                      {entry.date_type === "month_only" && (
-                        <span className="text-[9px] opacity-70 font-medium ml-0.5">(est.)</span>
-                      )}
-                    </span>
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <span className={cn("flex items-center gap-1 text-xs", entry.reminder_days > 0 ? getReminderUrgencyClass(entry) : "text-muted-foreground/40")}>
