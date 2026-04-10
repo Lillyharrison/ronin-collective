@@ -44,7 +44,7 @@ interface CalEvent {
   calendar_source: string | null;
   property_id: string | null;
   // virtual fields for Ronin events
-  _source?: "calendar_events" | "maintenance" | "orders" | "birthday";
+  _source?: "calendar_events" | "maintenance" | "orders" | "birthday" | "planned_maintenance";
   _source_id?: string;
   _color?: string;
   _tab?: RoninTab;
@@ -124,7 +124,7 @@ function getFamilyTypeConfig(type: string) {
 function getRoninTabForEvent(ev: CalEvent): RoninTab {
   if (ev._tab) return ev._tab;
   if (ev._source === "birthday") return "birthdays";
-  if (ev._source === "maintenance") return "maintenance";
+  if (ev._source === "maintenance" || ev._source === "planned_maintenance") return "maintenance";
   if (ev._source === "orders") return "deliveries";
   if (ev.event_type === "travel") return "travel";
   if (ev.event_type === "construction") return "construction";
@@ -670,8 +670,11 @@ function EventDetailSheet({
   const start = parseISO(event.start_date);
   const end = event.end_date ? parseISO(event.end_date) : null;
 
-  // Birthdays are auto-generated from profiles — cannot be deleted from here
-  const isDeletable = canDelete && event._source !== "birthday" && event.calendar_source !== "ical";
+  // Birthdays and linked planned maintenance events are auto-managed elsewhere
+  const isDeletable = canDelete
+    && event._source !== "birthday"
+    && event._source !== "planned_maintenance"
+    && event.calendar_source !== "ical";
   // Source label for linked events
   const sourceLabel = event._source === "maintenance" ? "maintenance issue"
     : event._source === "orders" ? "delivery order"
@@ -1244,6 +1247,20 @@ export function CalendarSection() {
         .neq("status", "delivered"),
     ]);
 
+    const manualEventIds = (manualData ?? []).map((ev) => ev.id);
+    const { data: linkedPlanned } = manualEventIds.length
+      ? await supabase
+          .from("planned_maintenance")
+          .select("calendar_event_id")
+          .in("calendar_event_id", manualEventIds)
+      : { data: [] };
+
+    const linkedPlannedIds = new Set(
+      (linkedPlanned ?? [])
+        .map((entry) => entry.calendar_event_id)
+        .filter((id): id is string => !!id)
+    );
+
     const events: CalEvent[] = [];
 
     for (const ev of manualData ?? []) {
@@ -1254,7 +1271,13 @@ export function CalendarSection() {
         : ev.event_type === "birthday" ? "birthdays"
         : ev.event_type === "construction" ? "construction"
         : "all";
-      events.push({ ...ev, _source: "calendar_events", _is_draggable: true, _tab: tab });
+      const isLinkedPlanned = ev.calendar_source === "planned_maintenance" || linkedPlannedIds.has(ev.id);
+      events.push({
+        ...ev,
+        _source: isLinkedPlanned ? "planned_maintenance" : "calendar_events",
+        _is_draggable: !isLinkedPlanned,
+        _tab: tab,
+      });
     }
 
     for (const p of profiles ?? []) {
