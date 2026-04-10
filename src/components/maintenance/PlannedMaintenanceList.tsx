@@ -234,7 +234,7 @@ export function PlannedMaintenanceList({
                 ? "bg-gold/10 border-gold/50 text-gold"
                 : "border-border text-muted-foreground hover:border-gold/30"
             )}>
-            {s === "" ? "All" : STATUS_CONFIG[s as keyof typeof STATUS_CONFIG]?.label ?? s}
+            {s === "" ? "All" : STATUS_LABELS[s] ?? s}
           </button>
         ))}
       </div>
