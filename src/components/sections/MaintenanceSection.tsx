@@ -376,11 +376,16 @@ export function MaintenanceSection() {
     if (!editPlanned) return;
     await updateEntry(editPlanned.id, payload);
 
-    // Sync linked calendar event with updated dates
-    await syncCalendarForPlanned(editPlanned.id, editPlanned.calendar_event_id, {
-      ...editPlanned,
-      ...payload,
-    } as PlannedMaintenanceEntry);
+    // Re-read the entry from DB to capture any auto-rolled dates from the hook
+    const { data: updated } = await supabase
+      .from("planned_maintenance")
+      .select("*")
+      .eq("id", editPlanned.id)
+      .single();
+
+    if (updated) {
+      await syncCalendarForPlanned(editPlanned.id, updated.calendar_event_id, updated as PlannedMaintenanceEntry);
+    }
 
     refetchPlanned();
     setEditPlanned(null);
