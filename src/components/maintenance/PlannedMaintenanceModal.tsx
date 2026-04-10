@@ -34,6 +34,7 @@ const MONTHS = [
 const RECURRENCE_OPTIONS = [
   { value: "", label: "One-off (no repeat)" },
   { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
   { value: "3", label: "Every 3 months (Quarterly)" },
   { value: "6", label: "Every 6 months (Semi-annual)" },
   { value: "12", label: "Every year (Annual)" },
@@ -79,6 +80,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       const rec = initial.recurrence_months;
       if (!rec) setRecurrence("");
       else if (rec === -1) setRecurrence("weekly");
+      else if (rec === -2) setRecurrence("monthly");
       else if ([3,6,12].includes(rec)) setRecurrence(String(rec));
       else { setRecurrence("custom"); setCustomMonths(String(rec)); }
     } else {
@@ -97,6 +99,8 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
     setSaving(true);
     const recurrenceMonths = recurrence === "weekly"
       ? -1
+      : recurrence === "monthly"
+      ? -2
       : recurrence === "custom"
         ? (parseInt(customMonths) || null)
         : recurrence ? parseInt(recurrence) : null;

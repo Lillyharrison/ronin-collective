@@ -76,7 +76,7 @@ export function PlannedMaintenanceList({
 
   function getDateUrgencyClass(entry: PlannedMaintenanceEntry): string {
     if (entry.status === "cancelled") return "text-muted-foreground";
-    if (entry.recurrence_months === -1) return "text-muted-foreground"; // weekly = neutral
+    if (entry.recurrence_months === -1 || entry.recurrence_months === -2) return "text-muted-foreground"; // weekly/monthly = neutral
     // Completed entries: the Date column shows the NEXT service date — use normal urgency, not green
     const targetDate = getTargetDate(entry);
     if (!targetDate) return "text-muted-foreground";
@@ -124,6 +124,7 @@ export function PlannedMaintenanceList({
 
   function formatDate(entry: PlannedMaintenanceEntry) {
     if (entry.recurrence_months === -1) return "Weekly";
+    if (entry.recurrence_months === -2) return "Monthly";
     if (entry.date_type === "specific" && entry.scheduled_date) {
       return format(parseISO(entry.scheduled_date), "dd MMM yyyy");
     }
@@ -273,7 +274,7 @@ export function PlannedMaintenanceList({
                 </span>
                 {entry.recurrence_months && (
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <RotateCcw size={10} /> {entry.recurrence_months === -1 ? "Weekly" : `Every ${entry.recurrence_months}mo`}
+                    <RotateCcw size={10} /> {entry.recurrence_months === -1 ? "Weekly" : entry.recurrence_months === -2 ? "Monthly" : `Every ${entry.recurrence_months}mo`}
                   </span>
                 )}
               </div>
@@ -404,7 +405,7 @@ export function PlannedMaintenanceList({
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.recurrence_months
-                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><RotateCcw size={9} /> {entry.recurrence_months === -1 ? "Weekly" : `Every ${entry.recurrence_months}mo`}</span>
+                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><RotateCcw size={9} /> {entry.recurrence_months === -1 ? "Weekly" : entry.recurrence_months === -2 ? "Monthly" : `Every ${entry.recurrence_months}mo`}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
                   </td>
                   {canManage && (
