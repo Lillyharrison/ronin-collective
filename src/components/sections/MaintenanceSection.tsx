@@ -229,6 +229,9 @@ export function MaintenanceSection() {
     calendarEventId: string | null,
     entry: Partial<PlannedMaintenanceEntry>,
   ) => {
+    // Weekly tasks are excluded from the calendar
+    if (entry.recurrence_months === -1) return;
+
     // Build calendar start/end date from the entry's current date fields
     let calStartDate: string | null = null;
     let calEndDate: string | null = null;
