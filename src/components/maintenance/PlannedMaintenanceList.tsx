@@ -10,12 +10,20 @@ const MONTHS_SHORT = [
   "Jul","Aug","Sep","Oct","Nov","Dec"
 ];
 
-const STATUS_CONFIG = {
-  to_be_booked:        { label: "To Be Booked",        color: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  booked:              { label: "Booked",               color: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-  initiated_by_vendor: { label: "Initiated by Vendor",  color: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
-  completed:           { label: "Completed",            color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  cancelled:           { label: "Cancelled",            color: "bg-muted text-muted-foreground border-border" },
+const STATUS_LABELS: Record<string, string> = {
+  to_be_booked:        "To Be Booked",
+  booked:              "Booked",
+  initiated_by_vendor: "Initiated by Vendor",
+  completed:           "Completed",
+  cancelled:           "Cancelled",
+};
+
+const STATUS_BASE_COLOR: Record<string, string> = {
+  to_be_booked:        "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  booked:              "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  initiated_by_vendor: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  completed:           "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  cancelled:           "bg-muted text-muted-foreground border-border",
 };
 
 type PlannedViewMode = "tile" | "list";
@@ -87,6 +95,26 @@ export function PlannedMaintenanceList({
     if (days <= 14) return "text-orange-400 font-semibold"; // ≤2 weeks = orange
     if (days <= 30) return "text-amber-400 font-medium"; // ≤1 month = amber
     return "text-muted-foreground";
+  }
+
+  function getStatusColorClass(entry: PlannedMaintenanceEntry): string {
+    if (entry.status === "completed") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+    if (entry.status === "cancelled") return "bg-muted text-muted-foreground border-border";
+    if (entry.status === "booked") return "bg-orange-500/15 text-orange-400 border-orange-500/30";
+    if (entry.status === "initiated_by_vendor") return "bg-purple-500/15 text-purple-400 border-purple-500/30";
+    // to_be_booked: use reminder-window urgency
+    if (entry.status === "to_be_booked") {
+      if (entry.recurrence_months === -1 || entry.recurrence_months === -2) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+      const targetDate = getTargetDate(entry);
+      if (!targetDate) return "bg-amber-500/15 text-amber-400 border-amber-500/30";
+      const days = differenceInDays(targetDate, new Date());
+      if (days < 0) return "bg-red-500/15 text-red-400 border-red-500/30"; // overdue
+      const halfReminder = Math.floor(entry.reminder_days / 2);
+      if (days <= halfReminder) return "bg-red-500/15 text-red-400 border-red-500/30"; // imminent
+      if (days <= entry.reminder_days) return "bg-orange-500/15 text-orange-400 border-orange-500/30"; // in reminder window
+      return "bg-amber-500/15 text-amber-400 border-amber-500/30"; // normal
+    }
+    return STATUS_BASE_COLOR[entry.status] ?? "bg-muted text-muted-foreground border-border";
   }
 
   function getTargetDate(entry: PlannedMaintenanceEntry): Date | null {
@@ -206,7 +234,7 @@ export function PlannedMaintenanceList({
                 ? "bg-gold/10 border-gold/50 text-gold"
                 : "border-border text-muted-foreground hover:border-gold/30"
             )}>
-            {s === "" ? "All" : STATUS_CONFIG[s as keyof typeof STATUS_CONFIG]?.label ?? s}
+            {s === "" ? "All" : STATUS_LABELS[s] ?? s}
           </button>
         ))}
       </div>
@@ -240,9 +268,9 @@ export function PlannedMaintenanceList({
                   )}
                 </div>
                 <span className={cn("flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                  STATUS_CONFIG[entry.status]?.color ?? "bg-muted text-muted-foreground border-border"
+                  getStatusColorClass(entry)
                 )}>
-                  {STATUS_CONFIG[entry.status]?.label ?? entry.status}
+                  {STATUS_LABELS[entry.status] ?? entry.status}
                 </span>
               </div>
 
@@ -364,9 +392,9 @@ export function PlannedMaintenanceList({
                       </select>
                     ) : (
                       <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",
-                        STATUS_CONFIG[entry.status]?.color ?? "bg-muted text-muted-foreground border-border"
+                        getStatusColorClass(entry)
                       )}>
-                        {STATUS_CONFIG[entry.status]?.label ?? entry.status}
+                        {STATUS_LABELS[entry.status] ?? entry.status}
                       </span>
                     )}
                   </td>
