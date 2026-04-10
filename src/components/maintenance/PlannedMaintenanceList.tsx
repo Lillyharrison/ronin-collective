@@ -10,12 +10,20 @@ const MONTHS_SHORT = [
   "Jul","Aug","Sep","Oct","Nov","Dec"
 ];
 
-const STATUS_CONFIG = {
-  to_be_booked:        { label: "To Be Booked",        color: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  booked:              { label: "Booked",               color: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-  initiated_by_vendor: { label: "Initiated by Vendor",  color: "bg-purple-500/15 text-purple-400 border-purple-500/30" },
-  completed:           { label: "Completed",            color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  cancelled:           { label: "Cancelled",            color: "bg-muted text-muted-foreground border-border" },
+const STATUS_LABELS: Record<string, string> = {
+  to_be_booked:        "To Be Booked",
+  booked:              "Booked",
+  initiated_by_vendor: "Initiated by Vendor",
+  completed:           "Completed",
+  cancelled:           "Cancelled",
+};
+
+const STATUS_BASE_COLOR: Record<string, string> = {
+  to_be_booked:        "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  booked:              "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  initiated_by_vendor: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  completed:           "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  cancelled:           "bg-muted text-muted-foreground border-border",
 };
 
 type PlannedViewMode = "tile" | "list";
