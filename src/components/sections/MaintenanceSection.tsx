@@ -264,6 +264,7 @@ export function MaintenanceSection() {
           end_date: calEndDate,
           property_id: entry.property_id ?? undefined,
           status: calStatus,
+          calendar_source: "planned_maintenance",
         })
         .eq("id", calendarEventId);
     } else {
