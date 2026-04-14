@@ -71,7 +71,38 @@ const PROPERTY_COLORS = [
   { bg: "bg-orange-500/15 border-orange-500/30", text: "text-orange-400", dot: "bg-orange-400" },
   { bg: "bg-pink-500/15 border-pink-500/30",    text: "text-pink-400",    dot: "bg-pink-400" },
   { bg: "bg-cyan-500/15 border-cyan-500/30",    text: "text-cyan-400",    dot: "bg-cyan-400" },
+  { bg: "bg-amber-500/15 border-amber-500/30",  text: "text-amber-400",   dot: "bg-amber-400" },
+  { bg: "bg-rose-500/15 border-rose-500/30",    text: "text-rose-400",    dot: "bg-rose-400" },
+  { bg: "bg-teal-500/15 border-teal-500/30",    text: "text-teal-400",    dot: "bg-teal-400" },
+  { bg: "bg-indigo-500/15 border-indigo-500/30", text: "text-indigo-400", dot: "bg-indigo-400" },
 ];
+
+/** Explicit color assignments for key properties to avoid similar-looking colors */
+const PROPERTY_COLOR_OVERRIDES: Record<string, number> = {
+  rockingham: 0, // blue
+  moreno: 3,     // orange
+  bristol: 5,    // cyan
+  franklyn: 1,   // emerald
+  toyopa: 2,     // purple
+  wisconsin: 4,  // pink
+  broadbeach: 6, // amber
+  montana: 7,    // rose
+  grosvenor: 8,  // teal
+  aman: 9,       // indigo
+};
+
+function propColor(propId: string | null, properties: Property[]) {
+  if (!propId) return PROPERTY_COLORS[PROPERTY_COLORS.length - 1];
+  const prop = properties.find((p) => p.id === propId);
+  if (prop) {
+    const nameLower = prop.name.toLowerCase();
+    for (const [key, colorIdx] of Object.entries(PROPERTY_COLOR_OVERRIDES)) {
+      if (nameLower.includes(key)) return PROPERTY_COLORS[colorIdx % PROPERTY_COLORS.length];
+    }
+  }
+  const idx = properties.findIndex((p) => p.id === propId);
+  return PROPERTY_COLORS[Math.abs(idx) % PROPERTY_COLORS.length];
+}
 
 const LEAVE_TYPES = ["vacation", "sick", "personal", "public_holiday", "other"];
 const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -82,17 +113,6 @@ function formatTime(t: string | null) {
   const [h, m] = t.split(":");
   const hour = parseInt(h, 10);
   return `${hour % 12 || 12}:${m}${hour < 12 ? "am" : "pm"}`;
-}
-
-function propColor(propId: string | null, properties: Property[]) {
-  if (!propId) return PROPERTY_COLORS[PROPERTY_COLORS.length - 1];
-  const idxMontanan = properties.findIndex((p) => p.name.toLowerCase().includes("montan"));
-  const idxMoreno   = properties.findIndex((p) => p.name.toLowerCase().includes("moreno"));
-  let idx = properties.findIndex((p) => p.id === propId);
-  // Swap colors between Montanan and Moreno
-  if (idx === idxMontanan && idxMoreno !== -1) idx = idxMoreno;
-  else if (idx === idxMoreno && idxMontanan !== -1) idx = idxMontanan;
-  return PROPERTY_COLORS[Math.abs(idx) % PROPERTY_COLORS.length];
 }
 
 // ── Build display shifts from schedules + concrete shifts + leave ──────────────
@@ -281,6 +301,7 @@ function ShiftModal({
   onClose,
   onSave,
   onUpdate,
+  onUpdateSchedule,
   onSaveSchedule,
   profiles,
   properties,
@@ -293,6 +314,7 @@ function ShiftModal({
   onClose: () => void;
   onSave: (data: Omit<StaffShift, "id" | "created_at" | "updated_at">) => Promise<boolean>;
   onUpdate: (id: string, data: Partial<StaffShift>) => Promise<boolean>;
+  onUpdateSchedule: (id: string, data: Partial<StaffSchedule>) => Promise<boolean>;
   onSaveSchedule: (data: Omit<StaffSchedule, "id" | "created_at" | "updated_at">) => Promise<boolean>;
   profiles: Profile[];
   properties: Property[];
@@ -368,6 +390,20 @@ function ShiftModal({
         shift_date: form.shift_date,
         start_time: form.start_time || null,
         end_time: form.end_time || null,
+        notes: noteVal,
+      });
+      setSaving(false);
+      if (ok) onClose();
+      return;
+    }
+
+    // ── Edit mode: virtual shift from recurring schedule → update the schedule ─
+    if (editShift && editShift.is_virtual && editShift.schedule_id) {
+      const ok = await onUpdateSchedule(editShift.schedule_id, {
+        staff_id: form.staff_id,
+        property_id: form.property_id || null,
+        start_time: form.start_time || "09:00",
+        end_time: form.end_time || "17:00",
         notes: noteVal,
       });
       setSaving(false);
@@ -1534,7 +1570,7 @@ export function StaffCalendarTab({
 
   const {
     schedules, shifts, leaveRequests, loading, refetch,
-    createSchedule, editSchedule, deactivateSchedule,
+    createSchedule, editSchedule, updateSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
   } = useStaffSchedules(
@@ -2277,6 +2313,7 @@ export function StaffCalendarTab({
         onClose={() => { setShowShiftModal(false); setEditingShift(null); }}
         onSave={createShift}
         onUpdate={updateShift}
+        onUpdateSchedule={updateSchedule}
         onSaveSchedule={createSchedule}
         profiles={profiles}
         properties={properties}
