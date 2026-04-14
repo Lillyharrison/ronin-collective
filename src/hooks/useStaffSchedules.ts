@@ -140,6 +140,16 @@ export function useStaffSchedules(
     return true;
   };
 
+  /** Update a recurring schedule in-place (affects all past + future occurrences). */
+  const updateSchedule = async (id: string, data: Partial<StaffSchedule>) => {
+    const { error } = await supabase.from("staff_schedules").update(data as never).eq("id", id);
+    if (error) { toast.error("Failed to update schedule"); return false; }
+    toast.success("Recurring schedule updated");
+    await fetchData();
+    return true;
+  };
+
+
   const deactivateSchedule = async (id: string) => {
     const { error } = await supabase
       .from("staff_schedules")
@@ -221,6 +231,7 @@ export function useStaffSchedules(
     refetch: fetchData,
     createSchedule,
     editSchedule,
+    updateSchedule,
     deactivateSchedule,
     createShift,
     updateShift,
