@@ -104,6 +104,17 @@ function propColor(propId: string | null, properties: Property[]) {
   return PROPERTY_COLORS[Math.abs(idx) % PROPERTY_COLORS.length];
 }
 
+const LEAVE_TYPES = ["vacation", "sick", "personal", "public_holiday", "other"];
+const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DOW_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function formatTime(t: string | null) {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hour = parseInt(h, 10);
+  return `${hour % 12 || 12}:${m}${hour < 12 ? "am" : "pm"}`;
+}
+
 // ── Build display shifts from schedules + concrete shifts + leave ──────────────
 
 function buildDisplayShifts(
