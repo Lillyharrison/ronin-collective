@@ -397,6 +397,20 @@ function ShiftModal({
       return;
     }
 
+    // ── Edit mode: virtual shift from recurring schedule → update the schedule ─
+    if (editShift && editShift.is_virtual && editShift.schedule_id) {
+      const ok = await onUpdateSchedule(editShift.schedule_id, {
+        staff_id: form.staff_id,
+        property_id: form.property_id || null,
+        start_time: form.start_time || "09:00",
+        end_time: form.end_time || "17:00",
+        notes: noteVal,
+      });
+      setSaving(false);
+      if (ok) onClose();
+      return;
+    }
+
     if (mode === "recurring") {
       // Create one staff_schedule per selected day-of-week
       if (form.days_of_week.length === 0) { setSaving(false); return; }
@@ -1556,7 +1570,7 @@ export function StaffCalendarTab({
 
   const {
     schedules, shifts, leaveRequests, loading, refetch,
-    createSchedule, editSchedule, deactivateSchedule,
+    createSchedule, editSchedule, updateSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
     submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
   } = useStaffSchedules(
@@ -2299,6 +2313,7 @@ export function StaffCalendarTab({
         onClose={() => { setShowShiftModal(false); setEditingShift(null); }}
         onSave={createShift}
         onUpdate={updateShift}
+        onUpdateSchedule={updateSchedule}
         onSaveSchedule={createSchedule}
         profiles={profiles}
         properties={properties}
