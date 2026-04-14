@@ -241,6 +241,10 @@ function ShiftChip({
   const virtualLoc = virtualLocMatch?.[1];
   const displayLabel = prop?.name ?? virtualLoc ?? "—";
 
+  const timeLabel = shift.start_time && shift.end_time
+    ? `${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`
+    : shift.start_time ? formatTime(shift.start_time) : "";
+
   return (
     <div
       draggable
@@ -249,7 +253,7 @@ function ShiftChip({
       onDoubleClick={onDoubleClick}
       title="Double-click to edit"
       className={cn(
-        "rounded px-1.5 py-0.5 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight",
+        "rounded px-1.5 py-1 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight w-full",
         virtualLoc && !prop
           ? "bg-muted/60 border-border text-muted-foreground"
           : `${col.bg} ${col.text}`
@@ -261,8 +265,8 @@ function ShiftChip({
           <span className="opacity-50 flex-shrink-0 text-[8px]">↻</span>
         )}
       </div>
-      {shift.start_time && (
-        <div className="opacity-70 text-[9px]">{formatTime(shift.start_time)}</div>
+      {timeLabel && (
+        <div className="opacity-70 text-[9px]">{timeLabel}</div>
       )}
     </div>
   );
@@ -1263,7 +1267,7 @@ function StaffDayCell({
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => { setDragOver(false); onDrop(dateStr); }}
     >
-      <div className="flex flex-wrap gap-0.5">
+      <div className="flex flex-col gap-0.5 w-full">
         {shifts.map((shift) => (
           <div key={shift.key} className="relative group">
             <ShiftChip
@@ -1412,7 +1416,7 @@ function StaffMonthGrid({
                   )}>
                     {getDisplayName(person)}
                   </p>
-                  {person.job_title && !person.is_draft && (
+                  {person.job_title && (
                     <p className="text-[9px] text-muted-foreground truncate leading-tight">{person.job_title}</p>
                   )}
                 </div>
@@ -2189,7 +2193,7 @@ export function StaffCalendarTab({
                           {getDisplayName(person)}
                         </p>
                       </div>
-                      {!person.is_draft && person.job_title && (
+                      {person.job_title && (
                         <p className="text-[9px] text-muted-foreground truncate">{person.job_title}</p>
                       )}
                     </div>
