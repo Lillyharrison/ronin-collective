@@ -1732,23 +1732,30 @@ export function StaffCalendarTab({
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 }));
   const isCurrentMonth = format(monthStart, "yyyy-MM") === format(new Date(), "yyyy-MM");
 
-  // ── Property color map for export (hex colors matching PROPERTY_COLORS) ──────
+  // ── Property color map for export (hex colors matching PROPERTY_COLORS + overrides) ──
   const EXPORT_PROP_COLORS = [
-    { bg: "DBEAFE", text: "1D4ED8" },  // blue
-    { bg: "D1FAE5", text: "065F46" },  // emerald
-    { bg: "EDE9FE", text: "5B21B6" },  // purple
-    { bg: "FFEDD5", text: "9A3412" },  // orange
-    { bg: "FCE7F3", text: "9D174D" },  // pink
-    { bg: "CFFAFE", text: "164E63" },  // cyan
+    { bg: "DBEAFE", text: "1D4ED8" },  // 0 blue
+    { bg: "D1FAE5", text: "065F46" },  // 1 emerald
+    { bg: "EDE9FE", text: "5B21B6" },  // 2 purple
+    { bg: "FFEDD5", text: "9A3412" },  // 3 orange
+    { bg: "FCE7F3", text: "9D174D" },  // 4 pink
+    { bg: "CFFAFE", text: "164E63" },  // 5 cyan
+    { bg: "FEF3C7", text: "92400E" },  // 6 amber
+    { bg: "FFE4E6", text: "9F1239" },  // 7 rose
+    { bg: "CCFBF1", text: "134E4A" },  // 8 teal
+    { bg: "E0E7FF", text: "3730A3" },  // 9 indigo
   ];
 
   function getExportPropColor(propId: string | null) {
     if (!propId) return EXPORT_PROP_COLORS[EXPORT_PROP_COLORS.length - 1];
-    const idxMontanan = properties.findIndex((p) => p.name.toLowerCase().includes("montan"));
-    const idxMoreno   = properties.findIndex((p) => p.name.toLowerCase().includes("moreno"));
-    let idx = properties.findIndex((p) => p.id === propId);
-    if (idx === idxMontanan && idxMoreno !== -1) idx = idxMoreno;
-    else if (idx === idxMoreno && idxMontanan !== -1) idx = idxMontanan;
+    const prop = properties.find((p) => p.id === propId);
+    if (prop) {
+      const nameLower = prop.name.toLowerCase();
+      for (const [key, colorIdx] of Object.entries(PROPERTY_COLOR_OVERRIDES)) {
+        if (nameLower.includes(key)) return EXPORT_PROP_COLORS[colorIdx % EXPORT_PROP_COLORS.length];
+      }
+    }
+    const idx = properties.findIndex((p) => p.id === propId);
     return EXPORT_PROP_COLORS[Math.abs(idx) % EXPORT_PROP_COLORS.length];
   }
 
@@ -1953,32 +1960,7 @@ export function StaffCalendarTab({
       margin: { left: marginL, right: marginR },
     });
 
-    // ── Legend — wrap into 2 rows of ~half the properties each ──────────────
-    const finalY = (doc as any).lastAutoTable?.finalY ?? 180;
-    const legendY = finalY + 7;
-    const itemsPerRow = Math.ceil(properties.length / 2);
-    const itemW = usableWidth / itemsPerRow;
-
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-
-    properties.forEach((p, i) => {
-      const row = Math.floor(i / itemsPerRow);
-      const col2 = i % itemsPerRow;
-      const x = marginL + col2 * itemW;
-      const y = legendY + row * 7;
-
-      // Use the same swap-aware function so legend matches the actual cell colors
-      const exportCol = getExportPropColor(p.id);
-      doc.setFillColor(
-        parseInt(exportCol.bg.slice(0, 2), 16),
-        parseInt(exportCol.bg.slice(2, 4), 16),
-        parseInt(exportCol.bg.slice(4, 6), 16)
-      );
-      doc.roundedRect(x, y - 3, 5, 3.5, 0.5, 0.5, "F");
-      doc.setTextColor(60, 60, 60);
-      doc.text(p.name, x + 6.5, y);
-    });
+    // No legend — property names and colors in the cells are sufficient
 
     doc.save(`staff-schedule-${format(weekStart, "yyyy-MM-dd")}.pdf`);
     toast.success("PDF downloaded");
