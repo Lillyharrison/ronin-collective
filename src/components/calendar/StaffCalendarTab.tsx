@@ -1960,32 +1960,7 @@ export function StaffCalendarTab({
       margin: { left: marginL, right: marginR },
     });
 
-    // ── Legend — wrap into 2 rows of ~half the properties each ──────────────
-    const finalY = (doc as any).lastAutoTable?.finalY ?? 180;
-    const legendY = finalY + 7;
-    const itemsPerRow = Math.ceil(properties.length / 2);
-    const itemW = usableWidth / itemsPerRow;
-
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-
-    properties.forEach((p, i) => {
-      const row = Math.floor(i / itemsPerRow);
-      const col2 = i % itemsPerRow;
-      const x = marginL + col2 * itemW;
-      const y = legendY + row * 7;
-
-      // Use the same swap-aware function so legend matches the actual cell colors
-      const exportCol = getExportPropColor(p.id);
-      doc.setFillColor(
-        parseInt(exportCol.bg.slice(0, 2), 16),
-        parseInt(exportCol.bg.slice(2, 4), 16),
-        parseInt(exportCol.bg.slice(4, 6), 16)
-      );
-      doc.roundedRect(x, y - 3, 5, 3.5, 0.5, 0.5, "F");
-      doc.setTextColor(60, 60, 60);
-      doc.text(p.name, x + 6.5, y);
-    });
+    // No legend — property names and colors in the cells are sufficient
 
     doc.save(`staff-schedule-${format(weekStart, "yyyy-MM-dd")}.pdf`);
     toast.success("PDF downloaded");
