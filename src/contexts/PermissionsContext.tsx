@@ -143,10 +143,14 @@ function buildPermissions(
   const isManager = role === "manager" || isAdmin;
   const isFamily = level === "principal" || level === "extended_family";
 
+  // "vendors" section is displayed as "contacts" in permissions UI
+  const SECTION_ALIASES: Record<string, string> = { vendors: "contacts" };
+
   const canSee = (section: string): boolean => {
     if (isMasterAdmin) return true;
+    const key = SECTION_ALIASES[section] ?? section;
     if (sectionPermissions) {
-      const perm = sectionPermissions[section];
+      const perm = sectionPermissions[key] ?? sectionPermissions[section];
       if (perm !== undefined) return perm.view === true;
     }
     if (!role) return false;
@@ -157,9 +161,10 @@ function buildPermissions(
 
   const canEdit = (section: string): boolean => {
     if (isMasterAdmin || isAdmin) return true;
+    const key = SECTION_ALIASES[section] ?? section;
     if (!canSee(section)) return false;
     if (sectionPermissions) {
-      const perm = sectionPermissions[section];
+      const perm = sectionPermissions[key] ?? sectionPermissions[section];
       if (perm !== undefined) return perm.edit === true;
     }
     const managerEditSections = [
@@ -171,9 +176,10 @@ function buildPermissions(
 
   const wantsAlerts = (section: string): boolean => {
     if (isMasterAdmin) return true;
+    const key = SECTION_ALIASES[section] ?? section;
     if (!canSee(section)) return false;
     if (sectionPermissions) {
-      const perm = sectionPermissions[section];
+      const perm = sectionPermissions[key] ?? sectionPermissions[section];
       if (perm !== undefined) return perm.notifications === true;
     }
     return isAdmin || isManager;
