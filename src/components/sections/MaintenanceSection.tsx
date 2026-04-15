@@ -494,12 +494,15 @@ export function MaintenanceSection() {
           <PlannedMaintenanceList
             entries={plannedEntries}
             loading={plannedLoading}
+            canManage={false}
+            properties={allProperties}
+            propertyFilter={filterProp}
+            onPropertyFilterChange={setFilterProp}
+            onAdd={() => {}}
             onEdit={() => {}}
             onDelete={() => {}}
-            readOnly
-            vendors={vendors}
-            properties={allProperties}
-            profiles={profiles}
+            onStatusChange={() => {}}
+            refetch={refetchPlanned}
           />
         )}
 
