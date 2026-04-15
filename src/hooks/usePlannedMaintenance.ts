@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export interface PlannedMaintenanceEntry {
@@ -30,10 +31,22 @@ export interface PlannedMaintenanceEntry {
 }
 
 export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
+  const { user, loading: authLoading } = useAuth();
   const [entries, setEntries] = useState<PlannedMaintenanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+
+    if (!user) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     let query = supabase
       .from("planned_maintenance")
@@ -45,7 +58,11 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
     }
 
     const { data, error } = await query;
-    if (error || !data) { setLoading(false); return; }
+    if (error || !data) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
 
     // Gather IDs for joins
     const vendorIds   = [...new Set(data.map((e: any) => e.vendor_id).filter(Boolean))] as string[];
@@ -76,7 +93,7 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
 
     setEntries(enriched);
     setLoading(false);
-  }, [scopedPropertyIds?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, scopedPropertyIds?.join(","), user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetch(); }, [fetch]);
 
