@@ -161,9 +161,10 @@ function buildPermissions(
 
   const canEdit = (section: string): boolean => {
     if (isMasterAdmin || isAdmin) return true;
+    const key = SECTION_ALIASES[section] ?? section;
     if (!canSee(section)) return false;
     if (sectionPermissions) {
-      const perm = sectionPermissions[section];
+      const perm = sectionPermissions[key] ?? sectionPermissions[section];
       if (perm !== undefined) return perm.edit === true;
     }
     const managerEditSections = [
