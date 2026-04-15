@@ -143,10 +143,14 @@ function buildPermissions(
   const isManager = role === "manager" || isAdmin;
   const isFamily = level === "principal" || level === "extended_family";
 
+  // "vendors" section is displayed as "contacts" in permissions UI
+  const SECTION_ALIASES: Record<string, string> = { vendors: "contacts" };
+
   const canSee = (section: string): boolean => {
     if (isMasterAdmin) return true;
+    const key = SECTION_ALIASES[section] ?? section;
     if (sectionPermissions) {
-      const perm = sectionPermissions[section];
+      const perm = sectionPermissions[key] ?? sectionPermissions[section];
       if (perm !== undefined) return perm.view === true;
     }
     if (!role) return false;
