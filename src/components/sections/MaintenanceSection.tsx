@@ -469,11 +469,40 @@ export function MaintenanceSection() {
             <Plus size={14} /> {t("reportButton")}
           </button>
         </div>
-        <div className="space-y-3">
-          {displayIssues.map(issue => (
-            <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
-          ))}
+
+        {/* Repairs / Planned tabs */}
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setActiveTab("repairs")}
+            className={cn("text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors",
+              activeTab === "repairs" ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30")}>
+            {isL ? "Reparaciones" : "Repairs"}
+          </button>
+          <button onClick={() => setActiveTab("planned")}
+            className={cn("text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors",
+              activeTab === "planned" ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30")}>
+            {isL ? "Planificado" : "Planned"}
+          </button>
         </div>
+
+        {activeTab === "repairs" ? (
+          <div className="space-y-3">
+            {displayIssues.map(issue => (
+              <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+            ))}
+          </div>
+        ) : (
+          <PlannedMaintenanceList
+            entries={plannedEntries}
+            loading={plannedLoading}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            readOnly
+            vendors={vendors}
+            properties={allProperties}
+            profiles={profiles}
+          />
+        )}
+
         <IssueModal open={modalOpen} onClose={() => { setModalOpen(false); setEditIssue(null); }}
           onSave={editIssue ? handleEdit : handleCreate}
           initial={editIssue ?? undefined}
@@ -483,7 +512,6 @@ export function MaintenanceSection() {
           mode={editIssue ? "edit" : "create"} />
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
-            // Allow reporter to edit their own reported issues before approval
             onEdit={detailIssue.reported_by === userId && detailIssue.status === "reported"
               ? (issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }
               : undefined}
