@@ -176,9 +176,10 @@ function buildPermissions(
 
   const wantsAlerts = (section: string): boolean => {
     if (isMasterAdmin) return true;
+    const key = SECTION_ALIASES[section] ?? section;
     if (!canSee(section)) return false;
     if (sectionPermissions) {
-      const perm = sectionPermissions[section];
+      const perm = sectionPermissions[key] ?? sectionPermissions[section];
       if (perm !== undefined) return perm.notifications === true;
     }
     return isAdmin || isManager;
