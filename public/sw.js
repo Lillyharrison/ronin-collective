@@ -9,7 +9,7 @@
 // NO skipWaiting — this prevents the forced reload when a new SW is detected.
 // The app will update silently on the NEXT launch, not the current session.
 
-const CACHE_VERSION = "ronin-v5";
+const CACHE_VERSION = "ronin-v6";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 const DATA_CACHE    = `${CACHE_VERSION}-data`;
 
