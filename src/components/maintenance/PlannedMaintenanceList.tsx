@@ -137,7 +137,11 @@ export function PlannedMaintenanceList({
       case "Property": return (entry.property_name ?? "").toLowerCase();
       case "Assigned": return (entry.assignee_name ?? "").toLowerCase();
       case "Last Service": return entry.last_service_date ?? "9999-12-31";
-      case "Date": return entry.scheduled_date ?? `${entry.scheduled_year ?? 9999}-${String(entry.scheduled_month ?? 99).padStart(2, "0")}`;
+      case "Date": {
+        if (entry.recurrence_months === -1) return "0000-00-01"; // Weekly first
+        if (entry.recurrence_months === -2) return "0000-00-02"; // Monthly second
+        return entry.scheduled_date ?? `${entry.scheduled_year ?? 9999}-${String(entry.scheduled_month ?? 99).padStart(2, "0")}`;
+      }
       case "Reminder": return String(entry.reminder_days).padStart(5, "0");
       case "Recurrence": return String(entry.recurrence_months ?? 0).padStart(5, "0");
       default: return "";
