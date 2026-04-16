@@ -2171,24 +2171,7 @@ export function StaffCalendarTab({
         </div>
       )}
 
-      {/* ── Property Legend ───────────────────────────────────────────────── */}
-      {properties.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          {properties.map((p) => {
-            const col = propColor(p.id, properties);
-            return (
-              <div key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className={cn("w-2 h-2 rounded-full", col.dot)} />
-                {p.name}
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarOff size={10} />
-            Leave
-          </div>
-        </div>
-      )}
+      {/* Property legend rendered below the calendar — see bottom of section. */}
 
       {/* ── Month View ────────────────────────────────────────────────────── */}
       {calView === "month" && (
