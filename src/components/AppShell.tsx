@@ -35,6 +35,7 @@ const MemorySection      = lazy(() => import("@/components/sections/MemorySectio
 const AlertsSection      = lazy(() => import("@/components/sections/AlertsSection").then(m => ({ default: m.AlertsSection })));
 const RulesSection       = lazy(() => import("@/components/sections/RulesSection").then(m => ({ default: m.RulesSection })));
 const CarWashSection     = lazy(() => import("@/components/sections/CarWashSection").then(m => ({ default: m.CarWashSection })));
+const StaffSchedulingSection = lazy(() => import("@/components/sections/StaffSchedulingSection").then(m => ({ default: m.StaffSchedulingSection })));
 const ChecklistDetailPage= lazy(() => import("@/components/sections/ChecklistDetailPage").then(m => ({ default: m.ChecklistDetailPage })));
 
 // ── Section loading skeleton ──────────────────────────────────────────────────
@@ -72,6 +73,7 @@ const sectionTitles: Record<string, string> = {
   alerts:          "Alerts",
   rules:           "Property Rules",
   "car-wash":      "Car Wash",
+  "staff-schedule":"Staff Schedule",
 };
 
 function ActiveSection() {
@@ -111,6 +113,7 @@ function ActiveSection() {
     case "alerts":        return <AlertsSection />;
     case "rules":         return gated("rules",         <RulesSection />);
     case "car-wash":      return gated("car-wash",      <CarWashSection />);
+    case "staff-schedule":return gated("staff-schedule",<StaffSchedulingSection />);
     default:              return <Dashboard />;
   }
 }
