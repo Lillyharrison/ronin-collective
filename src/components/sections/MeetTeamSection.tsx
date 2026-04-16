@@ -589,7 +589,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     }
   }
 
-  function togglePerm(sectionKey: string, field: keyof SectionPerm) {
+  function togglePerm(sectionKey: string, field: "view" | "edit" | "notifications") {
     setPerms(prev => ({
       ...prev,
       [sectionKey]: {
@@ -597,6 +597,13 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
         [field]: !prev[sectionKey]?.[field],
         ...(field === "view" && prev[sectionKey]?.view ? { edit: false, notifications: false } : {}),
       },
+    }));
+  }
+
+  function setScope(sectionKey: string, scope: "own" | "department" | "all") {
+    setPerms(prev => ({
+      ...prev,
+      [sectionKey]: { ...prev[sectionKey], scope },
     }));
   }
 
@@ -997,7 +1004,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     return defaultQuickActionsForLevel(member.level || "staff");
   });
 
-  function togglePerm(sectionKey: string, field: keyof SectionPerm) {
+  function togglePerm(sectionKey: string, field: "view" | "edit" | "notifications") {
     setPerms(prev => ({
       ...prev,
       [sectionKey]: {
@@ -1006,6 +1013,13 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         // If turning off view, also turn off edit & notifications
         ...(field === "view" && prev[sectionKey]?.view ? { edit: false, notifications: false } : {}),
       },
+    }));
+  }
+
+  function setScope(sectionKey: string, scope: "own" | "department" | "all") {
+    setPerms(prev => ({
+      ...prev,
+      [sectionKey]: { ...prev[sectionKey], scope },
     }));
   }
 
