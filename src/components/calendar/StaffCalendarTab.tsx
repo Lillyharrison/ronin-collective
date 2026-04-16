@@ -31,6 +31,7 @@ interface Profile {
   avatar_url: string | null;
   job_title: string | null;
   department: string | null;
+  assigned_property_ids?: string[] | null;
   is_draft?: boolean;
 }
 
