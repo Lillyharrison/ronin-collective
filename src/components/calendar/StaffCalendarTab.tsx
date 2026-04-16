@@ -1652,7 +1652,24 @@ export function StaffCalendarTab({
           const scopeSet = new Set(scopeFilterIds);
           allStaff = allStaff.filter((p) => scopeSet.has(p.id));
         }
-        const base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => !scopeFilterIds || scopeFilterIds.includes(p.id)) : profiles.filter((p) => p.id === filterStaff));
+        let base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => !scopeFilterIds || scopeFilterIds.includes(p.id)) : profiles.filter((p) => p.id === filterStaff));
+
+        // ── User-controlled filters (search / department / property) ────────
+        const q = filterSearch.trim().toLowerCase();
+        if (q) {
+          base = base.filter((p) => {
+            const name = (p.full_name ?? "").toLowerCase();
+            const title = (p.job_title ?? "").toLowerCase();
+            return name.includes(q) || title.includes(q);
+          });
+        }
+        if (filterDepartment !== "all") {
+          base = base.filter((p) => (p.department ?? "—") === filterDepartment);
+        }
+        if (filterProperty !== "all") {
+          base = base.filter((p) => (p.assigned_property_ids ?? []).includes(filterProperty));
+        }
+
         // Apply saved custom order
         const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
         return [...base].sort((a, b) => {
@@ -1661,6 +1678,12 @@ export function StaffCalendarTab({
           return ai - bi;
         });
       })();
+
+  // Distinct departments present across loaded profiles (for filter dropdown)
+  const departmentOptions = Array.from(
+    new Set(profiles.map((p) => p.department).filter((d): d is string => !!d && d.trim() !== ""))
+  ).sort();
+  const filtersActive = !!filterSearch || filterDepartment !== "all" || filterProperty !== "all";
 
   // ── Row reorder drag handlers ───────────────────────────────────────────────
   const handleRowDragStart = (staffId: string) => { rowDragRef.current = staffId; };
