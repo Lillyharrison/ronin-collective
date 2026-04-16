@@ -1594,7 +1594,7 @@ export function StaffCalendarTab({
     setProfilesLoading(true);
     Promise.all([
       supabase.from("user_roles").select("user_id, role"),
-      supabase.from("properties").select("id, name").order("sort_order"),
+      supabase.from("properties").select("id, name, city, country").order("sort_order"),
     ]).then(async ([rolesRes, propRes]) => {
       const allRoles = rolesRes.data ?? [];
 
