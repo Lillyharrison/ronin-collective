@@ -1544,6 +1544,9 @@ export function StaffCalendarTab({
   const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
   const [filterStaff, setFilterStaff] = useState<string>("all");
+  const [filterSearch, setFilterSearch] = useState<string>("");
+  const [filterDepartment, setFilterDepartment] = useState<string>("all");
+  const [filterProperty, setFilterProperty] = useState<string>("all");
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
 
   const dragRef = useRef<DisplayShift | null>(null);
