@@ -29,6 +29,7 @@ interface SectionPerm {
   view: boolean;
   edit: boolean;
   notifications: boolean;
+  scope?: "own" | "department" | "all";
 }
 type SectionPermissions = Record<string, SectionPerm>;
 
@@ -67,7 +68,7 @@ interface AddUserForm {
 }
 
 // ─── All navigable sections in the app ────────────────────────────────────────
-const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean }[] = [
+const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; hasScope?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean }[] = [
   { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
   // ── Dashboard sub-features ──
   { key: "principal-location",   label: "   ↳ Principal Location", labelEs: "   ↳ Ubicación del Principal", hasEdit: false, isFeature: true, isDashboardSub: true },
@@ -84,6 +85,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "meet-team",          label: "Meet the Team",       labelEs: "Equipo",            hasEdit: false },
   { key: "travel",             label: "Travel",              labelEs: "Viajes",            hasEdit: true  },
   { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
+  { key: "staff-schedule",     label: "Staff Schedule",      labelEs: "Horario del Personal", hasEdit: true, hasScope: true },
   // ── Calendar sub-tabs ──
   { key: "family-calendar",      label: "   ↳ Family Calendar",      labelEs: "   ↳ Calendario Familiar",    hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-travel",      label: "   ↳ Travel",               labelEs: "   ↳ Viajes",                 hasEdit: false, isFeature: true, isCalendarSub: true },
@@ -91,7 +93,6 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "calendar-maintenance", label: "   ↳ Maintenance",          labelEs: "   ↳ Mantenimiento",          hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-deliveries",  label: "   ↳ Deliveries",           labelEs: "   ↳ Entregas",               hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-construction",label: "   ↳ Construction / Design",labelEs: "   ↳ Construcción / Diseño",  hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-staff",       label: "   ↳ Staff Schedule",       labelEs: "   ↳ Horario del Personal",   hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "car-wash",             label: "   ↳ Car Wash",              labelEs: "   ↳ Lavado de Autos",        hasEdit: true,  isFeature: true, isCalendarSub: true },
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
