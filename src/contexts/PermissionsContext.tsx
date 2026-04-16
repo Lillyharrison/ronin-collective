@@ -5,6 +5,13 @@ export type UserLevel = "principal" | "extended_family" | "manager" | "staff";
 export type UserDepartment = "exterior" | "interior" | "kitchen" | "security" | "office" | null;
 export type AppRole = "master_admin" | "admin" | "manager" | "staff" | "principal";
 
+export interface SectionPermEntry {
+  view: boolean;
+  edit: boolean;
+  notifications: boolean;
+  scope?: "own" | "department" | "all";
+}
+
 export interface UserPermissions {
   userId: string | null;
   role: AppRole | null;
@@ -17,6 +24,7 @@ export interface UserPermissions {
   isFamily: boolean;
   fullName: string | null;
   avatarUrl: string | null;
+  sectionPermissions: Record<string, SectionPermEntry> | null;
   canSee: (section: string) => boolean;
   canEdit: (section: string) => boolean;
   wantsAlerts: (section: string) => boolean;
