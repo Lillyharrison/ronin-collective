@@ -46,6 +46,8 @@ function getDisplayName(p: Profile | undefined | null, fallback = "Staff"): stri
 interface Property {
   id: string;
   name: string;
+  city?: string | null;
+  country?: string | null;
 }
 
 interface DisplayShift {
@@ -1592,7 +1594,7 @@ export function StaffCalendarTab({
     setProfilesLoading(true);
     Promise.all([
       supabase.from("user_roles").select("user_id, role"),
-      supabase.from("properties").select("id, name").order("sort_order"),
+      supabase.from("properties").select("id, name, city, country").order("sort_order"),
     ]).then(async ([rolesRes, propRes]) => {
       const allRoles = rolesRes.data ?? [];
 
@@ -2169,24 +2171,7 @@ export function StaffCalendarTab({
         </div>
       )}
 
-      {/* ── Property Legend ───────────────────────────────────────────────── */}
-      {properties.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          {properties.map((p) => {
-            const col = propColor(p.id, properties);
-            return (
-              <div key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className={cn("w-2 h-2 rounded-full", col.dot)} />
-                {p.name}
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarOff size={10} />
-            Leave
-          </div>
-        </div>
-      )}
+      {/* Property legend rendered below the calendar — see bottom of section. */}
 
       {/* ── Month View ────────────────────────────────────────────────────── */}
       {calView === "month" && (
@@ -2370,6 +2355,47 @@ export function StaffCalendarTab({
         userId={userId}
         canEdit={canEdit}
       />
+
+      {/* ── Property Legend (grouped by city) ─────────────────────────────── */}
+      {properties.length > 0 && (() => {
+        const groups = new Map<string, Property[]>();
+        for (const p of properties) {
+          const key = (p.city?.trim() || p.country?.trim() || "Other");
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(p);
+        }
+        const groupEntries = Array.from(groups.entries());
+        return (
+          <div className="space-y-1.5 pt-1">
+            {groupEntries.map(([city, props]) => (
+              <div key={city} className="flex items-center gap-3 flex-wrap">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide w-24 flex-shrink-0">
+                  {city}
+                </span>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {props.map((p) => {
+                    const col = propColor(p.id, properties);
+                    return (
+                      <div key={p.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <div className={cn("w-2 h-2 rounded-full", col.dot)} />
+                        {p.name}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center gap-3 flex-wrap pt-1">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide w-24 flex-shrink-0">
+                Other
+              </span>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarOff size={10} /> Leave
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Modals ────────────────────────────────────────────────────────── */}
       <ShiftModal
