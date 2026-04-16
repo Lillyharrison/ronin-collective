@@ -163,11 +163,16 @@ function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const allowed = base[level] || base["staff"];
   const perms: SectionPermissions = {};
   ALL_SECTIONS.forEach(s => {
-    perms[s.key] = {
+    const entry: SectionPerm = {
       view: allowed.includes(s.key),
       edit: allowed.includes(s.key) && (s.hasEdit ?? false),
       notifications: allowed.includes(s.key),
     };
+    if (s.hasScope) {
+      // Family/admin/manager → "all"; staff → "own"
+      entry.scope = (level === "manager" || level === "principal" || level === "extended_family") ? "all" : "own";
+    }
+    perms[s.key] = entry;
   });
   return perms;
 }
