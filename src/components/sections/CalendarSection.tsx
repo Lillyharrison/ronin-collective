@@ -1554,13 +1554,8 @@ export function CalendarSection() {
         </div>
       )}
 
-      {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
-      {mode === "ronin" && roninTab === "staff" && (
-        <StaffCalendarTab canEdit={isMasterAdmin || isAdmin} userId={userId} />
-      )}
-
-      {/* ── Calendar grid (hidden when staff tab active) ─────────────────── */}
-      {(mode !== "ronin" || roninTab !== "staff") && (
+      {/* Staff Schedule moved to its own top-level section */}
+      {(mode === "ronin" || mode === "family") && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Calendar grid */}
         <div className="lg:col-span-2 rounded-2xl border border-border bg-card overflow-hidden">
