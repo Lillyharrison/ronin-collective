@@ -31,6 +31,7 @@ interface Profile {
   avatar_url: string | null;
   job_title: string | null;
   department: string | null;
+  assigned_property_ids?: string[] | null;
   is_draft?: boolean;
 }
 
@@ -1543,6 +1544,9 @@ export function StaffCalendarTab({
   const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
   const [filterStaff, setFilterStaff] = useState<string>("all");
+  const [filterSearch, setFilterSearch] = useState<string>("");
+  const [filterDepartment, setFilterDepartment] = useState<string>("all");
+  const [filterProperty, setFilterProperty] = useState<string>("all");
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
 
   const dragRef = useRef<DisplayShift | null>(null);
@@ -1609,7 +1613,7 @@ export function StaffCalendarTab({
       if (uniqueStaffIds.length > 0) {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, job_title, department, is_draft")
+          .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft")
           .in("id", uniqueStaffIds)
           .order("full_name");
         setProfiles((profileData as Profile[]) ?? []);
@@ -1648,7 +1652,24 @@ export function StaffCalendarTab({
           const scopeSet = new Set(scopeFilterIds);
           allStaff = allStaff.filter((p) => scopeSet.has(p.id));
         }
-        const base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => !scopeFilterIds || scopeFilterIds.includes(p.id)) : profiles.filter((p) => p.id === filterStaff));
+        let base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => !scopeFilterIds || scopeFilterIds.includes(p.id)) : profiles.filter((p) => p.id === filterStaff));
+
+        // ── User-controlled filters (search / department / property) ────────
+        const q = filterSearch.trim().toLowerCase();
+        if (q) {
+          base = base.filter((p) => {
+            const name = (p.full_name ?? "").toLowerCase();
+            const title = (p.job_title ?? "").toLowerCase();
+            return name.includes(q) || title.includes(q);
+          });
+        }
+        if (filterDepartment !== "all") {
+          base = base.filter((p) => (p.department ?? "—") === filterDepartment);
+        }
+        if (filterProperty !== "all") {
+          base = base.filter((p) => (p.assigned_property_ids ?? []).includes(filterProperty));
+        }
+
         // Apply saved custom order
         const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
         return [...base].sort((a, b) => {
@@ -1657,6 +1678,12 @@ export function StaffCalendarTab({
           return ai - bi;
         });
       })();
+
+  // Distinct departments present across loaded profiles (for filter dropdown)
+  const departmentOptions = Array.from(
+    new Set(profiles.map((p) => p.department).filter((d): d is string => !!d && d.trim() !== ""))
+  ).sort();
+  const filtersActive = !!filterSearch || filterDepartment !== "all" || filterProperty !== "all";
 
   // ── Row reorder drag handlers ───────────────────────────────────────────────
   const handleRowDragStart = (staffId: string) => { rowDragRef.current = staffId; };
@@ -2094,6 +2121,53 @@ export function StaffCalendarTab({
           )}
         </div>
       </div>
+
+      {/* ── Filter Bar (search / department / property) ───────────────────── */}
+      {canEdit && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Input
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder="Search staff…"
+            className="h-8 text-xs w-44"
+          />
+          <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+            <SelectTrigger className="h-8 text-xs w-40">
+              <SelectValue placeholder="Department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All departments</SelectItem>
+              {departmentOptions.map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterProperty} onValueChange={setFilterProperty}>
+            <SelectTrigger className="h-8 text-xs w-44">
+              <SelectValue placeholder="Property" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All properties</SelectItem>
+              {properties.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filtersActive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs gap-1"
+              onClick={() => { setFilterSearch(""); setFilterDepartment("all"); setFilterProperty("all"); }}
+            >
+              <X size={13} /> Clear
+            </Button>
+          )}
+          <span className="text-[11px] text-muted-foreground ml-auto">
+            {staffToShow.length} {staffToShow.length === 1 ? "person" : "people"}
+          </span>
+        </div>
+      )}
 
       {/* ── Property Legend ───────────────────────────────────────────────── */}
       {properties.length > 0 && (
