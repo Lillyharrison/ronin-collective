@@ -24,7 +24,8 @@ export type ActiveSection =
   | "memory"
   | "alerts"
   | "rules"
-  | "car-wash";
+  | "car-wash"
+  | "staff-schedule";
 
 // ── Path ↔ section mapping ────────────────────────────────────────────────────
 const SECTION_TO_PATH: Record<ActiveSection, string> = {
@@ -50,6 +51,7 @@ const SECTION_TO_PATH: Record<ActiveSection, string> = {
   alerts:          "/alerts",
   rules:           "/rules",
   "car-wash":      "/car-wash",
+  "staff-schedule":"/staff-schedule",
 };
 
 const PATH_TO_SECTION: Record<string, ActiveSection> = Object.fromEntries(

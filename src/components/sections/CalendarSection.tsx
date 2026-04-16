@@ -1457,16 +1457,7 @@ export function CalendarSection() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {(isMasterAdmin || isAdmin || canSee("calendar-staff")) && (
-            <Button
-              variant={roninTab === "staff" && mode === "ronin" ? "default" : "outline"}
-              size="sm"
-              onClick={() => { setMode("ronin"); setRoninTab(roninTab === "staff" ? "all" : "staff"); }}
-              className="gap-1.5 h-7 text-xs"
-            >
-              <UserCheck size={13} /> Staff
-            </Button>
-          )}
+          {/* Staff Schedule moved to its own top-level section under Calendar in the sidebar */}
           {isMasterAdmin && (
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSettings(true)}>
               <Settings size={16} />
@@ -1563,13 +1554,8 @@ export function CalendarSection() {
         </div>
       )}
 
-      {/* ── Staff Schedule view ─────────────────────────────────────────────── */}
-      {mode === "ronin" && roninTab === "staff" && (
-        <StaffCalendarTab canEdit={isMasterAdmin || isAdmin} userId={userId} />
-      )}
-
-      {/* ── Calendar grid (hidden when staff tab active) ─────────────────── */}
-      {(mode !== "ronin" || roninTab !== "staff") && (
+      {/* Staff Schedule moved to its own top-level section */}
+      {(mode === "ronin" || mode === "family") && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Calendar grid */}
         <div className="lg:col-span-2 rounded-2xl border border-border bg-card overflow-hidden">

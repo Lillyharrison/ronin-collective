@@ -63,6 +63,7 @@ export const translations = {
     rules: "Rules",
     alerts: "Alerts",
     carWash: "Car Wash",
+    staffSchedule: "Staff Schedule",
 
     // Maintenance
     reportIssueTitle: "Report Issue",
@@ -295,6 +296,7 @@ export const translations = {
     rules: "Reglas",
     alerts: "Alertas",
     carWash: "Lavado de Autos",
+    staffSchedule: "Horario del Personal",
 
     // Maintenance
     reportIssueTitle: "Reportar Problema",

@@ -7,13 +7,13 @@ import {
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
   Building2, FileSpreadsheet, Calendar, Brain,
-  ClipboardList, Shield, Bell, Car,
+  ClipboardList, Shield, Bell, Car, CalendarClock,
 } from "lucide-react";
 
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "vendors" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts" | "carWash";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "vendors" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts" | "carWash" | "staffSchedule";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
@@ -24,9 +24,10 @@ const ALL_ITEMS: SidebarItem[] = [
   { section: "messages",     labelKey: "messages",     icon: <MessageCircle size={20} /> },
   { section: "maintenance",  labelKey: "maintenance",  icon: <Wrench size={20} /> },
   { section: "profile",      labelKey: "profile",      icon: <User size={20} /> },
-  { section: "calendar",     labelKey: "calendar",     icon: <Calendar size={20} />, dividerBefore: true },
-  { section: "car-wash",     labelKey: "carWash",      icon: <Car size={20} /> },
-  { section: "travel",       labelKey: "travel",       icon: <Plane size={20} /> },
+  { section: "calendar",       labelKey: "calendar",      icon: <Calendar size={20} />, dividerBefore: true },
+  { section: "staff-schedule", labelKey: "staffSchedule", icon: <CalendarClock size={20} /> },
+  { section: "car-wash",       labelKey: "carWash",       icon: <Car size={20} /> },
+  { section: "travel",         labelKey: "travel",        icon: <Plane size={20} /> },
   { section: "tasks",        labelKey: "tasks",        icon: <CheckSquare size={20} />, dividerBefore: true },
   { section: "alerts",       labelKey: "alerts",       icon: <Bell size={20} /> },
   { section: "checklists",   labelKey: "checklists",   icon: <ClipboardList size={20} /> },

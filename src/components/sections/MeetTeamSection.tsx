@@ -29,6 +29,7 @@ interface SectionPerm {
   view: boolean;
   edit: boolean;
   notifications: boolean;
+  scope?: "own" | "department" | "all";
 }
 type SectionPermissions = Record<string, SectionPerm>;
 
@@ -67,7 +68,7 @@ interface AddUserForm {
 }
 
 // ─── All navigable sections in the app ────────────────────────────────────────
-const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean }[] = [
+const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; hasScope?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean }[] = [
   { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
   // ── Dashboard sub-features ──
   { key: "principal-location",   label: "   ↳ Principal Location", labelEs: "   ↳ Ubicación del Principal", hasEdit: false, isFeature: true, isDashboardSub: true },
@@ -84,6 +85,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "meet-team",          label: "Meet the Team",       labelEs: "Equipo",            hasEdit: false },
   { key: "travel",             label: "Travel",              labelEs: "Viajes",            hasEdit: true  },
   { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
+  { key: "staff-schedule",     label: "Staff Schedule",      labelEs: "Horario del Personal", hasEdit: true, hasScope: true },
   // ── Calendar sub-tabs ──
   { key: "family-calendar",      label: "   ↳ Family Calendar",      labelEs: "   ↳ Calendario Familiar",    hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-travel",      label: "   ↳ Travel",               labelEs: "   ↳ Viajes",                 hasEdit: false, isFeature: true, isCalendarSub: true },
@@ -91,7 +93,6 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "calendar-maintenance", label: "   ↳ Maintenance",          labelEs: "   ↳ Mantenimiento",          hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-deliveries",  label: "   ↳ Deliveries",           labelEs: "   ↳ Entregas",               hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-construction",label: "   ↳ Construction / Design",labelEs: "   ↳ Construcción / Diseño",  hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-staff",       label: "   ↳ Staff Schedule",       labelEs: "   ↳ Horario del Personal",   hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "car-wash",             label: "   ↳ Car Wash",              labelEs: "   ↳ Lavado de Autos",        hasEdit: true,  isFeature: true, isCalendarSub: true },
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
@@ -156,17 +157,22 @@ function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
     principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays"],
     extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","calendar-staff"],
-    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","profile","achievements","calendar-travel","calendar-birthdays","calendar-maintenance"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries"],
+    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","calendar-travel","calendar-birthdays","calendar-maintenance"],
   };
   const allowed = base[level] || base["staff"];
   const perms: SectionPermissions = {};
   ALL_SECTIONS.forEach(s => {
-    perms[s.key] = {
+    const entry: SectionPerm = {
       view: allowed.includes(s.key),
       edit: allowed.includes(s.key) && (s.hasEdit ?? false),
       notifications: allowed.includes(s.key),
     };
+    if (s.hasScope) {
+      // Family/admin/manager → "all"; staff → "own"
+      entry.scope = (level === "manager" || level === "principal" || level === "extended_family") ? "all" : "own";
+    }
+    perms[s.key] = entry;
   });
   return perms;
 }
@@ -583,7 +589,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     }
   }
 
-  function togglePerm(sectionKey: string, field: keyof SectionPerm) {
+  function togglePerm(sectionKey: string, field: "view" | "edit" | "notifications") {
     setPerms(prev => ({
       ...prev,
       [sectionKey]: {
@@ -591,6 +597,13 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
         [field]: !prev[sectionKey]?.[field],
         ...(field === "view" && prev[sectionKey]?.view ? { edit: false, notifications: false } : {}),
       },
+    }));
+  }
+
+  function setScope(sectionKey: string, scope: "own" | "department" | "all") {
+    setPerms(prev => ({
+      ...prev,
+      [sectionKey]: { ...prev[sectionKey], scope },
     }));
   }
 
@@ -852,28 +865,44 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                           <div className="flex-1 h-px bg-charcoal-light" />
                         </div>
                       )}
-                      <div className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
-                        <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
-                        <div className="w-10 flex justify-center">
-                          <button onClick={() => togglePerm(section.key, "view")}
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}>
-                            <Check size={11} />
-                          </button>
+                      <div className={`flex flex-col gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
+                        <div className="flex items-center gap-1">
+                          <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
+                          <div className="w-10 flex justify-center">
+                            <button onClick={() => togglePerm(section.key, "view")}
+                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}>
+                              <Check size={11} />
+                            </button>
+                          </div>
+                          <div className="w-10 flex justify-center">
+                            <button onClick={() => section.hasEdit && sp.view && togglePerm(section.key, "edit")}
+                              disabled={!section.hasEdit || !sp.view}
+                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
+                              <Check size={11} />
+                            </button>
+                          </div>
+                          <div className="w-10 flex justify-center">
+                            <button onClick={() => sp.view && togglePerm(section.key, "notifications")}
+                              disabled={!sp.view}
+                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
+                              <Check size={11} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="w-10 flex justify-center">
-                          <button onClick={() => section.hasEdit && sp.view && togglePerm(section.key, "edit")}
-                            disabled={!section.hasEdit || !sp.view}
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
-                            <Check size={11} />
-                          </button>
-                        </div>
-                        <div className="w-10 flex justify-center">
-                          <button onClick={() => sp.view && togglePerm(section.key, "notifications")}
-                            disabled={!sp.view}
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}>
-                            <Check size={11} />
-                          </button>
-                        </div>
+                        {section.hasScope && sp.view && (
+                          <div className="flex items-center gap-2 pl-2">
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{isEN ? "Visibility" : "Visibilidad"}</span>
+                            <select
+                              value={sp.scope ?? "own"}
+                              onChange={(e) => setScope(section.key, e.target.value as "own" | "department" | "all")}
+                              className="text-[11px] bg-charcoal border border-charcoal-light rounded px-1.5 py-0.5 text-cream focus:outline-none focus:border-gold/50"
+                            >
+                              <option value="own">{isEN ? "Own only" : "Solo propio"}</option>
+                              <option value="department">{isEN ? "Their department" : "Su departamento"}</option>
+                              <option value="all">{isEN ? "All staff" : "Todo el personal"}</option>
+                            </select>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -991,7 +1020,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     return defaultQuickActionsForLevel(member.level || "staff");
   });
 
-  function togglePerm(sectionKey: string, field: keyof SectionPerm) {
+  function togglePerm(sectionKey: string, field: "view" | "edit" | "notifications") {
     setPerms(prev => ({
       ...prev,
       [sectionKey]: {
@@ -1000,6 +1029,13 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         // If turning off view, also turn off edit & notifications
         ...(field === "view" && prev[sectionKey]?.view ? { edit: false, notifications: false } : {}),
       },
+    }));
+  }
+
+  function setScope(sectionKey: string, scope: "own" | "department" | "all") {
+    setPerms(prev => ({
+      ...prev,
+      [sectionKey]: { ...prev[sectionKey], scope },
     }));
   }
 
@@ -1369,38 +1405,55 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
                 {ALL_SECTIONS.map(section => {
                   const sp = perms[section.key] || { view: false, edit: false, notifications: false };
                   return (
-                    <div key={section.key} className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
-                      <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
-                      {/* View */}
-                      <div className="w-10 flex justify-center">
-                        <button
-                          onClick={() => canEdit && togglePerm(section.key, "view")}
-                          disabled={!canEdit}
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}
-                        >
-                          <Check size={11} />
-                        </button>
+                    <div key={section.key} className={`flex flex-col gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
+                      <div className="flex items-center gap-1">
+                        <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
+                        {/* View */}
+                        <div className="w-10 flex justify-center">
+                          <button
+                            onClick={() => canEdit && togglePerm(section.key, "view")}
+                            disabled={!canEdit}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}
+                          >
+                            <Check size={11} />
+                          </button>
+                        </div>
+                        {/* Edit */}
+                        <div className="w-10 flex justify-center">
+                          <button
+                            onClick={() => canEdit && section.hasEdit && sp.view && togglePerm(section.key, "edit")}
+                            disabled={!canEdit || !section.hasEdit || !sp.view}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}
+                          >
+                            <Check size={11} />
+                          </button>
+                        </div>
+                        {/* Notifications */}
+                        <div className="w-10 flex justify-center">
+                          <button
+                            onClick={() => canEdit && sp.view && togglePerm(section.key, "notifications")}
+                            disabled={!canEdit || !sp.view}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}
+                          >
+                            <Check size={11} />
+                          </button>
+                        </div>
                       </div>
-                      {/* Edit */}
-                      <div className="w-10 flex justify-center">
-                        <button
-                          onClick={() => canEdit && section.hasEdit && sp.view && togglePerm(section.key, "edit")}
-                          disabled={!canEdit || !section.hasEdit || !sp.view}
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}
-                        >
-                          <Check size={11} />
-                        </button>
-                      </div>
-                      {/* Notifications */}
-                      <div className="w-10 flex justify-center">
-                        <button
-                          onClick={() => canEdit && sp.view && togglePerm(section.key, "notifications")}
-                          disabled={!canEdit || !sp.view}
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}
-                        >
-                          <Check size={11} />
-                        </button>
-                      </div>
+                      {section.hasScope && sp.view && (
+                        <div className="flex items-center gap-2 pl-2">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{isEN ? "Visibility" : "Visibilidad"}</span>
+                          <select
+                            value={sp.scope ?? "own"}
+                            onChange={(e) => canEdit && setScope(section.key, e.target.value as "own" | "department" | "all")}
+                            disabled={!canEdit}
+                            className="text-[11px] bg-charcoal border border-charcoal-light rounded px-1.5 py-0.5 text-cream focus:outline-none focus:border-gold/50 disabled:opacity-50"
+                          >
+                            <option value="own">{isEN ? "Own only" : "Solo propio"}</option>
+                            <option value="department">{isEN ? "Their department" : "Su departamento"}</option>
+                            <option value="all">{isEN ? "All staff" : "Todo el personal"}</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

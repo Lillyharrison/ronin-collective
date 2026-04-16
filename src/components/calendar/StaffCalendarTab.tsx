@@ -1519,9 +1519,12 @@ function StaffMonthGrid({
 export function StaffCalendarTab({
   canEdit,
   userId,
+  scopeFilterIds = null,
 }: {
   canEdit: boolean;
   userId: string | null;
+  /** If non-null, restrict the visible staff rows to these user IDs (for non-admin scopes). */
+  scopeFilterIds?: string[] | null;
 }) {
   const [calView, setCalView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() =>
@@ -1627,8 +1630,8 @@ export function StaffCalendarTab({
 
   const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
 
-  // Non-admins only see their own row
-  const staffToShow = !canEdit && userId
+  // Non-admins only see their own row UNLESS a wider scope was provided
+  const staffToShow = !canEdit && userId && !scopeFilterIds
     ? profiles.filter((p) => p.id === userId)
     : (() => {
         const activeStaffIds = Array.from(
@@ -1637,10 +1640,15 @@ export function StaffCalendarTab({
             ...schedules.map((s) => s.staff_id),
           ])
         );
-        const allStaff = profiles.filter((p) =>
+        let allStaff = profiles.filter((p) =>
           filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff
         );
-        const base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10) : profiles.filter((p) => p.id === filterStaff));
+        // Apply scope filter (e.g. department) for non-admin viewers
+        if (scopeFilterIds) {
+          const scopeSet = new Set(scopeFilterIds);
+          allStaff = allStaff.filter((p) => scopeSet.has(p.id));
+        }
+        const base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => !scopeFilterIds || scopeFilterIds.includes(p.id)) : profiles.filter((p) => p.id === filterStaff));
         // Apply saved custom order
         const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
         return [...base].sort((a, b) => {
