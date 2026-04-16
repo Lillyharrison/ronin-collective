@@ -46,6 +46,8 @@ function getDisplayName(p: Profile | undefined | null, fallback = "Staff"): stri
 interface Property {
   id: string;
   name: string;
+  city?: string | null;
+  country?: string | null;
 }
 
 interface DisplayShift {
