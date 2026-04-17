@@ -37,16 +37,20 @@ export function useMessages(threadId: string | null) {
     if (!threadId) { setMessages([]); setHasMore(false); return; }
     setLoading(true);
 
+    // Narrow column list — never `select("*")` on lists. Saves bandwidth as
+    // threads grow into thousands of messages.
+    const MSG_COLS = "id, thread_id, sender_id, content_text, content_media_url, media_type, audio_duration_sec, reactions, seen_by, delivery_status, is_starred, is_ai_generated, reply_to_id, created_at";
+
     const { data } = await supabase
       .from("messages")
-      .select("*")
+      .select(MSG_COLS)
       .eq("thread_id", threadId)
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE);
 
     if (data) {
       const ordered = [...data].reverse(); // oldest → newest
-      const enriched = await enrichMessages(ordered);
+      const enriched = await enrichMessages(ordered as Tables<"messages">[]);
       setMessages(enriched);
       setHasMore(data.length === PAGE_SIZE);
       oldestCursorRef.current = ordered[0]?.created_at ?? null;
@@ -61,9 +65,10 @@ export function useMessages(threadId: string | null) {
     if (!threadId || !hasMore || loadingOlder || !oldestCursorRef.current) return;
     setLoadingOlder(true);
 
+    const MSG_COLS = "id, thread_id, sender_id, content_text, content_media_url, media_type, audio_duration_sec, reactions, seen_by, delivery_status, is_starred, is_ai_generated, reply_to_id, created_at";
     const { data } = await supabase
       .from("messages")
-      .select("*")
+      .select(MSG_COLS)
       .eq("thread_id", threadId)
       .lt("created_at", oldestCursorRef.current)
       .order("created_at", { ascending: false })
@@ -71,7 +76,7 @@ export function useMessages(threadId: string | null) {
 
     if (data) {
       const ordered = [...data].reverse();
-      const enriched = await enrichMessages(ordered);
+      const enriched = await enrichMessages(ordered as Tables<"messages">[]);
       setMessages(prev => [...enriched, ...prev]);
       setHasMore(data.length === PAGE_SIZE);
       if (ordered.length > 0) {

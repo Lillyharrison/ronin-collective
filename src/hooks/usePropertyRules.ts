@@ -26,7 +26,14 @@ export function usePropertyRules(propertyId?: string | null) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from("property_rules").select("*").eq("is_active", true).eq("status", "active").order("created_at");
+    // Property rules table is small but scoped — narrow columns and cap at 200.
+    let q = supabase
+      .from("property_rules")
+      .select("id, title, description, property_id, is_universal, applies_to_roles, visible_to_user_ids, enacted_event_types, enacted_keywords, enacted_occupant_ids, icon, color, is_active, created_by, created_at, updated_at")
+      .eq("is_active", true)
+      .eq("status", "active")
+      .order("created_at")
+      .limit(200);
     if (propertyId !== undefined && propertyId !== null) {
       q = q.or(`property_id.eq.${propertyId},is_universal.eq.true`);
     }
@@ -55,24 +62,28 @@ export function useActiveRulesForDashboard(assignedPropertyIds: string[], isMast
 
       let rules: PropertyRule[] = [];
 
+      const RULE_COLS = "id, title, description, property_id, is_universal, applies_to_roles, visible_to_user_ids, enacted_event_types, enacted_keywords, enacted_occupant_ids, icon, color, is_active, created_by, created_at, updated_at";
+
       if (isMasterAdmin) {
         // Master admin sees every active+approved rule
         const { data } = await supabase
           .from("property_rules")
-          .select("*")
+          .select(RULE_COLS)
           .eq("is_active", true)
           .eq("status", "active")
-          .order("created_at");
+          .order("created_at")
+          .limit(200);
         rules = (data as PropertyRule[]) ?? [];
       } else if (assignedPropertyIds.length > 0) {
         // Staff: active rules for their assigned properties + universal rules
         const { data } = await supabase
           .from("property_rules")
-          .select("*")
+          .select(RULE_COLS)
           .eq("is_active", true)
           .eq("status", "active")
           .or(`is_universal.eq.true,property_id.in.(${assignedPropertyIds.join(",")})`)
-          .order("created_at");
+          .order("created_at")
+          .limit(200);
         rules = (data as PropertyRule[]) ?? [];
       }
 

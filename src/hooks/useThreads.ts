@@ -22,12 +22,14 @@ export function useThreads(userId: string | null) {
   const fetchThreads = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
 
-    // 1) Fetch threads
+    // 1) Fetch threads — narrow columns + cap. A user is unlikely to actively
+    // participate in more than ~100 threads; 200 is a generous safety cap.
     const { data: rawThreads } = await supabase
       .from("chat_threads")
-      .select("*")
+      .select("id, title, type, participant_ids, last_message_at, created_by, property_id, is_pinned")
       .contains("participant_ids", [userId])
-      .order("last_message_at", { ascending: false, nullsFirst: false });
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .limit(200);
 
     if (!rawThreads?.length) { setThreads([]); setLoading(false); return; }
 

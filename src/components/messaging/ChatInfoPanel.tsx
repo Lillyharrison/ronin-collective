@@ -62,13 +62,14 @@ export function ChatInfoPanel({
     loadMessages();
   }, [open, threadId, threadTitle]);
 
-  // Load all profiles when add-member panel opens
+  // Load all profiles when add-member panel opens — capped at realistic team size
   useEffect(() => {
     if (!showAddMember) return;
     supabase
       .from("profiles")
       .select("id, full_name, avatar_url")
       .order("full_name")
+      .limit(500)
       .then(({ data }) => setAllProfiles(data ?? []));
   }, [showAddMember]);
 
