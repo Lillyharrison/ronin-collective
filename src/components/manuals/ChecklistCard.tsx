@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 import { useChecklistSessions, useChecklistItems, ChecklistTemplate } from "@/hooks/useChecklists";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   template: ChecklistTemplate;
@@ -40,6 +41,25 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
       .update({ is_published: !template.is_published })
       .eq("id", template.id);
     // Trigger parent reload via page reload for simplicity
+    window.location.reload();
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Delete "${template.title}"?\n\nThis will permanently remove the checklist, all its items, completion history, and comments. This cannot be undone.`
+    );
+    if (!confirmed) return;
+    // Children (items, sessions, comments) cascade or are removed via FK; delete template
+    await supabase.from("checklist_comments").delete().eq("template_id", template.id);
+    await supabase.from("checklist_sessions").delete().eq("template_id", template.id);
+    await supabase.from("checklist_items").delete().eq("template_id", template.id);
+    const { error } = await supabase.from("checklist_templates").delete().eq("id", template.id);
+    if (error) {
+      toast.error("Failed to delete checklist");
+      return;
+    }
+    toast.success("Checklist deleted");
     window.location.reload();
   };
 
@@ -129,18 +149,27 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
 
       <div className="flex items-center gap-1 flex-shrink-0">
         {isMasterAdmin && (
-          <button
-            onClick={togglePublish}
-            title={isDraft ? "Publish" : "Unpublish"}
-            className={cn(
-              "p-1.5 rounded-lg border transition-all",
-              isDraft
-                ? "border-muted-foreground/20 text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-[hsl(var(--gold))]"
-                : "border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))] hover:border-[hsl(var(--status-done)/0.6)]"
-            )}
-          >
-            {isDraft ? <Eye size={13} /> : <EyeOff size={13} />}
-          </button>
+          <>
+            <button
+              onClick={togglePublish}
+              title={isDraft ? "Publish" : "Unpublish"}
+              className={cn(
+                "p-1.5 rounded-lg border transition-all",
+                isDraft
+                  ? "border-muted-foreground/20 text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-[hsl(var(--gold))]"
+                  : "border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))] hover:border-[hsl(var(--status-done)/0.6)]"
+              )}
+            >
+              {isDraft ? <Eye size={13} /> : <EyeOff size={13} />}
+            </button>
+            <button
+              onClick={handleDelete}
+              title="Delete checklist"
+              className="p-1.5 rounded-lg border border-[hsl(var(--status-urgent)/0.3)] text-[hsl(var(--status-urgent))] hover:border-[hsl(var(--status-urgent)/0.6)] hover:bg-[hsl(var(--status-urgent)/0.1)] transition-all"
+            >
+              <Trash2 size={13} />
+            </button>
+          </>
         )}
         {!isMasterAdmin && <ChevronRight size={16} className="text-muted-foreground" />}
         {isMasterAdmin && <ChevronRight size={16} className="text-muted-foreground" onClick={onOpenDetail} />}
