@@ -223,25 +223,43 @@ export function ChecklistsSection() {
               })
             )}
             {canManageChecklists && (
-              <button
-                onClick={async () => {
-                  const title = window.prompt(language === "es" ? "Título de la lista de actividad:" : "Activity list title:");
-                  if (!title?.trim()) return;
-                  await supabase.from("checklist_templates").insert({
-                    title: title.trim(), category: "activity",
-                    subcategory: title.trim().toLowerCase().replace(/\s+/g, "_"),
-                    icon: "🎯", color: "blue", is_universal: true,
-                  });
-                  window.location.reload();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
-              >
-                <Plus size={14} /> {t("addActivityList")}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={async () => {
+                    const title = window.prompt(language === "es" ? "Título de la lista de actividad:" : "Activity list title:");
+                    if (!title?.trim()) return;
+                    await supabase.from("checklist_templates").insert({
+                      title: title.trim(), category: "activity",
+                      subcategory: title.trim().toLowerCase().replace(/\s+/g, "_"),
+                      icon: "🎯", color: "blue", is_universal: true,
+                    });
+                    window.location.reload();
+                  }}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
+                >
+                  <Plus size={14} /> {t("addActivityList")}
+                </button>
+                <button
+                  onClick={() => setImportOpen(true)}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-gold/40 rounded-xl text-sm text-gold hover:bg-gold/5 transition-all"
+                >
+                  <Upload size={14} /> {language === "es" ? "Importar archivo" : "Import file"}
+                </button>
+              </div>
             )}
           </>
         )}
       </div>
+
+      <ChecklistImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        propertyId={tab === "cleaning" ? selectedPropId : null}
+        onImported={() => {
+          if (tab === "cleaning") reloadCleaning();
+          else window.location.reload();
+        }}
+      />
     </div>
   );
 }
