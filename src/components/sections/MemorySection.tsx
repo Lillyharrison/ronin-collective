@@ -70,9 +70,15 @@ export default function MemorySection() {
   const fetchAll = async () => {
     setLoading(true);
     const [memoriesRes, propsRes, profilesRes] = await Promise.all([
-      supabase.from("ronin_memories").select("*").order("importance", { ascending: false }).order("created_at", { ascending: false }),
-      supabase.from("properties").select("id, name, is_primary"),
-      supabase.from("profiles").select("id, full_name"),
+      // Narrow + cap. Memories grow indefinitely — 500 most-important is plenty for the admin UI.
+      supabase
+        .from("ronin_memories")
+        .select("id, content, summary, category, importance, tags, source, property_id, subject_user_id, reference_count, last_referenced_at, created_at, updated_at")
+        .order("importance", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase.from("properties").select("id, name, is_primary").limit(500),
+      supabase.from("profiles").select("id, full_name").limit(500),
     ]);
     setMemories((memoriesRes.data as RoninMemory[]) ?? []);
     setProperties(sortProperties((propsRes.data ?? []) as { id: string; name: string; is_primary?: boolean }[]));
