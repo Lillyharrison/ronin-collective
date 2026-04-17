@@ -34,6 +34,7 @@ export function ChecklistsSection() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(checklistsForPropertyId ?? null);
   const [showPropPicker, setShowPropPicker] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const TABS = [
     { id: "cleaning" as Tab,  icon: <ClipboardList size={14} />, label: "Checklists",   labelEs: t("checklists") },
