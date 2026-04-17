@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useStaffSchedules, StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useStaffSchedules";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1672,6 +1673,10 @@ export function StaffCalendarTab({
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
   const [filterProperty, setFilterProperty] = useState<string>("all");
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
+  const [familyEvents, setFamilyEvents] = useState<FamilyEvent[]>([]);
+
+  const { canSee } = usePermissions();
+  const showFamilyOverlay = canSee("family-movements");
 
   const dragRef = useRef<DisplayShift | null>(null);
   const rowDragRef = useRef<string | null>(null); // staff_id being row-dragged
@@ -1749,7 +1754,29 @@ export function StaffCalendarTab({
     });
   }, []);
 
-  const weekDays = calView === "month"
+  // ── Fetch family travel/guest events for the visible month (when overlay enabled) ──
+  useEffect(() => {
+    if (calView !== "month" || !showFamilyOverlay) {
+      setFamilyEvents([]);
+      return;
+    }
+    const monthEnd = endOfMonth(monthStart);
+    const startISO = monthStart.toISOString();
+    const endISO = monthEnd.toISOString();
+    let cancelled = false;
+    supabase
+      .from("calendar_events")
+      .select("id, title, start_date, end_date, event_type, property_id")
+      .in("event_type", ["travel", "guest"])
+      .lte("start_date", endISO)
+      .or(`end_date.gte.${startISO},end_date.is.null`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setFamilyEvents((data ?? []) as FamilyEvent[]);
+      });
+    return () => { cancelled = true; };
+  }, [calView, monthStart, showFamilyOverlay]);
+
     ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
     : eachDayOfInterval({
         start: weekStart,
