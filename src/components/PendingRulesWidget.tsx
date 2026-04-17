@@ -36,7 +36,7 @@ export function usePendingRulesCount() {
     if (!isMasterAdmin) return;
     const { count: c } = await supabase
       .from("property_rules")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("status", "pending_approval");
     setCount(c ?? 0);
   }, [isMasterAdmin]);
