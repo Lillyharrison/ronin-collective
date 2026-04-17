@@ -10,6 +10,7 @@ interface Props {
   template: ChecklistTemplate;
   propertyId?: string | null;
   onOpenDetail?: () => void;
+  onChanged?: () => void;
 }
 
 const COLOR_BG: Record<string, string> = {
