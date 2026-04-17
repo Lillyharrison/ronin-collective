@@ -320,7 +320,7 @@ export function PlannedMaintenanceList({
 
               {/* Actions */}
               {canManage && (
-                <div className="flex items-center gap-2 pt-0.5 border-t border-border/50">
+                <div className="flex items-center gap-2 pt-0.5 border-t border-border/50" onClick={e => e.stopPropagation()}>
                   <select
                     value={entry.status}
                     onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
@@ -333,23 +333,23 @@ export function PlannedMaintenanceList({
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
-                  <button onClick={() => onEdit(entry)}
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(entry); }}
                     className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                     <Edit2 size={13} />
                   </button>
                   {confirmDelete === entry.id ? (
                     <div className="flex items-center gap-1">
-                      <button onClick={() => { onDelete(entry.id); setConfirmDelete(null); }}
+                      <button onClick={(e) => { e.stopPropagation(); onDelete(entry.id); setConfirmDelete(null); }}
                         className="text-[10px] bg-destructive text-destructive-foreground px-2 py-1 rounded font-medium">
                         Confirm
                       </button>
-                      <button onClick={() => setConfirmDelete(null)}
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(null); }}
                         className="text-[10px] text-muted-foreground px-2 py-1 rounded hover:bg-muted">
                         Cancel
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => setConfirmDelete(entry.id)}
+                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(entry.id); }}
                       className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive">
                       <Trash2 size={13} />
                     </button>
