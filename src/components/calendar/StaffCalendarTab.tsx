@@ -1517,7 +1517,6 @@ function StaffMonthGrid({
           );
         })}
       </div>
-    </div>
   );
 
   return noWrapper
