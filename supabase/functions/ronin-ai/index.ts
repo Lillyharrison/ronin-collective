@@ -7,6 +7,36 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ─── PERMISSIONS SYNC ─────────────────────────────────────────────────────────
+// Single source of truth: the `user_section_permissions` table. Whenever the
+// admin UI saves a profile's `section_permissions` JSONB, mirror it row-by-row
+// into the table so the app (which reads from the table) stays in sync.
+// Drafts (no auth.users row) are skipped — caller must guard those.
+async function syncSectionPermissions(
+  // deno-lint-ignore no-explicit-any
+  client: any,
+  userId: string,
+  sectionPermissions: Record<string, unknown> | null | undefined,
+): Promise<void> {
+  if (!sectionPermissions || typeof sectionPermissions !== "object") return;
+
+  const rows: Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean }> = [];
+  for (const [section, raw] of Object.entries(sectionPermissions)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue; // skip _quick_actions etc.
+    const v = raw as { view?: boolean; edit?: boolean; notifications?: boolean };
+    rows.push({
+      user_id: userId,
+      section,
+      can_view: v.view === true,
+      can_edit: v.edit === true,
+      notifications: v.notifications === true,
+    });
+  }
+  if (rows.length === 0) return;
+
+  await client.from("user_section_permissions").upsert(rows, { onConflict: "user_id,section" });
+}
+
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
 const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors", "search_product"];
