@@ -751,6 +751,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       await adminClient.from("user_roles").insert({ user_id: newId, role });
+      // Note: draft profiles have no auth.users row → can't sync to user_section_permissions yet.
+      // The sync happens later when send_invitation promotes them to a real auth user.
       return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
