@@ -102,28 +102,35 @@ serve(async (req) => {
 
     const adminIds = new Set<string>((adminRoles ?? []).map((r: { user_id: string }) => r.user_id));
 
-    // 2. If the notification is property-scoped, only consider profiles assigned to that property.
-    //    This prevents a 50-staff fan-out when only 5 people manage that property.
-    let profileQuery = supabaseAdmin.from("profiles").select("id, section_permissions, assigned_property_ids");
-    // (No server-side filter on property here; we filter client-side below so
-    // master_admins without an assigned_property_ids still get notified.)
+    // 2. Find users who opted into notifications for this section (single query on the
+    //    user_section_permissions table — the source of truth).
+    const { data: permRows } = await supabaseAdmin
+      .from("user_section_permissions")
+      .select("user_id")
+      .eq("section", section)
+      .eq("notifications", true);
 
-    const { data: allProfiles } = await profileQuery;
+    const optedInIds = new Set<string>((permRows ?? []).map((r: { user_id: string }) => r.user_id));
 
-    const extraIds: string[] = (allProfiles ?? [])
-      .filter((p: { id: string; section_permissions: unknown; assigned_property_ids: string[] | null }) => {
-        if (adminIds.has(p.id)) return false; // already included
-
-        // If notification is property-scoped, the user must be assigned to that property
+    // 3. If property-scoped, filter opted-in users to those assigned to that property.
+    let extraIds: string[] = [];
+    if (optedInIds.size > 0) {
+      const candidateIds = [...optedInIds].filter(id => !adminIds.has(id));
+      if (candidateIds.length > 0) {
         if (payload.property_id) {
-          const assigned = p.assigned_property_ids ?? [];
-          if (!assigned.includes(payload.property_id)) return false;
+          const { data: profs } = await supabaseAdmin
+            .from("profiles")
+            .select("id, assigned_property_ids")
+            .in("id", candidateIds);
+          extraIds = (profs ?? [])
+            .filter((p: { id: string; assigned_property_ids: string[] | null }) =>
+              (p.assigned_property_ids ?? []).includes(payload.property_id))
+            .map((p: { id: string }) => p.id);
+        } else {
+          extraIds = candidateIds;
         }
-
-        const perms = p.section_permissions as Record<string, { notifications?: boolean }> | null;
-        return perms?.[section]?.notifications === true;
-      })
-      .map((p: { id: string }) => p.id);
+      }
+    }
 
     const recipientSet = new Set<string>([...adminIds, ...extraIds]);
     if (excludeUserId) recipientSet.delete(excludeUserId);

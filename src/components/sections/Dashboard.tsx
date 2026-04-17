@@ -201,7 +201,7 @@ export function Dashboard() {
       // 2. Quick action prefs from profile
       supabase
         .from("profiles")
-        .select("section_permissions")
+        .select("quick_actions")
         .eq("id", userId)
         .maybeSingle(),
 
@@ -246,11 +246,8 @@ export function Dashboard() {
       setPendingCount(taskCount ?? 0);
 
       // 2. Quick actions
-      if (profileData?.section_permissions) {
-        const perms = profileData.section_permissions as Record<string, unknown>;
-        const qa = perms["_quick_actions"];
-        if (Array.isArray(qa)) setUserQuickActions(qa as string[]);
-      }
+      const qa = (profileData as { quick_actions?: string[] } | null)?.quick_actions;
+      if (Array.isArray(qa) && qa.length > 0) setUserQuickActions(qa);
       setQaLoading(false);
 
       // 3. Notifications

@@ -7,34 +7,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ─── PERMISSIONS SYNC ─────────────────────────────────────────────────────────
-// Single source of truth: the `user_section_permissions` table. Whenever the
-// admin UI saves a profile's `section_permissions` JSONB, mirror it row-by-row
-// into the table so the app (which reads from the table) stays in sync.
+// ─── PERMISSIONS WRITER ───────────────────────────────────────────────────────
+// Single source of truth: the `user_section_permissions` table. Callers pass
+// pre-built rows (built client-side) — no JSONB blob is involved anywhere.
 // Drafts (no auth.users row) are skipped — caller must guard those.
-async function syncSectionPermissions(
+async function writeSectionPermissionRows(
   // deno-lint-ignore no-explicit-any
   client: any,
   userId: string,
-  sectionPermissions: Record<string, unknown> | null | undefined,
+  rows: Array<{ section: string; can_view: boolean; can_edit: boolean; notifications: boolean }> | null | undefined,
 ): Promise<void> {
-  if (!sectionPermissions || typeof sectionPermissions !== "object") return;
-
-  const rows: Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean }> = [];
-  for (const [section, raw] of Object.entries(sectionPermissions)) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue; // skip _quick_actions etc.
-    const v = raw as { view?: boolean; edit?: boolean; notifications?: boolean };
-    rows.push({
-      user_id: userId,
-      section,
-      can_view: v.view === true,
-      can_edit: v.edit === true,
-      notifications: v.notifications === true,
-    });
-  }
-  if (rows.length === 0) return;
-
-  await client.from("user_section_permissions").upsert(rows, { onConflict: "user_id,section" });
+  if (!Array.isArray(rows) || rows.length === 0) return;
+  const payload = rows.map(r => ({
+    user_id: userId,
+    section: r.section,
+    can_view: r.can_view === true,
+    can_edit: r.can_edit === true,
+    notifications: r.notifications === true,
+  }));
+  await client.from("user_section_permissions").upsert(payload, { onConflict: "user_id,section" });
 }
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
@@ -645,16 +636,14 @@ async function notifyAdminsOfAIAction(
     // Also collect any non-admin user who has notifications toggled on for the section
     let extraIds: string[] = [];
     if (requiredSection) {
-      const { data: allProfiles } = await adminClient
-        .from("profiles")
-        .select("id, section_permissions");
-      extraIds = (allProfiles ?? [])
-        .filter((p: { id: string; section_permissions: unknown }) => {
-          if (adminIds.has(p.id)) return false; // already included
-          const perms = p.section_permissions as Record<string, { view?: boolean; notifications?: boolean }> | null;
-          return perms?.[requiredSection]?.notifications === true;
-        })
-        .map((p: { id: string }) => p.id);
+      const { data: permRows } = await adminClient
+        .from("user_section_permissions")
+        .select("user_id")
+        .eq("section", requiredSection)
+        .eq("notifications", true);
+      extraIds = (permRows ?? [])
+        .map((r: { user_id: string }) => r.user_id)
+        .filter((id: string) => !adminIds.has(id));
     }
 
     const recipientSet = new Set([...adminIds, ...extraIds]);
@@ -720,7 +709,7 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { email, full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions } = body;
+      const { email, full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, section_permissions_rows } = body;
       if (!email || !full_name || !level || !role) {
         return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -737,9 +726,9 @@ serve(async (req) => {
         birthday: birthday || null, notes: notes || null,
         phone: phone || null,
         assigned_property_ids: assigned_property_ids || [],
-        section_permissions: section_permissions || null,
+        quick_actions: Array.isArray(quick_actions) ? quick_actions : [],
       });
-      await syncSectionPermissions(adminClient, uid, section_permissions);
+      await writeSectionPermissionRows(adminClient, uid, section_permissions_rows);
       const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
       if (!existingRole) await adminClient.from("user_roles").insert({ user_id: uid, role });
       else await adminClient.from("user_roles").update({ role }).eq("user_id", uid);
@@ -753,7 +742,7 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions, is_draft } = body;
+      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, is_draft } = body;
       // Allow saving without full_name when is_draft is true
       if (!is_draft && !full_name) {
         return new Response(JSON.stringify({ error: "Missing required fields: full_name" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -774,15 +763,15 @@ serve(async (req) => {
         notes: notes || null,
         phone: phone || null,
         assigned_property_ids: assigned_property_ids || [],
-        section_permissions: section_permissions || null,
+        quick_actions: Array.isArray(quick_actions) ? quick_actions : [],
         is_draft: is_draft === true,
       });
       if (profErr) {
         return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       await adminClient.from("user_roles").insert({ user_id: newId, role });
-      // Note: draft profiles have no auth.users row → can't sync to user_section_permissions yet.
-      // The sync happens later when send_invitation promotes them to a real auth user.
+      // Note: draft profiles have no auth.users row → can't write to user_section_permissions yet
+      // (foreign key constraint). Permissions will sync when send_invitation promotes them.
       return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -791,7 +780,7 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { profile_id, full_name, email, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, section_permissions, send_invitation } = body;
+      const { profile_id, full_name, email, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, section_permissions_rows, send_invitation } = body;
       if (!profile_id) return new Response(JSON.stringify({ error: "Missing profile_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       // Update the profile
@@ -805,17 +794,17 @@ serve(async (req) => {
         notes: notes || null,
         phone: phone || null,
         assigned_property_ids: assigned_property_ids || [],
-        section_permissions: section_permissions || null,
+        quick_actions: Array.isArray(quick_actions) ? quick_actions : [],
         // Only promote out of draft when sending invitation
         is_draft: send_invitation ? false : true,
       }).eq("id", profile_id);
       if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      // Sync to user_section_permissions only if this profile is tied to a real auth user
+      // Write to user_section_permissions only if this profile is tied to a real auth user
       // (drafts without an auth.users row would violate the FK constraint).
       const { data: authUser } = await adminClient.auth.admin.getUserById(profile_id);
       if (authUser?.user) {
-        await syncSectionPermissions(adminClient, profile_id, section_permissions);
+        await writeSectionPermissionRows(adminClient, profile_id, section_permissions_rows);
       }
 
       // Update role if provided
@@ -839,8 +828,8 @@ serve(async (req) => {
             await adminClient.from("profiles").insert({ ...oldProfile, id: inviteData.user.id, is_draft: false });
             await adminClient.from("user_roles").update({ user_id: inviteData.user.id }).eq("user_id", profile_id);
             await adminClient.from("profiles").delete().eq("id", profile_id);
-            // Now that the auth user exists, sync permissions to the new uid
-            await syncSectionPermissions(adminClient, inviteData.user.id, section_permissions);
+            // Now that the auth user exists, write permissions to the new uid
+            await writeSectionPermissionRows(adminClient, inviteData.user.id, section_permissions_rows);
           }
           return new Response(JSON.stringify({ success: true, user_id: inviteData.user.id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
