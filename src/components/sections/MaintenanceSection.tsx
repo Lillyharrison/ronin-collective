@@ -496,14 +496,14 @@ export function MaintenanceSection() {
           <PlannedMaintenanceList
             entries={plannedEntries}
             loading={plannedLoading}
-            canManage={false}
+            canManage={canEdit("maintenance")}
             properties={allProperties}
             propertyFilter={filterProp}
             onPropertyFilterChange={setFilterProp}
-            onAdd={() => {}}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onStatusChange={() => {}}
+            onAdd={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
+            onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
+            onDelete={deleteEntry}
+            onStatusChange={async (id, status) => { await updateEntry(id, { status }); }}
             refetch={refetchPlanned}
           />
         )}
