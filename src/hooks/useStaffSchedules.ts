@@ -82,7 +82,7 @@ export function useStaffSchedules(
 
     let leaveQuery = supabase
       .from("staff_leave_requests")
-      .select("id, staff_id, start_date, end_date, leave_type, status, reason, reviewed_at, reviewed_by, created_at")
+      .select("id, staff_id, start_date, end_date, leave_type, status, reason, reviewed_at, reviewed_by, created_by, created_at")
       .lte("start_date", weekEndStr)
       .gte("end_date", weekStartStr)
       .limit(500);
