@@ -176,7 +176,7 @@ export function ManualsSection() {
                 />
               ))
             )}
-            {isAdmin && (
+            {canManageManuals && (
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
