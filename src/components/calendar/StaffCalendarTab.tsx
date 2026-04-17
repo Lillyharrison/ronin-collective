@@ -1353,6 +1353,7 @@ function StaffMonthGrid({
   loading,
   canEdit,
   onShowScheduleManager,
+  noWrapper = false,
 }: {
   monthStart: Date;
   staffToShow: Profile[];
@@ -1361,6 +1362,7 @@ function StaffMonthGrid({
   loading: boolean;
   canEdit: boolean;
   onShowScheduleManager: () => void;
+  noWrapper?: boolean;
 }) {
   const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
   // Group days into weeks (Mon–Sun rows)
