@@ -33,6 +33,9 @@ interface Profile {
   department: string | null;
   assigned_property_ids?: string[] | null;
   is_draft?: boolean;
+  contracted_days_per_week?: number | null;
+  contracted_hours_per_week?: number | null;
+  annual_leave_days?: number | null;
 }
 
 /** Returns a human-readable label for a profile, using job title for drafts. */
@@ -1734,7 +1737,7 @@ export function StaffCalendarTab({
       if (uniqueStaffIds.length > 0) {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft")
+          .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days")
           .in("id", uniqueStaffIds)
           .order("full_name");
         setProfiles((profileData as Profile[]) ?? []);
