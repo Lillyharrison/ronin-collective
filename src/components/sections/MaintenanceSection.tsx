@@ -502,8 +502,8 @@ export function MaintenanceSection() {
             onPropertyFilterChange={setFilterProp}
             onAdd={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
             onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
-            onDelete={async (id) => { await deletePlanned(id); }}
-            onStatusChange={async (id, status) => { await updatePlanned(id, { status }); }}
+            onDelete={deleteEntry}
+            onStatusChange={async (id, status) => { await updateEntry(id, { status }); }}
             refetch={refetchPlanned}
           />
         )}
