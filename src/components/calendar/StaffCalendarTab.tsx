@@ -2323,17 +2323,86 @@ export function StaffCalendarTab({
       {/* Property legend rendered below the calendar — see bottom of section. */}
 
       {/* ── Month View ────────────────────────────────────────────────────── */}
-      {calView === "month" && (
-        <StaffMonthGrid
-          monthStart={monthStart}
-          staffToShow={staffToShow}
-          displayShifts={displayShifts}
-          properties={properties}
-          loading={loading || profilesLoading}
-          canEdit={canEdit}
-          onShowScheduleManager={() => setShowScheduleManager(true)}
-        />
-      )}
+      {calView === "month" && (() => {
+        const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+
+        // Show calculator only when filtered to a single person
+        const singleStaff = filterStaff !== "all"
+          ? profiles.find((p) => p.id === filterStaff)
+          : null;
+
+        let calc: RosterStats | null = null;
+        if (singleStaff) {
+          const personShifts = displayShifts.filter(
+            (s) => s.staff_id === singleStaff.id && !s.is_leave && s.status === "scheduled"
+          );
+          const daysWorked = new Set(personShifts.map((s) => s.shift_date)).size;
+          const hoursWorked = personShifts.reduce((sum, s) => {
+            if (!s.start_time || !s.end_time) return sum;
+            const [sh, sm] = s.start_time.split(":").map(Number);
+            const [eh, em] = s.end_time.split(":").map(Number);
+            return sum + Math.max(0, (eh + em / 60) - (sh + sm / 60));
+          }, 0);
+
+          const dpw = singleStaff.contracted_days_per_week ?? 5;
+          const hpw = singleStaff.contracted_hours_per_week ?? 40;
+          const allowance = singleStaff.annual_leave_days ?? 25;
+
+          // Approx weeks in month: total days / 7
+          const weeksInMonth = monthDays.length / 7;
+          const daysExpected = Math.round(dpw * weeksInMonth);
+          const hoursExpected = hpw * weeksInMonth;
+
+          // YTD leave taken (calendar year so far)
+          const yearStart = `${monthStart.getFullYear()}-01-01`;
+          const yearEnd = `${monthStart.getFullYear()}-12-31`;
+          const leaveTakenYTD = leaveRequests
+            .filter((lr) => lr.staff_id === singleStaff.id && lr.status === "approved")
+            .reduce((sum, lr) => {
+              const start = lr.start_date > yearStart ? lr.start_date : yearStart;
+              const end = lr.end_date < yearEnd ? lr.end_date : yearEnd;
+              if (start > end) return sum;
+              return sum + differenceInCalendarDays(parseISO(end), parseISO(start)) + 1;
+            }, 0);
+
+          calc = {
+            daysWorked,
+            daysExpected,
+            hoursWorked,
+            hoursExpected,
+            leaveTakenYTD,
+            leaveAllowance: allowance,
+          };
+        }
+
+        return (
+          <>
+            {calc && singleStaff && (
+              <CalculatorPanel personName={getDisplayName(singleStaff)} stats={calc} />
+            )}
+            <div className="rounded-2xl border border-border bg-card overflow-x-auto">
+              {showFamilyOverlay && (
+                <FamilyOverlayBand
+                  monthStart={monthStart}
+                  monthDays={monthDays}
+                  events={familyEvents}
+                  properties={properties}
+                />
+              )}
+              <StaffMonthGrid
+                monthStart={monthStart}
+                staffToShow={staffToShow}
+                displayShifts={displayShifts}
+                properties={properties}
+                loading={loading || profilesLoading}
+                canEdit={canEdit}
+                onShowScheduleManager={() => setShowScheduleManager(true)}
+                noWrapper
+              />
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Week Schedule Grid ────────────────────────────────────────────── */}
       {calView === "week" && (
