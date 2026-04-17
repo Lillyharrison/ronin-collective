@@ -244,10 +244,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }
 
       // ── 2. Fetch fresh from DB (3 queries in one round-trip) ─────────────
+      // SOURCE OF TRUTH: user_section_permissions table.
+      // The profiles.section_permissions JSONB still exists for backwards
+      // compat (older code reads it), but we DO NOT fall back to it here —
+      // doing so caused silent drift when the admin UI saved to JSONB only.
+      // The admin UI now writes to BOTH places; this reader trusts only the table.
       const [{ data: roleRow }, { data: profile }, rowPermsResult] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
         supabase.from("profiles")
-          .select("level, department, assigned_property_ids, full_name, avatar_url, section_permissions")
+          .select("level, department, assigned_property_ids, full_name, avatar_url")
           .eq("id", userId).maybeSingle(),
         (supabase.from("user_section_permissions" as never)
           .select("section, can_view, can_edit, notifications")
@@ -272,12 +277,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         for (const row of rowPerms) {
           sectionPermissions[row.section] = { view: row.can_view, edit: row.can_edit, notifications: row.notifications };
         }
-      } else if (profile?.section_permissions && typeof profile.section_permissions === "object") {
-        const permsBlob = profile.section_permissions as Record<string, unknown>;
-        if (Object.keys(permsBlob).length > 0) {
-          sectionPermissions = permsBlob as Record<string, { view: boolean; edit: boolean; notifications: boolean }>;
-        }
       }
+      // No JSONB fallback — if the table has no rows, we use the role-based default matrix below.
 
       // ── 3. Write back to cache ─────────────────────────────────────────────
       writeCache({ userId, role, level, department, assignedPropertyIds, fullName, avatarUrl, sectionPermissions });
