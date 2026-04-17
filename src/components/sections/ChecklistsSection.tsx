@@ -162,6 +162,7 @@ export function ChecklistsSection() {
                   template={tpl}
                   propertyId={selectedPropId}
                   onOpenDetail={() => openChecklistDetail(tpl.id, selectedPropId)}
+                  onChanged={reloadCleaning}
                 />
               ))
             )}
