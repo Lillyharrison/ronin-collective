@@ -1521,11 +1521,11 @@ export function CalendarSection() {
       </div>
 
       {/* Ronin category tabs — staff excluded here, lives in the header button */}
-      {mode === "ronin" && roninTab !== "staff" && (
+      {mode === "ronin" && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][])
             .filter(([key]) => {
-              if (key === "staff") return false; // staff moved to header
+              if ((key as string) === "staff") return false; // staff moved to header
               if (isMasterAdmin) return true;
               if (key === "all") return true;
               if (key === "birthdays") return canSee("calendar-birthdays");
