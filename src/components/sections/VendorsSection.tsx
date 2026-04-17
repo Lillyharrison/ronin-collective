@@ -17,9 +17,9 @@ import { VendorDetailPanel } from "@/components/vendors/VendorDetailPanel";
 
 export function VendorsSection() {
   const { t } = useLanguage();
-  const { isMasterAdmin, isAdmin, isManager } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, canEdit: permCanEdit } = usePermissions();
   const { registerBackHandler } = useNavigation();
-  const canEdit = isMasterAdmin || isAdmin || isManager;
+  const canEdit = isMasterAdmin || isAdmin || isManager || permCanEdit("vendors");
   const { vendors, loading, createVendor, updateVendor, deleteVendor, createContact, updateContact, deleteContact } = useVendors();
 
   const [search, setSearch] = useState("");

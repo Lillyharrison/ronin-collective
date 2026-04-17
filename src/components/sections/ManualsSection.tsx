@@ -21,7 +21,8 @@ type ManualTab = "care_guides" | "rules";
 
 export function ManualsSection() {
   const { language, t } = useLanguage();
-  const { isAdmin, assignedPropertyIds } = usePermissions();
+  const { isAdmin, isMasterAdmin, isManager, assignedPropertyIds, canEdit } = usePermissions();
+  const canManageManuals = isMasterAdmin || isAdmin || isManager || canEdit("manuals");
   const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail, activePropertyId, setActivePropertyId } = useNavigation();
   const [tab, setTab] = useState<ManualTab>("care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
