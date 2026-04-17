@@ -235,7 +235,7 @@ export function ChecklistsSection() {
                       subcategory: title.trim().toLowerCase().replace(/\s+/g, "_"),
                       icon: "🎯", color: "blue", is_universal: true,
                     });
-                    window.location.reload();
+                    reloadActivity();
                   }}
                   className="flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
                 >
