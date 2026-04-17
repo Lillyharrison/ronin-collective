@@ -127,7 +127,13 @@ export function PropertySection() {
 
   async function fetchProperties() {
     setLoading(true);
-    let query = supabase.from("properties").select("*").order("sort_order").order("name");
+    // Narrow columns — list view shows card details; detail modal opens fresh on click.
+    let query = supabase
+      .from("properties")
+      .select("id, name, address, city, country, status, image_url, is_primary, occupied_by, occupied_by_profile_id, occupied_by_profile_ids, sort_order, timezone, created_at, updated_at")
+      .order("sort_order")
+      .order("name")
+      .limit(500);
     if (!isMasterAdmin && assignedPropertyIds.length > 0) {
       query = query.in("id", assignedPropertyIds);
     } else if (!isMasterAdmin) {

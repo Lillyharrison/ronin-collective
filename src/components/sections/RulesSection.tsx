@@ -369,7 +369,14 @@ export function RulesSection() {
   const load = useCallback(async () => {
     setLoading(true);
     const [{ data: rulesData }, { data: propsData }] = await Promise.all([
-      supabase.from("property_rules").select("*").order("created_at"),
+      // Narrow columns: skip large arrays (enacted_keywords, enacted_event_types,
+      // enacted_occupant_ids, applies_to_roles, visible_to_user_ids) used only in detail editor.
+      // Capped at 500 — the management screen shows ALL rules, but rules are bounded.
+      supabase
+        .from("property_rules")
+        .select("id, title, description, icon, color, status, is_active, is_universal, only_when_occupied, property_id, submitted_by, submitted_source, rejection_reason, created_at, updated_at, enacted_keywords, enacted_event_types, enacted_occupant_ids, applies_to_roles, visible_to_user_ids")
+        .order("created_at")
+        .limit(500),
       supabase.from("properties").select("id, name"),
     ]);
 
