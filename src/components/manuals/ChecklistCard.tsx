@@ -44,6 +44,25 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
     window.location.reload();
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Delete "${template.title}"?\n\nThis will permanently remove the checklist, all its items, completion history, and comments. This cannot be undone.`
+    );
+    if (!confirmed) return;
+    // Children (items, sessions, comments) cascade or are removed via FK; delete template
+    await supabase.from("checklist_comments").delete().eq("template_id", template.id);
+    await supabase.from("checklist_sessions").delete().eq("template_id", template.id);
+    await supabase.from("checklist_items").delete().eq("template_id", template.id);
+    const { error } = await supabase.from("checklist_templates").delete().eq("id", template.id);
+    if (error) {
+      toast.error("Failed to delete checklist");
+      return;
+    }
+    toast.success("Checklist deleted");
+    window.location.reload();
+  };
+
   const totalItems = items.length;
   const completedCount = completedIds.size;
   const isAllComplete = totalItems > 0 && completedCount >= totalItems;
