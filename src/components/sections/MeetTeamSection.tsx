@@ -1011,9 +1011,8 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
 
   // Load current principal from system_settings on mount
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any).from("system_settings").select("value").eq("key", "principal_user_id").maybeSingle()
-      .then(({ data }: { data: { value: string } | null }) => {
+    supabase.from("system_settings").select("value").eq("key", "principal_user_id").maybeSingle()
+      .then(({ data }) => {
         if (data?.value === member.id) setIsPrincipal(true);
       });
   }, [member.id]);
@@ -1326,13 +1325,11 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
                           try {
                             if (isPrincipal) {
                               // Remove designation
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                              await (supabase as any).from("system_settings").delete().eq("key", "principal_user_id");
+                              await supabase.from("system_settings").delete().eq("key", "principal_user_id");
                               setIsPrincipal(false);
                             } else {
                               // Set this user as principal
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                              await (supabase as any).from("system_settings").upsert({
+                              await supabase.from("system_settings").upsert({
                                 key: "principal_user_id",
                                 value: member.id,
                                 updated_at: new Date().toISOString(),

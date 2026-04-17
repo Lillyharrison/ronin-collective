@@ -1144,11 +1144,11 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
   const fetchRooms = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
-      .from("property_rooms" as any)
+      .from("property_rooms")
       .select("id, name, sort_order")
       .eq("property_id", property.id)
       .order("sort_order");
-    setRooms(((data ?? []) as unknown) as { id: string; name: string; sort_order: number }[]);
+    setRooms(data ?? []);
     setLoading(false);
   }, [property.id]);
 
@@ -1157,7 +1157,7 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
   const handleAdd = async () => {
     if (!newRoom.trim()) return;
     setSaving(true);
-    await supabase.from("property_rooms" as any).insert({
+    await supabase.from("property_rooms").insert({
       property_id: property.id,
       name: newRoom.trim(),
       sort_order: rooms.length,
@@ -1168,7 +1168,7 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from("property_rooms" as any).delete().eq("id", id);
+    await supabase.from("property_rooms").delete().eq("id", id);
     setDeleteId(null);
     await fetchRooms();
   };
