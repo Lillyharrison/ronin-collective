@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 import { useChecklistSessions, useChecklistItems, ChecklistTemplate } from "@/hooks/useChecklists";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   template: ChecklistTemplate;
