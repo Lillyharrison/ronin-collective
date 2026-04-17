@@ -262,7 +262,14 @@ export function PlannedMaintenanceList({
         /* ── Tile view ── */
         <div className="px-4 pb-4 space-y-3">
           {sorted.map(entry => (
-            <div key={entry.id} className="bg-card border border-border rounded-xl p-3.5 space-y-2.5">
+            <div
+              key={entry.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onEdit(entry)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEdit(entry); } }}
+              className="bg-card border border-border rounded-xl p-3.5 space-y-2.5 cursor-pointer hover:border-gold/30 active:scale-[0.99] transition-all"
+            >
               {/* Header row */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
