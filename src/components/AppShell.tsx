@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -178,20 +179,29 @@ export function AppShell() {
   const { user } = useAuth();
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
 
-  const [detailTemplate, setDetailTemplate] = useState<ChecklistTemplate | null>(null);
-  const [detailPropName, setDetailPropName] = useState<string | undefined>(undefined);
+  // React Query: dedupes & caches the checklist template across navigations.
+  // Switching back to the same checklist is now instant (served from cache).
+  const { data: detailTemplate } = useQuery({
+    queryKey: ["checklist-template-detail", checklistDetailId],
+    enabled: !!checklistDetailId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("checklist_templates").select("*").eq("id", checklistDetailId!).single();
+      return (data as unknown as ChecklistTemplate) ?? null;
+    },
+  });
 
-  useEffect(() => {
-    if (!checklistDetailId) { setDetailTemplate(null); return; }
-    supabase.from("checklist_templates").select("*").eq("id", checklistDetailId).single()
-      .then(({ data }) => setDetailTemplate(data as unknown as ChecklistTemplate ?? null));
-  }, [checklistDetailId]);
-
-  useEffect(() => {
-    if (!checklistDetailPropId) { setDetailPropName(undefined); return; }
-    supabase.from("properties").select("name").eq("id", checklistDetailPropId).single()
-      .then(({ data }) => setDetailPropName(data?.name ?? undefined));
-  }, [checklistDetailPropId]);
+  const { data: detailPropName } = useQuery({
+    queryKey: ["property-name", checklistDetailPropId],
+    enabled: !!checklistDetailPropId,
+    staleTime: 5 * 60_000, // property names rarely change
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("properties").select("name").eq("id", checklistDetailPropId!).single();
+      return data?.name ?? undefined;
+    },
+  });
 
   const showDetail = !!checklistDetailId && !!detailTemplate;
 

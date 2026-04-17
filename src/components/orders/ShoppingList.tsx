@@ -67,7 +67,7 @@ export function ShoppingList() {
       quantity:   newQty.trim() || null,
       notes:      newNotes.trim() || null,
       created_by: userId,
-    } as any);
+    });
     setNewName("");
     setNewQty("");
     setNewNotes("");
@@ -78,7 +78,7 @@ export function ShoppingList() {
   };
 
   const toggleCheck = async (item: ShoppingItem) => {
-    await supabase.from("shopping_list_items").update({ is_checked: !item.is_checked } as any).eq("id", item.id);
+    await supabase.from("shopping_list_items").update({ is_checked: !item.is_checked }).eq("id", item.id);
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_checked: !i.is_checked } : i));
   };
 
