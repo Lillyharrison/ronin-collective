@@ -86,6 +86,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "travel",             label: "Travel",              labelEs: "Viajes",            hasEdit: true  },
   { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
   { key: "staff-schedule",     label: "Staff Schedule",      labelEs: "Horario del Personal", hasEdit: true, hasScope: true },
+  { key: "family-movements",   label: "   ↳ Family Movements", labelEs: "   ↳ Movimientos Familiares", hasEdit: false, isFeature: true },
   // ── Calendar sub-tabs ──
   { key: "family-calendar",      label: "   ↳ Family Calendar",      labelEs: "   ↳ Calendario Familiar",    hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-travel",      label: "   ↳ Travel",               labelEs: "   ↳ Viajes",                 hasEdit: false, isFeature: true, isCalendarSub: true },
@@ -155,9 +156,9 @@ const DEPT_COLORS: Record<string, string> = {
 // Default section permissions based on level
 function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
-    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays"],
+    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","family-movements"],
     extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","family-movements"],
     staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","calendar-travel","calendar-birthdays","calendar-maintenance"],
   };
   const allowed = base[level] || base["staff"];
