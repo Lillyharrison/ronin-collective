@@ -28,7 +28,7 @@ const RECURRENCE_LABELS: Record<string, string> = {
 };
 
 export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
-  function ChecklistCard({ template, propertyId, onOpenDetail }, ref) {
+  function ChecklistCard({ template, propertyId, onOpenDetail, onChanged }, ref) {
   const { completedIds } = useChecklistSessions(template.id, propertyId);
   const { items } = useChecklistItems(template.id);
   const { isMasterAdmin } = usePermissions();
