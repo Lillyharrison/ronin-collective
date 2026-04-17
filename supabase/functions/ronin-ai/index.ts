@@ -7,6 +7,36 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ─── PERMISSIONS SYNC ─────────────────────────────────────────────────────────
+// Single source of truth: the `user_section_permissions` table. Whenever the
+// admin UI saves a profile's `section_permissions` JSONB, mirror it row-by-row
+// into the table so the app (which reads from the table) stays in sync.
+// Drafts (no auth.users row) are skipped — caller must guard those.
+async function syncSectionPermissions(
+  // deno-lint-ignore no-explicit-any
+  client: any,
+  userId: string,
+  sectionPermissions: Record<string, unknown> | null | undefined,
+): Promise<void> {
+  if (!sectionPermissions || typeof sectionPermissions !== "object") return;
+
+  const rows: Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean }> = [];
+  for (const [section, raw] of Object.entries(sectionPermissions)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue; // skip _quick_actions etc.
+    const v = raw as { view?: boolean; edit?: boolean; notifications?: boolean };
+    rows.push({
+      user_id: userId,
+      section,
+      can_view: v.view === true,
+      can_edit: v.edit === true,
+      notifications: v.notifications === true,
+    });
+  }
+  if (rows.length === 0) return;
+
+  await client.from("user_section_permissions").upsert(rows, { onConflict: "user_id,section" });
+}
+
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
 const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors", "search_product"];
@@ -709,6 +739,7 @@ serve(async (req) => {
         assigned_property_ids: assigned_property_ids || [],
         section_permissions: section_permissions || null,
       });
+      await syncSectionPermissions(adminClient, uid, section_permissions);
       const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
       if (!existingRole) await adminClient.from("user_roles").insert({ user_id: uid, role });
       else await adminClient.from("user_roles").update({ role }).eq("user_id", uid);
@@ -750,6 +781,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       await adminClient.from("user_roles").insert({ user_id: newId, role });
+      // Note: draft profiles have no auth.users row → can't sync to user_section_permissions yet.
+      // The sync happens later when send_invitation promotes them to a real auth user.
       return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -778,6 +811,13 @@ serve(async (req) => {
       }).eq("id", profile_id);
       if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+      // Sync to user_section_permissions only if this profile is tied to a real auth user
+      // (drafts without an auth.users row would violate the FK constraint).
+      const { data: authUser } = await adminClient.auth.admin.getUserById(profile_id);
+      if (authUser?.user) {
+        await syncSectionPermissions(adminClient, profile_id, section_permissions);
+      }
+
       // Update role if provided
       if (role) {
         const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", profile_id).maybeSingle();
@@ -799,6 +839,8 @@ serve(async (req) => {
             await adminClient.from("profiles").insert({ ...oldProfile, id: inviteData.user.id, is_draft: false });
             await adminClient.from("user_roles").update({ user_id: inviteData.user.id }).eq("user_id", profile_id);
             await adminClient.from("profiles").delete().eq("id", profile_id);
+            // Now that the auth user exists, sync permissions to the new uid
+            await syncSectionPermissions(adminClient, inviteData.user.id, section_permissions);
           }
           return new Response(JSON.stringify({ success: true, user_id: inviteData.user.id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
