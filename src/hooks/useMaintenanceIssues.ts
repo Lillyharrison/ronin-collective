@@ -71,10 +71,13 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   const fetchIssues = useCallback(async (pageIndex = 0) => {
     setLoading(true);
 
+    // Narrow columns — list view never needs description until detail drawer opens
+    const ISSUE_COLS = "id, title, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at";
+
     // Build query with server-side property + filter params
     let query = supabase
       .from("maintenance_issues")
-      .select("*")
+      .select(ISSUE_COLS)
       .order("created_at", { ascending: false })
       .range(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE - 1);
 
@@ -122,7 +125,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     });
     (relatedRes.data ?? []).forEach((r: { id: string; title: string }) => { relMap[r.id] = r.title; });
 
-    const enriched: MaintenanceIssue[] = (data as MaintenanceIssue[]).map(issue => ({
+    const enriched: MaintenanceIssue[] = (data as unknown as MaintenanceIssue[]).map(issue => ({
       ...issue,
       property_name:        issue.property_id      ? propMap[issue.property_id]        : undefined,
       reporter_name:        profileMap[issue.reported_by]?.name,

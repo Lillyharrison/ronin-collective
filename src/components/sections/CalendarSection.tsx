@@ -1213,13 +1213,16 @@ export function CalendarSection() {
   const fetchFamilyEvents = useCallback(async () => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
+    // Narrow columns + cap result size — calendar list never needs notes/description on chips
+    const CAL_COLS = "id, title, description, event_type, start_date, end_date, property_id, calendar_source, status, is_private, assigned_staff_ids, keywords, location, created_by";
     const { data } = await supabase
       .from("calendar_events")
-      .select("*")
+      .select(CAL_COLS)
       .eq("calendar_source", "ical")
       .or(`start_date.gte.${start.toISOString()},end_date.gte.${start.toISOString()}`)
       .lte("start_date", end.toISOString())
-      .order("start_date");
+      .order("start_date")
+      .limit(500);
     return (data ?? []).map((ev) => ({ ...ev, _source: "calendar_events" as const, _is_draggable: false }));
   }, [currentMonth]);
 
@@ -1227,14 +1230,16 @@ export function CalendarSection() {
   const fetchRoninEvents = useCallback(async () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
+    const CAL_COLS = "id, title, description, event_type, start_date, end_date, property_id, calendar_source, status, is_private, assigned_staff_ids, keywords, location, created_by";
 
     const [{ data: manualData }, { data: profiles }, { data: maintenance }, { data: orders }] = await Promise.all([
-      // Manual calendar events (non-ical) — fetch broader range for multi-day events that start before but overlap
-      supabase.from("calendar_events").select("*")
+      // Manual calendar events (non-ical) — capped + scoped to overlapping month window
+      supabase.from("calendar_events").select(CAL_COLS)
         .neq("calendar_source", "ical")
         .or(`start_date.gte.${monthStart.toISOString()},end_date.gte.${monthStart.toISOString()}`)
         .lte("start_date", monthEnd.toISOString())
-        .order("start_date"),
+        .order("start_date")
+        .limit(500),
       supabase.from("profiles").select("id, full_name, birthday, avatar_url, job_title"),
       supabase.from("maintenance_issues").select("id, title, scheduled_date, status, priority, property_id")
         .not("scheduled_date", "is", null)

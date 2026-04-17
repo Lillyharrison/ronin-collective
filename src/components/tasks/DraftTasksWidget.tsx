@@ -40,6 +40,7 @@ export function DraftTasksWidget() {
     if (permLoading || (!isMasterAdmin && !isAdmin)) { setLoading(false); return; }
 
     function fetchDrafts() {
+      // Cap drafts widget at 50 — only the most recent matter; full list lives in TasksSection.
       supabase
         .from("tasks")
         .select(`
@@ -51,6 +52,7 @@ export function DraftTasksWidget() {
         `)
         .eq("is_draft", true)
         .order("created_at", { ascending: false })
+        .limit(50)
         .then(({ data }) => {
           setDrafts((data as unknown as DraftTask[]) ?? []);
           setLoading(false);
@@ -154,7 +156,7 @@ export function DraftTasksWidget() {
           onClose={() => setEditTask(null)}
           onSaved={() => {
             setEditTask(null);
-            supabase.from("tasks").select("id").eq("is_draft", true).then(({ data }) => {
+            supabase.from("tasks").select("id").eq("is_draft", true).limit(100).then(({ data }) => {
               if (data) setDrafts(prev => prev.filter(d => data.some(r => r.id === d.id)));
             });
           }}

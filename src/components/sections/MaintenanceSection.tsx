@@ -81,13 +81,15 @@ export function MaintenanceSection() {
     : allProperties.filter(p => assignedPropertyIds.includes(p.id));
 
   useEffect(() => {
+    // Properties + vendors are tiny lookups (≤ a few dozen rows) — no limit needed.
+    // Profiles can grow; cap at 500 staff which is well above any realistic team size.
     supabase.from("properties").select("id, name, is_primary")
       .then(({ data }) => setAllProperties(sortProperties((data ?? []) as { id: string; name: string; is_primary?: boolean }[])));
-    supabase.from("profiles").select("id, full_name, avatar_url").order("full_name")
+    supabase.from("profiles").select("id, full_name, avatar_url").order("full_name").limit(500)
       .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
-    supabase.from("vendors").select("id, name").eq("is_active", true).order("name")
+    supabase.from("vendors").select("id, name").eq("is_active", true).order("name").limit(200)
       .then(({ data }) => setVendors(data ?? []));
   }, []);
 
