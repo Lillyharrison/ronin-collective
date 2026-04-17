@@ -6,9 +6,10 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useChecklistTemplates } from "@/hooks/useChecklists";
 import { ChecklistCard } from "@/components/manuals/ChecklistCard";
+import { ChecklistImportModal } from "@/components/manuals/ChecklistImportModal";
 import { cn } from "@/lib/utils";
 import {
-  ClipboardList, Backpack, ChevronDown, Plus, MapPin,
+  ClipboardList, Backpack, ChevronDown, Plus, MapPin, Upload,
 } from "lucide-react";
 
 interface Property {
@@ -33,6 +34,7 @@ export function ChecklistsSection() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(checklistsForPropertyId ?? null);
   const [showPropPicker, setShowPropPicker] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const TABS = [
     { id: "cleaning" as Tab,  icon: <ClipboardList size={14} />, label: "Checklists",   labelEs: t("checklists") },
@@ -164,20 +166,29 @@ export function ChecklistsSection() {
               ))
             )}
             {canManageChecklists && (
-              <button
-                onClick={async () => {
-                  const title = window.prompt(language === "es" ? "Título de la lista:" : "Checklist title:");
-                  if (!title?.trim()) return;
-                  await supabase.from("checklist_templates").insert({
-                    title: title.trim(), category: "cleaning", icon: "✅", color: "green",
-                    property_id: selectedPropId,
-                  });
-                  reloadCleaning();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
-              >
-                <Plus size={14} /> {t("addChecklist")}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={async () => {
+                    const title = window.prompt(language === "es" ? "Título de la lista:" : "Checklist title:");
+                    if (!title?.trim()) return;
+                    await supabase.from("checklist_templates").insert({
+                      title: title.trim(), category: "cleaning", icon: "✅", color: "green",
+                      property_id: selectedPropId,
+                    });
+                    reloadCleaning();
+                  }}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
+                >
+                  <Plus size={14} /> {t("addChecklist")}
+                </button>
+                <button
+                  onClick={() => setImportOpen(true)}
+                  disabled={!selectedPropId}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-gold/40 rounded-xl text-sm text-gold hover:bg-gold/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Upload size={14} /> {language === "es" ? "Importar archivo" : "Import file"}
+                </button>
+              </div>
             )}
           </>
         )}
@@ -212,25 +223,43 @@ export function ChecklistsSection() {
               })
             )}
             {canManageChecklists && (
-              <button
-                onClick={async () => {
-                  const title = window.prompt(language === "es" ? "Título de la lista de actividad:" : "Activity list title:");
-                  if (!title?.trim()) return;
-                  await supabase.from("checklist_templates").insert({
-                    title: title.trim(), category: "activity",
-                    subcategory: title.trim().toLowerCase().replace(/\s+/g, "_"),
-                    icon: "🎯", color: "blue", is_universal: true,
-                  });
-                  window.location.reload();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
-              >
-                <Plus size={14} /> {t("addActivityList")}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={async () => {
+                    const title = window.prompt(language === "es" ? "Título de la lista de actividad:" : "Activity list title:");
+                    if (!title?.trim()) return;
+                    await supabase.from("checklist_templates").insert({
+                      title: title.trim(), category: "activity",
+                      subcategory: title.trim().toLowerCase().replace(/\s+/g, "_"),
+                      icon: "🎯", color: "blue", is_universal: true,
+                    });
+                    window.location.reload();
+                  }}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
+                >
+                  <Plus size={14} /> {t("addActivityList")}
+                </button>
+                <button
+                  onClick={() => setImportOpen(true)}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-gold/40 rounded-xl text-sm text-gold hover:bg-gold/5 transition-all"
+                >
+                  <Upload size={14} /> {language === "es" ? "Importar archivo" : "Import file"}
+                </button>
+              </div>
             )}
           </>
         )}
       </div>
+
+      <ChecklistImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        propertyId={tab === "cleaning" ? selectedPropId : null}
+        onImported={() => {
+          if (tab === "cleaning") reloadCleaning();
+          else window.location.reload();
+        }}
+      />
     </div>
   );
 }
