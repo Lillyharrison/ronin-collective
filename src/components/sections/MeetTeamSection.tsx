@@ -398,49 +398,61 @@ export function MeetTeamSection() {
           const lvlLabel = LEVEL_LABELS[lvl];
           return (
             <div key={lvl}>
-              <p className={`text-[10px] font-bold tracking-widest uppercase mb-2 ${LEVEL_COLORS[lvl].split(" ")[0]}`}>
-                {isEN ? lvlLabel.en : lvlLabel.es}
-                <span className="ml-2 opacity-50">{group.length}</span>
-              </p>
-              <div className="space-y-2">
-                {group.map(m => (
-                   <button
-                     key={m.id}
-                     onClick={() => setSelectedMember(m)}
-                     className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 hover:border-gold/30 transition-all text-left"
-                   >
-                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.role === "master_admin" ? "master_admin" : (m.level || "staff")]}`}>
-                       {m.avatar_url ? (
-                         <img src={imageUrl(m.avatar_url, 80, 80)} alt={m.full_name || ""} loading="lazy" className="w-full h-full rounded-full object-cover" />
-                       ) : (
-                         <span className="font-display text-base text-foreground">{(m.full_name || "?")[0].toUpperCase()}</span>
-                       )}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2">
-                         <p className="text-foreground text-sm font-medium truncate">{m.full_name || (m.is_draft ? "Draft Account" : "—")}</p>
-                         {m.is_draft && (
-                           <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
-                             Draft
-                           </span>
+              <button
+                type="button"
+                onClick={() => toggleGroup(lvl)}
+                className="w-full flex items-center gap-2 mb-2 group"
+              >
+                <ChevronDown
+                  size={12}
+                  className={`text-muted-foreground transition-transform ${collapsedGroups[lvl] ? "-rotate-90" : ""}`}
+                />
+                <p className={`text-[10px] font-bold tracking-widest uppercase ${LEVEL_COLORS[lvl].split(" ")[0]}`}>
+                  {isEN ? lvlLabel.en : lvlLabel.es}
+                  <span className="ml-2 opacity-50">{group.length}</span>
+                </p>
+              </button>
+              {!collapsedGroups[lvl] && (
+                <div className="space-y-2">
+                  {group.map(m => (
+                     <button
+                       key={m.id}
+                       onClick={() => setSelectedMember(m)}
+                       className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 hover:border-gold/30 transition-all text-left"
+                     >
+                       <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.role === "master_admin" ? "master_admin" : (m.level || "staff")]}`}>
+                         {m.avatar_url ? (
+                           <img src={imageUrl(m.avatar_url, 80, 80)} alt={m.full_name || ""} loading="lazy" className="w-full h-full rounded-full object-cover" />
+                         ) : (
+                           <span className="font-display text-base text-foreground">{(m.full_name || "?")[0].toUpperCase()}</span>
                          )}
                        </div>
-                       <div className="flex items-center gap-2 mt-0.5">
-                         {m.job_title && <span className="text-muted-foreground text-[11px] truncate">{m.job_title}</span>}
-                         {m.department && (
-                           <span className={`text-[10px] font-semibold ${DEPT_COLORS[m.department] || "text-cream/50"}`}>
-                             · {m.department}
-                           </span>
-                         )}
-                         {m.is_draft && !m.full_name && (
-                           <span className="text-muted-foreground text-[11px]">Add name to send invitation</span>
-                         )}
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-2">
+                           <p className="text-foreground text-sm font-medium truncate">{m.full_name || (m.is_draft ? "Draft Account" : "—")}</p>
+                           {m.is_draft && (
+                             <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                               Draft
+                             </span>
+                           )}
+                         </div>
+                         <div className="flex items-center gap-2 mt-0.5">
+                           {m.job_title && <span className="text-muted-foreground text-[11px] truncate">{m.job_title}</span>}
+                           {m.department && (
+                             <span className={`text-[10px] font-semibold ${DEPT_COLORS[m.department] || "text-cream/50"}`}>
+                               · {m.department}
+                             </span>
+                           )}
+                           {m.is_draft && !m.full_name && (
+                             <span className="text-muted-foreground text-[11px]">Add name to send invitation</span>
+                           )}
+                         </div>
                        </div>
-                     </div>
-                     <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-                   </button>
-                ))}
-              </div>
+                       <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+                     </button>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
