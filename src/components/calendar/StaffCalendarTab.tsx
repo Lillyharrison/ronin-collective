@@ -1400,11 +1400,9 @@ function StaffMonthGrid({
     );
   }
 
-  return (
-    <div className="rounded-2xl border border-border bg-card overflow-x-auto">
-      {/* Header row: Name + day numbers */}
-      <div className="min-w-[600px]">
-        {/* Month day-number header */}
+  const inner = (
+    <div className="min-w-[600px]">
+      {/* Month day-number header */}
         <div
           className="grid border-b border-border bg-muted/30"
           style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
