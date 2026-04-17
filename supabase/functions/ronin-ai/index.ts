@@ -709,6 +709,7 @@ serve(async (req) => {
         assigned_property_ids: assigned_property_ids || [],
         section_permissions: section_permissions || null,
       });
+      await syncSectionPermissions(adminClient, uid, section_permissions);
       const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
       if (!existingRole) await adminClient.from("user_roles").insert({ user_id: uid, role });
       else await adminClient.from("user_roles").update({ role }).eq("user_id", uid);
