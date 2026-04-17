@@ -205,9 +205,7 @@ export function AppShell() {
       <main
         className={activeSection === "messages" ? "h-[100dvh] overflow-hidden" : "min-h-screen pb-20"}
         style={{
-          paddingTop: activeSection === "messages"
-            ? "calc(56px + env(safe-area-inset-top, 0px))"
-            : "calc(56px + env(safe-area-inset-top, 0px))",
+          paddingTop: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px))",
         }}
       >
         <Suspense fallback={<SectionSkeleton />}>

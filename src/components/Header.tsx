@@ -18,7 +18,7 @@ export function Header({ title }: HeaderProps) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-charcoal border-b border-charcoal-light" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+      <header className="fixed left-0 right-0 z-50 bg-charcoal border-b border-charcoal-light" style={{ top: "var(--push-banner-h, 0px)", paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="relative flex items-center justify-between px-4 h-14">
           {/* Left — hamburger always visible; back arrow shown alongside when applicable */}
           <div className="flex items-center gap-0.5">
