@@ -6,9 +6,10 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useChecklistTemplates } from "@/hooks/useChecklists";
 import { ChecklistCard } from "@/components/manuals/ChecklistCard";
+import { ChecklistImportModal } from "@/components/manuals/ChecklistImportModal";
 import { cn } from "@/lib/utils";
 import {
-  ClipboardList, Backpack, ChevronDown, Plus, MapPin,
+  ClipboardList, Backpack, ChevronDown, Plus, MapPin, Upload,
 } from "lucide-react";
 
 interface Property {
