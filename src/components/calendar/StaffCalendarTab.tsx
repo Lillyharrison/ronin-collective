@@ -1517,7 +1517,139 @@ function StaffMonthGrid({
   );
 }
 
-// ── Main StaffCalendarTab ─────────────────────────────────────────────────────
+// ── Family overlay band (above staff rows in monthly view) ─────────────────────
+
+interface FamilyEvent {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string | null;
+  event_type: string;
+  property_id: string | null;
+}
+
+function FamilyOverlayBand({
+  monthStart,
+  monthDays,
+  events,
+  properties,
+}: {
+  monthStart: Date;
+  monthDays: Date[];
+  events: FamilyEvent[];
+  properties: Property[];
+}) {
+  if (events.length === 0) return null;
+
+  // Group by event title (so the same person/trip merges across days)
+  const groups = new Map<string, FamilyEvent[]>();
+  for (const ev of events) {
+    const key = ev.title || "Family";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(ev);
+  }
+
+  return (
+    <div className="border-b border-border bg-muted/10">
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
+      >
+        <div className="px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground border-r border-border flex items-center gap-1">
+          <PlaneTakeoff size={10} /> Family
+        </div>
+        <div className="col-span-full" style={{ gridColumn: `2 / span ${monthDays.length}` }}>
+          <div className="relative" style={{ height: `${groups.size * 18}px` }}>
+            {Array.from(groups.entries()).map(([title, evs], rowIdx) => {
+              const col = propColor(evs[0].property_id, properties);
+              return (
+                <div
+                  key={title}
+                  className="absolute left-0 right-0 flex"
+                  style={{ top: `${rowIdx * 18}px`, height: "16px" }}
+                >
+                  {monthDays.map((day) => {
+                    const dateStr = format(day, "yyyy-MM-dd");
+                    const inEvent = evs.some((ev) => {
+                      const start = ev.start_date.slice(0, 10);
+                      const end = (ev.end_date ?? ev.start_date).slice(0, 10);
+                      return dateStr >= start && dateStr <= end;
+                    });
+                    return (
+                      <div key={dateStr} className="flex-1 px-px">
+                        {inEvent && (
+                          <div
+                            className={cn("h-full rounded-sm border", col.bg, col.text)}
+                            title={title}
+                          >
+                            <span className="text-[8px] font-medium leading-none px-1 truncate block">
+                              {title}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Worked-vs-Expected Calculator (shown when filtered to one person) ──────────
+
+interface RosterStats {
+  daysWorked: number;
+  daysExpected: number;
+  hoursWorked: number;
+  hoursExpected: number;
+  leaveTakenYTD: number;
+  leaveAllowance: number;
+}
+
+function CalculatorPanel({
+  personName,
+  stats,
+}: {
+  personName: string;
+  stats: RosterStats;
+}) {
+  const leaveRemaining = Math.max(0, stats.leaveAllowance - stats.leaveTakenYTD);
+  const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
+    <div className="flex-1 min-w-[120px] rounded-lg border border-border bg-card px-3 py-2">
+      <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
+      <p className="text-sm font-bold text-foreground mt-0.5">{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground leading-tight">{sub}</p>}
+    </div>
+  );
+  return (
+    <div className="rounded-2xl border border-border bg-muted/10 px-3 py-2.5 mb-2">
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">
+        {personName} · This month
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Stat
+          label="Days worked"
+          value={`${stats.daysWorked} / ${stats.daysExpected}`}
+          sub={stats.daysExpected > 0 ? `${Math.round((stats.daysWorked / stats.daysExpected) * 100)}%` : undefined}
+        />
+        <Stat
+          label="Hours worked"
+          value={`${stats.hoursWorked.toFixed(1)} / ${stats.hoursExpected.toFixed(0)}`}
+        />
+        <Stat
+          label="Annual leave"
+          value={`${leaveRemaining} left`}
+          sub={`${stats.leaveTakenYTD} taken of ${stats.leaveAllowance}`}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function StaffCalendarTab({
   canEdit,
