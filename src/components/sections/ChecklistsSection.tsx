@@ -63,7 +63,7 @@ export function ChecklistsSection() {
 
   // All subcategory keys flattened — fetch only what exists, grouped client-side for display
   const ALL_ACTIVITY_KEYS = ACTIVITY_GROUPS.flatMap(g => g.keys);
-  const { templates: activityTemplates, loading: activityLoading } = useChecklistTemplates(
+  const { templates: activityTemplates, loading: activityLoading, reload: reloadActivity } = useChecklistTemplates(
     tab === "activity" ? "activity" : undefined,
     tab === "activity" ? null : undefined,
     tab === "activity" ? ALL_ACTIVITY_KEYS : undefined,
