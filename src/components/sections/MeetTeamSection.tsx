@@ -241,16 +241,34 @@ export function MeetTeamSection() {
   async function loadMembers() {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, section_permissions, is_draft")
+      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft")
       .order("full_name");
 
     if (!profiles) return;
+
+    // Load all section permissions in one go, then build per-user maps
+    const userIds = profiles.map(p => p.id);
+    const { data: permRows } = await supabase
+      .from("user_section_permissions")
+      .select("user_id, section, can_view, can_edit, notifications")
+      .in("user_id", userIds);
+
+    const permsByUser: Record<string, SectionPermissions> = {};
+    for (const row of (permRows ?? []) as Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean }>) {
+      if (!permsByUser[row.user_id]) permsByUser[row.user_id] = {};
+      permsByUser[row.user_id][row.section] = {
+        view: row.can_view,
+        edit: row.can_edit,
+        notifications: row.notifications,
+      };
+    }
 
     const { data: roles } = await supabase.from("user_roles").select("user_id, role");
     const roleMap = Object.fromEntries((roles || []).map(r => [r.user_id, r.role as AppRole]));
     setMembers(profiles.map(p => ({
       ...p,
-      section_permissions: (p.section_permissions as unknown as SectionPermissions) || null,
+      section_permissions: permsByUser[p.id] || null,
+      quick_actions: ((p as { quick_actions?: string[] }).quick_actions) ?? [],
       role: roleMap[p.id] || null,
       is_draft: (p as { is_draft?: boolean }).is_draft ?? false,
     })));
