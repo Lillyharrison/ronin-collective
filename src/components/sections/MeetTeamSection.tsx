@@ -208,6 +208,11 @@ export function MeetTeamSection() {
   const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
   const [showTitleDropdown, setShowTitleDropdown] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useLocalStorage<Record<string, boolean>>(
+    "meet-team:collapsed-groups",
+    { master_admin: true, admin: true, principal: true, extended_family: true, manager: true, staff: true }
+  );
+  const toggleGroup = (key: string) => setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
 
   const [form, setForm] = useState<AddUserForm>({
     full_name: "", email: "", job_title: "", level: "",
