@@ -1195,7 +1195,10 @@ export function CalendarSection() {
 
   const defaultMode: CalendarMode = (isFamilyUser && canSeeFamilyCal) ? "family" : "ronin";
   const [mode, setMode] = useLocalStorage<CalendarMode>("cal_mode", defaultMode);
-  const [roninTab, setRoninTab] = useLocalStorage<RoninTab>("cal_ronin_tab", "all");
+  const [roninTabRaw, setRoninTab] = useLocalStorage<RoninTab>("cal_ronin_tab", "all");
+  // "staff" was a previous tab that has since been moved to its own section.
+  // If a user has it cached in localStorage, fall back to "all" so the tab bar isn't hidden.
+  const roninTab: RoninTab = roninTabRaw === "staff" ? "all" : roninTabRaw;
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [familyEvents, setFamilyEvents] = useState<CalEvent[]>([]);
   const [roninEvents, setRoninEvents] = useState<CalEvent[]>([]);
@@ -1518,11 +1521,11 @@ export function CalendarSection() {
       </div>
 
       {/* Ronin category tabs — staff excluded here, lives in the header button */}
-      {mode === "ronin" && roninTab !== "staff" && (
+      {mode === "ronin" && (
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][])
             .filter(([key]) => {
-              if (key === "staff") return false; // staff moved to header
+              if ((key as string) === "staff") return false; // staff moved to header
               if (isMasterAdmin) return true;
               if (key === "all") return true;
               if (key === "birthdays") return canSee("calendar-birthdays");
