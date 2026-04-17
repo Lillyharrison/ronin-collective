@@ -259,7 +259,7 @@ export function ChecklistsSection() {
         propertyId={tab === "cleaning" ? selectedPropId : null}
         onImported={() => {
           if (tab === "cleaning") reloadCleaning();
-          else window.location.reload();
+          else reloadActivity();
         }}
       />
     </div>
