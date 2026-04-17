@@ -27,8 +27,8 @@ const ACTIVITY_GROUPS = [
 
 export function ChecklistsSection() {
   const { language, t } = useLanguage();
-  const { isAdmin, assignedPropertyIds, canEdit } = usePermissions();
-  const canManageChecklists = isAdmin || canEdit("checklists");
+  const { isAdmin, isMasterAdmin, isManager, assignedPropertyIds, canEdit } = usePermissions();
+  const canManageChecklists = isMasterAdmin || isAdmin || isManager || canEdit("checklists");
   const { openChecklistDetail, checklistsForPropertyId, setChecklistsForPropertyId } = useNavigation();
   const [tab, setTab] = useState<Tab>("cleaning");
   const [properties, setProperties] = useState<Property[]>([]);
