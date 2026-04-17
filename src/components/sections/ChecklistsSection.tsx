@@ -216,6 +216,7 @@ export function ChecklistsSection() {
                           template={tpl}
                           propertyId={null}
                           onOpenDetail={() => openChecklistDetail(tpl.id, null)}
+                          onChanged={reloadActivity}
                         />
                       ))}
                     </div>
