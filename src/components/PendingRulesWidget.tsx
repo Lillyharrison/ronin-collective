@@ -36,7 +36,7 @@ export function usePendingRulesCount() {
     if (!isMasterAdmin) return;
     const { count: c } = await supabase
       .from("property_rules")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("status", "pending_approval");
     setCount(c ?? 0);
   }, [isMasterAdmin]);
@@ -69,11 +69,16 @@ export function PendingRulesWidget() {
   const load = useCallback(async () => {
     if (!isMasterAdmin) return;
     setLoading(true);
+    // Narrow column list — only what this widget renders. Skips heavy
+    // arrays (enacted_keywords, enacted_event_types, enacted_occupant_ids,
+    // applies_to_roles, visible_to_user_ids) and unused fields. Cap at 50
+    // so even an extreme backlog doesn't bloat the payload.
     const { data } = await supabase
       .from("property_rules")
-      .select("*")
+      .select("id, title, description, icon, color, submitted_by, submitted_source, created_at, is_universal, property_id")
       .eq("status", "pending_approval")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(50);
 
     if (!data) { setLoading(false); return; }
 
