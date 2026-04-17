@@ -1776,7 +1776,7 @@ export function StaffCalendarTab({
       });
     return () => { cancelled = true; };
   }, [calView, monthStart, showFamilyOverlay]);
-
+  const weekDays = calView === "month"
     ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
     : eachDayOfInterval({
         start: weekStart,
