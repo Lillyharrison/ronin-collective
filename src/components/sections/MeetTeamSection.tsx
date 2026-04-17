@@ -47,6 +47,7 @@ interface TeamMember {
   notes: string | null;
   assigned_property_ids: string[] | null;
   section_permissions: SectionPermissions | null;
+  quick_actions: string[];
   role?: AppRole | null;
   is_draft?: boolean;
 }
@@ -669,7 +670,13 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             birthday: form.birthday || null,
             notes: form.notes || null,
             assigned_property_ids: assignedProps,
-            section_permissions: finalPerms as any,
+            quick_actions: [],
+            section_permissions_rows: Object.entries(finalPerms)
+              .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
+              .map(([section, v]) => {
+                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
+                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true };
+              }),
             is_draft: isDraft,
           },
         });
@@ -689,7 +696,13 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             notes: form.notes || null,
             phone: phone || null,
             assigned_property_ids: assignedProps,
-            section_permissions: finalPerms,
+            quick_actions: [],
+            section_permissions_rows: Object.entries(finalPerms)
+              .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
+              .map(([section, v]) => {
+                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
+                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true };
+              }),
           },
         });
       }
@@ -1062,13 +1075,11 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     return defaultPermissionsForLevel(member.level || "staff");
   });
 
-  // Quick actions — read from _quick_actions key in section_permissions
+  // Quick actions — read from dedicated `quick_actions` column on profile
   const [quickActions, setQuickActions] = useState<string[]>(() => {
-    const stored = member.section_permissions?.["_quick_actions"];
-    if (Array.isArray(stored)) return stored;
-    // Cast as any since it's stored as SectionPerm type in the map
-    const asAny = stored as unknown;
-    if (Array.isArray(asAny)) return asAny as string[];
+    if (Array.isArray(member.quick_actions) && member.quick_actions.length > 0) {
+      return member.quick_actions;
+    }
     return defaultQuickActionsForLevel(member.level || "staff");
   });
 
@@ -1134,11 +1145,19 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
       const resolvedRole = level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff");
       const roleToSet: AppRole = (member.role === "master_admin" ? "master_admin" : resolvedRole) as AppRole;
 
-      // Merge quick actions into perms under a special key
-      const finalPerms = {
-        ...perms,
-        _quick_actions: quickActions as unknown as SectionPerm,
-      };
+      // Build perm rows for the dedicated table — single source of truth
+      const permRows = Object.entries(perms)
+        .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
+        .map(([section, v]) => {
+          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
+          return {
+            user_id: member.id,
+            section,
+            can_view: p.view === true,
+            can_edit: p.edit === true,
+            notifications: p.notifications === true,
+          };
+        });
 
       if (isDraft) {
         // Draft profiles: save via edge function so is_draft flag is preserved
@@ -1155,7 +1174,8 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
             birthday: birthday || null,
             notes: notes || null,
             assigned_property_ids: assignedProps,
-            section_permissions: finalPerms as unknown,
+            quick_actions: quickActions,
+            section_permissions_rows: permRows,
             role: roleToSet,
             send_invitation: false,
           },
@@ -1172,28 +1192,15 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
           birthday: birthday || null,
           notes: notes || null,
           assigned_property_ids: assignedProps,
-          section_permissions: finalPerms as unknown as import("@/integrations/supabase/types").Json,
+          quick_actions: quickActions,
           contracted_days_per_week: contractedDays === "" ? null : Number(contractedDays),
           contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
           annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
         } as never).eq("id", member.id);
 
-        // Mirror permissions into user_section_permissions table — this is what the app actually reads.
-        // Without this sync the JSONB blob and table rows drift, and toggles silently fail to take effect.
-        const permRows = Object.entries(perms)
-          .filter(([, v]) => v && typeof v === "object" && !Array.isArray(v))
-          .map(([section, v]) => {
-            const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
-            return {
-              user_id: member.id,
-              section,
-              can_view: p.view === true,
-              can_edit: p.edit === true,
-              notifications: p.notifications === true,
-            };
-          });
+        // Write permissions to the dedicated table — the ONLY source of truth
         if (permRows.length > 0) {
-          await supabase.from("user_section_permissions" as never).upsert(permRows as never, { onConflict: "user_id,section" } as never);
+          await supabase.from("user_section_permissions").upsert(permRows, { onConflict: "user_id,section" });
         }
 
         // Update role if changed
@@ -1202,7 +1209,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
         }
       }
 
-      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: finalPerms, role: roleToSet, is_draft: isDraft });
+      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: perms, quick_actions: quickActions, role: roleToSet, is_draft: isDraft });
     } catch (e) { console.error(e); }
     setSaving(false);
   }
@@ -1212,7 +1219,18 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     setSendingInvite(true);
     try {
       const resolvedRole = level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff");
-      const finalPerms = { ...perms, _quick_actions: quickActions as unknown as SectionPerm };
+      const permRows = Object.entries(perms)
+        .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
+        .map(([section, v]) => {
+          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
+          return {
+            user_id: member.id,
+            section,
+            can_view: p.view === true,
+            can_edit: p.edit === true,
+            notifications: p.notifications === true,
+          };
+        });
       const { error } = await supabase.functions.invoke("ronin-ai", {
         body: {
           action: "save_draft_user",
@@ -1227,7 +1245,8 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
           birthday: birthday || null,
           notes: notes || null,
           assigned_property_ids: assignedProps,
-          section_permissions: finalPerms as unknown,
+          quick_actions: quickActions,
+          section_permissions_rows: permRows,
           role: resolvedRole,
           send_invitation: true,
         },
