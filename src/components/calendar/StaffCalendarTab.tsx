@@ -1519,6 +1519,10 @@ function StaffMonthGrid({
       </div>
     </div>
   );
+
+  return noWrapper
+    ? inner
+    : <div className="rounded-2xl border border-border bg-card overflow-x-auto">{inner}</div>;
 }
 
 // ── Family overlay band (above staff rows in monthly view) ─────────────────────
