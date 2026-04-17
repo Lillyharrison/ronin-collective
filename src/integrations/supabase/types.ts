@@ -1039,6 +1039,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           quick_actions: string[]
+          section_permissions: Json | null
           start_date: string | null
           updated_at: string
         }
@@ -1060,6 +1061,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           quick_actions?: string[]
+          section_permissions?: Json | null
           start_date?: string | null
           updated_at?: string
         }
@@ -1081,6 +1083,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           quick_actions?: string[]
+          section_permissions?: Json | null
           start_date?: string | null
           updated_at?: string
         }

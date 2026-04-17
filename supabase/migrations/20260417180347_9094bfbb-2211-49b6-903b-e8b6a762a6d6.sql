@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS section_permissions jsonb;
+COMMENT ON COLUMN public.profiles.section_permissions IS 'DEPRECATED — kept as a no-op nullable column so older cached PWA builds that still SELECT this column do not error. The source of truth is public.user_section_permissions.';
