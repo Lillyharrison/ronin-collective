@@ -67,22 +67,25 @@ export function useStaffSchedules(
 
     let schedulesQuery = supabase
       .from("staff_schedules")
-      .select("*")
+      .select("id, staff_id, property_id, day_of_week, start_time, end_time, effective_from, effective_to, is_active, notes")
       .eq("is_active", true)
       .lte("effective_from", weekEndStr)
-      .or(`effective_to.is.null,effective_to.gte.${weekStartStr}`);
+      .or(`effective_to.is.null,effective_to.gte.${weekStartStr}`)
+      .limit(500);
 
     let shiftsQuery = supabase
       .from("staff_shifts")
-      .select("*")
+      .select("id, staff_id, schedule_id, property_id, shift_date, start_time, end_time, status, notes")
       .gte("shift_date", weekStartStr)
-      .lte("shift_date", weekEndStr);
+      .lte("shift_date", weekEndStr)
+      .limit(500);
 
     let leaveQuery = supabase
       .from("staff_leave_requests")
-      .select("*")
+      .select("id, staff_id, start_date, end_date, leave_type, status, reason, reviewed_at, reviewed_by, created_at")
       .lte("start_date", weekEndStr)
-      .gte("end_date", weekStartStr);
+      .gte("end_date", weekStartStr)
+      .limit(500);
 
     // Non-admins only see their own data
     if (!isAdmin && currentUserId) {

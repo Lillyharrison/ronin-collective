@@ -51,8 +51,9 @@ export function AchievementsSection() {
   useEffect(() => {
     supabase
       .from("achievements")
-      .select("*")
+      .select("id, key, title_en, title_es, description_en, description_es, icon, points, category")
       .order("points", { ascending: false })
+      .limit(200)
       .then(({ data }) => {
         if (data) setAchievements(data as Achievement[]);
         setLoading(false);

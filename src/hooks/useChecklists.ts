@@ -77,7 +77,12 @@ export function useChecklistTemplates(
 
   const load = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from("checklist_templates").select("*").order("sort_order");
+    // Narrow columns — list view doesn't need `products` JSONB blob (loaded in detail).
+    let q = supabase
+      .from("checklist_templates")
+      .select("id, title, category, subcategory, color, icon, cover_image_url, location, recurrence, recurrence_day, notify_on_day, only_when_occupied, is_published, is_universal, property_id, assigned_department, assigned_role, manual_link_label, manual_link_url, sort_order, created_at, updated_at, created_by")
+      .order("sort_order")
+      .limit(500);
     if (category) q = q.eq("category", category);
     if (propertyId !== undefined) {
       if (propertyId === null) {
@@ -108,9 +113,10 @@ export function useChecklistItems(templateId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("checklist_items")
-      .select("*")
+      .select("id, template_id, title, icon, color, container, photo_url, notes, is_required, sort_order, created_at, updated_at")
       .eq("template_id", templateId)
-      .order("sort_order");
+      .order("sort_order")
+      .limit(500);
     setItems((data as ChecklistItem[]) ?? []);
     setLoading(false);
   }, [templateId]);

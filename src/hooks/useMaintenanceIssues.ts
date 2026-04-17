@@ -63,8 +63,9 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   const fetchCategories = useCallback(async () => {
     const { data } = await supabase
       .from("maintenance_categories")
-      .select("*")
-      .order("sort_order");
+      .select("id, name, icon, color, is_custom, sort_order")
+      .order("sort_order")
+      .limit(200);
     if (data) setCategories(data as MaintenanceCategory[]);
   }, []);
 

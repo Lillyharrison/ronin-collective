@@ -998,10 +998,19 @@ export function CarWashSection() {
   async function loadAll() {
     setLoading(true);
     const [{ data: vData }, { data: bData }, { data: pData }, { data: prData }] = await Promise.all([
-      db.from("vehicles").select("*").order("sort_order").order("created_at"),
-      db.from("car_wash_bookings").select("*").gte("requested_date", format(subWeeks(new Date(), 4), "yyyy-MM-dd")).order("requested_date"),
-      supabase.from("properties").select("id, name, is_primary").order("sort_order"),
-      supabase.from("profiles").select("id, full_name, avatar_url, job_title").order("full_name"),
+      // Vehicles: small bounded set, narrow columns
+      db.from("vehicles")
+        .select("id, make, model, year, colour, photo_url, owner_profile_id, property_id, sort_order, notes, created_at, updated_at")
+        .order("sort_order").order("created_at")
+        .limit(500),
+      // Bookings: 4-week window kept; narrow columns
+      db.from("car_wash_bookings")
+        .select("id, vehicle_id, requested_date, requested_time, wash_type, status, location_property_id, assigned_staff_id, requested_by, notes, completed_at, created_at, updated_at")
+        .gte("requested_date", format(subWeeks(new Date(), 4), "yyyy-MM-dd"))
+        .order("requested_date")
+        .limit(500),
+      supabase.from("properties").select("id, name, is_primary").order("sort_order").limit(500),
+      supabase.from("profiles").select("id, full_name, avatar_url, job_title").order("full_name").limit(500),
     ]);
 
     const props: Property[] = sortProperties((pData ?? []) as (Property & { is_primary?: boolean })[]);

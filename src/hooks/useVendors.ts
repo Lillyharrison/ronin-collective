@@ -60,16 +60,19 @@ export function useVendors() {
   const fetchVendors = useCallback(async () => {
     setLoading(true);
     try {
+      // Narrow columns — vendor cards render name/company/category/contact info.
       const { data: vendorData, error: vendorErr } = await supabase
         .from("vendors")
-        .select("*")
-        .order("name");
+        .select("id, name, company, email, phone, website, category, description, notes, logo_url, address, is_active, created_by, created_at, updated_at")
+        .order("name")
+        .limit(500);
       if (vendorErr) throw vendorErr;
 
       const { data: contactData, error: contactErr } = await supabase
         .from("vendor_contacts")
-        .select("*")
-        .order("is_primary", { ascending: false });
+        .select("id, vendor_id, name, job_title, phone, email, notes, is_primary, created_at")
+        .order("is_primary", { ascending: false })
+        .limit(2000);
       if (contactErr) throw contactErr;
 
       const vendorsWithContacts = (vendorData ?? []).map((v) => ({
