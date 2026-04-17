@@ -130,8 +130,12 @@ function PushPromptBanner({ userId }: { userId: string }) {
   if (permission === "granted") return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[60] flex items-center gap-3 px-4 py-2.5 bg-gold/95 text-charcoal"
-      style={{ paddingTop: "calc(0.625rem + env(safe-area-inset-top, 0px))" }}>
+    // In-flow banner (NOT fixed) so it stacks above the header instead of
+    // overlapping it on iOS. The header itself is fixed; we render the banner
+    // above the header in the DOM tree and offset the header/main accordingly.
+    <div className="fixed top-0 left-0 right-0 z-[70] flex items-center gap-3 px-4 py-2.5 bg-gold/95 text-charcoal"
+      style={{ paddingTop: "calc(0.625rem + env(safe-area-inset-top, 0px))" }}
+      data-push-banner>
       <Bell size={16} className="shrink-0" />
       <p className="flex-1 text-xs font-medium leading-snug">
         Enable notifications to get alerts for new messages even when the app is closed.
