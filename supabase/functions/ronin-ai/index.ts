@@ -781,6 +781,13 @@ serve(async (req) => {
       }).eq("id", profile_id);
       if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+      // Sync to user_section_permissions only if this profile is tied to a real auth user
+      // (drafts without an auth.users row would violate the FK constraint).
+      const { data: authUser } = await adminClient.auth.admin.getUserById(profile_id);
+      if (authUser?.user) {
+        await syncSectionPermissions(adminClient, profile_id, section_permissions);
+      }
+
       // Update role if provided
       if (role) {
         const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", profile_id).maybeSingle();
@@ -802,6 +809,8 @@ serve(async (req) => {
             await adminClient.from("profiles").insert({ ...oldProfile, id: inviteData.user.id, is_draft: false });
             await adminClient.from("user_roles").update({ user_id: inviteData.user.id }).eq("user_id", profile_id);
             await adminClient.from("profiles").delete().eq("id", profile_id);
+            // Now that the auth user exists, sync permissions to the new uid
+            await syncSectionPermissions(adminClient, inviteData.user.id, section_permissions);
           }
           return new Response(JSON.stringify({ success: true, user_id: inviteData.user.id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
