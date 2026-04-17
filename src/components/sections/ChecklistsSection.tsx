@@ -166,20 +166,29 @@ export function ChecklistsSection() {
               ))
             )}
             {canManageChecklists && (
-              <button
-                onClick={async () => {
-                  const title = window.prompt(language === "es" ? "Título de la lista:" : "Checklist title:");
-                  if (!title?.trim()) return;
-                  await supabase.from("checklist_templates").insert({
-                    title: title.trim(), category: "cleaning", icon: "✅", color: "green",
-                    property_id: selectedPropId,
-                  });
-                  reloadCleaning();
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
-              >
-                <Plus size={14} /> {t("addChecklist")}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={async () => {
+                    const title = window.prompt(language === "es" ? "Título de la lista:" : "Checklist title:");
+                    if (!title?.trim()) return;
+                    await supabase.from("checklist_templates").insert({
+                      title: title.trim(), category: "cleaning", icon: "✅", color: "green",
+                      property_id: selectedPropId,
+                    });
+                    reloadCleaning();
+                  }}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
+                >
+                  <Plus size={14} /> {t("addChecklist")}
+                </button>
+                <button
+                  onClick={() => setImportOpen(true)}
+                  disabled={!selectedPropId}
+                  className="flex items-center justify-center gap-2 py-3 border border-dashed border-gold/40 rounded-xl text-sm text-gold hover:bg-gold/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Upload size={14} /> {language === "es" ? "Importar archivo" : "Import file"}
+                </button>
+              </div>
             )}
           </>
         )}
