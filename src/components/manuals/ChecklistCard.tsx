@@ -10,6 +10,7 @@ interface Props {
   template: ChecklistTemplate;
   propertyId?: string | null;
   onOpenDetail?: () => void;
+  onChanged?: () => void;
 }
 
 const COLOR_BG: Record<string, string> = {
@@ -27,7 +28,7 @@ const RECURRENCE_LABELS: Record<string, string> = {
 };
 
 export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
-  function ChecklistCard({ template, propertyId, onOpenDetail }, ref) {
+  function ChecklistCard({ template, propertyId, onOpenDetail, onChanged }, ref) {
   const { completedIds } = useChecklistSessions(template.id, propertyId);
   const { items } = useChecklistItems(template.id);
   const { isMasterAdmin } = usePermissions();
@@ -40,8 +41,7 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
       .from("checklist_templates")
       .update({ is_published: !template.is_published })
       .eq("id", template.id);
-    // Trigger parent reload via page reload for simplicity
-    window.location.reload();
+    onChanged?.();
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -50,7 +50,6 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
       `Delete "${template.title}"?\n\nThis will permanently remove the checklist, all its items, completion history, and comments. This cannot be undone.`
     );
     if (!confirmed) return;
-    // Children (items, sessions, comments) cascade or are removed via FK; delete template
     await supabase.from("checklist_comments").delete().eq("template_id", template.id);
     await supabase.from("checklist_sessions").delete().eq("template_id", template.id);
     await supabase.from("checklist_items").delete().eq("template_id", template.id);
@@ -60,7 +59,7 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
       return;
     }
     toast.success("Checklist deleted");
-    window.location.reload();
+    onChanged?.();
   };
 
   const totalItems = items.length;

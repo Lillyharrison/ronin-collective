@@ -15,6 +15,7 @@ interface CareGuideTemplate {
 interface Props {
   template: CareGuideTemplate;
   onOpen: () => void;
+  onChanged?: () => void;
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -25,7 +26,7 @@ const COLOR_MAP: Record<string, string> = {
   green:  "border-[hsl(var(--status-done)/0.4)] bg-[hsl(var(--status-done)/0.08)] text-[hsl(var(--status-done))]",
 };
 
-export function CareGuideCard({ template, onOpen }: Props) {
+export function CareGuideCard({ template, onOpen, onChanged }: Props) {
   const { isMasterAdmin } = usePermissions();
   const colorCls = COLOR_MAP[template.color] ?? COLOR_MAP.gold;
   const isDraft = !template.is_published;
@@ -36,7 +37,7 @@ export function CareGuideCard({ template, onOpen }: Props) {
       .from("checklist_templates")
       .update({ is_published: !template.is_published })
       .eq("id", template.id);
-    window.location.reload();
+    onChanged?.();
   };
 
   return (

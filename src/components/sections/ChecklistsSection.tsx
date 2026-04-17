@@ -63,7 +63,7 @@ export function ChecklistsSection() {
 
   // All subcategory keys flattened — fetch only what exists, grouped client-side for display
   const ALL_ACTIVITY_KEYS = ACTIVITY_GROUPS.flatMap(g => g.keys);
-  const { templates: activityTemplates, loading: activityLoading } = useChecklistTemplates(
+  const { templates: activityTemplates, loading: activityLoading, reload: reloadActivity } = useChecklistTemplates(
     tab === "activity" ? "activity" : undefined,
     tab === "activity" ? null : undefined,
     tab === "activity" ? ALL_ACTIVITY_KEYS : undefined,
@@ -162,6 +162,7 @@ export function ChecklistsSection() {
                   template={tpl}
                   propertyId={selectedPropId}
                   onOpenDetail={() => openChecklistDetail(tpl.id, selectedPropId)}
+                  onChanged={reloadCleaning}
                 />
               ))
             )}
@@ -215,6 +216,7 @@ export function ChecklistsSection() {
                           template={tpl}
                           propertyId={null}
                           onOpenDetail={() => openChecklistDetail(tpl.id, null)}
+                          onChanged={reloadActivity}
                         />
                       ))}
                     </div>
@@ -233,7 +235,7 @@ export function ChecklistsSection() {
                       subcategory: title.trim().toLowerCase().replace(/\s+/g, "_"),
                       icon: "🎯", color: "blue", is_universal: true,
                     });
-                    window.location.reload();
+                    reloadActivity();
                   }}
                   className="flex items-center justify-center gap-2 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-gold hover:text-foreground transition-all"
                 >
@@ -257,7 +259,7 @@ export function ChecklistsSection() {
         propertyId={tab === "cleaning" ? selectedPropId : null}
         onImported={() => {
           if (tab === "cleaning") reloadCleaning();
-          else window.location.reload();
+          else reloadActivity();
         }}
       />
     </div>
