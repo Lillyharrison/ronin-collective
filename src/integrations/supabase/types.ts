@@ -1022,9 +1022,12 @@ export type Database = {
       }
       profiles: {
         Row: {
+          annual_leave_days: number | null
           assigned_property_ids: string[] | null
           avatar_url: string | null
           birthday: string | null
+          contracted_days_per_week: number | null
+          contracted_hours_per_week: number | null
           created_at: string
           department: string | null
           full_name: string | null
@@ -1040,9 +1043,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          annual_leave_days?: number | null
           assigned_property_ids?: string[] | null
           avatar_url?: string | null
           birthday?: string | null
+          contracted_days_per_week?: number | null
+          contracted_hours_per_week?: number | null
           created_at?: string
           department?: string | null
           full_name?: string | null
@@ -1058,9 +1064,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          annual_leave_days?: number | null
           assigned_property_ids?: string[] | null
           avatar_url?: string | null
           birthday?: string | null
+          contracted_days_per_week?: number | null
+          contracted_hours_per_week?: number | null
           created_at?: string
           department?: string | null
           full_name?: string | null

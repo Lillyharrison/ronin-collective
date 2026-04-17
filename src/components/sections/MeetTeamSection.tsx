@@ -86,6 +86,7 @@ const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boo
   { key: "travel",             label: "Travel",              labelEs: "Viajes",            hasEdit: true  },
   { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
   { key: "staff-schedule",     label: "Staff Schedule",      labelEs: "Horario del Personal", hasEdit: true, hasScope: true },
+  { key: "family-movements",   label: "   ↳ Family Movements", labelEs: "   ↳ Movimientos Familiares", hasEdit: false, isFeature: true },
   // ── Calendar sub-tabs ──
   { key: "family-calendar",      label: "   ↳ Family Calendar",      labelEs: "   ↳ Calendario Familiar",    hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-travel",      label: "   ↳ Travel",               labelEs: "   ↳ Viajes",                 hasEdit: false, isFeature: true, isCalendarSub: true },
@@ -155,9 +156,9 @@ const DEPT_COLORS: Record<string, string> = {
 // Default section permissions based on level
 function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
   const base: Record<string, string[]> = {
-    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays"],
+    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","family-movements"],
     extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","family-movements"],
     staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","calendar-travel","calendar-birthdays","calendar-maintenance"],
   };
   const allowed = base[level] || base["staff"];
@@ -988,6 +989,22 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   const [notes, setNotes] = useState(member.notes || "");
   const [assignedProps, setAssignedProps] = useState<string[]>(member.assigned_property_ids || []);
 
+  // Work roster (for staff-schedule worked-vs-expected calculator)
+  const m = member as TeamMember & {
+    contracted_days_per_week?: number | null;
+    contracted_hours_per_week?: number | null;
+    annual_leave_days?: number | null;
+  };
+  const [contractedDays, setContractedDays] = useState<string>(
+    m.contracted_days_per_week != null ? String(m.contracted_days_per_week) : "5"
+  );
+  const [contractedHours, setContractedHours] = useState<string>(
+    m.contracted_hours_per_week != null ? String(m.contracted_hours_per_week) : "40"
+  );
+  const [annualLeave, setAnnualLeave] = useState<string>(
+    m.annual_leave_days != null ? String(m.annual_leave_days) : "25"
+  );
+
   // Principal designation toggle — only relevant when level = principal
   const [isPrincipal, setIsPrincipal] = useState(false);
   const [principalLoading, setPrincipalLoading] = useState(false);
@@ -1121,7 +1138,10 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
           notes: notes || null,
           assigned_property_ids: assignedProps,
           section_permissions: finalPerms as unknown as import("@/integrations/supabase/types").Json,
-        }).eq("id", member.id);
+          contracted_days_per_week: contractedDays === "" ? null : Number(contractedDays),
+          contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
+          annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
+        } as never).eq("id", member.id);
 
         // Update role if changed
         if (roleToSet !== member.role) {
@@ -1360,6 +1380,40 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
               {/* Dates */}
               <EditField label={isEN ? "Start Date" : "Fecha de Inicio"} value={startDate} onChange={setStartDate} disabled={!canEdit} type="date" />
               <EditField label={isEN ? "Birthday" : "Cumpleaños"} value={birthday} onChange={setBirthday} disabled={!canEdit} type="date" />
+
+              {/* Work roster — powers the staff-schedule worked-vs-expected calculator */}
+              {canEdit && (level === "staff" || level === "manager") && (
+                <div className="rounded-xl border border-charcoal-light bg-charcoal-light/40 p-3 space-y-3">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+                    {isEN ? "Work Roster" : "Horario Contratado"}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <FieldLabel label={isEN ? "Days/week" : "Días/sem"} />
+                      <Input type="number" min={0} max={7} value={contractedDays}
+                        onChange={(e) => setContractedDays(e.target.value)}
+                        className="bg-charcoal border-charcoal-light text-cream h-9" />
+                    </div>
+                    <div>
+                      <FieldLabel label={isEN ? "Hours/week" : "Horas/sem"} />
+                      <Input type="number" min={0} max={80} step={0.5} value={contractedHours}
+                        onChange={(e) => setContractedHours(e.target.value)}
+                        className="bg-charcoal border-charcoal-light text-cream h-9" />
+                    </div>
+                    <div>
+                      <FieldLabel label={isEN ? "Annual leave" : "Vacaciones"} />
+                      <Input type="number" min={0} max={60} value={annualLeave}
+                        onChange={(e) => setAnnualLeave(e.target.value)}
+                        className="bg-charcoal border-charcoal-light text-cream h-9" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-snug">
+                    {isEN
+                      ? "Used by Staff Schedule to compute worked vs expected days/hours and annual leave remaining."
+                      : "Usado por el horario del personal para calcular días/horas trabajados y vacaciones restantes."}
+                  </p>
+                </div>
+              )}
 
               <FieldLabel label={isEN ? "Notes" : "Notas"} />
               <textarea

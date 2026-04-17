@@ -62,6 +62,8 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   "calendar-deliveries":  ["master_admin", "admin", "manager"],
   "calendar-construction":["master_admin", "admin", "manager"],
   "calendar-staff":       ["master_admin", "admin", "manager"],
+  // Staff-schedule overlay: family travel/guest events on the monthly view
+  "family-movements":     ["master_admin", "admin", "manager", "principal"],
 };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────

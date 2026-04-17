@@ -8,6 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useStaffSchedules, StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useStaffSchedules";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,9 @@ interface Profile {
   department: string | null;
   assigned_property_ids?: string[] | null;
   is_draft?: boolean;
+  contracted_days_per_week?: number | null;
+  contracted_hours_per_week?: number | null;
+  annual_leave_days?: number | null;
 }
 
 /** Returns a human-readable label for a profile, using job title for drafts. */
@@ -1349,6 +1353,7 @@ function StaffMonthGrid({
   loading,
   canEdit,
   onShowScheduleManager,
+  noWrapper = false,
 }: {
   monthStart: Date;
   staffToShow: Profile[];
@@ -1357,6 +1362,7 @@ function StaffMonthGrid({
   loading: boolean;
   canEdit: boolean;
   onShowScheduleManager: () => void;
+  noWrapper?: boolean;
 }) {
   const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
   // Group days into weeks (Mon–Sun rows)
@@ -1394,11 +1400,9 @@ function StaffMonthGrid({
     );
   }
 
-  return (
-    <div className="rounded-2xl border border-border bg-card overflow-x-auto">
-      {/* Header row: Name + day numbers */}
-      <div className="min-w-[600px]">
-        {/* Month day-number header */}
+  const inner = (
+    <div className="min-w-[600px]">
+      {/* Month day-number header */}
         <div
           className="grid border-b border-border bg-muted/30"
           style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
@@ -1513,11 +1517,133 @@ function StaffMonthGrid({
           );
         })}
       </div>
+  );
+
+  return noWrapper
+    ? inner
+    : <div className="rounded-2xl border border-border bg-card overflow-x-auto">{inner}</div>;
+}
+
+// ── Family overlay band (above staff rows in monthly view) ─────────────────────
+
+interface FamilyEvent {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string | null;
+  event_type: string;
+  property_id: string | null;
+}
+
+function FamilyOverlayBand({
+  monthStart,
+  monthDays,
+  events,
+  properties,
+}: {
+  monthStart: Date;
+  monthDays: Date[];
+  events: FamilyEvent[];
+  properties: Property[];
+}) {
+  if (events.length === 0) return null;
+
+  // Group by event title (so the same person/trip merges across days)
+  const groups = new Map<string, FamilyEvent[]>();
+  for (const ev of events) {
+    const key = ev.title || "Family";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(ev);
+  }
+
+  return (
+    <div className="border-b border-border bg-muted/10">
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
+      >
+        <div
+          className="px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground border-r border-border flex items-center gap-1 sticky left-0 bg-card z-10"
+          style={{ gridRow: `1 / span ${groups.size}` }}
+        >
+          <PlaneTakeoff size={10} /> Family
+        </div>
+        {Array.from(groups.entries()).map(([title, evs]) => {
+          const col = propColor(evs[0].property_id, properties);
+          return monthDays.map((day) => {
+            const dateStr = format(day, "yyyy-MM-dd");
+            const inEvent = evs.some((ev) => {
+              const start = ev.start_date.slice(0, 10);
+              const end = (ev.end_date ?? ev.start_date).slice(0, 10);
+              return dateStr >= start && dateStr <= end;
+            });
+            return (
+              <div key={`${title}-${dateStr}`} className="px-px py-0.5">
+                {inEvent && (
+                  <div
+                    className={cn("h-3.5 rounded-sm border", col.bg, col.text)}
+                    title={title}
+                  />
+                )}
+              </div>
+            );
+          });
+        })}
+      </div>
     </div>
   );
 }
 
-// ── Main StaffCalendarTab ─────────────────────────────────────────────────────
+// ── Worked-vs-Expected Calculator (shown when filtered to one person) ──────────
+
+interface RosterStats {
+  daysWorked: number;
+  daysExpected: number;
+  hoursWorked: number;
+  hoursExpected: number;
+  leaveTakenYTD: number;
+  leaveAllowance: number;
+}
+
+function CalculatorPanel({
+  personName,
+  stats,
+}: {
+  personName: string;
+  stats: RosterStats;
+}) {
+  const leaveRemaining = Math.max(0, stats.leaveAllowance - stats.leaveTakenYTD);
+  const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
+    <div className="flex-1 min-w-[120px] rounded-lg border border-border bg-card px-3 py-2">
+      <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
+      <p className="text-sm font-bold text-foreground mt-0.5">{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground leading-tight">{sub}</p>}
+    </div>
+  );
+  return (
+    <div className="rounded-2xl border border-border bg-muted/10 px-3 py-2.5 mb-2">
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">
+        {personName} · This month
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Stat
+          label="Days worked"
+          value={`${stats.daysWorked} / ${stats.daysExpected}`}
+          sub={stats.daysExpected > 0 ? `${Math.round((stats.daysWorked / stats.daysExpected) * 100)}%` : undefined}
+        />
+        <Stat
+          label="Hours worked"
+          value={`${stats.hoursWorked.toFixed(1)} / ${stats.hoursExpected.toFixed(0)}`}
+        />
+        <Stat
+          label="Annual leave"
+          value={`${leaveRemaining} left`}
+          sub={`${stats.leaveTakenYTD} taken of ${stats.leaveAllowance}`}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function StaffCalendarTab({
   canEdit,
@@ -1550,6 +1676,10 @@ export function StaffCalendarTab({
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
   const [filterProperty, setFilterProperty] = useState<string>("all");
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
+  const [familyEvents, setFamilyEvents] = useState<FamilyEvent[]>([]);
+
+  const { canSee } = usePermissions();
+  const showFamilyOverlay = canSee("family-movements");
 
   const dragRef = useRef<DisplayShift | null>(null);
   const rowDragRef = useRef<string | null>(null); // staff_id being row-dragged
@@ -1615,7 +1745,7 @@ export function StaffCalendarTab({
       if (uniqueStaffIds.length > 0) {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft")
+          .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days")
           .in("id", uniqueStaffIds)
           .order("full_name");
         setProfiles((profileData as Profile[]) ?? []);
@@ -1627,6 +1757,28 @@ export function StaffCalendarTab({
     });
   }, []);
 
+  // ── Fetch family travel/guest events for the visible month (when overlay enabled) ──
+  useEffect(() => {
+    if (calView !== "month" || !showFamilyOverlay) {
+      setFamilyEvents([]);
+      return;
+    }
+    const monthEnd = endOfMonth(monthStart);
+    const startISO = monthStart.toISOString();
+    const endISO = monthEnd.toISOString();
+    let cancelled = false;
+    supabase
+      .from("calendar_events")
+      .select("id, title, start_date, end_date, event_type, property_id")
+      .in("event_type", ["travel", "guest"])
+      .lte("start_date", endISO)
+      .or(`end_date.gte.${startISO},end_date.is.null`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setFamilyEvents((data ?? []) as FamilyEvent[]);
+      });
+    return () => { cancelled = true; };
+  }, [calView, monthStart, showFamilyOverlay]);
   const weekDays = calView === "month"
     ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
     : eachDayOfInterval({
@@ -2174,17 +2326,86 @@ export function StaffCalendarTab({
       {/* Property legend rendered below the calendar — see bottom of section. */}
 
       {/* ── Month View ────────────────────────────────────────────────────── */}
-      {calView === "month" && (
-        <StaffMonthGrid
-          monthStart={monthStart}
-          staffToShow={staffToShow}
-          displayShifts={displayShifts}
-          properties={properties}
-          loading={loading || profilesLoading}
-          canEdit={canEdit}
-          onShowScheduleManager={() => setShowScheduleManager(true)}
-        />
-      )}
+      {calView === "month" && (() => {
+        const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+
+        // Show calculator only when filtered to a single person
+        const singleStaff = filterStaff !== "all"
+          ? profiles.find((p) => p.id === filterStaff)
+          : null;
+
+        let calc: RosterStats | null = null;
+        if (singleStaff) {
+          const personShifts = displayShifts.filter(
+            (s) => s.staff_id === singleStaff.id && !s.is_leave && s.status === "scheduled"
+          );
+          const daysWorked = new Set(personShifts.map((s) => s.shift_date)).size;
+          const hoursWorked = personShifts.reduce((sum, s) => {
+            if (!s.start_time || !s.end_time) return sum;
+            const [sh, sm] = s.start_time.split(":").map(Number);
+            const [eh, em] = s.end_time.split(":").map(Number);
+            return sum + Math.max(0, (eh + em / 60) - (sh + sm / 60));
+          }, 0);
+
+          const dpw = singleStaff.contracted_days_per_week ?? 5;
+          const hpw = singleStaff.contracted_hours_per_week ?? 40;
+          const allowance = singleStaff.annual_leave_days ?? 25;
+
+          // Approx weeks in month: total days / 7
+          const weeksInMonth = monthDays.length / 7;
+          const daysExpected = Math.round(dpw * weeksInMonth);
+          const hoursExpected = hpw * weeksInMonth;
+
+          // YTD leave taken (calendar year so far)
+          const yearStart = `${monthStart.getFullYear()}-01-01`;
+          const yearEnd = `${monthStart.getFullYear()}-12-31`;
+          const leaveTakenYTD = leaveRequests
+            .filter((lr) => lr.staff_id === singleStaff.id && lr.status === "approved")
+            .reduce((sum, lr) => {
+              const start = lr.start_date > yearStart ? lr.start_date : yearStart;
+              const end = lr.end_date < yearEnd ? lr.end_date : yearEnd;
+              if (start > end) return sum;
+              return sum + differenceInCalendarDays(parseISO(end), parseISO(start)) + 1;
+            }, 0);
+
+          calc = {
+            daysWorked,
+            daysExpected,
+            hoursWorked,
+            hoursExpected,
+            leaveTakenYTD,
+            leaveAllowance: allowance,
+          };
+        }
+
+        return (
+          <>
+            {calc && singleStaff && (
+              <CalculatorPanel personName={getDisplayName(singleStaff)} stats={calc} />
+            )}
+            <div className="rounded-2xl border border-border bg-card overflow-x-auto">
+              {showFamilyOverlay && (
+                <FamilyOverlayBand
+                  monthStart={monthStart}
+                  monthDays={monthDays}
+                  events={familyEvents}
+                  properties={properties}
+                />
+              )}
+              <StaffMonthGrid
+                monthStart={monthStart}
+                staffToShow={staffToShow}
+                displayShifts={displayShifts}
+                properties={properties}
+                loading={loading || profilesLoading}
+                canEdit={canEdit}
+                onShowScheduleManager={() => setShowScheduleManager(true)}
+                noWrapper
+              />
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Week Schedule Grid ────────────────────────────────────────────── */}
       {calView === "week" && (
