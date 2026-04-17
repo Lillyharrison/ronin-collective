@@ -171,6 +171,7 @@ export function ManualsSection() {
                   key={tpl.id}
                   template={tpl}
                   onOpen={() => openCareGuideDetail(tpl.id)}
+                  onChanged={reloadCare}
                 />
               ))
             )}
