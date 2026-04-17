@@ -1160,6 +1160,24 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
           annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
         } as never).eq("id", member.id);
 
+        // Mirror permissions into user_section_permissions table — this is what the app actually reads.
+        // Without this sync the JSONB blob and table rows drift, and toggles silently fail to take effect.
+        const permRows = Object.entries(perms)
+          .filter(([, v]) => v && typeof v === "object" && !Array.isArray(v))
+          .map(([section, v]) => {
+            const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
+            return {
+              user_id: member.id,
+              section,
+              can_view: p.view === true,
+              can_edit: p.edit === true,
+              notifications: p.notifications === true,
+            };
+          });
+        if (permRows.length > 0) {
+          await supabase.from("user_section_permissions" as never).upsert(permRows as never, { onConflict: "user_id,section" } as never);
+        }
+
         // Update role if changed
         if (roleToSet !== member.role) {
           await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
