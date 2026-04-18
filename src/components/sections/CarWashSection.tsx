@@ -20,7 +20,7 @@ const db = supabase as any;
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Property { id: string; name: string; }
-interface Profile  { id: string; full_name: string | null; avatar_url: string | null; job_title: string | null; }
+interface Profile  { id: string; full_name: string | null; avatar_url: string | null; job_title: string | null; level?: string | null; }
 
 interface Vehicle {
   id: string;
