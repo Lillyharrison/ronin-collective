@@ -567,20 +567,12 @@ export function OrdersSection() {
               </p>
             </div>
           ) : (
-            <table className="w-full min-w-[640px]">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  {tableHeaders.map((h, i) => (
-                    <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Mobile: tiles */}
+              <div className="sm:hidden px-3 py-3 space-y-2">
                 {activeTab === "pending"
                   ? pending.map(o => (
-                      <PendingRow
+                      <PendingTile
                         key={o.id}
                         order={o}
                         onOpen={setModalOrder}
@@ -588,11 +580,39 @@ export function OrdersSection() {
                       />
                     ))
                   : delivered.map(o => (
-                      <DeliveredRow key={o.id} order={o} onOpen={setModalOrder} />
+                      <DeliveredTile key={o.id} order={o} onOpen={setModalOrder} />
                     ))
                 }
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop: table */}
+              <table className="hidden sm:table w-full min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    {tableHeaders.map((h, i) => (
+                      <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeTab === "pending"
+                    ? pending.map(o => (
+                        <PendingRow
+                          key={o.id}
+                          order={o}
+                          onOpen={setModalOrder}
+                          onMarkDelivered={() => fetchOrders()}
+                        />
+                      ))
+                    : delivered.map(o => (
+                        <DeliveredRow key={o.id} order={o} onOpen={setModalOrder} />
+                      ))
+                  }
+                </tbody>
+              </table>
+            </>
           )}
           {/* Load more */}
           {hasMore && !loading && (
