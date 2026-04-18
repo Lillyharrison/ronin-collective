@@ -131,11 +131,12 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
   useEffect(() => {
     Promise.all([
-      supabase.from("profiles").select("id, full_name, job_title").order("full_name"),
+      supabase.from("profiles").select("id, full_name, job_title, level").order("full_name"),
       supabase.from("properties").select("id, name, is_primary"),
       supabase.from("checklist_templates").select("id, title, icon").eq("is_published", true).order("sort_order"),
     ]).then(([p, pr, cl]) => {
-      setProfiles((p.data as Profile[]) ?? []);
+      // Family members (principal / extended_family) are never assigned work — exclude from picker.
+      setProfiles(filterAssignableStaff((p.data as Profile[]) ?? []));
       setProperties(sortProperties((pr.data as Property[]) ?? []));
       setChecklists((cl.data as ChecklistTemplate[]) ?? []);
     });
