@@ -22,6 +22,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { format, parseISO } from "date-fns";
 import { useBatchTranslation } from "@/hooks/useEntryTranslation";
 import { sortProperties } from "@/hooks/useScopedProperties";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { toast } from "sonner";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -85,8 +86,9 @@ export function MaintenanceSection() {
     // Profiles can grow; cap at 500 staff which is well above any realistic team size.
     supabase.from("properties").select("id, name, is_primary")
       .then(({ data }) => setAllProperties(sortProperties((data ?? []) as { id: string; name: string; is_primary?: boolean }[])));
-    supabase.from("profiles").select("id, full_name, avatar_url").order("full_name").limit(500)
-      .then(({ data }) => setProfiles((data ?? []).map((p: any) => ({
+    // Family members (principal / extended_family) are never assigned maintenance work — exclude from picker.
+    supabase.from("profiles").select("id, full_name, avatar_url, level").order("full_name").limit(500)
+      .then(({ data }) => setProfiles(filterAssignableStaff(data ?? []).map((p: any) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
     supabase.from("vendors").select("id, name").eq("is_active", true).order("name").limit(200)

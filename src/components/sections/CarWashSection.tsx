@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { imageUrl } from "@/lib/imageUrl";
 import { sortProperties } from "@/hooks/useScopedProperties";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +20,7 @@ const db = supabase as any;
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Property { id: string; name: string; }
-interface Profile  { id: string; full_name: string | null; avatar_url: string | null; job_title: string | null; }
+interface Profile  { id: string; full_name: string | null; avatar_url: string | null; job_title: string | null; level?: string | null; }
 
 interface Vehicle {
   id: string;
@@ -1010,11 +1011,12 @@ export function CarWashSection() {
         .order("requested_date")
         .limit(500),
       supabase.from("properties").select("id, name, is_primary").order("sort_order").limit(500),
-      supabase.from("profiles").select("id, full_name, avatar_url, job_title").order("full_name").limit(500),
+      supabase.from("profiles").select("id, full_name, avatar_url, job_title, level").order("full_name").limit(500),
     ]);
 
     const props: Property[] = sortProperties((pData ?? []) as (Property & { is_primary?: boolean })[]);
-    const profs: Profile[] = (prData ?? []) as Profile[];
+    // Family members (principal / extended_family) are never assigned car-wash work — exclude from picker.
+    const profs: Profile[] = filterAssignableStaff((prData ?? []) as (Profile & { level?: string | null })[]) as Profile[];
     const profMap = Object.fromEntries(profs.map(p => [p.id, p]));
     const propMap = Object.fromEntries(props.map(p => [p.id, p]));
 
