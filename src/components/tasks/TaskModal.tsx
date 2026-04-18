@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useContext } from "react";
 import { sortProperties } from "@/hooks/useScopedProperties";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";

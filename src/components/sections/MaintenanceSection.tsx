@@ -22,6 +22,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { format, parseISO } from "date-fns";
 import { useBatchTranslation } from "@/hooks/useEntryTranslation";
 import { sortProperties } from "@/hooks/useScopedProperties";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { toast } from "sonner";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
