@@ -252,6 +252,182 @@ function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => v
   );
 }
 
+/* ─── Pending tile (mobile) ──────────────────────────────────────────────────── */
+function PendingTile({ order, onOpen, onMarkDelivered }: {
+  order: Order;
+  onOpen: (o: Order) => void;
+  onMarkDelivered: (id: string) => void;
+}) {
+  const { language } = useLanguage();
+  const isL = language === "es";
+  const [delivering, setDelivering] = useState(false);
+  const { isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
+  const canEdit_orders = isAdmin || isMasterAdmin || isManager || canEdit("orders");
+
+  const deliveryDate = order.expected_delivery ? new Date(order.expected_delivery) : null;
+  const isOverdue = deliveryDate && deliveryDate < new Date() && order.status !== "not_placed";
+  const isNotPlaced = order.status === "not_placed";
+
+  const handleDeliver = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDelivering(true);
+    await supabase.from("orders").update({
+      status: "delivered",
+      delivered_at: new Date().toISOString(),
+    } as any).eq("id", order.id);
+    setDelivering(false);
+    onMarkDelivered(order.id);
+  };
+
+  return (
+    <button
+      onClick={() => onOpen(order)}
+      className={cn(
+        "w-full text-left rounded-2xl border border-border bg-card p-3 active:scale-[0.99] transition-transform shadow-sm",
+        isNotPlaced && "bg-amber-500/[0.04] border-amber-500/30"
+      )}
+    >
+      <div className="flex items-start gap-2">
+        {isNotPlaced
+          ? <AlertCircle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+          : <ShoppingCart size={16} className="text-[hsl(var(--gold))] flex-shrink-0 mt-0.5" />}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-foreground truncate">{order.title}</span>
+            <StatusBadge status={order.status} />
+          </div>
+          {order.description && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{order.description}</p>
+          )}
+        </div>
+        <ChevronRight size={16} className="text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs">
+        {deliveryDate && (
+          <div className={cn("flex items-center gap-1", isOverdue ? "text-status-urgent font-semibold" : "text-muted-foreground")}>
+            <Calendar size={11} />
+            {deliveryDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {isOverdue && " ⚠"}
+          </div>
+        )}
+        {order.property?.name && (
+          <div className="flex items-center gap-1 text-muted-foreground truncate">
+            <MapPin size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.property.name}</span>
+          </div>
+        )}
+        {order.carrier && (
+          <div className="flex items-center gap-1 text-muted-foreground truncate">
+            <Truck size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.carrier}</span>
+          </div>
+        )}
+        {order.tracking_number && (
+          <div className="flex items-center gap-1 text-muted-foreground font-mono truncate">
+            <span className="truncate">#{order.tracking_number}</span>
+          </div>
+        )}
+      </div>
+
+      {(order.tracking_url || canEdit_orders || isNotPlaced) && (
+        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
+          {order.tracking_url ? (
+            <a
+              href={order.tracking_url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="flex items-center gap-1 text-xs text-accent underline underline-offset-2"
+            >
+              <ExternalLink size={11} /> {isL ? "Ver" : "Track"}
+            </a>
+          ) : <span />}
+          {canEdit_orders && !isNotPlaced && (
+            <button
+              onClick={handleDeliver}
+              disabled={delivering}
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[hsl(var(--status-done)/0.1)] text-status-done border border-[hsl(var(--status-done)/0.25)] active:scale-95 disabled:opacity-50"
+            >
+              <Check size={12} /> {delivering ? "…" : (isL ? "Entregar" : "Deliver")}
+            </button>
+          )}
+          {isNotPlaced && (
+            <span className="text-[10px] text-amber-500/80 italic">
+              {isL ? "Tarea abierta" : "Task open"}
+            </span>
+          )}
+        </div>
+      )}
+    </button>
+  );
+}
+
+/* ─── Delivered tile (mobile) ────────────────────────────────────────────────── */
+function DeliveredTile({ order, onOpen }: { order: Order; onOpen: (o: Order) => void }) {
+  const { language } = useLanguage();
+  const isL = language === "es";
+  const deliveredAt = order.delivered_at ? new Date(order.delivered_at) : null;
+
+  return (
+    <button
+      onClick={() => onOpen(order)}
+      className="w-full text-left rounded-2xl border border-border bg-card p-3 opacity-80 active:scale-[0.99] transition-transform shadow-sm"
+    >
+      <div className="flex items-start gap-2">
+        <Check size={16} className="text-status-done flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-semibold text-foreground block truncate">{order.title}</span>
+          {order.description && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{order.description}</p>
+          )}
+        </div>
+        <ChevronRight size={16} className="text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs">
+        {deliveredAt && (
+          <div className="flex items-center gap-1 text-status-done">
+            <Check size={11} />
+            {deliveredAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          </div>
+        )}
+        {order.property?.name && (
+          <div className="flex items-center gap-1 text-muted-foreground truncate">
+            <MapPin size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.property.name}</span>
+          </div>
+        )}
+        {order.carrier && (
+          <div className="flex items-center gap-1 text-muted-foreground truncate">
+            <Truck size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.carrier}</span>
+          </div>
+        )}
+        {order.tracking_number && (
+          <div className="flex items-center gap-1 text-muted-foreground font-mono truncate">
+            <span className="truncate">#{order.tracking_number}</span>
+          </div>
+        )}
+      </div>
+
+      {order.tracking_url && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <a
+            href={order.tracking_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="flex items-center gap-1 text-xs text-accent underline underline-offset-2"
+          >
+            <ExternalLink size={11} /> {isL ? "Ver" : "Track"}
+          </a>
+        </div>
+      )}
+    </button>
+  );
+}
+
 /* ─── Main section ───────────────────────────────────────────────────────────── */
 export function OrdersSection() {
   const { language } = useLanguage();
@@ -391,20 +567,12 @@ export function OrdersSection() {
               </p>
             </div>
           ) : (
-            <table className="w-full min-w-[640px]">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  {tableHeaders.map((h, i) => (
-                    <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Mobile: tiles */}
+              <div className="sm:hidden px-3 py-3 space-y-2">
                 {activeTab === "pending"
                   ? pending.map(o => (
-                      <PendingRow
+                      <PendingTile
                         key={o.id}
                         order={o}
                         onOpen={setModalOrder}
@@ -412,11 +580,39 @@ export function OrdersSection() {
                       />
                     ))
                   : delivered.map(o => (
-                      <DeliveredRow key={o.id} order={o} onOpen={setModalOrder} />
+                      <DeliveredTile key={o.id} order={o} onOpen={setModalOrder} />
                     ))
                 }
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop: table */}
+              <table className="hidden sm:table w-full min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    {tableHeaders.map((h, i) => (
+                      <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeTab === "pending"
+                    ? pending.map(o => (
+                        <PendingRow
+                          key={o.id}
+                          order={o}
+                          onOpen={setModalOrder}
+                          onMarkDelivered={() => fetchOrders()}
+                        />
+                      ))
+                    : delivered.map(o => (
+                        <DeliveredRow key={o.id} order={o} onOpen={setModalOrder} />
+                      ))
+                  }
+                </tbody>
+              </table>
+            </>
           )}
           {/* Load more */}
           {hasMore && !loading && (
