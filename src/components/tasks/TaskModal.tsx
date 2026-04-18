@@ -43,7 +43,7 @@ export interface FullTask {
   category?: string | null;
 }
 
-interface Profile { id: string; full_name: string | null; job_title: string | null; }
+interface Profile { id: string; full_name: string | null; job_title: string | null; level?: string | null; }
 interface Property { id: string; name: string; }
 interface ChecklistTemplate { id: string; title: string; icon: string; }
 
