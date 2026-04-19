@@ -7,13 +7,15 @@
  * Step 4 will add the create/edit modal launched from `onEdit`.
  */
 import { useMemo, useState } from "react";
-import { Search, Plus, Filter, BookOpen } from "lucide-react";
+import { Search, Plus, BookOpen, LayoutGrid, List } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { cn } from "@/lib/utils";
 import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary";
 import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
 import { LibraryItemCard } from "./LibraryItemCard";
+import { LibraryItemRow } from "./LibraryItemRow";
 import { LibraryItemDetailModal } from "./LibraryItemDetailModal";
 
 const CATEGORIES = [
@@ -39,6 +41,10 @@ export function OrderLibraryTab() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("preferred");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selected, setSelected] = useState<OrderLibraryItem | null>(null);
+  const [viewMode, setViewMode] = useLocalStorage<"grid" | "list">(
+    "order-library-view-mode",
+    "grid",
+  );
 
   const filtered = useMemo(() => {
     let list = items;
@@ -101,30 +107,72 @@ export function OrderLibraryTab() {
         ))}
       </div>
 
-      {/* Category chips */}
-      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
-        {CATEGORIES.map((c) => (
+      {/* Category chips + view toggle */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex-1 flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => setCategoryFilter(c.key)}
+              className={cn(
+                "whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium border transition-colors flex items-center gap-1",
+                categoryFilter === c.key
+                  ? "bg-accent text-accent-foreground border-accent"
+                  : "bg-muted/30 text-muted-foreground border-border hover:bg-muted",
+              )}
+            >
+              <span>{c.emoji}</span>
+              {isL ? c.labelEs : c.label}
+            </button>
+          ))}
+        </div>
+
+        {/* View mode toggle */}
+        <div className="shrink-0 flex items-center rounded-full border border-border bg-muted/30 p-0.5">
           <button
-            key={c.key}
-            onClick={() => setCategoryFilter(c.key)}
+            type="button"
+            onClick={() => setViewMode("grid")}
+            aria-label={isL ? "Vista cuadrícula" : "Grid view"}
             className={cn(
-              "whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium border transition-colors flex items-center gap-1",
-              categoryFilter === c.key
-                ? "bg-accent text-accent-foreground border-accent"
-                : "bg-muted/30 text-muted-foreground border-border hover:bg-muted",
+              "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+              viewMode === "grid"
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span>{c.emoji}</span>
-            {isL ? c.labelEs : c.label}
+            <LayoutGrid size={13} />
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            aria-label={isL ? "Vista lista" : "List view"}
+            className={cn(
+              "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+              viewMode === "list"
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <List size={13} />
+          </button>
+        </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid or list */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className={cn(
+          viewMode === "grid"
+            ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2"
+            : "flex flex-col gap-2",
+        )}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="aspect-square rounded-2xl bg-card border border-border animate-pulse" />
+            <div
+              key={i}
+              className={cn(
+                "rounded-xl bg-card border border-border animate-pulse",
+                viewMode === "grid" ? "aspect-[3/4]" : "h-20",
+              )}
+            />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -132,10 +180,16 @@ export function OrderLibraryTab() {
           hasQuery={!!query.trim() || statusFilter !== "all" || categoryFilter !== "all"}
           isL={isL}
         />
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
           {filtered.map((item) => (
             <LibraryItemCard key={item.id} item={item} onOpen={setSelected} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {filtered.map((item) => (
+            <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
           ))}
         </div>
       )}
