@@ -30,7 +30,7 @@ async function writeSectionPermissionRows(
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
-const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors", "search_product"];
+const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors", "search_product", "search_library_item"];
 const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message", "log_maintenance_issue", "log_vendor", "update_occupancy"];
 const SILENT_TOOL_NAMES = ["save_memory", "add_shopping_list_item"];
 
@@ -129,6 +129,22 @@ const RONIN_TOOLS = [
           category: { type: "string", enum: ["general", "grocery", "household", "electronics", "appliance", "outdoor", "cleaning"], description: "Product category to help refine results" },
         },
         required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_library_item",
+      description: "Search the global Order Library — the household's curated catalogue of preferred products (cleaning supplies, groceries, toiletries, etc.). Use BEFORE adding anything to the shopping list to check whether the household already has a preferred brand, size, or supplier. Returns matched library items with id, name, category, status (preferred / no_longer_preferred), notes, default_quantity, size, purchase cadence, website_url, and substitutions_allowed. If a match is found, pass its id as `library_item_id` when calling add_shopping_list_item so the entry inherits the library metadata.",
+      parameters: {
+        type: "object",
+        properties: {
+          keyword: { type: "string", description: "Search keyword matched against item name, aliases, and notes" },
+          status: { type: "string", enum: ["preferred", "no_longer_preferred", "all"], description: "Filter by status. Defaults to 'preferred' (the only items normally worth surfacing)." },
+          category: { type: "string", description: "Optional category filter, e.g. 'cleaning', 'food'" },
+        },
+        required: ["keyword"],
       },
     },
   },
@@ -298,7 +314,7 @@ const RONIN_TOOLS = [
         properties: {
           items: {
             type: "array",
-            description: "One or more items to add to the shopping list",
+            description: "One or more items to add to the shopping list. If a library match was found via search_library_item, include its id as library_item_id so the entry inherits library metadata (image, supplier, etc.).",
             items: {
               type: "object",
               properties: {
@@ -306,6 +322,7 @@ const RONIN_TOOLS = [
                 category: { type: "string", enum: ["food", "cleaning", "supplies", "personal", "tech", "other"], description: "Auto-detect: food=groceries/produce/drinks, cleaning=detergents/mops, supplies=paper/packaging, personal=toiletries/cosmetics, tech=electronics/batteries" },
                 quantity: { type: "string", description: "Optional quantity, e.g. '2 kg', '1 case'" },
                 notes: { type: "string", description: "Optional extra notes" },
+                library_item_id: { type: "string", description: "Optional UUID of a matched order_library_items row from search_library_item. When set, the shopping list entry is linked to that library item." },
               },
               required: ["name", "category"],
             },
@@ -542,6 +559,57 @@ async function executeObservationTool(
     return results;
   }
 
+  if (name === "search_library_item") {
+    const keyword = String(args.keyword ?? "").trim();
+    if (!keyword) return { error: "keyword is required" };
+    let q = adminClient.from("order_library_items")
+      .select("id, name, category, status, notes, default_quantity, size, purchase, website_url, image_url, substitutions_allowed, search_aliases");
+    const kw = `%${keyword}%`;
+    q = q.or(`name.ilike.${kw},notes.ilike.${kw}`);
+    const status = (args.status as string) ?? "preferred";
+    if (status !== "all") q = q.eq("status", status);
+    if (args.category) q = q.eq("category", args.category as string);
+    q = q.order("status", { ascending: true }).order("name", { ascending: true }).limit(15);
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+
+    // Also catch alias-only matches (search_aliases is a text[] array)
+    const lowerKw = keyword.toLowerCase();
+    const { data: aliasHits } = await adminClient
+      .from("order_library_items")
+      .select("id, name, category, status, notes, default_quantity, size, purchase, website_url, image_url, substitutions_allowed, search_aliases")
+      .contains("search_aliases", [lowerKw])
+      .limit(10);
+
+    const seen = new Set<string>();
+    const merged = [...(data ?? []), ...(aliasHits ?? [])].filter((r: Record<string, unknown>) => {
+      const id = r.id as string;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    return {
+      total: merged.length,
+      items: merged.map((i: Record<string, unknown>) => ({
+        id: i.id,
+        name: i.name,
+        category: i.category,
+        status: i.status,
+        notes: i.notes ?? null,
+        default_quantity: i.default_quantity ?? null,
+        size: i.size ?? null,
+        purchase: i.purchase ?? null,
+        website_url: i.website_url ?? null,
+        image_url: i.image_url ?? null,
+        substitutions_allowed: i.substitutions_allowed,
+      })),
+      hint: merged.length === 0
+        ? "No library match — proceed with the user's described item."
+        : "If one of these is a clear match, pass its `id` as `library_item_id` in add_shopping_list_item.",
+    };
+  }
+
   return { error: `Unknown observation tool: ${name}` };
 }
 
@@ -589,13 +657,14 @@ async function addShoppingListItemsSilently(
   adminClient: ReturnType<typeof createClient>
 ): Promise<string> {
   try {
-    const items = args.items as Array<{ name: string; category: string; quantity?: string; notes?: string }>;
+    const items = args.items as Array<{ name: string; category: string; quantity?: string; notes?: string; library_item_id?: string }>;
     if (!items?.length) return "⚠️ No items provided.";
     const rows = items.map(item => ({
       name: item.name,
       category: item.category,
       quantity: item.quantity ?? null,
       notes: item.notes ?? null,
+      library_item_id: item.library_item_id ?? null,
       created_by: callerUserId,
       is_checked: false,
     }));
@@ -1348,7 +1417,8 @@ You operate in a multi-step reasoning loop. BEFORE taking any write action or an
   - **THE RULE: If you respond with ANY acknowledgement ("noted", "I'll remember", "got it", "understood", "of course") you have ALREADY called save_memory in the same turn. No exceptions. No delays. No "I'll save that." Just save it silently and confirm verbally.**
   - Never announce or describe the tool call to the user. Execute silently, then respond naturally.
   - After saving, always say something like "✓ Noted and saved to my memory." so the user knows it's locked in.
-- **add_shopping_list_item**: Use immediately when someone mentions buying something.
+- **add_shopping_list_item**: Use immediately when someone mentions buying something. ALWAYS call **search_library_item** first with the item keyword. If a preferred match is returned, pass its id as \`library_item_id\` so the entry inherits library metadata (image, supplier, size). If the match status is \`no_longer_preferred\`, gently note that and ask the user whether to proceed.
+- **search_library_item**: The household's curated catalogue of preferred products. Use whenever someone asks "do we have a preferred X?", "what brand of Y do we use?", "is Z on our reorder list?", or before adding anything to the shopping list.
 
 ## VENDOR PROTOCOL
 When a user pastes or describes a contact (phone number, email, name, company):
