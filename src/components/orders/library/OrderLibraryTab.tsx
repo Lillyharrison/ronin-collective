@@ -260,10 +260,13 @@ export function OrderLibraryTab() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col rounded-lg border border-border overflow-hidden bg-card">
-          {filtered.map((item) => (
-            <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
-          ))}
+        <div className="rounded-lg border border-border overflow-hidden bg-card">
+          <LibraryListHeader sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+          <div className="flex flex-col">
+            {filtered.map((item) => (
+              <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
+            ))}
+          </div>
         </div>
       )}
 
