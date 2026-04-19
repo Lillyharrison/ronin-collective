@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -441,7 +442,7 @@ export function OrdersSection() {
   const [hasMore, setHasMore]       = useState(false);
   const [page, setPage]             = useState(0);
   const [modalOrder, setModalOrder] = useState<Order | null>(null);
-  const [activeTab, setActiveTab]   = useState<MainTab>("pending");
+  const [activeTab, setActiveTab]   = useLocalStorage<MainTab>("orders-active-tab", "pending");
 
   const fetchOrders = async (pageIndex = 0) => {
     setLoading(true);
@@ -461,6 +462,17 @@ export function OrdersSection() {
   const loadMore = () => { if (!loading && hasMore) fetchOrders(page + 1); };
 
   useEffect(() => { fetchOrders(0); }, []);
+
+  // Realtime: refresh list when orders change anywhere
+  useEffect(() => {
+    const channel = supabase
+      .channel(`orders_changes_${crypto.randomUUID()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        fetchOrders(0);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   // pending = not_placed + placed + pending_delivery (legacy)
   const pending   = orders.filter(o => o.status !== "delivered");
