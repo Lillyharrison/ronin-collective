@@ -463,6 +463,17 @@ export function OrdersSection() {
 
   useEffect(() => { fetchOrders(0); }, []);
 
+  // Realtime: refresh list when orders change anywhere
+  useEffect(() => {
+    const channel = supabase
+      .channel(`orders_changes_${crypto.randomUUID()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        fetchOrders(0);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   // pending = not_placed + placed + pending_delivery (legacy)
   const pending   = orders.filter(o => o.status !== "delivered");
   const delivered = orders.filter(o => o.status === "delivered");
