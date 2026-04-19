@@ -270,6 +270,41 @@ export function TasksSection() {
   const columns: TaskStatus[] = ["urgent", "pending", "in_progress", "completed"];
   const byStatus = (s: TaskStatus) => liveTasks.filter(t => t.status === s);
 
+  // Drag-and-drop status updates
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+  );
+
+  const handleDragEnd = async (e: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = e;
+    if (!over) return;
+    const overId = String(over.id);
+    if (!overId.startsWith("col-")) return;
+    const newStatusVal = overId.slice(4) as TaskStatus;
+    const taskId = String(active.id);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.status === newStatusVal) return;
+
+    // Optimistic update
+    const prev = tasks;
+    setTasks(prev.map(t => t.id === taskId ? { ...t, status: newStatusVal } : t));
+
+    const patch: { status: TaskStatus; completed_at?: string | null } = { status: newStatusVal };
+    if (newStatusVal === "completed") patch.completed_at = new Date().toISOString();
+    else if (task.status === "completed") patch.completed_at = null;
+
+    const { error } = await supabase.from("tasks").update(patch).eq("id", taskId);
+    if (error) {
+      setTasks(prev);
+      toast.error(isL ? "No se pudo actualizar" : "Could not update task");
+    }
+  };
+
+  const activeDragTask = activeDragId ? tasks.find(t => t.id === activeDragId) : null;
+
   const openNew = (status: TaskStatus) => {
     setNewStatus(status);
     setModalTask(null);
