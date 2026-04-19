@@ -93,6 +93,21 @@ function PartialChecklistsWidget() {
   );
 }
 
+// Draggable wrapper for TaskCard
+function DraggableTask({ task, onClick, disabled }: { task: KanbanTask; onClick: () => void; disabled: boolean }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, disabled });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{ opacity: isDragging ? 0.4 : 1, touchAction: disabled ? "auto" : "manipulation" }}
+    >
+      <TaskCard task={task} onClick={onClick} />
+    </div>
+  );
+}
+
 // ─── Kanban column ────────────────────────────────────────────────────────────
 interface ColumnProps {
   status: TaskStatus;
@@ -100,11 +115,13 @@ interface ColumnProps {
   onTaskClick: (task: KanbanTask) => void;
   onAddClick?: () => void;
   isAdmin: boolean;
+  canDrag: boolean;
 }
 
-function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: ColumnProps) {
+function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin, canDrag }: ColumnProps) {
   const { language } = useLanguage();
   const cfg = STATUS_CONFIG[status];
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${status}` });
   const ICONS: Record<TaskStatus, React.ReactNode> = {
     urgent:     <AlertTriangle size={12} />,
     pending:    <Circle size={12} />,
@@ -135,7 +152,13 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
         )}
       </div>
       {/* Cards */}
-      <div className="bg-muted/30 rounded-b-xl p-2 space-y-2 min-h-[80px] max-h-[55vh] overflow-y-auto">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "rounded-b-xl p-2 space-y-2 min-h-[80px] max-h-[55vh] overflow-y-auto transition-colors",
+          isOver ? "bg-[hsl(var(--gold)/0.12)] ring-2 ring-[hsl(var(--gold)/0.4)]" : "bg-muted/30"
+        )}
+      >
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center h-16">
             <p className="text-[10px] text-muted-foreground/50 italic">
@@ -143,7 +166,9 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
             </p>
           </div>
         ) : (
-          tasks.map(t => <TaskCard key={t.id} task={t} onClick={() => onTaskClick(t)} />)
+          tasks.map(t => (
+            <DraggableTask key={t.id} task={t} onClick={() => onTaskClick(t)} disabled={!canDrag} />
+          ))
         )}
       </div>
     </div>
