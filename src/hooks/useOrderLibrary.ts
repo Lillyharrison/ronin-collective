@@ -22,6 +22,7 @@ export interface OrderLibraryItem {
   website_url: string | null;
   notes: string | null;
   default_quantity: string | null;
+  purchase: string | null;
   status: LibraryStatus;
   substitutions_allowed: boolean;
   search_aliases: string[];

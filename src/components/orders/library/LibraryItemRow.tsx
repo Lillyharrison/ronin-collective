@@ -17,7 +17,7 @@ interface Props {
 
 /** Shared grid template — KEEP IN SYNC with LibraryListHeader. */
 export const LIBRARY_ROW_GRID =
-  "grid-cols-[16px_36px_minmax(140px,1.4fr)_70px_44px_minmax(160px,2fr)_36px]";
+  "grid-cols-[16px_36px_minmax(140px,1.4fr)_70px_44px_minmax(110px,0.9fr)_minmax(140px,1.6fr)_36px]";
 
 export function LibraryItemRow({ item, onOpen }: Props) {
   const { language } = useLanguage();
@@ -103,6 +103,11 @@ export function LibraryItemRow({ item, onOpen }: Props) {
         }
       >
         {item.substitutions_allowed ? <RefreshCw size={12} /> : <Lock size={12} />}
+      </span>
+
+      {/* Purchase */}
+      <span className="self-center text-[11px] text-muted-foreground/90 truncate" title={item.purchase ?? undefined}>
+        {item.purchase ?? "—"}
       </span>
 
       {/* Notes */}

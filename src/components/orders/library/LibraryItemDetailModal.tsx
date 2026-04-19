@@ -92,6 +92,13 @@ export function LibraryItemDetailModal({ item, onClose, onEdit, canEdit }: Props
               </Field>
             )}
 
+            {/* Purchase */}
+            {item.purchase && (
+              <Field label={isL ? "Compra" : "Purchase"}>
+                {item.purchase}
+              </Field>
+            )}
+
             {/* Notes */}
             {item.notes && (
               <Field label={isL ? "Notas" : "Notes"}>

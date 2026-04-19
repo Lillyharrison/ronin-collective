@@ -69,6 +69,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [defaultQty, setDefaultQty] = useState("");
+  const [purchase, setPurchase] = useState("");
   const [status, setStatus] = useState<LibraryStatus>("preferred");
   const [subAllowed, setSubAllowed] = useState(false);
   const [aliases, setAliases] = useState("");
@@ -85,6 +86,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setWebsiteUrl(item.website_url ?? "");
       setNotes(item.notes ?? "");
       setDefaultQty(item.default_quantity ?? "");
+      setPurchase(item.purchase ?? "");
       setStatus(item.status);
       setSubAllowed(item.substitutions_allowed);
       setAliases((item.search_aliases ?? []).join(", "));
@@ -95,6 +97,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setWebsiteUrl("");
       setNotes("");
       setDefaultQty("");
+      setPurchase("");
       setStatus("preferred");
       setSubAllowed(false);
       setAliases("");
@@ -122,6 +125,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       website_url: websiteUrl.trim() || null,
       notes: notes.trim() || null,
       default_quantity: defaultQty.trim() || null,
+      purchase: purchase.trim() || null,
       status,
       substitutions_allowed: subAllowed,
       search_aliases: aliasArr,
@@ -237,13 +241,23 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs">{isL ? "Cantidad estándar" : "Default quantity"}</Label>
-              <Input
-                value={defaultQty}
-                onChange={(e) => setDefaultQty(e.target.value)}
-                placeholder={isL ? "p. ej. 4" : "e.g. 4"}
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">{isL ? "Cantidad estándar" : "Default quantity"}</Label>
+                <Input
+                  value={defaultQty}
+                  onChange={(e) => setDefaultQty(e.target.value)}
+                  placeholder={isL ? "p. ej. 4" : "e.g. 4"}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">{isL ? "Compra" : "Purchase"}</Label>
+                <Input
+                  value={purchase}
+                  onChange={(e) => setPurchase(e.target.value)}
+                  placeholder={isL ? "p. ej. Suscripción mensual" : "e.g. Monthly subscription"}
+                />
+              </div>
             </div>
 
             <div>
