@@ -559,6 +559,57 @@ async function executeObservationTool(
     return results;
   }
 
+  if (name === "search_library_item") {
+    const keyword = String(args.keyword ?? "").trim();
+    if (!keyword) return { error: "keyword is required" };
+    let q = adminClient.from("order_library_items")
+      .select("id, name, category, status, notes, default_quantity, size, purchase, website_url, image_url, substitutions_allowed, search_aliases");
+    const kw = `%${keyword}%`;
+    q = q.or(`name.ilike.${kw},notes.ilike.${kw}`);
+    const status = (args.status as string) ?? "preferred";
+    if (status !== "all") q = q.eq("status", status);
+    if (args.category) q = q.eq("category", args.category as string);
+    q = q.order("status", { ascending: true }).order("name", { ascending: true }).limit(15);
+    const { data, error } = await q;
+    if (error) return { error: error.message };
+
+    // Also catch alias-only matches (search_aliases is a text[] array)
+    const lowerKw = keyword.toLowerCase();
+    const { data: aliasHits } = await adminClient
+      .from("order_library_items")
+      .select("id, name, category, status, notes, default_quantity, size, purchase, website_url, image_url, substitutions_allowed, search_aliases")
+      .contains("search_aliases", [lowerKw])
+      .limit(10);
+
+    const seen = new Set<string>();
+    const merged = [...(data ?? []), ...(aliasHits ?? [])].filter((r: Record<string, unknown>) => {
+      const id = r.id as string;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    return {
+      total: merged.length,
+      items: merged.map((i: Record<string, unknown>) => ({
+        id: i.id,
+        name: i.name,
+        category: i.category,
+        status: i.status,
+        notes: i.notes ?? null,
+        default_quantity: i.default_quantity ?? null,
+        size: i.size ?? null,
+        purchase: i.purchase ?? null,
+        website_url: i.website_url ?? null,
+        image_url: i.image_url ?? null,
+        substitutions_allowed: i.substitutions_allowed,
+      })),
+      hint: merged.length === 0
+        ? "No library match — proceed with the user's described item."
+        : "If one of these is a clear match, pass its `id` as `library_item_id` in add_shopping_list_item.",
+    };
+  }
+
   return { error: `Unknown observation tool: ${name}` };
 }
 
