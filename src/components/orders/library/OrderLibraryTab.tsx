@@ -1,25 +1,32 @@
 /**
- * OrderLibraryTab — top-level container for the read-only library grid.
+ * OrderLibraryTab — top-level container for the library grid/list.
  *
- * Mounted by OrdersSection as a tab. Handles search, status filter,
- * and category filter. Tile clicks open the detail modal.
- *
- * Step 4 will add the create/edit modal launched from `onEdit`.
+ * Mounts list-view by default, includes a legend explaining the status
+ * dot and substitution badges, and exposes a category dropdown.
+ * Edit/delete handled by LibraryItemFormModal.
  */
 import { useMemo, useState } from "react";
-import { Search, Plus, BookOpen, LayoutGrid, List } from "lucide-react";
+import { Search, Plus, BookOpen, LayoutGrid, List, Lock, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { cn } from "@/lib/utils";
 import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary";
 import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LibraryItemCard } from "./LibraryItemCard";
 import { LibraryItemRow } from "./LibraryItemRow";
 import { LibraryItemDetailModal } from "./LibraryItemDetailModal";
+import { LibraryItemFormModal } from "./LibraryItemFormModal";
 
 const CATEGORIES = [
-  { key: "all",      label: "All",                 labelEs: "Todos",            emoji: "📚" },
+  { key: "all",      label: "All categories",      labelEs: "Todas las categorías", emoji: "📚" },
   { key: "food",     label: "Food & Drink",        labelEs: "Comida y bebida",  emoji: "🍎" },
   { key: "cleaning", label: "Cleaning",            labelEs: "Limpieza",         emoji: "🧹" },
   { key: "supplies", label: "Supplies",            labelEs: "Suministros",      emoji: "📦" },
@@ -41,9 +48,11 @@ export function OrderLibraryTab() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("preferred");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selected, setSelected] = useState<OrderLibraryItem | null>(null);
+  const [editing, setEditing] = useState<OrderLibraryItem | null>(null);
+  const [creating, setCreating] = useState(false);
   const [viewMode, setViewMode] = useLocalStorage<"grid" | "list">(
     "order-library-view-mode",
-    "grid",
+    "list",
   );
 
   const filtered = useMemo(() => {
@@ -56,6 +65,11 @@ export function OrderLibraryTab() {
     }
     return list;
   }, [items, statusFilter, categoryFilter, query]);
+
+  const handleEditFromDetail = (item: OrderLibraryItem) => {
+    setSelected(null);
+    setEditing(item);
+  };
 
   return (
     <div className="px-3 sm:px-4 py-3">
@@ -77,14 +91,36 @@ export function OrderLibraryTab() {
         {canEditLibrary && (
           <button
             type="button"
-            disabled
-            title={isL ? "Próximamente" : "Coming in step 4"}
-            className="h-10 px-3 rounded-xl bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+            onClick={() => setCreating(true)}
+            className="h-10 px-3 rounded-xl bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold flex items-center gap-1.5 shadow-sm"
           >
             <Plus size={14} />
             <span className="hidden sm:inline">{isL ? "Nuevo" : "New"}</span>
           </button>
         )}
+      </div>
+
+      {/* Legend */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+        <span className="font-semibold uppercase tracking-wider text-muted-foreground/80">
+          {isL ? "Clave" : "Key"}:
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          {isL ? "Preferido" : "Preferred"}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
+          {isL ? "Antiguo" : "Deprecated"}
+        </span>
+        <span className="inline-flex items-center gap-1 text-blue-700 dark:text-blue-400">
+          <RefreshCw size={10} />
+          {isL ? "Sustitución OK" : "Sub OK"}
+        </span>
+        <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400">
+          <Lock size={10} />
+          {isL ? "Sin sustitución" : "No sub"}
+        </span>
       </div>
 
       {/* Status pill filter */}
@@ -107,27 +143,26 @@ export function OrderLibraryTab() {
         ))}
       </div>
 
-      {/* Category chips + view toggle */}
+      {/* Category dropdown + view toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <div className="flex-1 flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => setCategoryFilter(c.key)}
-              className={cn(
-                "whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium border transition-colors flex items-center gap-1",
-                categoryFilter === c.key
-                  ? "bg-accent text-accent-foreground border-accent"
-                  : "bg-muted/30 text-muted-foreground border-border hover:bg-muted",
-              )}
-            >
-              <span>{c.emoji}</span>
-              {isL ? c.labelEs : c.label}
-            </button>
-          ))}
+        <div className="flex-1 min-w-0">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((c) => (
+                <SelectItem key={c.key} value={c.key}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{c.emoji}</span>
+                    {isL ? c.labelEs : c.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* View mode toggle */}
         <div className="shrink-0 flex items-center rounded-full border border-border bg-muted/30 p-0.5">
           <button
             type="button"
@@ -170,7 +205,7 @@ export function OrderLibraryTab() {
               key={i}
               className={cn(
                 "rounded-xl bg-card border border-border animate-pulse",
-                viewMode === "grid" ? "aspect-[3/4]" : "h-20",
+                viewMode === "grid" ? "h-32" : "h-20",
               )}
             />
           ))}
@@ -198,8 +233,21 @@ export function OrderLibraryTab() {
       <LibraryItemDetailModal
         item={selected}
         onClose={() => setSelected(null)}
+        onEdit={canEditLibrary ? handleEditFromDetail : undefined}
         canEdit={canEditLibrary}
       />
+
+      {/* Create / edit modal */}
+      {canEditLibrary && (
+        <LibraryItemFormModal
+          open={creating || !!editing}
+          item={editing}
+          onClose={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }
