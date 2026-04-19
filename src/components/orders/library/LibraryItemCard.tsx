@@ -1,9 +1,8 @@
 /**
  * LibraryItemCard — compact tile for an order library item.
  *
- * Smaller footprint, image rendered as a contained icon (object-contain)
- * inside a square thumbnail. Surfaces key fields (default qty, substitution
- * policy, status) inline so users don't need to open the detail modal.
+ * Fixed-height image area (h-20) so all tiles share an identical icon
+ * footprint regardless of how much text content sits below.
  */
 import { Package, Lock, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,8 +28,8 @@ export function LibraryItemCard({ item, onOpen }: Props) {
         isDeprecated && "opacity-70",
       )}
     >
-      {/* Image area — contained icon, padded */}
-      <div className="relative aspect-square w-full bg-muted/30 p-2">
+      {/* Fixed-height icon area */}
+      <div className="relative h-20 w-full bg-muted/30 p-2">
         {item.image_url ? (
           <img
             src={item.image_url}
@@ -43,7 +42,7 @@ export function LibraryItemCard({ item, onOpen }: Props) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Package size={28} className="text-muted-foreground/30" />
+            <Package size={24} className="text-muted-foreground/30" />
           </div>
         )}
 
