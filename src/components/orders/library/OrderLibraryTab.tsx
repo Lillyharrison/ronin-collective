@@ -91,6 +91,8 @@ export function OrderLibraryTab() {
             return (a.status === b.status ? 0 : a.status === "preferred" ? -1 : 1) * dir;
           case "qty":
             return (a.default_quantity ?? "").localeCompare(b.default_quantity ?? "", undefined, { numeric: true }) * dir;
+          case "size":
+            return (a.size ?? "").localeCompare(b.size ?? "", undefined, { numeric: true }) * dir;
           case "sub":
             return ((a.substitutions_allowed ? 0 : 1) - (b.substitutions_allowed ? 0 : 1)) * dir;
           case "purchase":

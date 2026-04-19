@@ -17,7 +17,7 @@ interface Props {
 
 /** Shared grid template — KEEP IN SYNC with LibraryListHeader. */
 export const LIBRARY_ROW_GRID =
-  "grid-cols-[16px_36px_minmax(140px,1.4fr)_70px_44px_minmax(110px,0.9fr)_minmax(140px,1.6fr)_36px]";
+  "grid-cols-[16px_36px_minmax(140px,1.4fr)_70px_80px_44px_minmax(110px,0.9fr)_minmax(140px,1.6fr)_36px]";
 
 export function LibraryItemRow({ item, onOpen }: Props) {
   const { language } = useLanguage();
@@ -86,6 +86,11 @@ export function LibraryItemRow({ item, onOpen }: Props) {
       {/* Quantity */}
       <span className="self-center text-[12px] text-muted-foreground tabular-nums truncate">
         {item.default_quantity ?? "—"}
+      </span>
+
+      {/* Size */}
+      <span className="self-center text-[12px] text-muted-foreground truncate" title={item.size ?? undefined}>
+        {item.size ?? "—"}
       </span>
 
       {/* Substitution */}

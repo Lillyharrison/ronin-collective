@@ -92,6 +92,13 @@ export function LibraryItemDetailModal({ item, onClose, onEdit, canEdit }: Props
               </Field>
             )}
 
+            {/* Size */}
+            {item.size && (
+              <Field label={isL ? "Tamaño" : "Size"}>
+                {item.size}
+              </Field>
+            )}
+
             {/* Purchase */}
             {item.purchase && (
               <Field label={isL ? "Compra" : "Purchase"}>

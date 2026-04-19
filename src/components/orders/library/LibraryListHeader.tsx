@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LIBRARY_ROW_GRID } from "./LibraryItemRow";
 
-export type LibrarySortKey = "status" | "name" | "qty" | "sub" | "purchase" | "notes";
+export type LibrarySortKey = "status" | "name" | "qty" | "size" | "sub" | "purchase" | "notes";
 export type SortDir = "asc" | "desc";
 
 interface Props {
@@ -49,6 +49,7 @@ export function LibraryListHeader({ sortKey, sortDir, onSort }: Props) {
       <span /> {/* thumbnail column — no header */}
       {col("name", isL ? "Artículo" : "Item")}
       {col("qty", isL ? "Cant" : "Qty")}
+      {col("size", isL ? "Tamaño" : "Size")}
       {col("sub", isL ? "Sust" : "Sub", "center")}
       {col("purchase", isL ? "Compra" : "Purchase")}
       {col("notes", isL ? "Notas" : "Notes")}
