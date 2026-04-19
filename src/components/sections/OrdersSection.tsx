@@ -560,7 +560,7 @@ export function OrdersSection() {
       )}
 
       {/* Delivery table */}
-      {activeTab !== "shopping" && (
+      {(activeTab === "pending" || activeTab === "delivered") && (
         <div className="overflow-x-auto">
           {loading ? (
             <div className="px-4 pt-4 space-y-2">
