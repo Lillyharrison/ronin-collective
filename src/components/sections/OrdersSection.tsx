@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -441,7 +442,7 @@ export function OrdersSection() {
   const [hasMore, setHasMore]       = useState(false);
   const [page, setPage]             = useState(0);
   const [modalOrder, setModalOrder] = useState<Order | null>(null);
-  const [activeTab, setActiveTab]   = useState<MainTab>("pending");
+  const [activeTab, setActiveTab]   = useLocalStorage<MainTab>("orders-active-tab", "pending");
 
   const fetchOrders = async (pageIndex = 0) => {
     setLoading(true);
