@@ -186,6 +186,12 @@ export function OrderLibraryTab() {
             <LibraryItemCard key={item.id} item={item} onOpen={setSelected} />
           ))}
         </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {filtered.map((item) => (
+            <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
+          ))}
+        </div>
       )}
 
       {/* Detail modal */}
