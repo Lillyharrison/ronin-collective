@@ -53,6 +53,7 @@ const CATEGORY_OPTIONS = [
   { key: "cleaning", label: "Cleaning",           labelEs: "Limpieza" },
   { key: "supplies", label: "Supplies",           labelEs: "Suministros" },
   { key: "personal", label: "Personal Care",      labelEs: "Cuidado personal" },
+  { key: "laundry",  label: "Laundry",            labelEs: "Lavandería" },
   { key: "tech",     label: "Tech & Electronics", labelEs: "Tecnología" },
   { key: "other",    label: "Other",              labelEs: "Otro" },
 ];
