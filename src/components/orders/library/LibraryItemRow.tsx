@@ -1,9 +1,9 @@
 /**
- * LibraryItemRow — true list row (dense, single-line, table-like).
+ * LibraryItemRow — sortable list row.
  *
- * Mirrors the compact list density used in Maintenance/other sections:
- * small 32px thumbnail, single-line title, inline meta column, and a
- * trailing quick-link button. Designed for scanning many items quickly.
+ * Renders one row of the column-aligned library list. Column widths are
+ * fixed via inline grid template so they line up with the header in
+ * `LibraryListHeader`. Click anywhere (except the link) to open detail.
  */
 import { Package, Lock, RefreshCw, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,10 @@ interface Props {
   item: OrderLibraryItem;
   onOpen: (item: OrderLibraryItem) => void;
 }
+
+/** Shared grid template — KEEP IN SYNC with LibraryListHeader. */
+export const LIBRARY_ROW_GRID =
+  "grid-cols-[16px_36px_minmax(140px,1.4fr)_70px_44px_minmax(160px,2fr)_36px]";
 
 export function LibraryItemRow({ item, onOpen }: Props) {
   const { language } = useLanguage();
@@ -32,25 +36,28 @@ export function LibraryItemRow({ item, onOpen }: Props) {
         }
       }}
       className={cn(
-        "group flex items-center gap-2.5 rounded-md border-b border-border bg-card px-2 py-1.5 text-left cursor-pointer transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "grid items-start gap-2 px-2 py-2 border-b border-border last:border-b-0 cursor-pointer transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        LIBRARY_ROW_GRID,
         isDeprecated && "opacity-60",
       )}
     >
       {/* Status dot */}
-      <span
-        className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full",
-          isDeprecated ? "bg-muted-foreground/50" : "bg-emerald-500",
-        )}
-        title={
-          isDeprecated
-            ? isL ? "Ya no preferido" : "No longer preferred"
-            : isL ? "Preferido" : "Preferred"
-        }
-      />
+      <span className="flex h-5 items-center justify-center">
+        <span
+          className={cn(
+            "h-2 w-2 rounded-full",
+            isDeprecated ? "bg-muted-foreground/50" : "bg-emerald-500",
+          )}
+          title={
+            isDeprecated
+              ? isL ? "Ya no preferido" : "No longer preferred"
+              : isL ? "Preferido" : "Preferred"
+          }
+        />
+      </span>
 
-      {/* Tiny thumbnail */}
-      <div className="h-8 w-8 shrink-0 overflow-hidden rounded border border-border/50 bg-muted/30 p-0.5">
+      {/* Thumbnail */}
+      <div className="h-9 w-9 overflow-hidden rounded border border-border/50 bg-muted/30 p-0.5">
         {item.image_url ? (
           <img
             src={item.image_url}
@@ -65,27 +72,26 @@ export function LibraryItemRow({ item, onOpen }: Props) {
         )}
       </div>
 
-      {/* Name (single line, truncates) */}
+      {/* Name */}
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-sm font-medium text-foreground",
+          "min-w-0 self-center text-sm font-medium text-foreground truncate",
           isDeprecated && "line-through",
         )}
+        title={item.name}
       >
         {item.name}
       </span>
 
-      {/* Inline meta — hidden on narrow widths */}
-      {item.default_quantity && (
-        <span className="hidden sm:inline shrink-0 text-[11px] text-muted-foreground tabular-nums">
-          {isL ? "Cant" : "Qty"} {item.default_quantity}
-        </span>
-      )}
+      {/* Quantity */}
+      <span className="self-center text-[12px] text-muted-foreground tabular-nums truncate">
+        {item.default_quantity ?? "—"}
+      </span>
 
-      {/* Substitution icon */}
+      {/* Substitution */}
       <span
         className={cn(
-          "hidden sm:inline-flex shrink-0 items-center justify-center",
+          "self-center inline-flex items-center justify-center",
           item.substitutions_allowed
             ? "text-blue-600 dark:text-blue-400"
             : "text-amber-600 dark:text-amber-400",
@@ -96,25 +102,30 @@ export function LibraryItemRow({ item, onOpen }: Props) {
             : isL ? "Sin sustitución" : "No substitution"
         }
       >
-        {item.substitutions_allowed ? <RefreshCw size={11} /> : <Lock size={11} />}
+        {item.substitutions_allowed ? <RefreshCw size={12} /> : <Lock size={12} />}
       </span>
 
-      {/* Quick link */}
-      {item.website_url ? (
-        <a
-          href={item.website_url}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          aria-label={isL ? "Abrir enlace" : "Open link"}
-          title={isL ? "Abrir enlace" : "Open link"}
-          className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        >
-          <ExternalLink size={13} />
-        </a>
-      ) : (
-        <span className="h-7 w-7 shrink-0" />
-      )}
+      {/* Notes */}
+      <span className="text-[11px] text-muted-foreground/90 leading-snug whitespace-pre-wrap line-clamp-3">
+        {item.notes ?? ""}
+      </span>
+
+      {/* Link */}
+      <span className="flex h-5 items-center justify-center">
+        {item.website_url ? (
+          <a
+            href={item.website_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={isL ? "Abrir enlace" : "Open link"}
+            title={isL ? "Abrir enlace" : "Open link"}
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <ExternalLink size={13} />
+          </a>
+        ) : null}
+      </span>
     </div>
   );
 }
