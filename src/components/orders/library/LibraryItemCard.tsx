@@ -1,11 +1,9 @@
 /**
- * LibraryItemCard — tile representation of an order library item.
+ * LibraryItemCard — compact tile for an order library item.
  *
- * Used in the read-only library grid. Tap to open detail modal.
- * Visual signals:
- *  - Image (or placeholder)
- *  - Status dot: green = preferred, muted = no_longer_preferred
- *  - Substitution policy badge: 🔒 not allowed / 🔄 allowed
+ * Smaller footprint, image rendered as a contained icon (object-contain)
+ * inside a square thumbnail. Surfaces key fields (default qty, substitution
+ * policy, status) inline so users don't need to open the detail modal.
  */
 import { Package, Lock, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,32 +25,32 @@ export function LibraryItemCard({ item, onOpen }: Props) {
       type="button"
       onClick={() => onOpen(item)}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-transform active:scale-[0.98]",
+        "group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-transform active:scale-[0.98]",
         isDeprecated && "opacity-70",
       )}
     >
-      {/* Image area */}
-      <div className="relative aspect-square w-full bg-muted/40">
+      {/* Image area — contained icon, padded */}
+      <div className="relative aspect-square w-full bg-muted/30 p-2">
         {item.image_url ? (
           <img
             src={item.image_url}
             alt={item.name}
             loading="lazy"
             className={cn(
-              "h-full w-full object-cover",
+              "h-full w-full object-contain",
               isDeprecated && "grayscale",
             )}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Package size={36} className="text-muted-foreground/30" />
+            <Package size={28} className="text-muted-foreground/30" />
           </div>
         )}
 
         {/* Status dot */}
         <span
           className={cn(
-            "absolute left-2 top-2 inline-block h-2.5 w-2.5 rounded-full border-2 border-card shadow-sm",
+            "absolute left-1.5 top-1.5 inline-block h-2 w-2 rounded-full border-2 border-card shadow-sm",
             isDeprecated ? "bg-muted-foreground/50" : "bg-emerald-500",
           )}
           title={
@@ -65,7 +63,7 @@ export function LibraryItemCard({ item, onOpen }: Props) {
         {/* Substitution badge */}
         <span
           className={cn(
-            "absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold shadow-sm backdrop-blur",
+            "absolute right-1.5 top-1.5 inline-flex items-center justify-center rounded-full p-1 shadow-sm backdrop-blur",
             item.substitutions_allowed
               ? "bg-blue-500/15 text-blue-700 dark:text-blue-300"
               : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
@@ -76,25 +74,28 @@ export function LibraryItemCard({ item, onOpen }: Props) {
               : isL ? "Sin sustituciones" : "No substitutions"
           }
         >
-          {item.substitutions_allowed
-            ? <RefreshCw size={9} />
-            : <Lock size={9} />}
+          {item.substitutions_allowed ? <RefreshCw size={8} /> : <Lock size={8} />}
         </span>
       </div>
 
       {/* Text */}
-      <div className="flex flex-col gap-1 p-3">
+      <div className="flex flex-col gap-0.5 px-2 py-1.5 border-t border-border/50">
         <span
           className={cn(
-            "line-clamp-2 text-sm font-semibold text-foreground",
+            "line-clamp-2 text-[11px] font-semibold leading-tight text-foreground",
             isDeprecated && "line-through",
           )}
         >
           {item.name}
         </span>
         {item.default_quantity && (
-          <span className="text-[11px] text-muted-foreground">
-            {item.default_quantity}
+          <span className="text-[10px] text-muted-foreground leading-tight">
+            {isL ? "Cant" : "Qty"}: {item.default_quantity}
+          </span>
+        )}
+        {item.notes && (
+          <span className="line-clamp-2 text-[9px] text-muted-foreground/80 leading-snug whitespace-pre-wrap">
+            {item.notes}
           </span>
         )}
       </div>
