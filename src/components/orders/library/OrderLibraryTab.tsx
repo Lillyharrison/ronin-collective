@@ -7,13 +7,15 @@
  * Step 4 will add the create/edit modal launched from `onEdit`.
  */
 import { useMemo, useState } from "react";
-import { Search, Plus, Filter, BookOpen } from "lucide-react";
+import { Search, Plus, BookOpen, LayoutGrid, List } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { cn } from "@/lib/utils";
 import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary";
 import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
 import { LibraryItemCard } from "./LibraryItemCard";
+import { LibraryItemRow } from "./LibraryItemRow";
 import { LibraryItemDetailModal } from "./LibraryItemDetailModal";
 
 const CATEGORIES = [
