@@ -69,6 +69,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [defaultQty, setDefaultQty] = useState("");
+  const [size, setSize] = useState("");
   const [purchase, setPurchase] = useState("");
   const [status, setStatus] = useState<LibraryStatus>("preferred");
   const [subAllowed, setSubAllowed] = useState(false);
@@ -86,6 +87,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setWebsiteUrl(item.website_url ?? "");
       setNotes(item.notes ?? "");
       setDefaultQty(item.default_quantity ?? "");
+      setSize(item.size ?? "");
       setPurchase(item.purchase ?? "");
       setStatus(item.status);
       setSubAllowed(item.substitutions_allowed);
@@ -97,6 +99,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setWebsiteUrl("");
       setNotes("");
       setDefaultQty("");
+      setSize("");
       setPurchase("");
       setStatus("preferred");
       setSubAllowed(false);
@@ -125,6 +128,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       website_url: websiteUrl.trim() || null,
       notes: notes.trim() || null,
       default_quantity: defaultQty.trim() || null,
+      size: size.trim() || null,
       purchase: purchase.trim() || null,
       status,
       substitutions_allowed: subAllowed,
@@ -251,13 +255,22 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
                 />
               </div>
               <div>
-                <Label className="text-xs">{isL ? "Compra" : "Purchase"}</Label>
+                <Label className="text-xs">{isL ? "Tamaño" : "Size"}</Label>
                 <Input
-                  value={purchase}
-                  onChange={(e) => setPurchase(e.target.value)}
-                  placeholder={isL ? "p. ej. Suscripción mensual" : "e.g. Monthly subscription"}
+                  value={size}
+                  onChange={(e) => setSize(e.target.value)}
+                  placeholder={isL ? "p. ej. 32 oz" : "e.g. 32 oz"}
                 />
               </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">{isL ? "Compra" : "Purchase"}</Label>
+              <Input
+                value={purchase}
+                onChange={(e) => setPurchase(e.target.value)}
+                placeholder={isL ? "p. ej. Suscripción mensual" : "e.g. Monthly subscription"}
+              />
             </div>
 
             <div>
