@@ -89,7 +89,7 @@ export function LibraryItemRow({ item, onOpen }: Props) {
         </div>
 
         {item.notes && (
-          <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground/80 whitespace-pre-wrap leading-snug">
+          <p className="mt-0.5 text-[11px] text-muted-foreground/80 whitespace-pre-wrap leading-snug">
             {item.notes}
           </p>
         )}
