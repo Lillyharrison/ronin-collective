@@ -9,6 +9,11 @@ import {
 } from "lucide-react";
 import { TaskCard, KanbanTask, STATUS_CONFIG, TaskStatus } from "@/components/tasks/TaskCard";
 import { TaskModal, FullTask } from "@/components/tasks/TaskModal";
+import {
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent,
+  PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable,
+} from "@dnd-kit/core";
+import { toast } from "sonner";
 
 // ─── Partial checklists widget (keep from original) ───────────────────────────
 function PartialChecklistsWidget() {
