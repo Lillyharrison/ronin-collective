@@ -1,11 +1,11 @@
 /**
- * LibraryItemRow — list-view representation of an order library item.
+ * LibraryItemRow — true list row (dense, single-line, table-like).
  *
- * Horizontal row with a small thumbnail, name, key metadata, and
- * inline status indicators. Used when the user toggles list view in
- * OrderLibraryTab.
+ * Mirrors the compact list density used in Maintenance/other sections:
+ * small 32px thumbnail, single-line title, inline meta column, and a
+ * trailing quick-link button. Designed for scanning many items quickly.
  */
-import { Package, Lock, RefreshCw, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { Package, Lock, RefreshCw, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { OrderLibraryItem } from "@/hooks/useOrderLibrary";
@@ -32,75 +32,75 @@ export function LibraryItemRow({ item, onOpen }: Props) {
         }
       }}
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-border bg-card p-2 text-left shadow-sm transition-colors hover:bg-accent/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isDeprecated && "opacity-70",
+        "group flex items-center gap-2.5 rounded-md border-b border-border bg-card px-2 py-1.5 text-left cursor-pointer transition-colors hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        isDeprecated && "opacity-60",
       )}
     >
-      {/* Thumbnail */}
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted/30 p-1">
+      {/* Status dot */}
+      <span
+        className={cn(
+          "h-1.5 w-1.5 shrink-0 rounded-full",
+          isDeprecated ? "bg-muted-foreground/50" : "bg-emerald-500",
+        )}
+        title={
+          isDeprecated
+            ? isL ? "Ya no preferido" : "No longer preferred"
+            : isL ? "Preferido" : "Preferred"
+        }
+      />
+
+      {/* Tiny thumbnail */}
+      <div className="h-8 w-8 shrink-0 overflow-hidden rounded border border-border/50 bg-muted/30 p-0.5">
         {item.image_url ? (
           <img
             src={item.image_url}
-            alt={item.name}
+            alt=""
             loading="lazy"
             className={cn("h-full w-full object-contain", isDeprecated && "grayscale")}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Package size={20} className="text-muted-foreground/30" />
+            <Package size={14} className="text-muted-foreground/30" />
           </div>
         )}
-        <span
-          className={cn(
-            "absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card",
-            isDeprecated ? "bg-muted-foreground/50" : "bg-emerald-500",
-          )}
-        />
       </div>
 
-      {/* Body */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              "truncate text-sm font-semibold text-foreground",
-              isDeprecated && "line-through",
-            )}
-          >
-            {item.name}
-          </span>
-        </div>
-
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-          {item.default_quantity && (
-            <span className="font-medium">
-              {isL ? "Cant" : "Qty"}: {item.default_quantity}
-            </span>
-          )}
-          <span
-            className={cn(
-              "inline-flex items-center gap-0.5",
-              item.substitutions_allowed
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-amber-600 dark:text-amber-400",
-            )}
-          >
-            {item.substitutions_allowed ? <RefreshCw size={9} /> : <Lock size={9} />}
-            {item.substitutions_allowed
-              ? isL ? "Sust." : "Sub OK"
-              : isL ? "Sin sust." : "No sub"}
-          </span>
-        </div>
-
-        {item.notes && (
-          <p className="mt-0.5 text-[11px] text-muted-foreground/80 whitespace-pre-wrap leading-snug">
-            {item.notes}
-          </p>
+      {/* Name (single line, truncates) */}
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-sm font-medium text-foreground",
+          isDeprecated && "line-through",
         )}
-      </div>
+      >
+        {item.name}
+      </span>
 
-      {/* Quick link button */}
-      {item.website_url && (
+      {/* Inline meta — hidden on narrow widths */}
+      {item.default_quantity && (
+        <span className="hidden sm:inline shrink-0 text-[11px] text-muted-foreground tabular-nums">
+          {isL ? "Cant" : "Qty"} {item.default_quantity}
+        </span>
+      )}
+
+      {/* Substitution icon */}
+      <span
+        className={cn(
+          "hidden sm:inline-flex shrink-0 items-center justify-center",
+          item.substitutions_allowed
+            ? "text-blue-600 dark:text-blue-400"
+            : "text-amber-600 dark:text-amber-400",
+        )}
+        title={
+          item.substitutions_allowed
+            ? isL ? "Sustitución permitida" : "Substitution allowed"
+            : isL ? "Sin sustitución" : "No substitution"
+        }
+      >
+        {item.substitutions_allowed ? <RefreshCw size={11} /> : <Lock size={11} />}
+      </span>
+
+      {/* Quick link */}
+      {item.website_url ? (
         <a
           href={item.website_url}
           target="_blank"
@@ -108,10 +108,12 @@ export function LibraryItemRow({ item, onOpen }: Props) {
           onClick={(e) => e.stopPropagation()}
           aria-label={isL ? "Abrir enlace" : "Open link"}
           title={isL ? "Abrir enlace" : "Open link"}
-          className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         >
-          <ExternalLink size={14} />
+          <ExternalLink size={13} />
         </a>
+      ) : (
+        <span className="h-7 w-7 shrink-0" />
       )}
     </div>
   );
