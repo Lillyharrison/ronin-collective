@@ -657,13 +657,14 @@ async function addShoppingListItemsSilently(
   adminClient: ReturnType<typeof createClient>
 ): Promise<string> {
   try {
-    const items = args.items as Array<{ name: string; category: string; quantity?: string; notes?: string }>;
+    const items = args.items as Array<{ name: string; category: string; quantity?: string; notes?: string; library_item_id?: string }>;
     if (!items?.length) return "⚠️ No items provided.";
     const rows = items.map(item => ({
       name: item.name,
       category: item.category,
       quantity: item.quantity ?? null,
       notes: item.notes ?? null,
+      library_item_id: item.library_item_id ?? null,
       created_by: callerUserId,
       is_checked: false,
     }));
