@@ -151,6 +151,9 @@ const RONIN_TOOLS = [
 
   // ── WRITE TOOLS (confirmation required) ─────────────────────────────────────
   {
+    type: "function",
+    function: {
+      name: "log_maintenance_issue",
       description: "Log a new maintenance issue in the platform. This is the CORRECT tool to use when a user reports a maintenance problem (broken item, leak, damage, etc.). Use search_maintenance_issues first to avoid duplicates. If an admin/master_admin is approving the issue (not just reporting it), the issue should be logged as 'approved' immediately. If the user attached a photo in this conversation, include its URL in photo_url. IMPORTANT: If the issue was originally reported by someone else in the conversation (not the person clicking approve), pass their name in reported_by_name so they get proper credit.",
       parameters: {
         type: "object",
