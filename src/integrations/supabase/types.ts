@@ -874,6 +874,54 @@ export type Database = {
           },
         ]
       }
+      order_library_items: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          default_quantity: string | null
+          id: string
+          image_url: string | null
+          name: string
+          notes: string | null
+          search_aliases: string[]
+          status: string
+          substitutions_allowed: boolean
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_quantity?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          notes?: string | null
+          search_aliases?: string[]
+          status?: string
+          substitutions_allowed?: boolean
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_quantity?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          notes?: string | null
+          search_aliases?: string[]
+          status?: string
+          substitutions_allowed?: boolean
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           carrier: string | null
@@ -1359,6 +1407,7 @@ export type Database = {
           created_by: string | null
           id: string
           is_checked: boolean
+          library_item_id: string | null
           name: string
           notes: string | null
           property_id: string | null
@@ -1371,6 +1420,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_checked?: boolean
+          library_item_id?: string | null
           name: string
           notes?: string | null
           property_id?: string | null
@@ -1383,6 +1433,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_checked?: boolean
+          library_item_id?: string | null
           name?: string
           notes?: string | null
           property_id?: string | null
@@ -2034,6 +2085,7 @@ export type Database = {
         Args: { _message_ids: string[]; _user_id: string }
         Returns: undefined
       }
+      can_edit_orders: { Args: { _user_id: string }; Returns: boolean }
       can_user_see_checklist: {
         Args: {
           _template_assigned_dept: string
@@ -2051,6 +2103,8 @@ export type Database = {
       notify_ronin_overdue_tasks: { Args: never; Returns: undefined }
       prune_old_notifications: { Args: never; Returns: undefined }
       prune_old_system_events: { Args: never; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "master_admin" | "admin" | "manager" | "staff" | "principal"
