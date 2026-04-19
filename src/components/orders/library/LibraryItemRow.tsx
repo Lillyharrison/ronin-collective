@@ -5,7 +5,7 @@
  * inline status indicators. Used when the user toggles list view in
  * OrderLibraryTab.
  */
-import { Package, Lock, RefreshCw, ExternalLink } from "lucide-react";
+import { Package, Lock, RefreshCw, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { OrderLibraryItem } from "@/hooks/useOrderLibrary";
@@ -21,11 +21,18 @@ export function LibraryItemRow({ item, onOpen }: Props) {
   const isDeprecated = item.status === "no_longer_preferred";
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onOpen(item)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(item);
+        }
+      }}
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-border bg-card p-2 text-left shadow-sm transition-colors hover:bg-accent/30 active:scale-[0.99]",
+        "flex items-center gap-3 rounded-xl border border-border bg-card p-2 text-left shadow-sm transition-colors hover:bg-accent/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isDeprecated && "opacity-70",
       )}
     >
@@ -62,9 +69,6 @@ export function LibraryItemRow({ item, onOpen }: Props) {
           >
             {item.name}
           </span>
-          {item.website_url && (
-            <ExternalLink size={11} className="shrink-0 text-muted-foreground/50" />
-          )}
         </div>
 
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
@@ -94,6 +98,21 @@ export function LibraryItemRow({ item, onOpen }: Props) {
           </p>
         )}
       </div>
-    </button>
+
+      {/* Quick link button */}
+      {item.website_url && (
+        <a
+          href={item.website_url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          aria-label={isL ? "Abrir enlace" : "Open link"}
+          title={isL ? "Abrir enlace" : "Open link"}
+          className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        >
+          <ExternalLink size={14} />
+        </a>
+      )}
+    </div>
   );
 }

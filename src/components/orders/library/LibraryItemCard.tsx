@@ -4,7 +4,7 @@
  * Fixed-height image area (h-20) so all tiles share an identical icon
  * footprint regardless of how much text content sits below.
  */
-import { Package, Lock, RefreshCw } from "lucide-react";
+import { Package, Lock, RefreshCw, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { OrderLibraryItem } from "@/hooks/useOrderLibrary";
@@ -20,11 +20,18 @@ export function LibraryItemCard({ item, onOpen }: Props) {
   const isDeprecated = item.status === "no_longer_preferred";
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onOpen(item)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(item);
+        }
+      }}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-transform active:scale-[0.98]",
+        "group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isDeprecated && "opacity-70",
       )}
     >
@@ -75,6 +82,21 @@ export function LibraryItemCard({ item, onOpen }: Props) {
         >
           {item.substitutions_allowed ? <RefreshCw size={8} /> : <Lock size={8} />}
         </span>
+
+        {/* Quick link button */}
+        {item.website_url && (
+          <a
+            href={item.website_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={isL ? "Abrir enlace" : "Open link"}
+            title={isL ? "Abrir enlace" : "Open link"}
+            className="absolute bottom-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm border border-border hover:bg-accent transition-colors"
+          >
+            <ExternalLink size={11} />
+          </a>
+        )}
       </div>
 
       {/* Text */}
@@ -98,6 +120,6 @@ export function LibraryItemCard({ item, onOpen }: Props) {
           </span>
         )}
       </div>
-    </button>
+    </div>
   );
 }
