@@ -31,6 +31,7 @@ const CATEGORIES = [
   { key: "cleaning", label: "Cleaning",            labelEs: "Limpieza",         emoji: "🧹" },
   { key: "supplies", label: "Supplies",            labelEs: "Suministros",      emoji: "📦" },
   { key: "personal", label: "Personal Care",       labelEs: "Cuidado personal", emoji: "🧴" },
+  { key: "laundry",  label: "Laundry",             labelEs: "Lavandería",       emoji: "🧺" },
   { key: "tech",     label: "Tech & Electronics",  labelEs: "Tecnología",       emoji: "💡" },
   { key: "other",    label: "Other",               labelEs: "Otro",             emoji: "🛒" },
 ];

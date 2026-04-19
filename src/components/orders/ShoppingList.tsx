@@ -20,6 +20,7 @@ const CATEGORIES: { key: string; label: string; labelEs: string; emoji: string; 
   { key: "cleaning",  label: "Cleaning",           labelEs: "Limpieza",            emoji: "🧹", color: "bg-blue-500/10 text-blue-700 border-blue-500/20" },
   { key: "supplies",  label: "Supplies",           labelEs: "Suministros",         emoji: "📦", color: "bg-amber-500/10 text-amber-700 border-amber-500/20" },
   { key: "personal",  label: "Personal Care",      labelEs: "Cuidado personal",    emoji: "🧴", color: "bg-pink-500/10 text-pink-700 border-pink-500/20" },
+  { key: "laundry",   label: "Laundry",            labelEs: "Lavandería",          emoji: "🧺", color: "bg-cyan-500/10 text-cyan-700 border-cyan-500/20" },
   { key: "tech",      label: "Tech & Electronics", labelEs: "Tecnología",          emoji: "💡", color: "bg-purple-500/10 text-purple-700 border-purple-500/20" },
   { key: "other",     label: "Other",              labelEs: "Otro",                emoji: "🛒", color: "bg-muted text-muted-foreground border-border" },
 ];
