@@ -532,7 +532,7 @@ export function OrdersSection() {
           )}
         >
           <ShoppingBag size={12} />
-          {isL ? "Lista" : "List"}
+          {isL ? "Lista de compras" : "Shopping List"}
         </button>
         <button
           onClick={() => setActiveTab("library")}
