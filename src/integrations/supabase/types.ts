@@ -884,6 +884,7 @@ export type Database = {
           image_url: string | null
           name: string
           notes: string | null
+          purchase: string | null
           search_aliases: string[]
           status: string
           substitutions_allowed: boolean
@@ -899,6 +900,7 @@ export type Database = {
           image_url?: string | null
           name: string
           notes?: string | null
+          purchase?: string | null
           search_aliases?: string[]
           status?: string
           substitutions_allowed?: boolean
@@ -914,6 +916,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           notes?: string | null
+          purchase?: string | null
           search_aliases?: string[]
           status?: string
           substitutions_allowed?: boolean
