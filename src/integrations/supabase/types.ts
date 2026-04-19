@@ -886,6 +886,7 @@ export type Database = {
           notes: string | null
           purchase: string | null
           search_aliases: string[]
+          size: string | null
           status: string
           substitutions_allowed: boolean
           updated_at: string
@@ -902,6 +903,7 @@ export type Database = {
           notes?: string | null
           purchase?: string | null
           search_aliases?: string[]
+          size?: string | null
           status?: string
           substitutions_allowed?: boolean
           updated_at?: string
@@ -918,6 +920,7 @@ export type Database = {
           notes?: string | null
           purchase?: string | null
           search_aliases?: string[]
+          size?: string | null
           status?: string
           substitutions_allowed?: boolean
           updated_at?: string
