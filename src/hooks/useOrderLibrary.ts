@@ -60,7 +60,7 @@ export function useOrderLibrary() {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel("order_library_items_changes")
+      .channel(`order_library_items_changes_${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_library_items" },
