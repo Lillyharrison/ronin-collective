@@ -9,6 +9,11 @@ import {
 } from "lucide-react";
 import { TaskCard, KanbanTask, STATUS_CONFIG, TaskStatus } from "@/components/tasks/TaskCard";
 import { TaskModal, FullTask } from "@/components/tasks/TaskModal";
+import {
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent,
+  PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable,
+} from "@dnd-kit/core";
+import { toast } from "sonner";
 
 // ─── Partial checklists widget (keep from original) ───────────────────────────
 function PartialChecklistsWidget() {
@@ -88,6 +93,21 @@ function PartialChecklistsWidget() {
   );
 }
 
+// Draggable wrapper for TaskCard
+function DraggableTask({ task, onClick, disabled }: { task: KanbanTask; onClick: () => void; disabled: boolean }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, disabled });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={{ opacity: isDragging ? 0.4 : 1, touchAction: disabled ? "auto" : "manipulation" }}
+    >
+      <TaskCard task={task} onClick={onClick} />
+    </div>
+  );
+}
+
 // ─── Kanban column ────────────────────────────────────────────────────────────
 interface ColumnProps {
   status: TaskStatus;
@@ -95,11 +115,13 @@ interface ColumnProps {
   onTaskClick: (task: KanbanTask) => void;
   onAddClick?: () => void;
   isAdmin: boolean;
+  canDrag: boolean;
 }
 
-function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: ColumnProps) {
+function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin, canDrag }: ColumnProps) {
   const { language } = useLanguage();
   const cfg = STATUS_CONFIG[status];
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${status}` });
   const ICONS: Record<TaskStatus, React.ReactNode> = {
     urgent:     <AlertTriangle size={12} />,
     pending:    <Circle size={12} />,
@@ -130,7 +152,13 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
         )}
       </div>
       {/* Cards */}
-      <div className="bg-muted/30 rounded-b-xl p-2 space-y-2 min-h-[80px] max-h-[55vh] overflow-y-auto">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "rounded-b-xl p-2 space-y-2 min-h-[80px] max-h-[55vh] overflow-y-auto transition-colors",
+          isOver ? "bg-[hsl(var(--gold)/0.12)] ring-2 ring-[hsl(var(--gold)/0.4)]" : "bg-muted/30"
+        )}
+      >
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center h-16">
             <p className="text-[10px] text-muted-foreground/50 italic">
@@ -138,7 +166,9 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin }: Colum
             </p>
           </div>
         ) : (
-          tasks.map(t => <TaskCard key={t.id} task={t} onClick={() => onTaskClick(t)} />)
+          tasks.map(t => (
+            <DraggableTask key={t.id} task={t} onClick={() => onTaskClick(t)} disabled={!canDrag} />
+          ))
         )}
       </div>
     </div>
@@ -239,6 +269,41 @@ export function TasksSection() {
 
   const columns: TaskStatus[] = ["urgent", "pending", "in_progress", "completed"];
   const byStatus = (s: TaskStatus) => liveTasks.filter(t => t.status === s);
+
+  // Drag-and-drop status updates
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+  );
+
+  const handleDragEnd = async (e: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = e;
+    if (!over) return;
+    const overId = String(over.id);
+    if (!overId.startsWith("col-")) return;
+    const newStatusVal = overId.slice(4) as TaskStatus;
+    const taskId = String(active.id);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.status === newStatusVal) return;
+
+    // Optimistic update
+    const prev = tasks;
+    setTasks(prev.map(t => t.id === taskId ? { ...t, status: newStatusVal } : t));
+
+    const patch: { status: TaskStatus; completed_at?: string | null } = { status: newStatusVal };
+    if (newStatusVal === "completed") patch.completed_at = new Date().toISOString();
+    else if (task.status === "completed") patch.completed_at = null;
+
+    const { error } = await supabase.from("tasks").update(patch).eq("id", taskId);
+    if (error) {
+      setTasks(prev);
+      toast.error(isL ? "No se pudo actualizar" : "Could not update task");
+    }
+  };
+
+  const activeDragTask = activeDragId ? tasks.find(t => t.id === activeDragId) : null;
 
   const openNew = (status: TaskStatus) => {
     setNewStatus(status);
@@ -344,18 +409,29 @@ export function TasksSection() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
-          {columns.map(s => (
-          <KanbanColumn
-              key={s}
-              status={s}
-              tasks={byStatus(s)}
-              onTaskClick={openEdit}
-              onAddClick={() => openNew(s)}
-              isAdmin={canManageTasks}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          onDragStart={(e: DragStartEvent) => setActiveDragId(String(e.active.id))}
+          onDragCancel={() => setActiveDragId(null)}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
+            {columns.map(s => (
+              <KanbanColumn
+                key={s}
+                status={s}
+                tasks={byStatus(s)}
+                onTaskClick={openEdit}
+                onAddClick={() => openNew(s)}
+                isAdmin={canManageTasks}
+                canDrag={canManageTasks}
+              />
+            ))}
+          </div>
+          <DragOverlay>
+            {activeDragTask ? <TaskCard task={activeDragTask} onClick={() => {}} /> : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* Load more */}
