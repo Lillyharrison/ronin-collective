@@ -314,7 +314,7 @@ const RONIN_TOOLS = [
         properties: {
           items: {
             type: "array",
-            description: "One or more items to add to the shopping list",
+            description: "One or more items to add to the shopping list. If a library match was found via search_library_item, include its id as library_item_id so the entry inherits library metadata (image, supplier, etc.).",
             items: {
               type: "object",
               properties: {
@@ -322,6 +322,7 @@ const RONIN_TOOLS = [
                 category: { type: "string", enum: ["food", "cleaning", "supplies", "personal", "tech", "other"], description: "Auto-detect: food=groceries/produce/drinks, cleaning=detergents/mops, supplies=paper/packaging, personal=toiletries/cosmetics, tech=electronics/batteries" },
                 quantity: { type: "string", description: "Optional quantity, e.g. '2 kg', '1 case'" },
                 notes: { type: "string", description: "Optional extra notes" },
+                library_item_id: { type: "string", description: "Optional UUID of a matched order_library_items row from search_library_item. When set, the shopping list entry is linked to that library item." },
               },
               required: ["name", "category"],
             },
