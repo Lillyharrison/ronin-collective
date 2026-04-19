@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { LibraryItemCard } from "./LibraryItemCard";
 import { LibraryItemRow } from "./LibraryItemRow";
+import { LibraryListHeader, type LibrarySortKey, type SortDir } from "./LibraryListHeader";
 import { LibraryItemDetailModal } from "./LibraryItemDetailModal";
 import { LibraryItemFormModal } from "./LibraryItemFormModal";
 
@@ -55,6 +56,23 @@ export function OrderLibraryTab() {
     "order-library-view-mode",
     "list",
   );
+  const [sortKey, setSortKey] = useLocalStorage<LibrarySortKey>(
+    "order-library-sort-key",
+    "name",
+  );
+  const [sortDir, setSortDir] = useLocalStorage<SortDir>(
+    "order-library-sort-dir",
+    "asc",
+  );
+
+  const handleSort = (key: LibrarySortKey) => {
+    if (key === sortKey) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
 
   const filtered = useMemo(() => {
     let list = items;
@@ -64,8 +82,27 @@ export function OrderLibraryTab() {
       const matches = findLibraryMatches(query, list, { minScore: 0.4, limit: 50 });
       list = matches.map((m) => m.item);
     }
+    // Sort (only applied to list view; grid view keeps default order)
+    if (viewMode === "list") {
+      const dir = sortDir === "asc" ? 1 : -1;
+      list = [...list].sort((a, b) => {
+        switch (sortKey) {
+          case "status":
+            return (a.status === b.status ? 0 : a.status === "preferred" ? -1 : 1) * dir;
+          case "qty":
+            return (a.default_quantity ?? "").localeCompare(b.default_quantity ?? "", undefined, { numeric: true }) * dir;
+          case "sub":
+            return ((a.substitutions_allowed ? 0 : 1) - (b.substitutions_allowed ? 0 : 1)) * dir;
+          case "notes":
+            return (a.notes ?? "").localeCompare(b.notes ?? "") * dir;
+          case "name":
+          default:
+            return a.name.localeCompare(b.name) * dir;
+        }
+      });
+    }
     return list;
-  }, [items, statusFilter, categoryFilter, query]);
+  }, [items, statusFilter, categoryFilter, query, viewMode, sortKey, sortDir]);
 
   const handleEditFromDetail = (item: OrderLibraryItem) => {
     setSelected(null);
@@ -223,10 +260,13 @@ export function OrderLibraryTab() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col rounded-lg border border-border overflow-hidden bg-card">
-          {filtered.map((item) => (
-            <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
-          ))}
+        <div className="rounded-lg border border-border overflow-hidden bg-card">
+          <LibraryListHeader sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+          <div className="flex flex-col">
+            {filtered.map((item) => (
+              <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
+            ))}
+          </div>
         </div>
       )}
 
