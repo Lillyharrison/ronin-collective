@@ -409,18 +409,29 @@ export function TasksSection() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
-          {columns.map(s => (
-          <KanbanColumn
-              key={s}
-              status={s}
-              tasks={byStatus(s)}
-              onTaskClick={openEdit}
-              onAddClick={() => openNew(s)}
-              isAdmin={canManageTasks}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          onDragStart={(e: DragStartEvent) => setActiveDragId(String(e.active.id))}
+          onDragCancel={() => setActiveDragId(null)}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-4 pt-2 pb-4">
+            {columns.map(s => (
+              <KanbanColumn
+                key={s}
+                status={s}
+                tasks={byStatus(s)}
+                onTaskClick={openEdit}
+                onAddClick={() => openNew(s)}
+                isAdmin={canManageTasks}
+                canDrag={canManageTasks}
+              />
+            ))}
+          </div>
+          <DragOverlay>
+            {activeDragTask ? <TaskCard task={activeDragTask} onClick={() => {}} /> : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* Load more */}
