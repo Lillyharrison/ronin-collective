@@ -36,12 +36,12 @@ export function LibraryItemDetailModal({ item, onClose, onEdit, canEdit }: Props
 
           <div className="flex-1 overflow-y-auto space-y-4 pt-2">
             {/* Image */}
-            <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-border bg-muted/40">
+            <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-border bg-muted/30 p-4">
               {item.image_url ? (
                 <img
                   src={item.image_url}
                   alt={item.name}
-                  className={cn("h-full w-full object-cover", isDeprecated && "grayscale")}
+                  className={cn("h-full w-full object-contain", isDeprecated && "grayscale")}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
