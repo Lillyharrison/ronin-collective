@@ -9,8 +9,10 @@ import {
 } from "lucide-react";
 import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
 import { ShoppingList } from "@/components/orders/ShoppingList";
+import { OrderLibraryTab } from "@/components/orders/library/OrderLibraryTab";
+import { BookOpen } from "lucide-react";
 
-type MainTab = "pending" | "delivered" | "shopping";
+type MainTab = "pending" | "delivered" | "shopping" | "library";
 
 /* ─── Status badge ───────────────────────────────────────────────────────────── */
 function StatusBadge({ status }: { status: string }) {
@@ -532,10 +534,22 @@ export function OrdersSection() {
           <ShoppingBag size={12} />
           {isL ? "Lista" : "List"}
         </button>
+        <button
+          onClick={() => setActiveTab("library")}
+          className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+            activeTab === "library" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+          )}
+        >
+          <BookOpen size={12} />
+          {isL ? "Biblioteca" : "Library"}
+        </button>
       </div>
 
       {/* Shopping list */}
       {activeTab === "shopping" && <ShoppingList />}
+
+      {/* Library */}
+      {activeTab === "library" && <OrderLibraryTab />}
 
       {/* Legend for pending tab */}
       {activeTab === "pending" && !loading && pending.length > 0 && (
@@ -546,7 +560,7 @@ export function OrdersSection() {
       )}
 
       {/* Delivery table */}
-      {activeTab !== "shopping" && (
+      {(activeTab === "pending" || activeTab === "delivered") && (
         <div className="overflow-x-auto">
           {loading ? (
             <div className="px-4 pt-4 space-y-2">
