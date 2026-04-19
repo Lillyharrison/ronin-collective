@@ -132,8 +132,22 @@ const RONIN_TOOLS = [
       },
     },
   },
-
-  // ── WRITE TOOLS (confirmation required) ─────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "search_library_item",
+      description: "Search the global Order Library — the household's curated catalogue of preferred products (cleaning supplies, groceries, toiletries, etc.). Use BEFORE adding anything to the shopping list to check whether the household already has a preferred brand, size, or supplier. Returns matched library items with id, name, category, status (preferred / no_longer_preferred), notes, default_quantity, size, purchase cadence, website_url, and substitutions_allowed. If a match is found, pass its id as `library_item_id` when calling add_shopping_list_item so the entry inherits the library metadata.",
+      parameters: {
+        type: "object",
+        properties: {
+          keyword: { type: "string", description: "Search keyword matched against item name, aliases, and notes" },
+          status: { type: "string", enum: ["preferred", "no_longer_preferred", "all"], description: "Filter by status. Defaults to 'preferred' (the only items normally worth surfacing)." },
+          category: { type: "string", description: "Optional category filter, e.g. 'cleaning', 'food'" },
+        },
+        required: ["keyword"],
+      },
+    },
+  },
   {
     type: "function",
     function: {
