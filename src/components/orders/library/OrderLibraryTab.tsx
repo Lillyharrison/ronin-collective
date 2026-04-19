@@ -41,6 +41,10 @@ export function OrderLibraryTab() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("preferred");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selected, setSelected] = useState<OrderLibraryItem | null>(null);
+  const [viewMode, setViewMode] = useLocalStorage<"grid" | "list">(
+    "order-library-view-mode",
+    "grid",
+  );
 
   const filtered = useMemo(() => {
     let list = items;
