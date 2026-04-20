@@ -42,6 +42,11 @@ import {
   calcWorkdays,
   buildDisplayShifts,
 } from "./staff/utils";
+import type { FamilyEvent, RosterStats } from "./staff/types";
+import { ShiftChip } from "./staff/ShiftChip";
+import { LeaveCard } from "./staff/LeaveCard";
+import { FamilyOverlayBand } from "./staff/FamilyOverlayBand";
+import { CalculatorPanel } from "./staff/CalculatorPanel";
 
 // ShiftChip moved to ./staff/ShiftChip.tsx
 
