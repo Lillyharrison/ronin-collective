@@ -936,6 +936,36 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, user_id: linkData?.user?.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ─── SEND PASSWORD RESET (master_admin only) ──────────────────────────────
+    if (action === "send_password_reset") {
+      if (callerRole !== "master_admin") {
+        return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      let emailToReset: string | null = body.email || null;
+      if (!emailToReset && body.target_user_id) {
+        const { data: userData } = await adminClient.auth.admin.getUserById(body.target_user_id);
+        emailToReset = userData?.user?.email ?? null;
+      }
+      if (!emailToReset) {
+        return new Response(JSON.stringify({ error: "Could not resolve email for this user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://ronin-collective.lovable.app";
+      const redirectTo = body.redirect_url || `${origin}/reset-password`;
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: "recovery",
+        email: emailToReset,
+        options: { redirectTo },
+      });
+      if (linkErr) {
+        return new Response(JSON.stringify({ error: linkErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const actionLink = linkData?.properties?.action_link;
+      if (actionLink) {
+        await fetch(actionLink, { method: "GET" });
+      }
+      return new Response(JSON.stringify({ success: true, email: emailToReset }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ─── DELETE USER ──────────────────────────────────────────────────────────
     if (action === "delete_user") {
       if (callerRole !== "master_admin") {

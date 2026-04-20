@@ -1021,6 +1021,7 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resettingPwd, setResettingPwd] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
 
   // Draft state
@@ -1281,6 +1282,26 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
       toast.error(msg);
     }
     setResending(false);
+  }
+
+  async function handleSendPasswordReset() {
+    setResettingPwd(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ronin-ai", {
+        body: { action: "send_password_reset", target_user_id: member.id },
+      });
+      if (error) throw error;
+      const sentTo = (data as { email?: string } | null)?.email;
+      toast.success(
+        isEN
+          ? `Password reset link sent${sentTo ? ` to ${sentTo}` : ""}.`
+          : `Enlace de restablecimiento enviado${sentTo ? ` a ${sentTo}` : ""}.`
+      );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to send password reset.";
+      toast.error(msg);
+    }
+    setResettingPwd(false);
   }
 
   const TABS = [
@@ -1637,6 +1658,21 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
                 {resending
                   ? (isEN ? "Sending…" : "Enviando…")
                   : (isEN ? "Resend Invitation" : "Reenviar Invitación")}
+              </Button>
+            )}
+
+            {/* Master admin: send password reset to existing users */}
+            {isMasterAdmin && !isDraft && (
+              <Button
+                variant="outline"
+                disabled={resettingPwd || saving || deleting || resending}
+                onClick={handleSendPasswordReset}
+                className="w-full bg-charcoal-light border border-gold/30 text-cream hover:bg-gold/10 hover:border-gold/60 gap-2 font-semibold"
+              >
+                {resettingPwd ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                {resettingPwd
+                  ? (isEN ? "Sending…" : "Enviando…")
+                  : (isEN ? "Send Password Reset" : "Enviar Restablecer Contraseña")}
               </Button>
             )}
 
