@@ -21,6 +21,24 @@ export interface Property {
   country?: string | null;
 }
 
+export interface FamilyEvent {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string | null;
+  event_type: string;
+  property_id: string | null;
+}
+
+export interface RosterStats {
+  daysWorked: number;
+  daysExpected: number;
+  hoursWorked: number;
+  hoursExpected: number;
+  leaveTakenYTD: number;
+  leaveAllowance: number;
+}
+
 export interface DisplayShift {
   key: string;
   staff_id: string;

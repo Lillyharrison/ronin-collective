@@ -42,67 +42,13 @@ import {
   calcWorkdays,
   buildDisplayShifts,
 } from "./staff/utils";
+import type { FamilyEvent, RosterStats } from "./staff/types";
+import { ShiftChip } from "./staff/ShiftChip";
+import { LeaveCard } from "./staff/LeaveCard";
+import { FamilyOverlayBand } from "./staff/FamilyOverlayBand";
+import { CalculatorPanel } from "./staff/CalculatorPanel";
 
-// ── Shift Chip ────────────────────────────────────────────────────────────────
-
-function ShiftChip({
-  shift,
-  properties,
-  onDragStart,
-  onClick,
-  onDoubleClick,
-}: {
-  shift: DisplayShift;
-  properties: Property[];
-  onDragStart: (e: React.DragEvent) => void;
-  onClick: (e: React.MouseEvent) => void;
-  onDoubleClick?: (e: React.MouseEvent) => void;
-}) {
-  if (shift.is_leave) {
-    return (
-      <div className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted border border-border text-muted-foreground flex items-center gap-0.5">
-        <CalendarOff size={9} /> Leave
-      </div>
-    );
-  }
-  const col = propColor(shift.property_id, properties);
-  const prop = properties.find((p) => p.id === shift.property_id);
-
-  // Extract virtual location from notes (e.g. "📍 Office – some note")
-  const virtualLocMatch = shift.notes?.match(/^📍 (Office|Remote)/);
-  const virtualLoc = virtualLocMatch?.[1];
-  const displayLabel = prop?.name ?? virtualLoc ?? "—";
-
-  const timeLabel = shift.start_time && shift.end_time
-    ? `${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`
-    : shift.start_time ? formatTime(shift.start_time) : "";
-
-  return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      title="Double-click to edit"
-      className={cn(
-        "rounded px-1.5 py-1 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight w-full",
-        virtualLoc && !prop
-          ? "bg-muted/60 border-border text-muted-foreground"
-          : `${col.bg} ${col.text}`
-      )}
-    >
-      <div className="flex items-center gap-0.5">
-        <span className="truncate">{displayLabel}</span>
-        {shift.is_virtual && (
-          <span className="opacity-50 flex-shrink-0 text-[8px]">↻</span>
-        )}
-      </div>
-      {timeLabel && (
-        <div className="opacity-70 text-[9px]">{timeLabel}</div>
-      )}
-    </div>
-  );
-}
+// ShiftChip moved to ./staff/ShiftChip.tsx
 
 // ── Add / Edit Shift Modal ────────────────────────────────────────────────────
 
@@ -891,100 +837,7 @@ function ScheduleManagerDrawer({
   );
 }
 
-// ── Leave Card ────────────────────────────────────────────────────────────────
-
-function LeaveCard({
-  req,
-  profiles,
-  userId,
-  canEdit,
-  onReview,
-  onDelete,
-}: {
-  req: StaffLeaveRequest;
-  profiles: Profile[];
-  userId: string | null;
-  canEdit: boolean;
-  onReview: (id: string, status: "approved" | "rejected", reviewerId: string) => Promise<boolean>;
-  onDelete: (id: string) => Promise<boolean>;
-}) {
-  const person = profiles.find((p) => p.id === req.staff_id);
-  const typeConfig = LEAVE_TYPE_CONFIG[req.leave_type] ?? LEAVE_TYPE_CONFIG.other;
-  const workdays = calcWorkdays(req.start_date, req.end_date);
-  const totalDays = differenceInCalendarDays(parseISO(req.end_date), parseISO(req.start_date)) + 1;
-
-  const statusStyle = {
-    pending:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
-    approved: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    rejected: "text-red-400 bg-red-500/10 border-red-500/20",
-  }[req.status] ?? "";
-
-  const statusIcon = {
-    pending:  <Clock size={10} />,
-    approved: <Check size={10} />,
-    rejected: <X size={10} />,
-  }[req.status];
-
-  return (
-    <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2.5">
-      <div className="flex items-start gap-2.5 justify-between">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="text-xl flex-shrink-0">{typeConfig.emoji}</span>
-          <div className="min-w-0">
-            {canEdit && (
-              <p className="text-xs font-semibold truncate text-foreground">{getDisplayName(person, "Staff")}</p>
-            )}
-            <p className={cn("text-sm font-medium capitalize", typeConfig.color)}>{typeConfig.label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {req.start_date === req.end_date
-                ? req.start_date
-                : `${req.start_date} – ${req.end_date}`}
-              {" · "}
-              {totalDays === 1 ? "1 day" : `${workdays} working days`}
-            </p>
-            {req.reason && (
-              <p className="text-xs text-muted-foreground italic mt-0.5">"{req.reason}"</p>
-            )}
-          </div>
-        </div>
-        <span className={cn("flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize flex-shrink-0", statusStyle)}>
-          {statusIcon}
-          {req.status}
-        </span>
-      </div>
-
-      {canEdit && req.status === "pending" && (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 h-7 text-xs gap-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
-            onClick={() => userId && onReview(req.id, "approved", userId)}
-          >
-            <Check size={12} /> Approve
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 h-7 text-xs gap-1 text-red-400 border-red-500/30 hover:bg-red-500/10"
-            onClick={() => userId && onReview(req.id, "rejected", userId)}
-          >
-            <X size={12} /> Reject
-          </Button>
-        </div>
-      )}
-
-      {(req.staff_id === userId || canEdit) && req.status !== "approved" && (
-        <button
-          onClick={() => onDelete(req.id)}
-          className="text-xs text-destructive/70 hover:text-destructive transition-colors flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-destructive/10 min-h-[36px]"
-        >
-          <Trash2 size={13} /> Withdraw request
-        </button>
-      )}
-    </div>
-  );
-}
+// LeaveCard moved to ./staff/LeaveCard.tsx
 
 // ── Leave Panels ──────────────────────────────────────────────────────────────
 
@@ -1315,126 +1168,9 @@ function StaffMonthGrid({
     : <div className="rounded-2xl border border-border bg-card overflow-x-auto">{inner}</div>;
 }
 
-// ── Family overlay band (above staff rows in monthly view) ─────────────────────
+// FamilyOverlayBand moved to ./staff/FamilyOverlayBand.tsx
 
-interface FamilyEvent {
-  id: string;
-  title: string;
-  start_date: string;
-  end_date: string | null;
-  event_type: string;
-  property_id: string | null;
-}
-
-function FamilyOverlayBand({
-  monthStart,
-  monthDays,
-  events,
-  properties,
-}: {
-  monthStart: Date;
-  monthDays: Date[];
-  events: FamilyEvent[];
-  properties: Property[];
-}) {
-  if (events.length === 0) return null;
-
-  // Group by event title (so the same person/trip merges across days)
-  const groups = new Map<string, FamilyEvent[]>();
-  for (const ev of events) {
-    const key = ev.title || "Family";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(ev);
-  }
-
-  return (
-    <div className="border-b border-border bg-muted/10">
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
-      >
-        <div
-          className="px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground border-r border-border flex items-center gap-1 sticky left-0 bg-card z-10"
-          style={{ gridRow: `1 / span ${groups.size}` }}
-        >
-          <PlaneTakeoff size={10} /> Family
-        </div>
-        {Array.from(groups.entries()).map(([title, evs]) => {
-          const col = propColor(evs[0].property_id, properties);
-          return monthDays.map((day) => {
-            const dateStr = format(day, "yyyy-MM-dd");
-            const inEvent = evs.some((ev) => {
-              const start = ev.start_date.slice(0, 10);
-              const end = (ev.end_date ?? ev.start_date).slice(0, 10);
-              return dateStr >= start && dateStr <= end;
-            });
-            return (
-              <div key={`${title}-${dateStr}`} className="px-px py-0.5">
-                {inEvent && (
-                  <div
-                    className={cn("h-3.5 rounded-sm border", col.bg, col.text)}
-                    title={title}
-                  />
-                )}
-              </div>
-            );
-          });
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Worked-vs-Expected Calculator (shown when filtered to one person) ──────────
-
-interface RosterStats {
-  daysWorked: number;
-  daysExpected: number;
-  hoursWorked: number;
-  hoursExpected: number;
-  leaveTakenYTD: number;
-  leaveAllowance: number;
-}
-
-function CalculatorPanel({
-  personName,
-  stats,
-}: {
-  personName: string;
-  stats: RosterStats;
-}) {
-  const leaveRemaining = Math.max(0, stats.leaveAllowance - stats.leaveTakenYTD);
-  const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
-    <div className="flex-1 min-w-[120px] rounded-lg border border-border bg-card px-3 py-2">
-      <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
-      <p className="text-sm font-bold text-foreground mt-0.5">{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground leading-tight">{sub}</p>}
-    </div>
-  );
-  return (
-    <div className="rounded-2xl border border-border bg-muted/10 px-3 py-2.5 mb-2">
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">
-        {personName} · This month
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Stat
-          label="Days worked"
-          value={`${stats.daysWorked} / ${stats.daysExpected}`}
-          sub={stats.daysExpected > 0 ? `${Math.round((stats.daysWorked / stats.daysExpected) * 100)}%` : undefined}
-        />
-        <Stat
-          label="Hours worked"
-          value={`${stats.hoursWorked.toFixed(1)} / ${stats.hoursExpected.toFixed(0)}`}
-        />
-        <Stat
-          label="Annual leave"
-          value={`${leaveRemaining} left`}
-          sub={`${stats.leaveTakenYTD} taken of ${stats.leaveAllowance}`}
-        />
-      </div>
-    </div>
-  );
-}
+// CalculatorPanel moved to ./staff/CalculatorPanel.tsx
 
 export function StaffCalendarTab({
   canEdit,
