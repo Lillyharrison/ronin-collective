@@ -1284,6 +1284,26 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
     setResending(false);
   }
 
+  async function handleSendPasswordReset() {
+    setResettingPwd(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ronin-ai", {
+        body: { action: "send_password_reset", target_user_id: member.id },
+      });
+      if (error) throw error;
+      const sentTo = (data as { email?: string } | null)?.email;
+      toast.success(
+        isEN
+          ? `Password reset link sent${sentTo ? ` to ${sentTo}` : ""}.`
+          : `Enlace de restablecimiento enviado${sentTo ? ` a ${sentTo}` : ""}.`
+      );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to send password reset.";
+      toast.error(msg);
+    }
+    setResettingPwd(false);
+  }
+
   const TABS = [
     { key: "details",      label: isEN ? "Details" : "Detalles" },
     { key: "access",       label: isEN ? "Access & Alerts" : "Acceso" },
