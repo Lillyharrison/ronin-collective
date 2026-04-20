@@ -24,219 +24,24 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface Profile {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  job_title: string | null;
-  department: string | null;
-  assigned_property_ids?: string[] | null;
-  is_draft?: boolean;
-  contracted_days_per_week?: number | null;
-  contracted_hours_per_week?: number | null;
-  annual_leave_days?: number | null;
-}
-
-/** Returns a human-readable label for a profile, using job title for drafts. */
-function getDisplayName(p: Profile | undefined | null, fallback = "Staff"): string {
-  if (!p) return fallback;
-  if (p.full_name) return p.full_name;
-  if (p.is_draft) return p.job_title ? `[${p.job_title}]` : "[Draft]";
-  return fallback;
-}
-
-interface Property {
-  id: string;
-  name: string;
-  city?: string | null;
-  country?: string | null;
-}
-
-interface DisplayShift {
-  key: string;
-  staff_id: string;
-  property_id: string | null;
-  schedule_id: string | null;
-  concrete_id: string | null;
-  shift_date: string;
-  start_time: string | null;
-  end_time: string | null;
-  status: string;
-  notes: string | null;
-  is_virtual: boolean;
-  is_leave: boolean;
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const PROPERTY_COLORS = [
-  { bg: "bg-blue-500/15 border-blue-500/30",    text: "text-blue-400",    dot: "bg-blue-400" },
-  { bg: "bg-emerald-500/15 border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-400" },
-  { bg: "bg-purple-500/15 border-purple-500/30", text: "text-purple-400", dot: "bg-purple-400" },
-  { bg: "bg-orange-500/15 border-orange-500/30", text: "text-orange-400", dot: "bg-orange-400" },
-  { bg: "bg-pink-500/15 border-pink-500/30",    text: "text-pink-400",    dot: "bg-pink-400" },
-  { bg: "bg-cyan-500/15 border-cyan-500/30",    text: "text-cyan-400",    dot: "bg-cyan-400" },
-  { bg: "bg-amber-500/15 border-amber-500/30",  text: "text-amber-400",   dot: "bg-amber-400" },
-  { bg: "bg-rose-500/15 border-rose-500/30",    text: "text-rose-400",    dot: "bg-rose-400" },
-  { bg: "bg-teal-500/15 border-teal-500/30",    text: "text-teal-400",    dot: "bg-teal-400" },
-  { bg: "bg-indigo-500/15 border-indigo-500/30", text: "text-indigo-400", dot: "bg-indigo-400" },
-];
-
-/** Explicit color assignments for key properties to avoid similar-looking colors */
-const PROPERTY_COLOR_OVERRIDES: Record<string, number> = {
-  rockingham: 0, // blue
-  moreno: 3,     // orange
-  bristol: 5,    // cyan
-  franklyn: 1,   // emerald
-  toyopa: 2,     // purple
-  wisconsin: 4,  // pink
-  broadbeach: 6, // amber
-  montana: 7,    // rose
-  grosvenor: 8,  // teal
-  aman: 9,       // indigo
-};
-
-function propColor(propId: string | null, properties: Property[]) {
-  if (!propId) return PROPERTY_COLORS[PROPERTY_COLORS.length - 1];
-  const prop = properties.find((p) => p.id === propId);
-  if (prop) {
-    const nameLower = prop.name.toLowerCase();
-    for (const [key, colorIdx] of Object.entries(PROPERTY_COLOR_OVERRIDES)) {
-      if (nameLower.includes(key)) return PROPERTY_COLORS[colorIdx % PROPERTY_COLORS.length];
-    }
-  }
-  const idx = properties.findIndex((p) => p.id === propId);
-  return PROPERTY_COLORS[Math.abs(idx) % PROPERTY_COLORS.length];
-}
-
-const LEAVE_TYPES = ["vacation", "sick", "personal", "public_holiday", "other"];
-const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const DOW_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-function formatTime(t: string | null) {
-  if (!t) return "";
-  const [h, m] = t.split(":");
-  const hour = parseInt(h, 10);
-  return `${hour % 12 || 12}:${m}${hour < 12 ? "am" : "pm"}`;
-}
-
-// ── Build display shifts from schedules + concrete shifts + leave ──────────────
-
-function buildDisplayShifts(
-  weekDays: Date[],
-  schedules: StaffSchedule[],
-  concreteShifts: StaffShift[],
-  leaveRequests: StaffLeaveRequest[]
-): DisplayShift[] {
-  const result: DisplayShift[] = [];
-
-  for (const day of weekDays) {
-    const dateStr = format(day, "yyyy-MM-dd");
-    const dow = getDay(day); // 0=Sun … 6=Sat
-
-    // ─ Pattern-based shifts for this day ──────────────────────────────────────
-    for (const sched of schedules) {
-      if (sched.day_of_week !== dow) continue;
-      if (!sched.is_active) continue;
-      if (sched.effective_from > dateStr) continue;
-      if (sched.effective_to && sched.effective_to < dateStr) continue;
-
-      const staffId = sched.staff_id;
-
-      // Approved leave → show leave block (deduplicate: only once per staff/day)
-      const onLeave = leaveRequests.some(
-        (lr) =>
-          lr.staff_id === staffId &&
-          lr.status === "approved" &&
-          lr.start_date <= dateStr &&
-          lr.end_date >= dateStr
-      );
-      if (onLeave) {
-        if (!result.find((r) => r.staff_id === staffId && r.shift_date === dateStr && r.is_leave)) {
-          result.push({
-            key: `leave-${staffId}-${dateStr}`,
-            staff_id: staffId,
-            property_id: null,
-            schedule_id: null,
-            concrete_id: null,
-            shift_date: dateStr,
-            start_time: null,
-            end_time: null,
-            status: "leave",
-            notes: null,
-            is_virtual: false,
-            is_leave: true,
-          });
-        }
-        continue;
-      }
-
-      // Concrete override for this schedule + date?
-      const override = concreteShifts.find(
-        (s) => s.staff_id === staffId && s.shift_date === dateStr && s.schedule_id === sched.id
-      );
-
-      if (override?.status === "cancelled") continue; // cancelled for this specific day
-
-      if (override?.status === "scheduled") {
-        result.push({
-          key: override.id,
-          staff_id: staffId,
-          property_id: override.property_id,
-          schedule_id: sched.id,
-          concrete_id: override.id,
-          shift_date: dateStr,
-          start_time: override.start_time ?? sched.start_time,
-          end_time: override.end_time ?? sched.end_time,
-          status: "scheduled",
-          notes: override.notes,
-          is_virtual: false,
-          is_leave: false,
-        });
-        continue;
-      }
-
-      // Virtual shift from recurring pattern
-      result.push({
-        key: `virtual-${sched.id}-${dateStr}`,
-        staff_id: staffId,
-        property_id: sched.property_id,
-        schedule_id: sched.id,
-        concrete_id: null,
-        shift_date: dateStr,
-        start_time: sched.start_time,
-        end_time: sched.end_time,
-        status: "scheduled",
-        notes: sched.notes,
-        is_virtual: true,
-        is_leave: false,
-      });
-    }
-
-    // ─ Concrete one-off shifts (no schedule_id) ───────────────────────────────
-    for (const shift of concreteShifts) {
-      if (shift.shift_date !== dateStr || shift.schedule_id || shift.status !== "scheduled") continue;
-      result.push({
-        key: shift.id,
-        staff_id: shift.staff_id,
-        property_id: shift.property_id,
-        schedule_id: null,
-        concrete_id: shift.id,
-        shift_date: dateStr,
-        start_time: shift.start_time,
-        end_time: shift.end_time,
-        status: "scheduled",
-        notes: shift.notes,
-        is_virtual: false,
-        is_leave: false,
-      });
-    }
-  }
-
-  return result;
-}
+// Shared local types, constants, and pure helpers live in ./staff/*
+// Re-exported here so existing in-file references continue to work unchanged.
+import type { Profile, Property, DisplayShift } from "./staff/types";
+import {
+  PROPERTY_COLORS,
+  PROPERTY_COLOR_OVERRIDES,
+  LEAVE_TYPES,
+  DOW_LABELS,
+  DOW_FULL,
+  LEAVE_TYPE_CONFIG,
+} from "./staff/constants";
+import {
+  getDisplayName,
+  propColor,
+  formatTime,
+  calcWorkdays,
+  buildDisplayShifts,
+} from "./staff/utils";
 
 // ── Shift Chip ────────────────────────────────────────────────────────────────
 
