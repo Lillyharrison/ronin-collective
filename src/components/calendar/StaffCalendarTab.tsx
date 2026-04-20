@@ -443,20 +443,6 @@ function ShiftModal({
 
 // ── Leave Request Modal ───────────────────────────────────────────────────────
 
-const LEAVE_TYPE_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
-  vacation:       { label: "Vacation",        emoji: "🌴", color: "text-blue-400" },
-  sick:           { label: "Sick Leave",       emoji: "🤒", color: "text-red-400" },
-  personal:       { label: "Personal Day",     emoji: "🧘", color: "text-purple-400" },
-  public_holiday: { label: "Public Holiday",   emoji: "🎉", color: "text-amber-400" },
-  other:          { label: "Other",            emoji: "📋", color: "text-muted-foreground" },
-};
-
-function calcWorkdays(start: string, end: string): number {
-  if (!start || !end) return 0;
-  const days = eachDayOfInterval({ start: parseISO(start), end: parseISO(end) });
-  return days.filter((d) => !isWeekend(d)).length;
-}
-
 function LeaveModal({
   open,
   onClose,
