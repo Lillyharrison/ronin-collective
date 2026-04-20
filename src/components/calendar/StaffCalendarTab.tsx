@@ -47,6 +47,9 @@ import { ShiftChip } from "./staff/ShiftChip";
 import { LeaveCard } from "./staff/LeaveCard";
 import { FamilyOverlayBand } from "./staff/FamilyOverlayBand";
 import { CalculatorPanel } from "./staff/CalculatorPanel";
+import { ShiftModal } from "./staff/ShiftModal";
+import { LeaveModal } from "./staff/LeaveModal";
+import { ScheduleManagerDrawer } from "./staff/ScheduleManagerDrawer";
 
 // ShiftChip moved to ./staff/ShiftChip.tsx
 
