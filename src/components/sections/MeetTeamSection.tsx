@@ -1661,6 +1661,21 @@ function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, on
               </Button>
             )}
 
+            {/* Master admin: send password reset to existing users */}
+            {isMasterAdmin && !isDraft && (
+              <Button
+                variant="outline"
+                disabled={resettingPwd || saving || deleting || resending}
+                onClick={handleSendPasswordReset}
+                className="w-full bg-charcoal-light border border-gold/30 text-cream hover:bg-gold/10 hover:border-gold/60 gap-2 font-semibold"
+              >
+                {resettingPwd ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+                {resettingPwd
+                  ? (isEN ? "Sending…" : "Enviando…")
+                  : (isEN ? "Send Password Reset" : "Enviar Restablecer Contraseña")}
+              </Button>
+            )}
+
             <Button onClick={handleSave} disabled={saving || deleting} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
               {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
               {saving ? (isEN ? "Saving…" : "Guardando…") : (isDraft ? (isEN ? "Save Draft" : "Guardar Borrador") : (isEN ? "Save Changes" : "Guardar Cambios"))}
