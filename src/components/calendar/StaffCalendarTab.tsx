@@ -88,6 +88,8 @@ export function StaffCalendarTab({
       });
   }, []);
 
+  const monthRangeEnd = endOfMonth(addMonths(monthStart, Math.max(0, monthsCount - 1)));
+
   const {
     schedules, shifts, leaveRequests, loading, refetch,
     createSchedule, editSchedule, updateSchedule, deactivateSchedule,
@@ -97,7 +99,7 @@ export function StaffCalendarTab({
     calView === "month" ? monthStart : weekStart,
     userId,
     canEdit,
-    calView === "month" ? endOfMonth(monthStart) : undefined
+    calView === "month" ? monthRangeEnd : undefined
   );
 
   useEffect(() => {
