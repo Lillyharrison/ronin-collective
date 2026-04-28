@@ -19,6 +19,7 @@ import { LeaveModal } from "./staff/LeaveModal";
 import { ScheduleManagerDrawer } from "./staff/ScheduleManagerDrawer";
 import { LeavePanel } from "./staff/LeavePanel";
 import { StaffMonthGrid } from "./staff/StaffMonthGrid";
+import { StaffDaysSummary } from "./staff/StaffDaysSummary";
 import { StaffWeekGrid } from "./staff/StaffWeekGrid";
 import { CalendarToolbar } from "./staff/CalendarToolbar";
 import { StaffFilterBar } from "./staff/StaffFilterBar";
@@ -476,7 +477,14 @@ export function StaffCalendarTab({
             {calc && singleStaff && (
               <CalculatorPanel personName={getDisplayName(singleStaff)} stats={calc} />
             )}
-            <div className="space-y-4">
+            <StaffDaysSummary
+              staffToShow={staffToShow}
+              displayShifts={displayShifts}
+              leaveRequests={leaveRequests}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+            />
+            <div className="space-y-4 mt-4">
               {monthCards.map((mStart) => {
                 const mEnd = endOfMonth(mStart);
                 const cardDays = eachDayOfInterval({ start: mStart, end: mEnd });
