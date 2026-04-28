@@ -157,7 +157,7 @@ export function StaffCalendarTab({
   }, [calView, monthStart, monthRangeEnd, showFamilyOverlay]);
 
   const weekDays = calView === "month"
-    ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
+    ? eachDayOfInterval({ start: monthStart, end: monthRangeEnd })
     : eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) });
 
   const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
