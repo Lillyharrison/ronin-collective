@@ -12,6 +12,8 @@ export function CalendarToolbar({
   onNext,
   onToday,
   canEdit,
+  monthsCount,
+  setMonthsCount,
   onRequestLeave,
   onAddShift,
   onOpenScheduleManager,
@@ -27,6 +29,8 @@ export function CalendarToolbar({
   onNext: () => void;
   onToday: () => void;
   canEdit: boolean;
+  monthsCount?: number;
+  setMonthsCount?: (n: number) => void;
   onRequestLeave: () => void;
   onAddShift: () => void;
   onOpenScheduleManager: () => void;
