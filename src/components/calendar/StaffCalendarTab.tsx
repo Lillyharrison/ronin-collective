@@ -139,7 +139,7 @@ export function StaffCalendarTab({
       setFamilyEvents([]);
       return;
     }
-    const monthEnd = endOfMonth(monthStart);
+    const monthEnd = monthRangeEnd;
     const startISO = monthStart.toISOString();
     const endISO = monthEnd.toISOString();
     let cancelled = false;
@@ -154,7 +154,7 @@ export function StaffCalendarTab({
         setFamilyEvents((data ?? []) as FamilyEvent[]);
       });
     return () => { cancelled = true; };
-  }, [calView, monthStart, showFamilyOverlay]);
+  }, [calView, monthStart, monthRangeEnd, showFamilyOverlay]);
 
   const weekDays = calView === "month"
     ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
