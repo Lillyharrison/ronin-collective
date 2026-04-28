@@ -336,6 +336,11 @@ export function StaffCalendarTab({
         onNext={handleNext}
         onToday={handleToday}
         canEdit={canEdit}
+        monthsCount={monthsCount}
+        setMonthsCount={(n) => {
+          setMonthsCount(n);
+          try { localStorage.setItem("ronin_staff_months_count", String(n)); } catch { /* noop */ }
+        }}
         onRequestLeave={() => setShowLeaveModal(true)}
         onAddShift={() => { setPrefillDate(undefined); setPrefillStaff(undefined); setShowShiftModal(true); }}
         onOpenScheduleManager={() => { setScheduleManagerStaff(null); setShowScheduleManager(true); }}
