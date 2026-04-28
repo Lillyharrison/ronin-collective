@@ -89,6 +89,24 @@ export function CalendarToolbar({
           </button>
         </div>
 
+        {calView === "month" && setMonthsCount && (
+          <div className="flex items-center rounded-lg border border-border overflow-hidden h-8" title="Months to show">
+            {[1, 2, 3, 6].map((n, i) => (
+              <button
+                key={n}
+                onClick={() => setMonthsCount(n)}
+                className={cn(
+                  "px-2 h-full text-[11px] font-medium transition-colors",
+                  i > 0 && "border-l border-border",
+                  monthsCount === n ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {n}M
+              </button>
+            ))}
+          </div>
+        )}
+
         <Button
           variant="outline"
           size="sm"
