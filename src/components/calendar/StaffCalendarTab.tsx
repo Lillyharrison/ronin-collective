@@ -360,7 +360,7 @@ export function StaffCalendarTab({
       )}
 
       {calView === "month" && (() => {
-        const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+        const monthDays = eachDayOfInterval({ start: monthStart, end: monthRangeEnd });
 
         const singleStaff = filterStaff !== "all"
           ? profiles.find((p) => p.id === filterStaff)
