@@ -38,6 +38,12 @@ export function StaffCalendarTab({
   const [calView, setCalView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()));
+  const [monthsCount, setMonthsCount] = useState<number>(() => {
+    try {
+      const saved = parseInt(localStorage.getItem("ronin_staff_months_count") ?? "1", 10);
+      return [1, 2, 3, 6].includes(saved) ? saved : 1;
+    } catch { return 1; }
+  });
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
@@ -82,6 +88,8 @@ export function StaffCalendarTab({
       });
   }, []);
 
+  const monthRangeEnd = endOfMonth(addMonths(monthStart, Math.max(0, monthsCount - 1)));
+
   const {
     schedules, shifts, leaveRequests, loading, refetch,
     createSchedule, editSchedule, updateSchedule, deactivateSchedule,
@@ -91,7 +99,7 @@ export function StaffCalendarTab({
     calView === "month" ? monthStart : weekStart,
     userId,
     canEdit,
-    calView === "month" ? endOfMonth(monthStart) : undefined
+    calView === "month" ? monthRangeEnd : undefined
   );
 
   useEffect(() => {
@@ -131,7 +139,7 @@ export function StaffCalendarTab({
       setFamilyEvents([]);
       return;
     }
-    const monthEnd = endOfMonth(monthStart);
+    const monthEnd = monthRangeEnd;
     const startISO = monthStart.toISOString();
     const endISO = monthEnd.toISOString();
     let cancelled = false;
@@ -146,10 +154,10 @@ export function StaffCalendarTab({
         setFamilyEvents((data ?? []) as FamilyEvent[]);
       });
     return () => { cancelled = true; };
-  }, [calView, monthStart, showFamilyOverlay]);
+  }, [calView, monthStart, monthRangeEnd, showFamilyOverlay]);
 
   const weekDays = calView === "month"
-    ? eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) })
+    ? eachDayOfInterval({ start: monthStart, end: monthRangeEnd })
     : eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) });
 
   const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
@@ -299,7 +307,9 @@ export function StaffCalendarTab({
   };
 
   const weekLabel = calView === "month"
-    ? format(monthStart, "MMMM yyyy")
+    ? (monthsCount > 1
+        ? `${format(monthStart, "MMM yyyy")} – ${format(monthRangeEnd, "MMM yyyy")}`
+        : format(monthStart, "MMMM yyyy"))
     : `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 }));
   const isCurrentMonth = format(monthStart, "yyyy-MM") === format(new Date(), "yyyy-MM");
@@ -326,6 +336,11 @@ export function StaffCalendarTab({
         onNext={handleNext}
         onToday={handleToday}
         canEdit={canEdit}
+        monthsCount={monthsCount}
+        setMonthsCount={(n) => {
+          setMonthsCount(n);
+          try { localStorage.setItem("ronin_staff_months_count", String(n)); } catch { /* noop */ }
+        }}
         onRequestLeave={() => setShowLeaveModal(true)}
         onAddShift={() => { setPrefillDate(undefined); setPrefillStaff(undefined); setShowShiftModal(true); }}
         onOpenScheduleManager={() => { setScheduleManagerStaff(null); setShowScheduleManager(true); }}
@@ -350,7 +365,7 @@ export function StaffCalendarTab({
       )}
 
       {calView === "month" && (() => {
-        const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+        const monthDays = eachDayOfInterval({ start: monthStart, end: monthRangeEnd });
 
         const singleStaff = filterStaff !== "all"
           ? profiles.find((p) => p.id === filterStaff)
@@ -410,6 +425,7 @@ export function StaffCalendarTab({
               )}
               <StaffMonthGrid
                 monthStart={monthStart}
+                monthEnd={monthRangeEnd}
                 staffToShow={staffToShow}
                 displayShifts={displayShifts}
                 properties={properties}

@@ -1,4 +1,4 @@
-import { format, eachDayOfInterval, endOfMonth, getDay, isToday, isWeekend } from "date-fns";
+import { format, eachDayOfInterval, endOfMonth, getDay, isToday, isWeekend, isSameMonth, startOfMonth } from "date-fns";
 import { CalendarOff, Settings2, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import type { DisplayShift, Profile, Property } from "./types";
 
 export function StaffMonthGrid({
   monthStart,
+  monthEnd,
   staffToShow,
   displayShifts,
   properties,
@@ -16,6 +17,7 @@ export function StaffMonthGrid({
   noWrapper = false,
 }: {
   monthStart: Date;
+  monthEnd?: Date;
   staffToShow: Profile[];
   displayShifts: DisplayShift[];
   properties: Property[];
@@ -24,7 +26,19 @@ export function StaffMonthGrid({
   onShowScheduleManager: () => void;
   noWrapper?: boolean;
 }) {
-  const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+  const rangeEnd = monthEnd ?? endOfMonth(monthStart);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: rangeEnd });
+  // Identify month boundaries for visual separators in multi-month ranges
+  const monthBoundaryDates = new Set<string>();
+  let cursor = startOfMonth(monthStart);
+  while (cursor <= rangeEnd) {
+    monthBoundaryDates.add(format(cursor, "yyyy-MM-dd"));
+    cursor = startOfMonth(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
+  }
+  const spansMultipleMonths = !isSameMonth(monthStart, rangeEnd);
+  const headerLabel = spansMultipleMonths
+    ? `${format(monthStart, "MMM yyyy")} – ${format(rangeEnd, "MMM yyyy")}`
+    : format(monthStart, "MMMM yyyy");
   // Group days into weeks (Mon–Sun rows) — kept for parity even if not rendered here
   const weeks: Date[][] = [];
   let week: Date[] = [];
@@ -35,6 +49,7 @@ export function StaffMonthGrid({
       week = [];
     }
   });
+  void weeks;
 
   if (loading) {
     return (
@@ -50,7 +65,7 @@ export function StaffMonthGrid({
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center px-4 rounded-2xl border border-border bg-card">
         <UserCheck size={36} className="text-muted-foreground/30 mb-3" />
-        <p className="text-sm font-medium text-muted-foreground">No staff scheduled this month</p>
+        <p className="text-sm font-medium text-muted-foreground">No staff scheduled in this range</p>
         {canEdit && (
           <Button variant="outline" size="sm" className="mt-3 gap-2" onClick={onShowScheduleManager}>
             <Settings2 size={13} /> Set Up Schedules
@@ -66,32 +81,41 @@ export function StaffMonthGrid({
         className="grid border-b border-border bg-muted/30"
         style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
       >
-        <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
-          {format(monthStart, "MMMM yyyy")}
+        <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border sticky left-0 bg-muted/30 z-10">
+          {headerLabel}
         </div>
-        {monthDays.map((day) => (
-          <div
-            key={day.toISOString()}
-            className={cn(
-              "py-1.5 text-center border-r border-border last:border-r-0",
-              isToday(day) && "bg-primary/10",
-              isWeekend(day) && "bg-muted/20"
-            )}
-          >
-            <p className={cn(
-              "text-[9px] font-medium text-muted-foreground uppercase leading-none",
-              isToday(day) && "text-primary"
-            )}>
-              {format(day, "EEE")}
-            </p>
-            <p className={cn(
-              "text-[11px] font-bold mt-0.5 w-5 h-5 rounded-full flex items-center justify-center mx-auto",
-              isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
-            )}>
-              {format(day, "d")}
-            </p>
-          </div>
-        ))}
+        {monthDays.map((day, idx) => {
+          const isMonthStart = idx > 0 && monthBoundaryDates.has(format(day, "yyyy-MM-dd"));
+          return (
+            <div
+              key={day.toISOString()}
+              className={cn(
+                "py-1.5 text-center border-r border-border last:border-r-0",
+                isToday(day) && "bg-primary/10",
+                isWeekend(day) && "bg-muted/20",
+                isMonthStart && "border-l-2 border-l-primary/40"
+              )}
+            >
+              {isMonthStart && (
+                <p className="text-[8px] font-semibold text-primary uppercase leading-none tracking-wider">
+                  {format(day, "MMM")}
+                </p>
+              )}
+              <p className={cn(
+                "text-[9px] font-medium text-muted-foreground uppercase leading-none",
+                isToday(day) && "text-primary"
+              )}>
+                {format(day, "EEE")}
+              </p>
+              <p className={cn(
+                "text-[11px] font-bold mt-0.5 w-5 h-5 rounded-full flex items-center justify-center mx-auto",
+                isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
+              )}>
+                {format(day, "d")}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       {staffToShow.map((person) => {
@@ -122,11 +146,12 @@ export function StaffMonthGrid({
               </div>
             </div>
 
-            {monthDays.map((day) => {
+            {monthDays.map((day, idx) => {
               const dateStr = format(day, "yyyy-MM-dd");
               const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
               const hasLeave = dayShifts.some((s) => s.is_leave);
               const workShifts = dayShifts.filter((s) => !s.is_leave);
+              const isMonthStart = idx > 0 && monthBoundaryDates.has(dateStr);
 
               return (
                 <div
@@ -134,7 +159,8 @@ export function StaffMonthGrid({
                   className={cn(
                     "border-r border-border last:border-r-0 py-1 px-0.5 flex flex-col gap-0.5 items-center justify-center min-h-[44px]",
                     isToday(day) && "bg-primary/5",
-                    isWeekend(day) && workShifts.length === 0 && !hasLeave && "bg-muted/10"
+                    isWeekend(day) && workShifts.length === 0 && !hasLeave && "bg-muted/10",
+                    isMonthStart && "border-l-2 border-l-primary/40"
                   )}
                 >
                   {hasLeave && (
