@@ -81,8 +81,8 @@ export function StaffMonthGrid({
         className="grid border-b border-border bg-muted/30"
         style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
       >
-        <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border">
-          {format(monthStart, "MMMM yyyy")}
+        <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border sticky left-0 bg-muted/30 z-10">
+          {headerLabel}
         </div>
         {monthDays.map((day) => (
           <div
