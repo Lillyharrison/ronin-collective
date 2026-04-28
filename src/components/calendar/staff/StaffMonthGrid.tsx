@@ -1,4 +1,4 @@
-import { format, eachDayOfInterval, endOfMonth, getDay, isToday, isWeekend } from "date-fns";
+import { format, eachDayOfInterval, endOfMonth, getDay, isToday, isWeekend, isSameMonth, startOfMonth } from "date-fns";
 import { CalendarOff, Settings2, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import type { DisplayShift, Profile, Property } from "./types";
 
 export function StaffMonthGrid({
   monthStart,
+  monthEnd,
   staffToShow,
   displayShifts,
   properties,
@@ -16,6 +17,7 @@ export function StaffMonthGrid({
   noWrapper = false,
 }: {
   monthStart: Date;
+  monthEnd?: Date;
   staffToShow: Profile[];
   displayShifts: DisplayShift[];
   properties: Property[];
@@ -24,7 +26,19 @@ export function StaffMonthGrid({
   onShowScheduleManager: () => void;
   noWrapper?: boolean;
 }) {
-  const monthDays = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+  const rangeEnd = monthEnd ?? endOfMonth(monthStart);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: rangeEnd });
+  // Identify month boundaries for visual separators in multi-month ranges
+  const monthBoundaryDates = new Set<string>();
+  let cursor = startOfMonth(monthStart);
+  while (cursor <= rangeEnd) {
+    monthBoundaryDates.add(format(cursor, "yyyy-MM-dd"));
+    cursor = startOfMonth(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
+  }
+  const spansMultipleMonths = !isSameMonth(monthStart, rangeEnd);
+  const headerLabel = spansMultipleMonths
+    ? `${format(monthStart, "MMM yyyy")} – ${format(rangeEnd, "MMM yyyy")}`
+    : format(monthStart, "MMMM yyyy");
   // Group days into weeks (Mon–Sun rows) — kept for parity even if not rendered here
   const weeks: Date[][] = [];
   let week: Date[] = [];
