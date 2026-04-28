@@ -84,29 +84,38 @@ export function StaffMonthGrid({
         <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border sticky left-0 bg-muted/30 z-10">
           {headerLabel}
         </div>
-        {monthDays.map((day) => (
-          <div
-            key={day.toISOString()}
-            className={cn(
-              "py-1.5 text-center border-r border-border last:border-r-0",
-              isToday(day) && "bg-primary/10",
-              isWeekend(day) && "bg-muted/20"
-            )}
-          >
-            <p className={cn(
-              "text-[9px] font-medium text-muted-foreground uppercase leading-none",
-              isToday(day) && "text-primary"
-            )}>
-              {format(day, "EEE")}
-            </p>
-            <p className={cn(
-              "text-[11px] font-bold mt-0.5 w-5 h-5 rounded-full flex items-center justify-center mx-auto",
-              isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
-            )}>
-              {format(day, "d")}
-            </p>
-          </div>
-        ))}
+        {monthDays.map((day, idx) => {
+          const isMonthStart = idx > 0 && monthBoundaryDates.has(format(day, "yyyy-MM-dd"));
+          return (
+            <div
+              key={day.toISOString()}
+              className={cn(
+                "py-1.5 text-center border-r border-border last:border-r-0",
+                isToday(day) && "bg-primary/10",
+                isWeekend(day) && "bg-muted/20",
+                isMonthStart && "border-l-2 border-l-primary/40"
+              )}
+            >
+              {isMonthStart && (
+                <p className="text-[8px] font-semibold text-primary uppercase leading-none tracking-wider">
+                  {format(day, "MMM")}
+                </p>
+              )}
+              <p className={cn(
+                "text-[9px] font-medium text-muted-foreground uppercase leading-none",
+                isToday(day) && "text-primary"
+              )}>
+                {format(day, "EEE")}
+              </p>
+              <p className={cn(
+                "text-[11px] font-bold mt-0.5 w-5 h-5 rounded-full flex items-center justify-center mx-auto",
+                isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
+              )}>
+                {format(day, "d")}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       {staffToShow.map((person) => {
