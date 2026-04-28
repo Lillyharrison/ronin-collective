@@ -1,13 +1,19 @@
-import { format, eachDayOfInterval, endOfMonth, getDay, isToday, isWeekend, isSameMonth, startOfMonth } from "date-fns";
+import { format, eachDayOfInterval, endOfMonth, getDay, isToday, isWeekend } from "date-fns";
 import { CalendarOff, Settings2, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { getDisplayName, propColor, formatTime } from "./utils";
 import type { DisplayShift, Profile, Property } from "./types";
 
+/**
+ * Renders a single calendar month as a self-contained grid.
+ * For multi-month ranges, render multiple instances stacked vertically — each is its own card.
+ *
+ * `monthStart` MUST be the first day of the month. Days are clipped to the actual month length.
+ * Optional `visibleStart`/`visibleEnd` dim cells outside the user's selected range (still rendered for context).
+ */
 export function StaffMonthGrid({
   monthStart,
-  monthEnd,
   staffToShow,
   displayShifts,
   properties,
@@ -15,9 +21,10 @@ export function StaffMonthGrid({
   canEdit,
   onShowScheduleManager,
   noWrapper = false,
+  visibleStart,
+  visibleEnd,
 }: {
   monthStart: Date;
-  monthEnd?: Date;
   staffToShow: Profile[];
   displayShifts: DisplayShift[];
   properties: Property[];
@@ -25,20 +32,12 @@ export function StaffMonthGrid({
   canEdit: boolean;
   onShowScheduleManager: () => void;
   noWrapper?: boolean;
+  visibleStart?: Date;
+  visibleEnd?: Date;
 }) {
-  const rangeEnd = monthEnd ?? endOfMonth(monthStart);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: rangeEnd });
-  // Identify month boundaries for visual separators in multi-month ranges
-  const monthBoundaryDates = new Set<string>();
-  let cursor = startOfMonth(monthStart);
-  while (cursor <= rangeEnd) {
-    monthBoundaryDates.add(format(cursor, "yyyy-MM-dd"));
-    cursor = startOfMonth(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1));
-  }
-  const spansMultipleMonths = !isSameMonth(monthStart, rangeEnd);
-  const headerLabel = spansMultipleMonths
-    ? `${format(monthStart, "MMM yyyy")} – ${format(rangeEnd, "MMM yyyy")}`
-    : format(monthStart, "MMMM yyyy");
+  const monthEnd = endOfMonth(monthStart);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
   // Group days into weeks (Mon–Sun rows) — kept for parity even if not rendered here
   const weeks: Date[][] = [];
   let week: Date[] = [];
@@ -75,6 +74,11 @@ export function StaffMonthGrid({
     );
   }
 
+  const isOutOfVisibleRange = (day: Date) => {
+    if (!visibleStart || !visibleEnd) return false;
+    return day < visibleStart || day > visibleEnd;
+  };
+
   const inner = (
     <div className="min-w-[600px]">
       <div
@@ -82,10 +86,10 @@ export function StaffMonthGrid({
         style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
       >
         <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border sticky left-0 bg-muted/30 z-10">
-          {headerLabel}
+          {format(monthStart, "MMMM yyyy")}
         </div>
-        {monthDays.map((day, idx) => {
-          const isMonthStart = idx > 0 && monthBoundaryDates.has(format(day, "yyyy-MM-dd"));
+        {monthDays.map((day) => {
+          const dim = isOutOfVisibleRange(day);
           return (
             <div
               key={day.toISOString()}
@@ -93,14 +97,9 @@ export function StaffMonthGrid({
                 "py-1.5 text-center border-r border-border last:border-r-0",
                 isToday(day) && "bg-primary/10",
                 isWeekend(day) && "bg-muted/20",
-                isMonthStart && "border-l-2 border-l-primary/40"
+                dim && "opacity-40"
               )}
             >
-              {isMonthStart && (
-                <p className="text-[8px] font-semibold text-primary uppercase leading-none tracking-wider">
-                  {format(day, "MMM")}
-                </p>
-              )}
               <p className={cn(
                 "text-[9px] font-medium text-muted-foreground uppercase leading-none",
                 isToday(day) && "text-primary"
@@ -146,12 +145,12 @@ export function StaffMonthGrid({
               </div>
             </div>
 
-            {monthDays.map((day, idx) => {
+            {monthDays.map((day) => {
               const dateStr = format(day, "yyyy-MM-dd");
               const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
               const hasLeave = dayShifts.some((s) => s.is_leave);
               const workShifts = dayShifts.filter((s) => !s.is_leave);
-              const isMonthStart = idx > 0 && monthBoundaryDates.has(dateStr);
+              const dim = isOutOfVisibleRange(day);
 
               return (
                 <div
@@ -160,7 +159,7 @@ export function StaffMonthGrid({
                     "border-r border-border last:border-r-0 py-1 px-0.5 flex flex-col gap-0.5 items-center justify-center min-h-[44px]",
                     isToday(day) && "bg-primary/5",
                     isWeekend(day) && workShifts.length === 0 && !hasLeave && "bg-muted/10",
-                    isMonthStart && "border-l-2 border-l-primary/40"
+                    dim && "opacity-40"
                   )}
                 >
                   {hasLeave && (
