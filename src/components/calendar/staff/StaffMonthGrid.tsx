@@ -146,11 +146,12 @@ export function StaffMonthGrid({
               </div>
             </div>
 
-            {monthDays.map((day) => {
+            {monthDays.map((day, idx) => {
               const dateStr = format(day, "yyyy-MM-dd");
               const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
               const hasLeave = dayShifts.some((s) => s.is_leave);
               const workShifts = dayShifts.filter((s) => !s.is_leave);
+              const isMonthStart = idx > 0 && monthBoundaryDates.has(dateStr);
 
               return (
                 <div
@@ -158,7 +159,8 @@ export function StaffMonthGrid({
                   className={cn(
                     "border-r border-border last:border-r-0 py-1 px-0.5 flex flex-col gap-0.5 items-center justify-center min-h-[44px]",
                     isToday(day) && "bg-primary/5",
-                    isWeekend(day) && workShifts.length === 0 && !hasLeave && "bg-muted/10"
+                    isWeekend(day) && workShifts.length === 0 && !hasLeave && "bg-muted/10",
+                    isMonthStart && "border-l-2 border-l-primary/40"
                   )}
                 >
                   {hasLeave && (
