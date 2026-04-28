@@ -420,6 +420,7 @@ export function StaffCalendarTab({
               )}
               <StaffMonthGrid
                 monthStart={monthStart}
+                monthEnd={monthRangeEnd}
                 staffToShow={staffToShow}
                 displayShifts={displayShifts}
                 properties={properties}
