@@ -49,6 +49,7 @@ export function StaffMonthGrid({
       week = [];
     }
   });
+  void weeks;
 
   if (loading) {
     return (
