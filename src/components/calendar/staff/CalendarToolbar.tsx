@@ -1,5 +1,8 @@
-import { ChevronLeft, ChevronRight, Plus, Settings2, PlaneTakeoff, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings2, PlaneTakeoff, Download, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export function CalendarToolbar({
@@ -12,8 +15,10 @@ export function CalendarToolbar({
   onNext,
   onToday,
   canEdit,
-  monthsCount,
-  setMonthsCount,
+  rangeStart,
+  rangeEnd,
+  setRangeStart,
+  setRangeEnd,
   onRequestLeave,
   onAddShift,
   onOpenScheduleManager,
@@ -29,14 +34,18 @@ export function CalendarToolbar({
   onNext: () => void;
   onToday: () => void;
   canEdit: boolean;
-  monthsCount?: number;
-  setMonthsCount?: (n: number) => void;
+  rangeStart?: Date;
+  rangeEnd?: Date;
+  setRangeStart?: (d: Date) => void;
+  setRangeEnd?: (d: Date) => void;
   onRequestLeave: () => void;
   onAddShift: () => void;
   onOpenScheduleManager: () => void;
   onExportExcel: () => void;
   onExportPDF: () => void;
 }) {
+  const showRangePickers = calView === "month" && rangeStart && rangeEnd && setRangeStart && setRangeEnd;
+
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-2">
@@ -89,21 +98,44 @@ export function CalendarToolbar({
           </button>
         </div>
 
-        {calView === "month" && setMonthsCount && (
-          <div className="flex items-center rounded-lg border border-border overflow-hidden h-8" title="Months to show">
-            {[1, 2, 3, 6].map((n, i) => (
-              <button
-                key={n}
-                onClick={() => setMonthsCount(n)}
-                className={cn(
-                  "px-2 h-full text-[11px] font-medium transition-colors",
-                  i > 0 && "border-l border-border",
-                  monthsCount === n ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {n}M
-              </button>
-            ))}
+        {showRangePickers && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground">From</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal">
+                  <CalendarIcon size={12} />
+                  {format(rangeStart!, "d MMM yyyy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={rangeStart}
+                  onSelect={(d) => d && setRangeStart!(d)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <span className="text-[11px] text-muted-foreground">To</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal">
+                  <CalendarIcon size={12} />
+                  {format(rangeEnd!, "d MMM yyyy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={rangeEnd}
+                  onSelect={(d) => d && setRangeEnd!(d)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         )}
 
