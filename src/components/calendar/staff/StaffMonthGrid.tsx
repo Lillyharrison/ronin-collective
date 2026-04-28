@@ -65,7 +65,7 @@ export function StaffMonthGrid({
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center px-4 rounded-2xl border border-border bg-card">
         <UserCheck size={36} className="text-muted-foreground/30 mb-3" />
-        <p className="text-sm font-medium text-muted-foreground">No staff scheduled this month</p>
+        <p className="text-sm font-medium text-muted-foreground">No staff scheduled in this range</p>
         {canEdit && (
           <Button variant="outline" size="sm" className="mt-3 gap-2" onClick={onShowScheduleManager}>
             <Settings2 size={13} /> Set Up Schedules
