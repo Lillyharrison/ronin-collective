@@ -307,7 +307,9 @@ export function StaffCalendarTab({
   };
 
   const weekLabel = calView === "month"
-    ? format(monthStart, "MMMM yyyy")
+    ? (monthsCount > 1
+        ? `${format(monthStart, "MMM yyyy")} – ${format(monthRangeEnd, "MMM yyyy")}`
+        : format(monthStart, "MMMM yyyy"))
     : `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 }));
   const isCurrentMonth = format(monthStart, "yyyy-MM") === format(new Date(), "yyyy-MM");
