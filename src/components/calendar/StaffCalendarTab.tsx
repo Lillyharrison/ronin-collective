@@ -38,6 +38,12 @@ export function StaffCalendarTab({
   const [calView, setCalView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()));
+  const [monthsCount, setMonthsCount] = useState<number>(() => {
+    try {
+      const saved = parseInt(localStorage.getItem("ronin_staff_months_count") ?? "1", 10);
+      return [1, 2, 3, 6].includes(saved) ? saved : 1;
+    } catch { return 1; }
+  });
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
