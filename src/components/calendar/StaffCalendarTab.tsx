@@ -37,13 +37,46 @@ export function StaffCalendarTab({
 }) {
   const [calView, setCalView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [monthStart, setMonthStart] = useState(() => startOfMonth(new Date()));
-  const [monthsCount, setMonthsCount] = useState<number>(() => {
+
+  // Month-view date range (From / To). Persisted to localStorage.
+  // Defaults: today's month → end of (today + 3 months), matching reference HTML behaviour.
+  const [rangeStart, setRangeStartState] = useState<Date>(() => {
     try {
-      const saved = parseInt(localStorage.getItem("ronin_staff_months_count") ?? "1", 10);
-      return [1, 2, 3, 6].includes(saved) ? saved : 1;
-    } catch { return 1; }
+      const saved = localStorage.getItem("ronin_staff_range_start");
+      if (saved) return startOfMonth(new Date(saved));
+    } catch { /* noop */ }
+    return startOfMonth(new Date());
   });
+  const [rangeEnd, setRangeEndState] = useState<Date>(() => {
+    try {
+      const saved = localStorage.getItem("ronin_staff_range_end");
+      if (saved) return endOfMonth(new Date(saved));
+    } catch { /* noop */ }
+    return endOfMonth(addMonths(new Date(), 3));
+  });
+  const setRangeStart = (d: Date) => {
+    const s = startOfMonth(d);
+    setRangeStartState(s);
+    try { localStorage.setItem("ronin_staff_range_start", s.toISOString()); } catch { /* noop */ }
+    // Auto-correct end if user picked start after current end
+    if (s > rangeEnd) {
+      const newEnd = endOfMonth(s);
+      setRangeEndState(newEnd);
+      try { localStorage.setItem("ronin_staff_range_end", newEnd.toISOString()); } catch { /* noop */ }
+    }
+  };
+  const setRangeEnd = (d: Date) => {
+    const e = endOfMonth(d);
+    setRangeEndState(e);
+    try { localStorage.setItem("ronin_staff_range_end", e.toISOString()); } catch { /* noop */ }
+    if (e < rangeStart) {
+      const newStart = startOfMonth(e);
+      setRangeStartState(newStart);
+      try { localStorage.setItem("ronin_staff_range_start", newStart.toISOString()); } catch { /* noop */ }
+    }
+  };
+  // Backwards-compat alias for code that still references monthStart (week-view nav, etc.)
+  const monthStart = rangeStart;
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
