@@ -121,7 +121,7 @@ export function StaffCalendarTab({
       });
   }, []);
 
-  const monthRangeEnd = endOfMonth(addMonths(monthStart, Math.max(0, monthsCount - 1)));
+  const monthRangeEnd = rangeEnd;
 
   const {
     schedules, shifts, leaveRequests, loading, refetch,
@@ -339,23 +339,44 @@ export function StaffCalendarTab({
     setShowShiftModal(true);
   };
 
+  const monthsSpan = (rangeEnd.getFullYear() - rangeStart.getFullYear()) * 12 + (rangeEnd.getMonth() - rangeStart.getMonth()) + 1;
   const weekLabel = calView === "month"
-    ? (monthsCount > 1
-        ? `${format(monthStart, "MMM yyyy")} – ${format(monthRangeEnd, "MMM yyyy")}`
-        : format(monthStart, "MMMM yyyy"))
+    ? (monthsSpan > 1
+        ? `${format(rangeStart, "MMM yyyy")} – ${format(rangeEnd, "MMM yyyy")}`
+        : format(rangeStart, "MMMM yyyy"))
     : `${format(weekStart, "MMM d")} – ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`;
   const isCurrentWeek = isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const isCurrentMonth = format(monthStart, "yyyy-MM") === format(new Date(), "yyyy-MM");
+  const isCurrentMonth = format(rangeStart, "yyyy-MM") === format(new Date(), "yyyy-MM") && monthsSpan === 1;
 
-  const handlePrev = () => calView === "month"
-    ? setMonthStart((m) => subMonths(m, 1))
-    : setWeekStart((w) => subWeeks(w, 1));
-  const handleNext = () => calView === "month"
-    ? setMonthStart((m) => addMonths(m, 1))
-    : setWeekStart((w) => addWeeks(w, 1));
-  const handleToday = () => calView === "month"
-    ? setMonthStart(startOfMonth(new Date()))
-    : setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  // Prev/Next shift the entire range by one month while preserving its width.
+  const shiftRange = (delta: number) => {
+    setRangeStartState((s) => {
+      const ns = startOfMonth(addMonths(s, delta));
+      try { localStorage.setItem("ronin_staff_range_start", ns.toISOString()); } catch { /* noop */ }
+      return ns;
+    });
+    setRangeEndState((e) => {
+      const ne = endOfMonth(addMonths(e, delta));
+      try { localStorage.setItem("ronin_staff_range_end", ne.toISOString()); } catch { /* noop */ }
+      return ne;
+    });
+  };
+  const handlePrev = () => calView === "month" ? shiftRange(-1) : setWeekStart((w) => subWeeks(w, 1));
+  const handleNext = () => calView === "month" ? shiftRange(1) : setWeekStart((w) => addWeeks(w, 1));
+  const handleToday = () => {
+    if (calView === "month") {
+      const ns = startOfMonth(new Date());
+      const ne = endOfMonth(addMonths(new Date(), Math.max(0, monthsSpan - 1)));
+      setRangeStartState(ns);
+      setRangeEndState(ne);
+      try {
+        localStorage.setItem("ronin_staff_range_start", ns.toISOString());
+        localStorage.setItem("ronin_staff_range_end", ne.toISOString());
+      } catch { /* noop */ }
+    } else {
+      setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -369,11 +390,10 @@ export function StaffCalendarTab({
         onNext={handleNext}
         onToday={handleToday}
         canEdit={canEdit}
-        monthsCount={monthsCount}
-        setMonthsCount={(n) => {
-          setMonthsCount(n);
-          try { localStorage.setItem("ronin_staff_months_count", String(n)); } catch { /* noop */ }
-        }}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        setRangeStart={setRangeStart}
+        setRangeEnd={setRangeEnd}
         onRequestLeave={() => setShowLeaveModal(true)}
         onAddShift={() => { setPrefillDate(undefined); setPrefillStaff(undefined); setShowShiftModal(true); }}
         onOpenScheduleManager={() => { setScheduleManagerStaff(null); setShowScheduleManager(true); }}
@@ -442,31 +462,54 @@ export function StaffCalendarTab({
           };
         }
 
+        // Build the list of months in the selected range — each renders as its own stacked card.
+        const monthCards: Date[] = [];
+        let cursor = startOfMonth(rangeStart);
+        const lastMonth = startOfMonth(rangeEnd);
+        while (cursor <= lastMonth) {
+          monthCards.push(cursor);
+          cursor = startOfMonth(addMonths(cursor, 1));
+        }
+
         return (
           <>
             {calc && singleStaff && (
               <CalculatorPanel personName={getDisplayName(singleStaff)} stats={calc} />
             )}
-            <div className="rounded-2xl border border-border bg-card overflow-x-auto">
-              {showFamilyOverlay && (
-                <FamilyOverlayBand
-                  monthStart={monthStart}
-                  monthDays={monthDays}
-                  events={familyEvents}
-                  properties={properties}
-                />
-              )}
-              <StaffMonthGrid
-                monthStart={monthStart}
-                monthEnd={monthRangeEnd}
-                staffToShow={staffToShow}
-                displayShifts={displayShifts}
-                properties={properties}
-                loading={loading || profilesLoading}
-                canEdit={canEdit}
-                onShowScheduleManager={() => setShowScheduleManager(true)}
-                noWrapper
-              />
+            <div className="space-y-4">
+              {monthCards.map((mStart) => {
+                const mEnd = endOfMonth(mStart);
+                const cardDays = eachDayOfInterval({ start: mStart, end: mEnd });
+                return (
+                  <div key={mStart.toISOString()} className="rounded-2xl border border-border bg-card overflow-hidden">
+                    <div className="bg-primary/10 border-b border-border px-4 py-2">
+                      <p className="text-sm font-semibold text-primary">{format(mStart, "MMMM yyyy")}</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      {showFamilyOverlay && (
+                        <FamilyOverlayBand
+                          monthStart={mStart}
+                          monthDays={cardDays}
+                          events={familyEvents}
+                          properties={properties}
+                        />
+                      )}
+                      <StaffMonthGrid
+                        monthStart={mStart}
+                        staffToShow={staffToShow}
+                        displayShifts={displayShifts}
+                        properties={properties}
+                        loading={loading || profilesLoading}
+                        canEdit={canEdit}
+                        onShowScheduleManager={() => setShowScheduleManager(true)}
+                        visibleStart={rangeStart}
+                        visibleEnd={rangeEnd}
+                        noWrapper
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </>
         );
