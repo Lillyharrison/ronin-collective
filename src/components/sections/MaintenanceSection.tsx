@@ -604,15 +604,8 @@ export function MaintenanceSection() {
               />
             </div>
 
-            {/* Filter/sort bar */}
+            {/* Sort/view bar */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <button onClick={() => setShowFilters(!showFilters)}
-                className={cn("flex-shrink-0 flex items-center gap-1.5 text-xs rounded-full border px-3 py-1.5 font-medium transition-colors",
-                  showFilters ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
-                )}>
-                <Filter size={11} /> {isL ? "Filtros" : "Filters"} {(filterProp || filterCat || filterPri) ? "●" : ""}
-              </button>
-
               <div className="relative flex-shrink-0">
                 <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
                   className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer">
