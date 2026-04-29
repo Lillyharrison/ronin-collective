@@ -619,8 +619,29 @@ export function MaintenanceSection() {
                 <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               </div>
 
+              {/* Download PDF (current filters/view) */}
+              <button
+                onClick={() => exportRepairsPDF({
+                  issues: displayIssues,
+                  // table view → clean spreadsheet PDF; board/list → tile PDF with photos
+                  viewMode: viewMode === "table" ? "list" : "tile",
+                  filters: {
+                    propertyName: filterProp
+                      ? properties.find(p => p.id === filterProp)?.name ?? null
+                      : null,
+                    category: filterCat || null,
+                    priority: filterPri || null,
+                    search: search || null,
+                  },
+                })}
+                disabled={displayIssues.length === 0}
+                title="Download current view as PDF"
+                className="flex-shrink-0 p-1.5 rounded-full border border-border hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed ml-auto">
+                <Download size={13} />
+              </button>
+
               {/* View toggle */}
-              <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden ml-auto">
+              <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden">
                 <button onClick={() => setViewMode("board")} title="Kanban board"
                   className={cn("p-1.5 transition-colors", viewMode === "board" ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground")}>
                   <LayoutGrid size={13} />
