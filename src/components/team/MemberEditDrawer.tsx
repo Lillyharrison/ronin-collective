@@ -735,3 +735,38 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     </div>
   );
 }
+
+// ── Master-admin helper: enter "View as" preview mode for the selected user ──
+import { usePermissionsControl } from "@/hooks/usePermissions";
+import { useState as useStateInner } from "react";
+
+function ViewAsButton({ targetUserId, targetName, onAfter, isEN }: {
+  targetUserId: string;
+  targetName: string;
+  onAfter: () => void;
+  isEN: boolean;
+}) {
+  const { enterPreview } = usePermissionsControl();
+  const [busy, setBusy] = useStateInner(false);
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await enterPreview(targetUserId);
+          onAfter();
+        } finally {
+          setBusy(false);
+        }
+      }}
+      title={isEN ? `View the app as ${targetName}` : `Ver la app como ${targetName}`}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-gold/10 hover:bg-gold/20 text-gold border border-gold/40 transition-colors disabled:opacity-50"
+    >
+      <Eye size={12} />
+      {busy ? "…" : (isEN ? "View as" : "Ver como")}
+    </button>
+  );
+}
