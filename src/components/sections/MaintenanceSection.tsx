@@ -667,7 +667,7 @@ export function MaintenanceSection() {
                   <option value="low">⚪ {isL ? "Bajo" : "Low"}</option>
                 </select>
               </div>
-            )}
+
           </>
         )}
       </div>
