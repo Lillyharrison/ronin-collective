@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type UserLevel = "principal" | "extended_family" | "manager" | "staff";
@@ -29,6 +29,15 @@ export interface UserPermissions {
   canEdit: (section: string) => boolean;
   wantsAlerts: (section: string) => boolean;
   loading: boolean;
+  // ── Preview / "View as user" mode ─────────────────────────────────────────
+  /** True when a master admin is currently viewing the app through another user's lens. */
+  isPreviewing: boolean;
+  /** The real signed-in master admin's userId (always set, even during preview). */
+  realUserId: string | null;
+  /** True if the actual signed-in user is a master_admin (independent of preview). */
+  realIsMasterAdmin: boolean;
+  /** Display name of the user currently being previewed (only when isPreviewing). */
+  previewName: string | null;
 }
 
 // Fallback permission matrix: which sections each role can access
@@ -67,10 +76,8 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
 };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────
-// WhatsApp-style: serve cached data immediately, revalidate in background.
-// The cache is keyed by userId so switching accounts works correctly.
 const CACHE_VERSION = "v2";
-const CACHE_TTL_MS  = 5 * 60 * 1000; // 5 min — fresh enough, avoids stale role issues
+const CACHE_TTL_MS  = 5 * 60 * 1000;
 
 interface PermissionsCache {
   version: string;
@@ -109,7 +116,6 @@ function clearCache(userId?: string) {
   if (userId) {
     localStorage.removeItem(`ronin_perms_${userId}`);
   } else {
-    // Clear any ronin_perms_* keys
     Object.keys(localStorage)
       .filter(k => k.startsWith("ronin_perms_"))
       .forEach(k => localStorage.removeItem(k));
@@ -134,9 +140,24 @@ const defaultPermissions: UserPermissions = {
   canEdit: () => false,
   wantsAlerts: () => false,
   loading: true,
+  isPreviewing: false,
+  realUserId: null,
+  realIsMasterAdmin: false,
+  previewName: null,
 };
 
+interface PermissionsControl {
+  /** Enter preview mode — start viewing the app as `targetUserId`. Master admin only. */
+  enterPreview: (targetUserId: string) => Promise<void>;
+  /** Exit preview mode and restore the master admin's own view. */
+  exitPreview: () => void;
+}
+
 const PermissionsContext = createContext<UserPermissions>(defaultPermissions);
+const PermissionsControlContext = createContext<PermissionsControl>({
+  enterPreview: async () => {},
+  exitPreview: () => {},
+});
 
 function buildPermissions(
   userId: string | null,
@@ -148,13 +169,13 @@ function buildPermissions(
   avatarUrl: string | null,
   sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null,
   loading: boolean,
+  preview: { isPreviewing: boolean; realUserId: string | null; realIsMasterAdmin: boolean; previewName: string | null },
 ): UserPermissions {
   const isMasterAdmin = role === "master_admin";
   const isAdmin = role === "admin" || isMasterAdmin;
   const isManager = role === "manager" || isAdmin;
   const isFamily = level === "principal" || level === "extended_family";
 
-  // "vendors" section is displayed as "contacts" in permissions UI
   const SECTION_ALIASES: Record<string, string> = { vendors: "contacts" };
 
   const canSee = (section: string): boolean => {
@@ -213,95 +234,113 @@ function buildPermissions(
     canEdit,
     wantsAlerts,
     loading,
+    ...preview,
   };
 }
 
 /**
- * PermissionsProvider — stale-while-revalidate strategy.
- *
- * 1. On mount: immediately serve cached permissions (loading = false instantly)
- *    so the rest of the app can render without waiting for DB.
- * 2. In parallel: fetch fresh data from DB and update cache + context.
- *
- * This is exactly how WhatsApp / Telegram show their UI instantly — they paint
- * from local state while network data rehydrates silently behind the scenes.
+ * Fetch the full permissions snapshot for a given user from the database.
+ * Used both for the real signed-in user and for the previewed target user.
  */
+async function fetchPermissionsSnapshot(userId: string) {
+  const [{ data: roleRow }, { data: profile }, rowPermsResult] = await Promise.all([
+    supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+    supabase.from("profiles")
+      .select("level, department, assigned_property_ids, full_name, avatar_url")
+      .eq("id", userId).maybeSingle(),
+    (supabase.from("user_section_permissions" as never)
+      .select("section, can_view, can_edit, notifications")
+      .eq("user_id", userId)) as unknown as Promise<{
+        data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean }[] | null
+      }>,
+  ]);
+
+  const role = (roleRow?.role as AppRole) ?? null;
+  const level = (profile?.level as UserLevel) ?? null;
+  const department = (profile?.department as UserDepartment) ?? null;
+  const assignedPropertyIds = profile?.assigned_property_ids ?? [];
+  const fullName = profile?.full_name ?? null;
+  const avatarUrl = profile?.avatar_url ?? null;
+
+  let sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null = null;
+  const rowPerms = rowPermsResult.data;
+  if (rowPerms && rowPerms.length > 0) {
+    sectionPermissions = {};
+    for (const row of rowPerms) {
+      sectionPermissions[row.section] = { view: row.can_view, edit: row.can_edit, notifications: row.notifications };
+    }
+  }
+
+  return { userId, role, level, department, assignedPropertyIds, fullName, avatarUrl, sectionPermissions };
+}
+
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [perms, setPerms] = useState<UserPermissions>(defaultPermissions);
+
+  // Real signed-in user snapshot (preserved across preview enter/exit).
+  const realSnapshotRef = useRef<Awaited<ReturnType<typeof fetchPermissionsSnapshot>> | null>(null);
+  const [previewState, setPreviewState] = useState<{ targetUserId: string; previewName: string | null } | null>(null);
+
+  // Apply a snapshot (real or previewed) to the context state.
+  const applySnapshot = useCallback((
+    snap: Awaited<ReturnType<typeof fetchPermissionsSnapshot>>,
+    preview: { isPreviewing: boolean; realUserId: string | null; realIsMasterAdmin: boolean; previewName: string | null },
+  ) => {
+    setPerms(buildPermissions(
+      snap.userId, snap.role, snap.level, snap.department,
+      snap.assignedPropertyIds, snap.fullName, snap.avatarUrl,
+      snap.sectionPermissions, false, preview,
+    ));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load(userId: string) {
-      // ── 1. Serve from cache immediately (zero network latency) ───────────
+      // Serve from cache immediately
       const cached = readCache(userId);
       if (cached && !cancelled) {
-        setPerms(buildPermissions(
-          cached.userId, cached.role, cached.level, cached.department,
-          cached.assignedPropertyIds, cached.fullName, cached.avatarUrl,
-          cached.sectionPermissions, false, // loading = false — use cache now
-        ));
+        const snap = {
+          userId: cached.userId, role: cached.role, level: cached.level, department: cached.department,
+          assignedPropertyIds: cached.assignedPropertyIds, fullName: cached.fullName, avatarUrl: cached.avatarUrl,
+          sectionPermissions: cached.sectionPermissions,
+        };
+        realSnapshotRef.current = snap;
+        applySnapshot(snap, {
+          isPreviewing: false, realUserId: userId,
+          realIsMasterAdmin: snap.role === "master_admin", previewName: null,
+        });
       }
 
-      // ── 2. Fetch fresh from DB (3 queries in one round-trip) ─────────────
-      // SOURCE OF TRUTH: user_section_permissions table.
-      // The profiles.section_permissions JSONB still exists for backwards
-      // compat (older code reads it), but we DO NOT fall back to it here —
-      // doing so caused silent drift when the admin UI saved to JSONB only.
-      // The admin UI now writes to BOTH places; this reader trusts only the table.
-      const [{ data: roleRow }, { data: profile }, rowPermsResult] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-        supabase.from("profiles")
-          .select("level, department, assigned_property_ids, full_name, avatar_url")
-          .eq("id", userId).maybeSingle(),
-        (supabase.from("user_section_permissions" as never)
-          .select("section, can_view, can_edit, notifications")
-          .eq("user_id", userId)) as unknown as Promise<{
-            data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean }[] | null
-          }>,
-      ]);
-
+      // Fetch fresh from DB
+      const fresh = await fetchPermissionsSnapshot(userId);
       if (cancelled) return;
 
-      const role = (roleRow?.role as AppRole) ?? null;
-      const level = (profile?.level as UserLevel) ?? null;
-      const department = (profile?.department as UserDepartment) ?? null;
-      const assignedPropertyIds = profile?.assigned_property_ids ?? [];
-      const fullName = profile?.full_name ?? null;
-      const avatarUrl = profile?.avatar_url ?? null;
+      writeCache(fresh);
+      realSnapshotRef.current = fresh;
 
-      let sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null = null;
-      const rowPerms = rowPermsResult.data;
-      if (rowPerms && rowPerms.length > 0) {
-        sectionPermissions = {};
-        for (const row of rowPerms) {
-          sectionPermissions[row.section] = { view: row.can_view, edit: row.can_edit, notifications: row.notifications };
-        }
+      // If we are currently previewing someone, do NOT overwrite the displayed view —
+      // only refresh the underlying real snapshot so exit returns to fresh data.
+      if (!previewState) {
+        applySnapshot(fresh, {
+          isPreviewing: false, realUserId: userId,
+          realIsMasterAdmin: fresh.role === "master_admin", previewName: null,
+        });
       }
-      // No JSONB fallback — if the table has no rows, we use the role-based default matrix below.
-
-      // ── 3. Write back to cache ─────────────────────────────────────────────
-      writeCache({ userId, role, level, department, assignedPropertyIds, fullName, avatarUrl, sectionPermissions });
-
-      // ── 4. Update context with fresh data ─────────────────────────────────
-      setPerms(buildPermissions(
-        userId, role, level, department, assignedPropertyIds,
-        fullName, avatarUrl, sectionPermissions, false,
-      ));
     }
 
-    // Wire up auth — use onAuthStateChange as single source of truth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         if (cancelled) return;
         clearCache();
+        realSnapshotRef.current = null;
+        setPreviewState(null);
         setPerms({ ...defaultPermissions, loading: false });
       } else {
         load(session.user.id);
       }
     });
 
-    // Also trigger on mount for users already signed in (getSession is local/cached)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && !cancelled) load(session.user.id);
       else if (!session && !cancelled) setPerms({ ...defaultPermissions, loading: false });
@@ -311,19 +350,60 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Preview controls ─────────────────────────────────────────────────────
+  const enterPreview = useCallback(async (targetUserId: string) => {
+    const real = realSnapshotRef.current;
+    if (!real) return;
+    if (real.role !== "master_admin") {
+      console.warn("[Permissions] enterPreview blocked — only master admins can preview other users.");
+      return;
+    }
+    if (targetUserId === real.userId) return;
+
+    const target = await fetchPermissionsSnapshot(targetUserId);
+    setPreviewState({ targetUserId, previewName: target.fullName ?? "User" });
+    applySnapshot(target, {
+      isPreviewing: true,
+      realUserId: real.userId,
+      realIsMasterAdmin: true,
+      previewName: target.fullName ?? "User",
+    });
+  }, [applySnapshot]);
+
+  const exitPreview = useCallback(() => {
+    const real = realSnapshotRef.current;
+    if (!real) return;
+    setPreviewState(null);
+    applySnapshot(real, {
+      isPreviewing: false,
+      realUserId: real.userId,
+      realIsMasterAdmin: real.role === "master_admin",
+      previewName: null,
+    });
+  }, [applySnapshot]);
 
   return (
     <PermissionsContext.Provider value={perms}>
-      {children}
+      <PermissionsControlContext.Provider value={{ enterPreview, exitPreview }}>
+        {children}
+      </PermissionsControlContext.Provider>
     </PermissionsContext.Provider>
   );
 }
 
 /**
- * usePermissions — reads from PermissionsContext.
- * Zero DB calls; data is fetched once by PermissionsProvider at the app root.
+ * usePermissions — reads the (possibly previewed) permission snapshot.
  */
 export function usePermissions(): UserPermissions {
   return useContext(PermissionsContext);
+}
+
+/**
+ * usePermissionsControl — exposes enterPreview / exitPreview for master admins.
+ */
+export function usePermissionsControl(): PermissionsControl {
+  return useContext(PermissionsControlContext);
 }
