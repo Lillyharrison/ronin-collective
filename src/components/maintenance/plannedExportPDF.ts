@@ -158,8 +158,9 @@ function exportListPDF(ctx: PlannedExportContext) {
   ]);
 
   // Column widths tuned so 9 columns fit landscape A4 with no overflow.
-  // usable = 297 - 20 = 277mm
-  const colWidths = [70, 26, 26, 30, 28, 30, 22, 18, 27]; // sum = 277
+  // usable = 297 - 20 = 277mm. Status widened so "Initiated by Vendor" fits
+  // on a single line; title trimmed to reclaim wasted whitespace.
+  const colWidths = [55, 38, 26, 30, 30, 32, 22, 16, 28]; // sum = 277
 
   autoTable(doc, {
     startY,
