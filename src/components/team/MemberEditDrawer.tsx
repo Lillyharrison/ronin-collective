@@ -353,7 +353,12 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               {lvlInfo && <p className={`text-[10px] tracking-widest uppercase mt-0.5 ${LEVEL_COLORS[member.level || "staff"].split(" ")[0]}`}>{isEN ? lvlInfo.label : lvlInfo.labelEs}</p>}
             </div>
           </div>
-          <button onClick={onClose} className="text-cream/50 hover:text-cream"><X size={20} /></button>
+          <div className="flex items-center gap-2">
+            {isMasterAdmin && !isDraft && (
+              <ViewAsButton targetUserId={member.id} targetName={member.full_name || "User"} onAfter={onClose} isEN={isEN} />
+            )}
+            <button onClick={onClose} className="text-cream/50 hover:text-cream"><X size={20} /></button>
+          </div>
         </div>
 
         {/* Draft banner */}
