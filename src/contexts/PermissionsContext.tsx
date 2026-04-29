@@ -280,6 +280,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   // Real signed-in user snapshot (preserved across preview enter/exit).
   const realSnapshotRef = useRef<Awaited<ReturnType<typeof fetchPermissionsSnapshot>> | null>(null);
   const [previewState, setPreviewState] = useState<{ targetUserId: string; previewName: string | null } | null>(null);
+  // Mirror previewState into a ref so the auth listener (registered once) always
+  // reads the LATEST value — without this, a token refresh ~every 5 min would
+  // overwrite the preview snapshot and "kick" the admin back to their own view.
+  const previewStateRef = useRef<typeof previewState>(null);
+  useEffect(() => { previewStateRef.current = previewState; }, [previewState]);
 
   // Apply a snapshot (real or previewed) to the context state.
   const applySnapshot = useCallback((
@@ -297,9 +302,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function load(userId: string) {
-      // Serve from cache immediately
+      const isPreviewing = previewStateRef.current !== null;
+
+      // Serve from cache immediately — but ONLY if we are not currently previewing,
+      // otherwise we'd flash back to the admin's own view on every token refresh.
       const cached = readCache(userId);
-      if (cached && !cancelled) {
+      if (cached && !cancelled && !isPreviewing) {
         const snap = {
           userId: cached.userId, role: cached.role, level: cached.level, department: cached.department,
           assignedPropertyIds: cached.assignedPropertyIds, fullName: cached.fullName, avatarUrl: cached.avatarUrl,
@@ -310,6 +318,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
           isPreviewing: false, realUserId: userId,
           realIsMasterAdmin: snap.role === "master_admin", previewName: null,
         });
+      } else if (cached && !cancelled && isPreviewing) {
+        // Still update the underlying real snapshot so exitPreview() has fresh data.
+        realSnapshotRef.current = {
+          userId: cached.userId, role: cached.role, level: cached.level, department: cached.department,
+          assignedPropertyIds: cached.assignedPropertyIds, fullName: cached.fullName, avatarUrl: cached.avatarUrl,
+          sectionPermissions: cached.sectionPermissions,
+        };
       }
 
       // Fetch fresh from DB
@@ -319,9 +334,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       writeCache(fresh);
       realSnapshotRef.current = fresh;
 
-      // If we are currently previewing someone, do NOT overwrite the displayed view —
-      // only refresh the underlying real snapshot so exit returns to fresh data.
-      if (!previewState) {
+      // Re-check preview state AFTER the await — user may have entered/exited preview meanwhile.
+      if (previewStateRef.current === null) {
         applySnapshot(fresh, {
           isPreviewing: false, realUserId: userId,
           realIsMasterAdmin: fresh.role === "master_admin", previewName: null,
@@ -329,16 +343,20 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         if (cancelled) return;
         clearCache();
         realSnapshotRef.current = null;
         setPreviewState(null);
+        previewStateRef.current = null;
         setPerms({ ...defaultPermissions, loading: false });
-      } else {
-        load(session.user.id);
+        return;
       }
+      // Skip benign token refreshes entirely while previewing — nothing about
+      // the admin's permissions changed, and we don't want to disturb the view.
+      if (event === "TOKEN_REFRESHED" && previewStateRef.current !== null) return;
+      load(session.user.id);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
