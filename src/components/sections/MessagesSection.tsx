@@ -17,13 +17,15 @@ const AGENT_RONIN_TITLE = "Agent Ronin";
 export function MessagesSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
-  const { level, userId, isMasterAdmin } = usePermissions();
+  const { level, userId, isMasterAdmin, isPreviewing } = usePermissions();
   const { setIsChatOpen, setTotalUnread, registerBackHandler } = useNavigation();
   const [view, setView] = useState<View>("threads");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const currentUserId = user?.id ?? null;
+  // When a master admin is previewing another user, show that user's threads
+  // (RLS allows master_admin to read any thread). Otherwise use the real auth user.
+  const currentUserId = (isPreviewing ? userId : user?.id) ?? null;
   usePresence(currentUserId);
 
   const { threads, loading, createDM, createGroup, deleteThread } = useThreads(currentUserId);
