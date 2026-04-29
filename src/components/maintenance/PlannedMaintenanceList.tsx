@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search, ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInDays, isPast } from "date-fns";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { exportPlannedMaintenancePDF } from "./plannedExportPDF";
 
 const MONTHS_SHORT = [
   "Jan","Feb","Mar","Apr","May","Jun",
@@ -217,6 +218,23 @@ export function PlannedMaintenanceList({
                 <Table2 size={13} />
               </button>
             </div>
+            <button
+              onClick={() => exportPlannedMaintenancePDF({
+                entries: sorted,
+                viewMode,
+                filters: {
+                  propertyName: propertyFilter
+                    ? properties.find(p => p.id === propertyFilter)?.name ?? null
+                    : null,
+                  status: filterStatus || null,
+                  search: search || null,
+                },
+              })}
+              disabled={sorted.length === 0}
+              title="Download current view as PDF"
+              className="p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
+              <Download size={15} />
+            </button>
             <button onClick={refetch}
               className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors text-muted-foreground", loading && "text-amber-400")}>
               <RefreshCw size={15} className={cn(loading && "animate-spin")} />
