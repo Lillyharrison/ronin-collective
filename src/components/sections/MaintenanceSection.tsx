@@ -604,15 +604,8 @@ export function MaintenanceSection() {
               />
             </div>
 
-            {/* Filter/sort bar */}
+            {/* Sort/view bar */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <button onClick={() => setShowFilters(!showFilters)}
-                className={cn("flex-shrink-0 flex items-center gap-1.5 text-xs rounded-full border px-3 py-1.5 font-medium transition-colors",
-                  showFilters ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
-                )}>
-                <Filter size={11} /> {isL ? "Filtros" : "Filters"} {(filterProp || filterCat || filterPri) ? "●" : ""}
-              </button>
-
               <div className="relative flex-shrink-0">
                 <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
                   className="appearance-none text-xs rounded-full border border-border bg-background pl-7 pr-6 py-1.5 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-gold/30 cursor-pointer">
@@ -642,21 +635,31 @@ export function MaintenanceSection() {
               </div>
             </div>
 
-            {/* Expanded filters */}
-            {showFilters && (
-              <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
-                <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
-                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-                  <option value="">{t("allPropertiesFilter")}</option>
-                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
-                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
-                  <option value="">{t("allCategories")}</option>
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
-                </select>
-                <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
-                  className="text-xs rounded-lg border border-input bg-background px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30">
+            {/* Always-visible filters */}
+            <div className="grid grid-cols-3 gap-2 p-3 bg-muted/30 rounded-xl border border-border">
+              <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
+                className={cn(
+                  "text-xs rounded-lg border px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30 font-medium transition-colors",
+                  filterProp
+                    ? "bg-gold/15 border-gold text-gold ring-1 ring-gold/40"
+                    : "border-input bg-background"
+                )}>
+                <option value="">{t("allPropertiesFilter")}</option>
+                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+                className={cn(
+                  "text-xs rounded-lg border px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors",
+                  filterCat ? "bg-gold/10 border-gold/60 text-gold font-medium" : "border-input bg-background"
+                )}>
+                <option value="">{t("allCategories")}</option>
+                {categories.map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
+              </select>
+              <select value={filterPri} onChange={e => setFilterPri(e.target.value)}
+                className={cn(
+                  "text-xs rounded-lg border px-2 py-2 focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors",
+                  filterPri ? "bg-gold/10 border-gold/60 text-gold font-medium" : "border-input bg-background"
+                )}>
                   <option value="">{t("allPriorities")}</option>
                   <option value="urgent">🔴 {isL ? "Urgente" : "Urgent"}</option>
                   <option value="high">🟠 {isL ? "Alto" : "High"}</option>
@@ -664,7 +667,7 @@ export function MaintenanceSection() {
                   <option value="low">⚪ {isL ? "Bajo" : "Low"}</option>
                 </select>
               </div>
-            )}
+
           </>
         )}
       </div>
