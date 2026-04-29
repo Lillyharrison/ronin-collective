@@ -136,7 +136,7 @@ function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
 // LIST / TABLE export — landscape A4
 // ──────────────────────────────────────────────────────────────────────────────
 
-function exportListPDF(ctx: PlannedExportContext) {
+function buildListDoc(ctx: PlannedExportContext, scale: number): jsPDF {
   const doc = new jsPDF({ orientation: "landscape", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();    // 297
   const pageHeight = doc.internal.pageSize.getHeight();  // 210
@@ -162,6 +162,11 @@ function exportListPDF(ctx: PlannedExportContext) {
   // on a single line; title trimmed to reclaim wasted whitespace.
   const colWidths = [55, 38, 26, 30, 30, 32, 22, 16, 28]; // sum = 277
 
+  const baseFont = 8;
+  const baseHeadFont = 8;
+  const basePadV = 2.5;
+  const basePadH = 2.5;
+
   autoTable(doc, {
     startY,
     head,
@@ -170,13 +175,13 @@ function exportListPDF(ctx: PlannedExportContext) {
       fillColor: [28, 29, 32],
       textColor: [245, 240, 232],
       fontStyle: "bold",
-      fontSize: 8,
-      cellPadding: { top: 3, bottom: 3, left: 2.5, right: 2.5 },
+      fontSize: baseHeadFont * scale,
+      cellPadding: { top: 3 * scale, bottom: 3 * scale, left: basePadH * scale, right: basePadH * scale },
       halign: "left",
     },
     bodyStyles: {
-      fontSize: 8,
-      cellPadding: { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 },
+      fontSize: baseFont * scale,
+      cellPadding: { top: basePadV * scale, bottom: basePadV * scale, left: basePadH * scale, right: basePadH * scale },
       overflow: "linebreak",
       valign: "middle",
       lineWidth: 0.1,
@@ -226,6 +231,13 @@ function exportListPDF(ctx: PlannedExportContext) {
     margin: { left: marginL, right: marginR, bottom: 14 },
   });
 
+  return doc;
+}
+
+function exportListPDF(ctx: PlannedExportContext) {
+  const doc = autoFitDoc((scale) => buildListDoc(ctx, scale));
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   drawFooter(doc, pageWidth, pageHeight);
   doc.save(`planned-maintenance-${format(new Date(), "yyyy-MM-dd")}.pdf`);
   toast.success("PDF downloaded");
