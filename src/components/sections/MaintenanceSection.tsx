@@ -3,8 +3,9 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
-  Flag, Tag, Clock, CheckCircle2, CalendarClock,
+  Flag, Tag, Clock, CheckCircle2, CalendarClock, Download,
 } from "lucide-react";
+import { exportRepairsPDF } from "@/components/maintenance/repairsExportPDF";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMaintenanceIssues, MaintenanceIssue, IssueStatus, MaintenanceFilters } from "@/hooks/useMaintenanceIssues";
 import { usePlannedMaintenance, PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
