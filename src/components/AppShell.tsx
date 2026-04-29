@@ -8,6 +8,7 @@ import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { PreviewModeBanner } from "@/components/PreviewModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
 import { Bell, X } from "lucide-react";
@@ -210,12 +211,13 @@ export function AppShell() {
       <Sidebar />
       <Header title={showDetail ? undefined : title} />
       {user?.id && <PushPromptBanner userId={user.id} />}
+      <PreviewModeBanner />
       <OfflineBanner />
 
       <main
         className={activeSection === "messages" ? "h-[100dvh] overflow-hidden" : "min-h-screen pb-20"}
         style={{
-          paddingTop: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px))",
+          paddingTop: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))",
         }}
       >
         <Suspense fallback={<SectionSkeleton />}>
