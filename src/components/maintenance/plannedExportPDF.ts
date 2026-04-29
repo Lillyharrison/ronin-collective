@@ -247,10 +247,9 @@ function exportListPDF(ctx: PlannedExportContext) {
 // TILE / CARD export — portrait A4
 // ──────────────────────────────────────────────────────────────────────────────
 
-function exportTilePDF(ctx: PlannedExportContext) {
+function buildTileDoc(ctx: PlannedExportContext, scale: number): jsPDF {
   const doc = new jsPDF({ orientation: "portrait", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();    // 210
-  const pageHeight = doc.internal.pageSize.getHeight();  // 297
   const marginL = 12;
   const marginR = 12;
   const startY = drawHeader(doc, ctx, pageWidth, marginL);
@@ -261,10 +260,7 @@ function exportTilePDF(ctx: PlannedExportContext) {
   const rightW = usable - leftW; // 86
 
   const body = ctx.entries.map((e) => {
-    // Left cell: title + description
     const left = e.description ? `${e.title}\n${e.description}` : e.title;
-
-    // Right cell: structured meta lines
     const metaLines: string[] = [];
     metaLines.push(`Status:    ${STATUS_LABELS[e.status] ?? e.status}${isOverdue(e) ? "  (OVERDUE)" : ""}`);
     metaLines.push(`Date:      ${formatEntryDate(e)}`);
@@ -276,7 +272,6 @@ function exportTilePDF(ctx: PlannedExportContext) {
     metaLines.push(`Assigned:  ${firstName(e.assignee_name)}`);
     metaLines.push(`Reminder:  ${e.reminder_days > 0 ? `${e.reminder_days} days` : "Off"}`);
     metaLines.push(`Recurs:    ${formatRecurrence(e)}`);
-
     return [left, metaLines.join("\n")];
   });
 
@@ -286,8 +281,8 @@ function exportTilePDF(ctx: PlannedExportContext) {
     body,
     theme: "plain",
     bodyStyles: {
-      fontSize: 9,
-      cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
+      fontSize: 9 * scale,
+      cellPadding: { top: 4 * scale, bottom: 4 * scale, left: 4 * scale, right: 4 * scale },
       overflow: "linebreak",
       valign: "top",
       lineWidth: 0.2,
@@ -297,22 +292,16 @@ function exportTilePDF(ctx: PlannedExportContext) {
     },
     columnStyles: {
       0: { cellWidth: leftW, fontStyle: "normal" },
-      1: { cellWidth: rightW, font: "courier", fontSize: 8.5, textColor: [70, 70, 70] },
+      1: { cellWidth: rightW, font: "courier", fontSize: 8.5 * scale, textColor: [70, 70, 70] },
     },
     didParseCell: (data) => {
       if (data.section !== "body") return;
       const entry = ctx.entries[data.row.index];
       if (!entry) return;
-
-      // Bold the title (first line of left cell). autoTable can't style per-line,
-      // so we keep the whole left cell at slightly larger size and rely on the
-      // line break + description below.
       if (data.column.index === 0) {
         data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fontSize = 10;
+        data.cell.styles.fontSize = 10 * scale;
       }
-
-      // Subtle alternating background to delineate cards
       if (data.row.index % 2 === 1) {
         data.cell.styles.fillColor = [250, 249, 245];
       }
@@ -320,9 +309,59 @@ function exportTilePDF(ctx: PlannedExportContext) {
     margin: { left: marginL, right: marginR, bottom: 14 },
   });
 
+  return doc;
+}
+
+function exportTilePDF(ctx: PlannedExportContext) {
+  const doc = autoFitDoc((scale) => buildTileDoc(ctx, scale));
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   drawFooter(doc, pageWidth, pageHeight);
   doc.save(`planned-maintenance-${format(new Date(), "yyyy-MM-dd")}.pdf`);
   toast.success("PDF downloaded");
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Auto-fit: render → measure last-page fill → if sparse, shrink and re-render
+// to claw back the page. Stops as soon as page count drops or scale floor hit.
+// ──────────────────────────────────────────────────────────────────────────────
+
+function lastPageFillRatio(doc: jsPDF): number {
+  // jspdf-autotable stamps the last drawn finalY on the doc instance.
+  const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 0;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const usableTop = 26;       // matches drawHeader return
+  const bottomPad = 14;       // matches autoTable bottom margin
+  const usable = pageHeight - usableTop - bottomPad;
+  // finalY is in absolute page coords for the current (last) page.
+  const used = Math.max(0, finalY - usableTop);
+  return Math.min(1, used / usable);
+}
+
+function autoFitDoc(builder: (scale: number) => jsPDF): jsPDF {
+  const SPARSE_THRESHOLD = 0.25; // last page <25% full → try to compress
+  const SCALES = [1.0, 0.95, 0.9, 0.85, 0.8]; // gentle, capped to stay legible
+
+  let doc = builder(SCALES[0]);
+  let pages = doc.getNumberOfPages();
+  if (pages <= 1) return doc;
+
+  let fill = lastPageFillRatio(doc);
+  if (fill >= SPARSE_THRESHOLD) return doc;
+
+  for (let i = 1; i < SCALES.length; i++) {
+    const candidate = builder(SCALES[i]);
+    const candidatePages = candidate.getNumberOfPages();
+    if (candidatePages < pages) {
+      // Successfully removed a page — keep this one and check again if still sparse.
+      doc = candidate;
+      pages = candidatePages;
+      if (pages <= 1) return doc;
+      fill = lastPageFillRatio(doc);
+      if (fill >= SPARSE_THRESHOLD) return doc;
+    }
+  }
+  return doc;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
