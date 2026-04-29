@@ -9,6 +9,7 @@
  */
 export {
   usePermissions,
+  usePermissionsControl,
   type UserPermissions,
   type UserLevel,
   type UserDepartment,
