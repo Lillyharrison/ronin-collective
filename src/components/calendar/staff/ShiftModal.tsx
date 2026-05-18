@@ -383,6 +383,27 @@ export function ShiftModal({
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={scopePrompt} onOpenChange={setScopePrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit recurring shift</AlertDialogTitle>
+            <AlertDialogDescription>
+              This shift is part of a recurring schedule. Apply your changes to
+              just this day, or to every occurrence going forward?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <Button variant="outline" disabled={saving} onClick={applyEditToSingleDay}>
+              Just this day
+            </Button>
+            <Button disabled={saving} onClick={applyEditToSeries}>
+              Entire series
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
