@@ -575,14 +575,7 @@ export function StaffCalendarTab({
             {calc && singleStaff && (
               <CalculatorPanel personName={getDisplayName(singleStaff)} stats={calc} />
             )}
-            <StaffDaysSummary
-              staffToShow={staffToShow}
-              displayShifts={displayShifts}
-              leaveRequests={leaveRequests}
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-            />
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               {monthCards.map((mStart) => {
                 const mEnd = endOfMonth(mStart);
                 const cardDays = eachDayOfInterval({ start: mStart, end: mEnd });
@@ -617,6 +610,13 @@ export function StaffCalendarTab({
                 );
               })}
             </div>
+            <StaffDaysSummary
+              staffToShow={staffToShow}
+              displayShifts={displayShifts}
+              leaveRequests={leaveRequests}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+            />
           </>
         );
       })()}
