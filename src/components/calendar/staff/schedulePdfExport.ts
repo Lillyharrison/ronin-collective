@@ -130,7 +130,6 @@ function renderWeeklyStacked(
 ) {
   const { staffToShow, displayShifts, properties, rangeStart, rangeEnd, rangeLabel, addPage } = ctx;
   if (addPage) doc.addPage("a4", "portrait");
-  else doc.deletePage(doc.getNumberOfPages()); // remove default landscape page from constructor if needed
 
   // Page geometry (portrait A4)
   const pageWidth = 210;
