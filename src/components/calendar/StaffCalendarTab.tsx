@@ -720,6 +720,14 @@ export function StaffCalendarTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PdfExportModal
+        open={showPdfModal}
+        onClose={() => setShowPdfModal(false)}
+        defaultStart={calView === "week" ? weekStart : rangeStart}
+        defaultEnd={calView === "week" ? endOfWeek(weekStart, { weekStartsOn: 1 }) : rangeEnd}
+        onExport={handlePdfExport}
+      />
     </div>
   );
 }
