@@ -6,6 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { StaffSchedule, StaffShift } from "@/hooks/useStaffSchedules";
 import { DOW_FULL, DOW_LABELS } from "./constants";
@@ -59,6 +63,7 @@ export function ShiftModal({
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const [scopePrompt, setScopePrompt] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -97,6 +102,14 @@ export function ShiftModal({
 
   const handleSave = async () => {
     if (!form.staff_id) return;
+
+    // Editing a virtual recurring shift → ask whether to change just this
+    // occurrence or the whole series before mutating anything.
+    if (editShift && editShift.is_virtual && editShift.schedule_id && !scopePrompt) {
+      setScopePrompt(true);
+      return;
+    }
+
     setSaving(true);
     const noteVal = locationNote(form.notes, form.location);
 
@@ -115,19 +128,8 @@ export function ShiftModal({
       return;
     }
 
-    // ── Edit mode: virtual shift from recurring schedule → update the schedule ─
-    if (editShift && editShift.is_virtual && editShift.schedule_id) {
-      const ok = await onUpdateSchedule(editShift.schedule_id, {
-        staff_id: form.staff_id,
-        property_id: form.property_id || null,
-        start_time: form.start_time || "09:00",
-        end_time: form.end_time || "17:00",
-        notes: noteVal,
-      });
-      setSaving(false);
-      if (ok) onClose();
-      return;
-    }
+    // Recurring virtual edit handled via scope prompt actions below.
+
 
     if (mode === "recurring") {
       // Create one staff_schedule per selected day-of-week
@@ -174,6 +176,44 @@ export function ShiftModal({
       setSaving(false);
       if (allOk) onClose();
     }
+  };
+
+  // Apply a virtual-recurring edit to just this date by creating a concrete
+  // staff_shifts override that supersedes the schedule occurrence.
+  const applyEditToSingleDay = async () => {
+    if (!editShift?.schedule_id) return;
+    setSaving(true);
+    const noteVal = locationNote(form.notes, form.location);
+    const ok = await onSave({
+      staff_id: form.staff_id,
+      property_id: form.property_id || null,
+      schedule_id: editShift.schedule_id,
+      shift_date: editShift.shift_date,
+      start_time: form.start_time || null,
+      end_time: form.end_time || null,
+      status: "scheduled",
+      notes: noteVal,
+      created_by: userId,
+    });
+    setSaving(false);
+    setScopePrompt(false);
+    if (ok) onClose();
+  };
+
+  const applyEditToSeries = async () => {
+    if (!editShift?.schedule_id) return;
+    setSaving(true);
+    const noteVal = locationNote(form.notes, form.location);
+    const ok = await onUpdateSchedule(editShift.schedule_id, {
+      staff_id: form.staff_id,
+      property_id: form.property_id || null,
+      start_time: form.start_time || "09:00",
+      end_time: form.end_time || "17:00",
+      notes: noteVal,
+    });
+    setSaving(false);
+    setScopePrompt(false);
+    if (ok) onClose();
   };
 
   const isValid = !!form.staff_id && (
@@ -343,6 +383,27 @@ export function ShiftModal({
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={scopePrompt} onOpenChange={setScopePrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit recurring shift</AlertDialogTitle>
+            <AlertDialogDescription>
+              This shift is part of a recurring schedule. Apply your changes to
+              just this day, or to every occurrence going forward?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <Button variant="outline" disabled={saving} onClick={applyEditToSingleDay}>
+              Just this day
+            </Button>
+            <Button disabled={saving} onClick={applyEditToSeries}>
+              Entire series
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

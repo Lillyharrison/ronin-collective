@@ -25,6 +25,11 @@ import { CalendarToolbar } from "./staff/CalendarToolbar";
 import { StaffFilterBar } from "./staff/StaffFilterBar";
 import { PropertyLegend } from "./staff/PropertyLegend";
 import { exportScheduleExcel, exportSchedulePDF } from "./staff/exportUtils";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 export function StaffCalendarTab({
   canEdit,
@@ -88,6 +93,7 @@ export function StaffCalendarTab({
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [prefillStaff, setPrefillStaff] = useState<string | undefined>();
   const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
   const [filterStaff] = useState<string>("all");
   const [filterSearch, setFilterSearch] = useState<string>("");
@@ -314,24 +320,49 @@ export function StaffCalendarTab({
   };
 
   const handleDeleteShift = useCallback(async (shift: DisplayShift) => {
+    if (shift.concrete_id && !shift.schedule_id) {
+      await deleteShift(shift.concrete_id);
+      return;
+    }
+    // Any shift tied to a recurring schedule (virtual occurrence or concrete
+    // override) prompts the user to pick scope before mutating.
+    if (shift.schedule_id) {
+      setPendingDelete(shift);
+      return;
+    }
     if (shift.concrete_id) {
       await deleteShift(shift.concrete_id);
-    } else if (shift.is_virtual && shift.schedule_id) {
-      const { error } = await supabase.from("staff_shifts").insert({
-        staff_id: shift.staff_id,
-        property_id: shift.property_id,
-        schedule_id: shift.schedule_id,
-        shift_date: shift.shift_date,
-        start_time: shift.start_time,
-        end_time: shift.end_time,
-        status: "cancelled",
-        notes: "Cancelled for this day",
-        created_by: userId,
-      } as never);
-      if (error) { toast.error("Failed to cancel shift"); }
-      else { toast.success("Shift cancelled for this day"); refetch(); }
     }
+  }, [deleteShift]);
+
+  const cancelSingleOccurrence = useCallback(async (shift: DisplayShift) => {
+    // If a concrete override already exists, just delete it (falls back to
+    // the recurring schedule). Otherwise insert a cancellation row.
+    if (shift.concrete_id) {
+      await deleteShift(shift.concrete_id);
+      // Also insert a cancellation so the virtual occurrence is suppressed.
+    }
+    const { error } = await supabase.from("staff_shifts").insert({
+      staff_id: shift.staff_id,
+      property_id: shift.property_id,
+      schedule_id: shift.schedule_id,
+      shift_date: shift.shift_date,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      status: "cancelled",
+      notes: "Cancelled for this day",
+      created_by: userId,
+    } as never);
+    if (error) { toast.error("Failed to cancel shift"); }
+    else { toast.success("Shift cancelled for this day"); refetch(); }
+    setPendingDelete(null);
   }, [deleteShift, refetch, userId]);
+
+  const cancelEntireSeries = useCallback(async (shift: DisplayShift) => {
+    if (!shift.schedule_id) return;
+    await deactivateSchedule(shift.schedule_id);
+    setPendingDelete(null);
+  }, [deactivateSchedule]);
 
   const handleShiftDoubleClick = (shift: DisplayShift) => {
     setEditingShift(shift);
@@ -595,6 +626,33 @@ export function StaffCalendarTab({
         onEdit={editSchedule}
         userId={userId}
       />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete recurring shift</AlertDialogTitle>
+            <AlertDialogDescription>
+              This shift is part of a recurring schedule. Remove it from just
+              this day, or end the entire series going forward?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => pendingDelete && cancelSingleOccurrence(pendingDelete)}
+            >
+              Just this day
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => pendingDelete && cancelEntireSeries(pendingDelete)}
+            >
+              Entire series
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
