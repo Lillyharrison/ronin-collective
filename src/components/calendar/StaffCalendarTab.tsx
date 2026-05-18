@@ -25,6 +25,11 @@ import { CalendarToolbar } from "./staff/CalendarToolbar";
 import { StaffFilterBar } from "./staff/StaffFilterBar";
 import { PropertyLegend } from "./staff/PropertyLegend";
 import { exportScheduleExcel, exportSchedulePDF } from "./staff/exportUtils";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 export function StaffCalendarTab({
   canEdit,
