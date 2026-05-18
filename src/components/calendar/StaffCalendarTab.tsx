@@ -497,7 +497,7 @@ export function StaffCalendarTab({
         onAddShift={() => { setPrefillDate(undefined); setPrefillStaff(undefined); setShowShiftModal(true); }}
         onOpenScheduleManager={() => { setScheduleManagerStaff(null); setShowScheduleManager(true); }}
         onExportExcel={() => exportScheduleExcel({ staffToShow, weekDays, weekStart, displayShifts, properties })}
-        onExportPDF={() => exportSchedulePDF({ staffToShow, weekDays, weekStart, weekLabel, displayShifts, properties })}
+        onExportPDF={() => setShowPdfModal(true)}
       />
 
       {canEdit && (
