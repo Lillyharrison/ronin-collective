@@ -95,73 +95,88 @@ export function StaffDaysSummary({
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
-      <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-sm font-semibold text-primary">Days Tracking</p>
+      <div className="bg-primary/10 border-b border-border px-3 py-1.5 flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs font-semibold text-primary">Days Tracking</p>
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
           {rangeLabel}
         </p>
       </div>
 
-      <div className="divide-y divide-border">
-        {rows.map((r) => (
-          <div key={r.person.id} className="px-3 py-2.5 hover:bg-muted/10 transition-colors">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={cn(
-                "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
-                r.person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
-              )}>
-                {getDisplayName(r.person, "?").charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className={cn(
-                  "text-xs font-semibold truncate leading-tight",
-                  r.person.is_draft && "italic text-muted-foreground"
-                )}>
-                  {getDisplayName(r.person)}
-                </p>
-                {r.person.job_title && (
-                  <p className="text-[10px] text-muted-foreground truncate leading-tight">{r.person.job_title}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <Stat
-                icon={<CalendarDays size={11} />}
-                label="Days"
-                value={`${r.daysWorked} / ${r.daysExpected}`}
-                delta={r.daysDelta}
-                deltaUnit="d"
-              />
-              <Stat
-                icon={<Clock size={11} />}
-                label="Hours"
-                value={`${r.hoursWorked.toFixed(1)} / ${r.hoursExpected}`}
-                delta={r.hoursDelta}
-                deltaUnit="h"
-              />
-              <Stat
-                icon={<Plane size={11} />}
-                label="Leave (YTD)"
-                value={`${r.leaveLeft} left`}
-                sub={`${r.leaveTakenYTD} of ${r.allowance}`}
-              />
-            </div>
-          </div>
-        ))}
+      {/* Compact table layout — one row per staff member */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-[11px]">
+          <thead className="bg-muted/30 text-[9px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="text-left font-semibold px-2 py-1.5">Staff</th>
+              <th className="text-center font-semibold px-1.5 py-1.5 w-[68px]">
+                <span className="inline-flex items-center gap-1"><CalendarDays size={10} /> Days</span>
+              </th>
+              <th className="text-center font-semibold px-1.5 py-1.5 w-[50px]">Δ</th>
+              <th className="text-center font-semibold px-1.5 py-1.5 w-[78px]">
+                <span className="inline-flex items-center gap-1"><Clock size={10} /> Hours</span>
+              </th>
+              <th className="text-center font-semibold px-1.5 py-1.5 w-[50px]">Δ</th>
+              <th className="text-center font-semibold px-1.5 py-1.5 w-[80px]">
+                <span className="inline-flex items-center gap-1"><Plane size={10} /> Leave YTD</span>
+              </th>
+              <th className="text-center font-semibold px-1.5 py-1.5 w-[44px]">Left</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {rows.map((r) => (
+              <tr key={r.person.id} className="hover:bg-muted/10 transition-colors">
+                <td className="px-2 py-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className={cn(
+                      "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-semibold",
+                      r.person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
+                    )}>
+                      {getDisplayName(r.person, "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={cn(
+                        "font-semibold truncate leading-tight",
+                        r.person.is_draft && "italic text-muted-foreground"
+                      )}>
+                        {getDisplayName(r.person)}
+                      </p>
+                      {r.person.job_title && (
+                        <p className="text-[9px] text-muted-foreground truncate leading-tight">{r.person.job_title}</p>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td className="text-center font-semibold tabular-nums">{r.daysWorked} / {r.daysExpected}</td>
+                <td className="text-center"><Delta value={r.daysDelta} unit="d" /></td>
+                <td className="text-center font-semibold tabular-nums">{r.hoursWorked.toFixed(1)} / {r.hoursExpected}</td>
+                <td className="text-center"><Delta value={r.hoursDelta} unit="h" /></td>
+                <td className="text-center tabular-nums text-muted-foreground">{r.leaveTakenYTD} / {r.allowance}</td>
+                <td className="text-center font-semibold tabular-nums">{r.leaveLeft}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-function Stat({
-  icon,
-  label,
-  value,
-  sub,
-  delta,
-  deltaUnit,
-}: {
+function Delta({ value, unit }: { value: number; unit: string }) {
+  if (value === 0) return <span className="text-muted-foreground">—</span>;
+  const positive = value > 0;
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-0.5 text-[10px] font-semibold tabular-nums",
+      positive ? "text-emerald-500" : "text-amber-500"
+    )}>
+      {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+      {positive ? "+" : ""}{Math.round(value)}{unit}
+    </span>
+  );
+}
+
+// Legacy Stat component preserved below in case re-imported elsewhere — kept as no-op export.
+function _UnusedStat(_: {
   icon: React.ReactNode;
   label: string;
   value: string;
@@ -169,25 +184,5 @@ function Stat({
   delta?: number;
   deltaUnit?: string;
 }) {
-  const showDelta = typeof delta === "number" && delta !== 0;
-  const positive = (delta ?? 0) > 0;
-  return (
-    <div className="rounded-lg border border-border bg-muted/10 px-2 py-1.5 min-w-0">
-      <div className="flex items-center gap-1 text-muted-foreground">
-        {icon}
-        <p className="text-[9px] uppercase tracking-wider font-semibold truncate">{label}</p>
-      </div>
-      <p className="text-xs font-bold text-foreground mt-0.5 truncate">{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground leading-tight truncate">{sub}</p>}
-      {showDelta && (
-        <p className={cn(
-          "text-[10px] font-semibold leading-tight flex items-center gap-0.5 mt-0.5",
-          positive ? "text-emerald-500" : "text-amber-500"
-        )}>
-          {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
-          {positive ? "+" : ""}{Math.round(delta!)}{deltaUnit}
-        </p>
-      )}
-    </div>
-  );
+  return null;
 }
