@@ -162,15 +162,13 @@ export function CalendarToolbar({
               <Settings2 size={15} />
             </Button>
             {calView === "week" && (
-              <>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExportExcel} title="Download Excel">
-                  <Download size={15} />
-                </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={onExportPDF} title="Download PDF">
-                  PDF
-                </Button>
-              </>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExportExcel} title="Download Excel">
+                <Download size={15} />
+              </Button>
             )}
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={onExportPDF} title="Download PDF">
+              PDF
+            </Button>
           </>
         )}
       </div>

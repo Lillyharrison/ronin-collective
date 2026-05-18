@@ -24,7 +24,10 @@ import { StaffWeekGrid } from "./staff/StaffWeekGrid";
 import { CalendarToolbar } from "./staff/CalendarToolbar";
 import { StaffFilterBar } from "./staff/StaffFilterBar";
 import { PropertyLegend } from "./staff/PropertyLegend";
-import { exportScheduleExcel, exportSchedulePDF } from "./staff/exportUtils";
+import { exportScheduleExcel } from "./staff/exportUtils";
+import { exportSchedulePDFv2 } from "./staff/schedulePdfExport";
+import { PdfExportModal, type PdfExportOptions } from "./staff/PdfExportModal";
+
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
@@ -95,6 +98,7 @@ export function StaffCalendarTab({
   const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const [filterStaff] = useState<string>("all");
   const [filterSearch, setFilterSearch] = useState<string>("");
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
@@ -410,6 +414,69 @@ export function StaffCalendarTab({
     }
   };
 
+  // Fetch fresh data for the requested PDF range (which may be wider than the current view)
+  // and trigger the v2 export. Schedules/shifts/leave are scoped to whatever staff are
+  // currently visible after filters.
+  const handlePdfExport = useCallback(async (opts: PdfExportOptions) => {
+    const visibleIds = staffToShow.map((p) => p.id);
+    if (visibleIds.length === 0) { toast.error("No staff to export"); return; }
+
+    const startStr = format(opts.rangeStart, "yyyy-MM-dd");
+    const endStr = format(opts.rangeEnd, "yyyy-MM-dd");
+
+    const [schedRes, shiftRes, leaveRes] = await Promise.all([
+      supabase
+        .from("staff_schedules")
+        .select("id, staff_id, property_id, day_of_week, start_time, end_time, effective_from, effective_to, is_active, notes")
+        .eq("is_active", true)
+        .in("staff_id", visibleIds)
+        .lte("effective_from", endStr)
+        .or(`effective_to.is.null,effective_to.gte.${startStr}`)
+        .limit(2000),
+      supabase
+        .from("staff_shifts")
+        .select("id, staff_id, schedule_id, property_id, shift_date, start_time, end_time, status, notes")
+        .in("staff_id", visibleIds)
+        .gte("shift_date", startStr)
+        .lte("shift_date", endStr)
+        .limit(5000),
+      supabase
+        .from("staff_leave_requests")
+        .select("id, staff_id, start_date, end_date, leave_type, reason, status, reviewed_by, reviewed_at, created_by")
+        .in("staff_id", visibleIds)
+        .or(`and(start_date.lte.${endStr},end_date.gte.${startStr}),and(start_date.gte.${opts.rangeStart.getFullYear()}-01-01,start_date.lte.${opts.rangeStart.getFullYear()}-12-31)`)
+        .limit(2000),
+    ]);
+
+    if (schedRes.error || shiftRes.error || leaveRes.error) {
+      toast.error("Failed to load schedule data for PDF");
+      return;
+    }
+
+    const exportDays = eachDayOfInterval({ start: opts.rangeStart, end: opts.rangeEnd });
+    const exportShifts = buildDisplayShifts(
+      exportDays,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (schedRes.data ?? []) as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (shiftRes.data ?? []) as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (leaveRes.data ?? []) as any,
+    );
+
+    exportSchedulePDFv2({
+      staffToShow,
+      displayShifts: exportShifts,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      leaveRequests: (leaveRes.data ?? []) as any,
+      properties,
+      rangeStart: opts.rangeStart,
+      rangeEnd: opts.rangeEnd,
+      layout: opts.layout,
+      includeTracking: opts.includeTracking,
+    });
+  }, [staffToShow, properties]);
+
   return (
     <div className="space-y-4">
       <CalendarToolbar
@@ -430,7 +497,7 @@ export function StaffCalendarTab({
         onAddShift={() => { setPrefillDate(undefined); setPrefillStaff(undefined); setShowShiftModal(true); }}
         onOpenScheduleManager={() => { setScheduleManagerStaff(null); setShowScheduleManager(true); }}
         onExportExcel={() => exportScheduleExcel({ staffToShow, weekDays, weekStart, displayShifts, properties })}
-        onExportPDF={() => exportSchedulePDF({ staffToShow, weekDays, weekStart, weekLabel, displayShifts, properties })}
+        onExportPDF={() => setShowPdfModal(true)}
       />
 
       {canEdit && (
@@ -508,14 +575,7 @@ export function StaffCalendarTab({
             {calc && singleStaff && (
               <CalculatorPanel personName={getDisplayName(singleStaff)} stats={calc} />
             )}
-            <StaffDaysSummary
-              staffToShow={staffToShow}
-              displayShifts={displayShifts}
-              leaveRequests={leaveRequests}
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-            />
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               {monthCards.map((mStart) => {
                 const mEnd = endOfMonth(mStart);
                 const cardDays = eachDayOfInterval({ start: mStart, end: mEnd });
@@ -550,6 +610,13 @@ export function StaffCalendarTab({
                 );
               })}
             </div>
+            <StaffDaysSummary
+              staffToShow={staffToShow}
+              displayShifts={displayShifts}
+              leaveRequests={leaveRequests}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+            />
           </>
         );
       })()}
@@ -653,6 +720,14 @@ export function StaffCalendarTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PdfExportModal
+        open={showPdfModal}
+        onClose={() => setShowPdfModal(false)}
+        defaultStart={calView === "week" ? weekStart : rangeStart}
+        defaultEnd={calView === "week" ? endOfWeek(weekStart, { weekStartsOn: 1 }) : rangeEnd}
+        onExport={handlePdfExport}
+      />
     </div>
   );
 }
