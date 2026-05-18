@@ -626,6 +626,33 @@ export function StaffCalendarTab({
         onEdit={editSchedule}
         userId={userId}
       />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => { if (!o) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete recurring shift</AlertDialogTitle>
+            <AlertDialogDescription>
+              This shift is part of a recurring schedule. Remove it from just
+              this day, or end the entire series going forward?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => pendingDelete && cancelSingleOccurrence(pendingDelete)}
+            >
+              Just this day
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => pendingDelete && cancelEntireSeries(pendingDelete)}
+            >
+              Entire series
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
