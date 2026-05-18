@@ -102,6 +102,14 @@ export function ShiftModal({
 
   const handleSave = async () => {
     if (!form.staff_id) return;
+
+    // Editing a virtual recurring shift → ask whether to change just this
+    // occurrence or the whole series before mutating anything.
+    if (editShift && editShift.is_virtual && editShift.schedule_id && !scopePrompt) {
+      setScopePrompt(true);
+      return;
+    }
+
     setSaving(true);
     const noteVal = locationNote(form.notes, form.location);
 
@@ -120,19 +128,8 @@ export function ShiftModal({
       return;
     }
 
-    // ── Edit mode: virtual shift from recurring schedule → update the schedule ─
-    if (editShift && editShift.is_virtual && editShift.schedule_id) {
-      const ok = await onUpdateSchedule(editShift.schedule_id, {
-        staff_id: form.staff_id,
-        property_id: form.property_id || null,
-        start_time: form.start_time || "09:00",
-        end_time: form.end_time || "17:00",
-        notes: noteVal,
-      });
-      setSaving(false);
-      if (ok) onClose();
-      return;
-    }
+    // Recurring virtual edit handled via scope prompt actions below.
+
 
     if (mode === "recurring") {
       // Create one staff_schedule per selected day-of-week
