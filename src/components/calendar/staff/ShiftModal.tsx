@@ -178,6 +178,44 @@ export function ShiftModal({
     }
   };
 
+  // Apply a virtual-recurring edit to just this date by creating a concrete
+  // staff_shifts override that supersedes the schedule occurrence.
+  const applyEditToSingleDay = async () => {
+    if (!editShift?.schedule_id) return;
+    setSaving(true);
+    const noteVal = locationNote(form.notes, form.location);
+    const ok = await onSave({
+      staff_id: form.staff_id,
+      property_id: form.property_id || null,
+      schedule_id: editShift.schedule_id,
+      shift_date: editShift.shift_date,
+      start_time: form.start_time || null,
+      end_time: form.end_time || null,
+      status: "scheduled",
+      notes: noteVal,
+      created_by: userId,
+    });
+    setSaving(false);
+    setScopePrompt(false);
+    if (ok) onClose();
+  };
+
+  const applyEditToSeries = async () => {
+    if (!editShift?.schedule_id) return;
+    setSaving(true);
+    const noteVal = locationNote(form.notes, form.location);
+    const ok = await onUpdateSchedule(editShift.schedule_id, {
+      staff_id: form.staff_id,
+      property_id: form.property_id || null,
+      start_time: form.start_time || "09:00",
+      end_time: form.end_time || "17:00",
+      notes: noteVal,
+    });
+    setSaving(false);
+    setScopePrompt(false);
+    if (ok) onClose();
+  };
+
   const isValid = !!form.staff_id && (
     mode === "recurring" ? form.days_of_week.length > 0 : !!form.shift_date
   );
