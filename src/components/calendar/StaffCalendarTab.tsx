@@ -315,24 +315,49 @@ export function StaffCalendarTab({
   };
 
   const handleDeleteShift = useCallback(async (shift: DisplayShift) => {
+    if (shift.concrete_id && !shift.schedule_id) {
+      await deleteShift(shift.concrete_id);
+      return;
+    }
+    // Any shift tied to a recurring schedule (virtual occurrence or concrete
+    // override) prompts the user to pick scope before mutating.
+    if (shift.schedule_id) {
+      setPendingDelete(shift);
+      return;
+    }
     if (shift.concrete_id) {
       await deleteShift(shift.concrete_id);
-    } else if (shift.is_virtual && shift.schedule_id) {
-      const { error } = await supabase.from("staff_shifts").insert({
-        staff_id: shift.staff_id,
-        property_id: shift.property_id,
-        schedule_id: shift.schedule_id,
-        shift_date: shift.shift_date,
-        start_time: shift.start_time,
-        end_time: shift.end_time,
-        status: "cancelled",
-        notes: "Cancelled for this day",
-        created_by: userId,
-      } as never);
-      if (error) { toast.error("Failed to cancel shift"); }
-      else { toast.success("Shift cancelled for this day"); refetch(); }
     }
+  }, [deleteShift]);
+
+  const cancelSingleOccurrence = useCallback(async (shift: DisplayShift) => {
+    // If a concrete override already exists, just delete it (falls back to
+    // the recurring schedule). Otherwise insert a cancellation row.
+    if (shift.concrete_id) {
+      await deleteShift(shift.concrete_id);
+      // Also insert a cancellation so the virtual occurrence is suppressed.
+    }
+    const { error } = await supabase.from("staff_shifts").insert({
+      staff_id: shift.staff_id,
+      property_id: shift.property_id,
+      schedule_id: shift.schedule_id,
+      shift_date: shift.shift_date,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      status: "cancelled",
+      notes: "Cancelled for this day",
+      created_by: userId,
+    } as never);
+    if (error) { toast.error("Failed to cancel shift"); }
+    else { toast.success("Shift cancelled for this day"); refetch(); }
+    setPendingDelete(null);
   }, [deleteShift, refetch, userId]);
+
+  const cancelEntireSeries = useCallback(async (shift: DisplayShift) => {
+    if (!shift.schedule_id) return;
+    await deactivateSchedule(shift.schedule_id);
+    setPendingDelete(null);
+  }, [deactivateSchedule]);
 
   const handleShiftDoubleClick = (shift: DisplayShift) => {
     setEditingShift(shift);
