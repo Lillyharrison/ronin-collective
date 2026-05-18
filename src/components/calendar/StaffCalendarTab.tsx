@@ -27,7 +27,7 @@ import { PropertyLegend } from "./staff/PropertyLegend";
 import { exportScheduleExcel } from "./staff/exportUtils";
 import { exportSchedulePDFv2 } from "./staff/schedulePdfExport";
 import { PdfExportModal, type PdfExportOptions } from "./staff/PdfExportModal";
-import { buildDisplayShifts } from "./staff/utils";
+
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
