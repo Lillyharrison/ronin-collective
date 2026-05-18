@@ -98,6 +98,7 @@ export function StaffCalendarTab({
   const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const [filterStaff] = useState<string>("all");
   const [filterSearch, setFilterSearch] = useState<string>("");
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
