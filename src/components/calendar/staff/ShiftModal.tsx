@@ -63,6 +63,7 @@ export function ShiftModal({
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const [scopePrompt, setScopePrompt] = useState(false);
 
   useEffect(() => {
     if (open) {
