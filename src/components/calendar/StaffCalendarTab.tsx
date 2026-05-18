@@ -88,6 +88,7 @@ export function StaffCalendarTab({
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [prefillStaff, setPrefillStaff] = useState<string | undefined>();
   const [editingShift, setEditingShift] = useState<DisplayShift | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
   const [filterStaff] = useState<string>("all");
   const [filterSearch, setFilterSearch] = useState<string>("");
