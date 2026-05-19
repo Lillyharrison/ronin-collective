@@ -29,6 +29,7 @@ import { toast } from "sonner";
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 type ViewMode = "board" | "list" | "table";
 type MaintenanceTab = "repairs" | "planned";
+type StaffProfileRow = { id: string; full_name: string | null; avatar_url: string | null; level?: string | null };
 
 export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
@@ -57,7 +58,16 @@ export function MaintenanceSection() {
   }), [debouncedSearch, filterCat, filterPri]);
 
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
-  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef, activePropertyId, setActivePropertyId } = useNavigation();
+  const {
+    pendingMaintenanceIssueId,
+    setPendingMaintenanceIssueId,
+    pendingMaintenanceIssueIdRef,
+    pendingPlannedMaintenanceEntryId,
+    setPendingPlannedMaintenanceEntryId,
+    pendingPlannedMaintenanceEntryIdRef,
+    activePropertyId,
+    setActivePropertyId,
+  } = useNavigation();
 
   // Planned maintenance
   const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
@@ -89,7 +99,7 @@ export function MaintenanceSection() {
       .then(({ data }) => setAllProperties(sortProperties((data ?? []) as { id: string; name: string; is_primary?: boolean }[])));
     // Family members (principal / extended_family) are never assigned maintenance work — exclude from picker.
     supabase.from("profiles").select("id, full_name, avatar_url, level").order("full_name").limit(500)
-      .then(({ data }) => setProfiles(filterAssignableStaff(data ?? []).map((p: any) => ({
+      .then(({ data }) => setProfiles(filterAssignableStaff((data ?? []) as StaffProfileRow[]).map((p) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
     supabase.from("vendors").select("id, name").eq("is_active", true).order("name").limit(200)
@@ -130,18 +140,82 @@ export function MaintenanceSection() {
   // Reads from the ref (always current) so we don't miss the value when
   // the section first mounts in the same render cycle as navigation.
   useEffect(() => {
+    let cancelled = false;
     const pendingId = pendingMaintenanceIssueIdRef.current;
     if (!pendingId) return;
     if (loading) return;
     const issue = issues.find(i => i.id === pendingId);
     if (issue) {
       setDetailIssue(issue);
+      setActiveTab("repairs");
       setPendingMaintenanceIssueId(null);
-    } else if (issues.length > 0) {
-      // Issues loaded but this one isn't visible (RLS / property filter) — clear gracefully
-      setPendingMaintenanceIssueId(null);
+      return;
     }
-  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
+
+    (async () => {
+      const { data } = await supabase
+        .from("maintenance_issues")
+        .select("id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at")
+        .eq("id", pendingId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!data) { setPendingMaintenanceIssueId(null); return; }
+
+      const profileIds = [data.reported_by, data.assigned_to].filter(Boolean) as string[];
+      const [propsRes, profilesRes, relatedRes] = await Promise.all([
+        data.property_id ? supabase.from("properties").select("id, name").eq("id", data.property_id).maybeSingle() : Promise.resolve({ data: null }),
+        profileIds.length ? supabase.from("profiles").select("id, full_name, avatar_url").in("id", profileIds) : Promise.resolve({ data: [] }),
+        data.related_issue_id ? supabase.from("maintenance_issues").select("id, title").eq("id", data.related_issue_id).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      if (cancelled) return;
+
+      const profileMap = new Map(((profilesRes.data ?? []) as StaffProfileRow[]).map((p) => [p.id, p]));
+      setDetailIssue({
+        ...(data as MaintenanceIssue),
+        property_name: propsRes.data?.name,
+        reporter_name: profileMap.get(data.reported_by)?.full_name ?? undefined,
+        assignee_name: data.assigned_to ? profileMap.get(data.assigned_to)?.full_name ?? undefined : undefined,
+        assignee_avatar: data.assigned_to ? profileMap.get(data.assigned_to)?.avatar_url ?? undefined : undefined,
+        related_issue_title: relatedRes.data?.title,
+      });
+      setActiveTab("repairs");
+      setPendingMaintenanceIssueId(null);
+    })();
+
+    return () => { cancelled = true; };
+  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, setActiveTab]);
+
+  // Deep-link: open a planned maintenance entry when arriving from the calendar.
+  useEffect(() => {
+    let cancelled = false;
+    const pendingId = pendingPlannedMaintenanceEntryIdRef.current;
+    if (!pendingId) return;
+    if (plannedLoading) return;
+    const entry = plannedEntries.find(e => e.id === pendingId);
+    if (entry) {
+      setActiveTab("planned");
+      setEditPlanned(entry);
+      setPlannedModalOpen(true);
+      setPendingPlannedMaintenanceEntryId(null);
+      return;
+    }
+
+    (async () => {
+      const { data } = await supabase
+        .from("planned_maintenance")
+        .select("*")
+        .eq("id", pendingId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!data) { setPendingPlannedMaintenanceEntryId(null); return; }
+      setActiveTab("planned");
+      setEditPlanned(data as PlannedMaintenanceEntry);
+      setPlannedModalOpen(true);
+      setPendingPlannedMaintenanceEntryId(null);
+    })();
+
+    return () => { cancelled = true; };
+  }, [pendingPlannedMaintenanceEntryIdRef, pendingPlannedMaintenanceEntryId, plannedEntries, plannedLoading, setPendingPlannedMaintenanceEntryId, setActiveTab]);
 
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",    label: "Reported",     labelEs: "Reportado" },
@@ -252,7 +326,7 @@ export function MaintenanceSection() {
     let calStartDate: string | null = null;
     let calEndDate: string | null = null;
     if (entry.date_type === "specific" && entry.scheduled_date) {
-      const time = (entry as any).scheduled_time ? (entry as any).scheduled_time.slice(0, 5) : "09:00";
+      const time = entry.scheduled_time ? entry.scheduled_time.slice(0, 5) : "09:00";
       calStartDate = `${entry.scheduled_date}T${time}:00`;
       // End = start + 1 hour
       const [h, m] = time.split(":").map(Number);
@@ -319,7 +393,7 @@ export function MaintenanceSection() {
     let calStartDate: string;
     let calEndDate: string;
     if (payload.date_type === "specific" && payload.scheduled_date) {
-      const time = (payload as any).scheduled_time ? (payload as any).scheduled_time.slice(0, 5) : "09:00";
+      const time = payload.scheduled_time ? payload.scheduled_time.slice(0, 5) : "09:00";
       calStartDate = `${payload.scheduled_date}T${time}:00`;
       const [h, m] = time.split(":").map(Number);
       const endH = String(Math.min(h + 1, 23)).padStart(2, "0");

@@ -135,6 +135,14 @@ function getRoninTabForEvent(ev: CalEvent): RoninTab {
   return "all";
 }
 
+function persistMaintenanceTab(tab: "repairs" | "planned") {
+  try {
+    window.localStorage.setItem("maintenance_tab", JSON.stringify(tab));
+  } catch {
+    // Ignore storage failures; navigation still works.
+  }
+}
+
 /** Returns true if an event spans more than one calendar day */
 function isMultiDay(ev: CalEvent): boolean {
   if (!ev.end_date) return false;
@@ -1200,7 +1208,7 @@ function RightPanel({
 
 export function CalendarSection() {
   const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee, assignedPropertyIds } = usePermissions();
-  const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId } = useNavigation();
   // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
   const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
@@ -1271,7 +1279,7 @@ export function CalendarSection() {
     const { data: linkedPlanned } = manualEventIds.length
       ? await supabase
           .from("planned_maintenance")
-          .select("calendar_event_id")
+          .select("id, calendar_event_id")
           .in("calendar_event_id", manualEventIds)
       : { data: [] };
 
@@ -1279,6 +1287,11 @@ export function CalendarSection() {
       (linkedPlanned ?? [])
         .map((entry) => entry.calendar_event_id)
         .filter((id): id is string => !!id)
+    );
+    const plannedEntryByCalendarId = new Map(
+      (linkedPlanned ?? [])
+        .filter((entry): entry is { id: string; calendar_event_id: string } => !!entry.id && !!entry.calendar_event_id)
+        .map((entry) => [entry.calendar_event_id, entry.id])
     );
 
     const events: CalEvent[] = [];
@@ -1297,6 +1310,7 @@ export function CalendarSection() {
         end_date: isLinkedPlanned ? ev.start_date : ev.end_date,
         calendar_source: isLinkedPlanned ? "planned_maintenance" : ev.calendar_source,
         _source: isLinkedPlanned ? "planned_maintenance" : "calendar_events",
+        _source_id: isLinkedPlanned ? plannedEntryByCalendarId.get(ev.id) : ev.id,
         _is_draggable: !isLinkedPlanned,
         _tab: tab,
       });
@@ -1626,7 +1640,22 @@ export function CalendarSection() {
                   selectedDay={selectedDay}
                   currentMonth={currentMonth}
                   onDaySelect={(day) => setSelectedDay(isSameDay(day, selectedDay ?? new Date(-1)) ? null : day)}
-                  onEventClick={(ev, e) => { e.stopPropagation(); setSelectedEvent(ev); }}
+                  onEventClick={(ev, e) => {
+                    e.stopPropagation();
+                    if (ev._source === "maintenance" && ev._source_id) {
+                      persistMaintenanceTab("repairs");
+                      setPendingMaintenanceIssueId(ev._source_id);
+                      setActiveSection("maintenance");
+                      return;
+                    }
+                    if (ev._source === "planned_maintenance") {
+                      persistMaintenanceTab("planned");
+                      if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
+                      setActiveSection("maintenance");
+                      return;
+                    }
+                    setSelectedEvent(ev);
+                  }}
                   onDragStart={handleDragStart}
                   onDrop={handleDrop}
                 />
@@ -1644,13 +1673,14 @@ export function CalendarSection() {
             familyEvents={familyEvents}
             onEventClick={(ev) => {
               if (ev._source === "maintenance" && ev._source_id) {
-                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("repairs")); } catch {}
+                persistMaintenanceTab("repairs");
                 setPendingMaintenanceIssueId(ev._source_id);
                 setActiveSection("maintenance");
                 return;
               }
               if (ev._source === "planned_maintenance") {
-                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("planned")); } catch {}
+                persistMaintenanceTab("planned");
+                if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
                 setActiveSection("maintenance");
                 return;
               }
