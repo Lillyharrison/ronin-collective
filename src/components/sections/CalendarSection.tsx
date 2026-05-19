@@ -1159,7 +1159,15 @@ function RightPanel({
                   <p className="text-lg font-bold leading-none text-foreground">{format(start, "d")}</p>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate text-foreground">{ev.title}</p>
+                  {(() => {
+                    const isMaint = ev._source === "maintenance" || ev._source === "planned_maintenance" || ev._tab === "maintenance";
+                    const propName = ev.property_id ? properties.find(p => p.id === ev.property_id)?.name : null;
+                    return (
+                      <p className="text-sm font-medium truncate text-foreground">
+                        {ev.title}{isMaint && propName ? <span className="text-muted-foreground font-normal"> ({propName})</span> : null}
+                      </p>
+                    );
+                  })()}
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     {mode === "ronin" ? (
                       <Badge variant="outline" className={cn("text-[10px] border px-1 py-0", roninCfg.bg, roninCfg.color)}>
