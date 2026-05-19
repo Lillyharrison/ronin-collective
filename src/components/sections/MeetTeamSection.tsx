@@ -75,7 +75,7 @@ export function MeetTeamSection() {
   async function loadMembers() {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft")
+      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days")
       .order("full_name");
 
     if (!profiles) return;
