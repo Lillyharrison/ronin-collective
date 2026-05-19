@@ -1188,7 +1188,7 @@ function RightPanel({
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
 export function CalendarSection() {
-  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee, assignedPropertyIds } = usePermissions();
   // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
   const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
