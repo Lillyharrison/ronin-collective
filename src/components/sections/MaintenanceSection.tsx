@@ -500,6 +500,25 @@ export function MaintenanceSection() {
           </button>
         </div>
 
+        {properties.length > 0 && (
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+            <button onClick={() => setFilterProp("")}
+              className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
+                !filterProp ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
+              )}>
+              {isL ? "Todas" : "All"}
+            </button>
+            {properties.map(p => (
+              <button key={p.id} onClick={() => setFilterProp(p.id)}
+                className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
+                  filterProp === p.id ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
+                )}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {activeTab === "repairs" ? (
           <div className="space-y-3">
             {displayIssues.map(issue => (
