@@ -990,7 +990,7 @@ export function CarWashSection() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"fleet" | "schedule">("fleet");
+  const [view, setView] = useLocalStorage<"fleet" | "schedule">("carwash.view", "fleet");
   const [bookingVehicle, setBookingVehicle] = useState<Vehicle | null>(null);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null | undefined>(undefined); // undefined = closed, null = new
   const [bookAllOpen, setBookAllOpen] = useState(false);
