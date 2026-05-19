@@ -325,8 +325,10 @@ function buildTileDoc(
   ctx: RepairsExportContext,
   scale: number,
   images: Map<string, PreparedImage>,
+  fonts: PdfFontData,
 ): jsPDF {
   const doc = new jsPDF({ orientation: "portrait", format: "a4" });
+  installPdfFonts(doc, fonts);
   const pageWidth = doc.internal.pageSize.getWidth();   // 210
   const pageHeight = doc.internal.pageSize.getHeight(); // 297
   const marginL = 12;
@@ -386,7 +388,7 @@ function buildTileDoc(
       doc.setDrawColor(220, 220, 220);
       doc.setLineWidth(0.2);
       doc.rect(ox, oy, photoBox, photoBox, "FD");
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setFontSize(7);
       doc.setTextColor(160, 160, 160);
       doc.text("No photo", ox + photoBox / 2, oy + photoBox / 2 + 1, { align: "center" });
@@ -413,7 +415,7 @@ function buildTileDoc(
     drawPhoto(issue, marginL + cardPad, y + cardPad);
 
     // Title + description (middle column)
-    doc.setFont("helvetica", "bold");
+    doc.setFont(PDF_FONT, "bold");
     doc.setFontSize(titleSize);
     doc.setTextColor(28, 29, 32);
     const titleLines = doc.splitTextToSize(issue.title, titleW).slice(0, 2);
@@ -423,7 +425,7 @@ function buildTileDoc(
     ty += titleLines.length * titleLineH + 0.5;
 
     if (issue.description) {
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setFontSize(descSize);
       doc.setTextColor(95, 95, 95);
       const descLineH = descSize * 0.42;
@@ -460,10 +462,10 @@ function buildTileDoc(
     let my = y + cardPad + metaSize * 0.35 + 1;
     doc.setFontSize(metaSize);
     visiblePairs.forEach(([label, value]) => {
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setTextColor(135, 135, 135);
       doc.text(label, labelX, my);
-      doc.setFont("helvetica", "bold");
+      doc.setFont(PDF_FONT, "bold");
       doc.setTextColor(40, 40, 40);
       const v = doc.splitTextToSize(value, valueW)[0] ?? value;
       doc.text(v, valueX, my);
