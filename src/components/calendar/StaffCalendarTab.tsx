@@ -105,7 +105,8 @@ export function StaffCalendarTab({
   const [filterProperty, setFilterProperty] = useState<string>("all");
   const [familyEvents, setFamilyEvents] = useState<FamilyEvent[]>([]);
 
-  const { canSee } = usePermissions();
+  const { canSee, isMasterAdmin, isAdmin, isManager, assignedPropertyIds } = usePermissions();
+  const canSeeAllProperties = isMasterAdmin || isAdmin || isManager;
   const showFamilyOverlay = canSee("family-movements");
 
   const dragRef = useRef<DisplayShift | null>(null);
