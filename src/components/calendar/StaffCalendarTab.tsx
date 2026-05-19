@@ -150,29 +150,14 @@ export function StaffCalendarTab({
   useEffect(() => {
     setProfilesLoading(true);
     Promise.all([
-      supabase.from("user_roles").select("user_id, role"),
+      supabase.rpc("get_staff_schedule_profiles"),
       supabase.from("properties").select("id, name, city, country").order("sort_order"),
-    ]).then(async ([rolesRes, propRes]) => {
-      const allRoles = rolesRes.data ?? [];
-      const familyRoles = new Set(["principal", "extended_family"]);
-      const staffRoles = new Set(["admin", "manager", "staff"]);
-      const hasFamilyRole = new Set(
-        allRoles.filter((r) => familyRoles.has(r.role)).map((r) => r.user_id)
-      );
-      const staffUserIds = allRoles
-        .filter((r) => staffRoles.has(r.role) && !hasFamilyRole.has(r.user_id))
-        .map((r) => r.user_id);
-      const uniqueStaffIds = [...new Set(staffUserIds)];
-
-      if (uniqueStaffIds.length > 0) {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days")
-          .in("id", uniqueStaffIds)
-          .order("full_name");
-        setProfiles((profileData as Profile[]) ?? []);
-      } else {
+    ]).then(([profilesRes, propRes]) => {
+      if (profilesRes.error) {
+        toast.error("Failed to load staff profiles");
         setProfiles([]);
+      } else {
+        setProfiles((profilesRes.data as Profile[]) ?? []);
       }
       const allProps = (propRes.data as Property[]) ?? [];
       const visibleProps = canSeeAllProperties
