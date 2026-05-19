@@ -4,7 +4,7 @@ import { enqueue } from "@/lib/offlineDB";
 import { OfflineSyncContext } from "@/hooks/useOfflineSync";
 
 export type IssuePriority = "urgent" | "high" | "medium" | "low";
-export type IssueStatus = "reported" | "approved" | "assigned" | "scheduled" | "in_progress" | "resolved";
+export type IssueStatus = "reported" | "approved" | "scheduled" | "in_progress" | "resolved";
 
 export interface MaintenanceIssue {
   id: string;

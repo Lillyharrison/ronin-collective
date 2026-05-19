@@ -137,11 +137,12 @@ export function MaintenanceSection() {
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",    label: "Reported",     labelEs: "Reportado" },
     { key: "approved",    label: "Approved",     labelEs: "Aprobado" },
-    { key: "assigned",    label: "Assigned",     labelEs: "Asignado" },
     { key: "scheduled",   label: "Scheduled",    labelEs: "Programado" },
     { key: "in_progress", label: "In Progress",  labelEs: "En Progreso" },
-    { key: "resolved",    label: "Resolved",     labelEs: "Resuelto" },
   ];
+
+  // Toggle between the active kanban and the resolved-only archive view
+  const [showResolved, setShowResolved] = useState(false);
 
   // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
   const filtered = useCallback(() => {
@@ -539,9 +540,23 @@ export function MaintenanceSection() {
             <h2 className="font-display text-xl text-foreground">{t("maintenance")}</h2>
             {activeTab === "repairs" && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                {openCount} {isL ? "abiertos" : "open"} · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
-                {reportedCount > 0 && (
-                  <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
+                {showResolved ? (
+                  <>
+                    {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
+                    <button onClick={() => setShowResolved(false)} className="ml-2 text-gold hover:underline font-semibold">
+                      ← {isL ? "Volver a activos" : "Back to active"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {openCount} {isL ? "abiertos" : "open"}
+                    <button onClick={() => setShowResolved(true)} className="ml-2 text-gold hover:underline">
+                      · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos →" : "resolved →"}
+                    </button>
+                    {reportedCount > 0 && (
+                      <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
+                    )}
+                  </>
                 )}
               </p>
             )}
@@ -727,14 +742,26 @@ export function MaintenanceSection() {
       ) : (
       <>
       {/* ─── Repairs content ─── */}
-      {loading ? (
+      {(() => {
+        const viewIssues = showResolved
+          ? displayIssues.filter(i => i.status === "resolved")
+          : displayIssues.filter(i => i.status !== "resolved");
+        return loading ? (
         <div className="px-4 grid grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
         </div>
-      ) : displayIssues.length === 0 ? (
+      ) : viewIssues.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 text-center gap-3">
           <Wrench size={40} className="text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">{isL ? "Sin problemas encontrados" : "No issues found"}</p>
+          <p className="text-sm text-muted-foreground">
+            {showResolved ? (isL ? "Sin problemas resueltos" : "No resolved issues") : (isL ? "Sin problemas encontrados" : "No issues found")}
+          </p>
+        </div>
+      ) : showResolved ? (
+        <div className="px-4 pb-4 space-y-3">
+          {viewIssues.map(issue => (
+            <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+          ))}
         </div>
       ) : viewMode === "board" ? (
         <div className="px-4 pb-4">
@@ -788,7 +815,7 @@ export function MaintenanceSection() {
         </div>
       ) : viewMode === "list" ? (
         <div className="px-4 pb-4 space-y-3">
-          {displayIssues.map(issue => (
+          {viewIssues.map(issue => (
             <IssueCard
               key={issue.id}
               issue={issue}
@@ -825,7 +852,7 @@ export function MaintenanceSection() {
               </tr>
             </thead>
             <tbody>
-              {displayIssues.map(issue => (
+              {viewIssues.map(issue => (
                 <tr
                   key={issue.id}
                   onClick={() => setDetailIssue(issue)}
@@ -864,7 +891,8 @@ export function MaintenanceSection() {
             </tbody>
           </table>
         </div>
-      )}
+      );
+      })()}
       </>
       )}
 

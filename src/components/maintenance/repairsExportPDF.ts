@@ -18,7 +18,7 @@ import type { MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues
 const STATUS_LABELS: Record<IssueStatus, string> = {
   reported:    "Reported",
   approved:    "Approved",
-  assigned:    "Assigned",
+  
   scheduled:   "Scheduled",
   in_progress: "In Progress",
   resolved:    "Resolved",
