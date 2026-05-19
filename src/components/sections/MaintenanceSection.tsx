@@ -540,9 +540,23 @@ export function MaintenanceSection() {
             <h2 className="font-display text-xl text-foreground">{t("maintenance")}</h2>
             {activeTab === "repairs" && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                {openCount} {isL ? "abiertos" : "open"} · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
-                {reportedCount > 0 && (
-                  <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
+                {showResolved ? (
+                  <>
+                    {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
+                    <button onClick={() => setShowResolved(false)} className="ml-2 text-gold hover:underline font-semibold">
+                      ← {isL ? "Volver a activos" : "Back to active"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {openCount} {isL ? "abiertos" : "open"}
+                    <button onClick={() => setShowResolved(true)} className="ml-2 text-gold hover:underline">
+                      · {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos →" : "resolved →"}
+                    </button>
+                    {reportedCount > 0 && (
+                      <span className="ml-2 text-amber-400 font-semibold">· {reportedCount} {t("awaitingApproval")}</span>
+                    )}
+                  </>
                 )}
               </p>
             )}
