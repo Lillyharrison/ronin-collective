@@ -74,7 +74,7 @@ async function findLinkedOrder(taskId: string): Promise<{ id: string; status: st
 
 export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Props) {
   const { language } = useLanguage();
-  const { userId, isAdmin, isMasterAdmin, isManager, department } = usePermissions();
+  const { userId, isAdmin, isMasterAdmin, isManager, department, assignedPropertyIds } = usePermissions();
   const syncCtx = useContext(OfflineSyncContext);
   const isL = language === "es";
   const fileRef = useRef<HTMLInputElement>(null);
@@ -138,10 +138,12 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     ]).then(([p, pr, cl]) => {
       // Family members (principal / extended_family) are never assigned work — exclude from picker.
       setProfiles(filterAssignableStaff((p.data as Profile[]) ?? []));
-      setProperties(sortProperties((pr.data as Property[]) ?? []));
+      const canSeeAllProps = isMasterAdmin || isAdmin || isManager;
+      const allProps = sortProperties((pr.data as Property[]) ?? []);
+      setProperties(canSeeAllProps ? allProps : allProps.filter(p => assignedPropertyIds.includes(p.id)));
       setChecklists((cl.data as ChecklistTemplate[]) ?? []);
     });
-  }, []);
+  }, [isMasterAdmin, isAdmin, isManager, assignedPropertyIds]);
 
   const handleUpload = async (file: File) => {
     if (!file) return;

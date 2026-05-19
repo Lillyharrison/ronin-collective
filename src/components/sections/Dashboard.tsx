@@ -278,7 +278,10 @@ export function Dashboard() {
             .contains("occupied_by_profile_ids", [principalUserId]),
         ]);
         const firstName = principalProfile?.full_name?.split(" ")[0] ?? "Principal";
-        const prop = occupiedProps?.[0];
+        const visibleOccupied = (isAdmin || isMasterAdmin)
+          ? (occupiedProps ?? [])
+          : (occupiedProps ?? []).filter(p => assignedPropertyIds.includes(p.id));
+        const prop = visibleOccupied[0];
         setPrincipalLocation(prop ? { name: firstName, propertyName: prop.name, propertyId: prop.id } : null);
       } else {
         setPrincipalLocation(null);
@@ -286,13 +289,19 @@ export function Dashboard() {
 
       // 6. Activity feed
       if (eventsData) {
-        const propIds = [...new Set(eventsData.map((e: { property_id: string | null }) => e.property_id).filter(Boolean))] as string[];
+        const canSeeAllProps = isAdmin || isMasterAdmin;
+        // Scope feed to events on properties the user has visibility into (events with no property stay visible).
+        const scopedEvents = canSeeAllProps
+          ? eventsData
+          : eventsData.filter((e: { property_id: string | null }) =>
+              !e.property_id || assignedPropertyIds.includes(e.property_id));
+        const propIds = [...new Set(scopedEvents.map((e: { property_id: string | null }) => e.property_id).filter(Boolean))] as string[];
         let propNames: Record<string, string> = {};
         if (propIds.length) {
           const { data: props } = await supabase.from("properties").select("id, name").in("id", propIds);
           (props ?? []).forEach((p: { id: string; name: string }) => { propNames[p.id] = p.name; });
         }
-        setFeedEvents(eventsData.map((e: FeedEvent) => ({
+        setFeedEvents(scopedEvents.map((e: FeedEvent) => ({
           ...e,
           payload: e.payload as Record<string, unknown> | null,
           propertyName: e.property_id ? propNames[e.property_id] : undefined,
@@ -300,7 +309,7 @@ export function Dashboard() {
       }
       setFeedLoading(false);
     });
-  }, [userId, isAdmin, permLoading]);
+  }, [userId, isAdmin, isMasterAdmin, assignedPropertyIds, permLoading]);
 
   // Realtime: refresh dashboard notifications when new ones arrive
   useEffect(() => {

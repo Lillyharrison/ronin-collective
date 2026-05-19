@@ -1188,7 +1188,7 @@ function RightPanel({
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
 export function CalendarSection() {
-  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee, assignedPropertyIds } = usePermissions();
   // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
   const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
@@ -1375,8 +1375,12 @@ export function CalendarSection() {
   useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
-    supabase.from("properties").select("id, name").order("sort_order").then(({ data }) => setProperties((data as Property[]) ?? []));
-  }, []);
+    const canSeeAll = isMasterAdmin || isAdmin || isManager;
+    supabase.from("properties").select("id, name").order("sort_order").then(({ data }) => {
+      const all = (data as Property[]) ?? [];
+      setProperties(canSeeAll ? all : all.filter(p => assignedPropertyIds.includes(p.id)));
+    });
+  }, [isMasterAdmin, isAdmin, isManager, assignedPropertyIds]);
 
   // Realtime
   useEffect(() => {
