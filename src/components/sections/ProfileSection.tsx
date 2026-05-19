@@ -90,6 +90,10 @@ export function ProfileSection() {
 
   // ─── save email (auth + profile) ─────────────────────────────────────
   const saveEmail = async () => {
+    if (isPreviewing) {
+      toast({ title: "Not allowed", description: "Email is auth-bound — exit preview to change your own email, or set it from User Management.", variant: "destructive" });
+      return;
+    }
     if (!localEmail.trim()) return;
     setSaving(true);
     const { error } = await supabase.auth.updateUser({ email: localEmail.trim() });
