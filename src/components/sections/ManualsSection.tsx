@@ -45,7 +45,11 @@ export function ManualsSection() {
     q.then(({ data }) => {
       const props = sortProperties((data as Property[]) ?? []);
       setProperties(props);
-      if (props.length > 0 && !activePropertyId) setSelectedPropId(props[0].id);
+      if (props.length > 0 && !activePropertyId && !selectedPropId) setSelectedPropId(props[0].id);
+      // Drop persisted selection if user no longer has access to that property
+      if (selectedPropId && !props.some(p => p.id === selectedPropId)) {
+        setSelectedPropId(props[0]?.id ?? null);
+      }
     });
   }, [isAdmin, assignedPropertyIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
