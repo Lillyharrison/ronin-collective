@@ -24,6 +24,7 @@ import {
 } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useNavigation } from "@/contexts/NavigationContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1085,6 +1086,7 @@ function RightPanel({
   onEventClick,
   selectedDay,
   currentMonth,
+  properties,
 }: {
   mode: CalendarMode;
   roninTab: RoninTab;
@@ -1093,6 +1095,7 @@ function RightPanel({
   onEventClick: (ev: CalEvent) => void;
   selectedDay: Date | null;
   currentMonth: Date;
+  properties: Property[];
 }) {
   // Combine both sources for the right panel — show everything
   const source = mode === "family" ? familyEvents : events;
@@ -1156,7 +1159,15 @@ function RightPanel({
                   <p className="text-lg font-bold leading-none text-foreground">{format(start, "d")}</p>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate text-foreground">{ev.title}</p>
+                  {(() => {
+                    const isMaint = ev._source === "maintenance" || ev._source === "planned_maintenance" || ev._tab === "maintenance";
+                    const propName = ev.property_id ? properties.find(p => p.id === ev.property_id)?.name : null;
+                    return (
+                      <p className="text-sm font-medium truncate text-foreground">
+                        {ev.title}{isMaint && propName ? <span className="text-muted-foreground font-normal"> ({propName})</span> : null}
+                      </p>
+                    );
+                  })()}
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     {mode === "ronin" ? (
                       <Badge variant="outline" className={cn("text-[10px] border px-1 py-0", roninCfg.bg, roninCfg.color)}>
@@ -1189,6 +1200,7 @@ function RightPanel({
 
 export function CalendarSection() {
   const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee, assignedPropertyIds } = usePermissions();
+  const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
   // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
   const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
@@ -1630,9 +1642,23 @@ export function CalendarSection() {
             roninTab={roninTab}
             events={filteredActiveEvents}
             familyEvents={familyEvents}
-            onEventClick={setSelectedEvent}
+            onEventClick={(ev) => {
+              if (ev._source === "maintenance" && ev._source_id) {
+                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("repairs")); } catch {}
+                setPendingMaintenanceIssueId(ev._source_id);
+                setActiveSection("maintenance");
+                return;
+              }
+              if (ev._source === "planned_maintenance") {
+                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("planned")); } catch {}
+                setActiveSection("maintenance");
+                return;
+              }
+              setSelectedEvent(ev);
+            }}
             selectedDay={selectedDay}
             currentMonth={currentMonth}
+            properties={properties}
           />
 
           {isMasterAdmin && mode === "family" && (
