@@ -72,6 +72,14 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   const fetchIssues = useCallback(async (pageIndex = 0) => {
     setLoading(true);
 
+    if (filterPropertyIds && filterPropertyIds.length === 0) {
+      setIssues([]);
+      setHasMore(false);
+      setPage(0);
+      setLoading(false);
+      return;
+    }
+
     // Narrow columns — list view never needs description until detail drawer opens
     const ISSUE_COLS = "id, title, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at";
 
