@@ -105,7 +105,8 @@ export function StaffCalendarTab({
   const [filterProperty, setFilterProperty] = useState<string>("all");
   const [familyEvents, setFamilyEvents] = useState<FamilyEvent[]>([]);
 
-  const { canSee } = usePermissions();
+  const { canSee, isMasterAdmin, isAdmin, isManager, assignedPropertyIds } = usePermissions();
+  const canSeeAllProperties = isMasterAdmin || isAdmin || isManager;
   const showFamilyOverlay = canSee("family-movements");
 
   const dragRef = useRef<DisplayShift | null>(null);
@@ -173,10 +174,14 @@ export function StaffCalendarTab({
       } else {
         setProfiles([]);
       }
-      setProperties((propRes.data as Property[]) ?? []);
+      const allProps = (propRes.data as Property[]) ?? [];
+      const visibleProps = canSeeAllProperties
+        ? allProps
+        : allProps.filter((p) => assignedPropertyIds.includes(p.id));
+      setProperties(visibleProps);
       setProfilesLoading(false);
     });
-  }, []);
+  }, [canSeeAllProperties, assignedPropertyIds]);
 
   useEffect(() => {
     if (calView !== "month" || !showFamilyOverlay) {
