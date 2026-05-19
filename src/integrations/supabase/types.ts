@@ -2114,6 +2114,10 @@ export type Database = {
       prune_old_system_events: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      user_can_access_property: {
+        Args: { _property_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "master_admin" | "admin" | "manager" | "staff" | "principal"
