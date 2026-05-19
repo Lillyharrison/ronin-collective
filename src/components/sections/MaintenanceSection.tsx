@@ -137,11 +137,12 @@ export function MaintenanceSection() {
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",    label: "Reported",     labelEs: "Reportado" },
     { key: "approved",    label: "Approved",     labelEs: "Aprobado" },
-    { key: "assigned",    label: "Assigned",     labelEs: "Asignado" },
     { key: "scheduled",   label: "Scheduled",    labelEs: "Programado" },
     { key: "in_progress", label: "In Progress",  labelEs: "En Progreso" },
-    { key: "resolved",    label: "Resolved",     labelEs: "Resuelto" },
   ];
+
+  // Toggle between the active kanban and the resolved-only archive view
+  const [showResolved, setShowResolved] = useState(false);
 
   // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
   const filtered = useCallback(() => {
