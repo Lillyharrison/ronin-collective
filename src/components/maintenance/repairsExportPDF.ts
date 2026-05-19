@@ -167,7 +167,7 @@ async function preloadImages(issues: MaintenanceIssue[]): Promise<Map<string, Pr
 // ──────────────────────────────────────────────────────────────────────────────
 
 function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, marginL: number): number {
-  doc.setFont("helvetica", "bold");
+  doc.setFont(PDF_FONT, "bold");
   doc.setFontSize(14);
   doc.setTextColor(28, 29, 32);
   doc.text("Repairs", marginL, 14);
@@ -179,7 +179,7 @@ function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, ma
   if (ctx.filters.priority) parts.push(`Priority: ${PRIORITY_LABELS[ctx.filters.priority] ?? ctx.filters.priority}`);
   if (ctx.filters.search)   parts.push(`Search: "${ctx.filters.search}"`);
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(110, 110, 110);
   doc.text(parts.join("  ·  "), marginL, 19.5);
@@ -197,7 +197,7 @@ function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, ma
 
 function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
   const pageCount = doc.getNumberOfPages();
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(140, 140, 140);
   for (let i = 1; i <= pageCount; i++) {
@@ -213,8 +213,9 @@ function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
 // LIST / TABLE export — landscape A4, no images
 // ──────────────────────────────────────────────────────────────────────────────
 
-function buildListDoc(ctx: RepairsExportContext, scale: number): jsPDF {
+function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontData): jsPDF {
   const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+  installPdfFonts(doc, fonts);
   const pageWidth = doc.internal.pageSize.getWidth();   // 297
   const marginL = 10;
   const marginR = 10;
@@ -248,6 +249,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number): jsPDF {
     head,
     body,
     headStyles: {
+      font: PDF_FONT,
       fillColor: [28, 29, 32],
       textColor: [245, 240, 232],
       fontStyle: "bold",
@@ -256,6 +258,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number): jsPDF {
       halign: "left",
     },
     bodyStyles: {
+      font: PDF_FONT,
       fontSize: baseFont * scale,
       cellPadding: { top: basePadV * scale, bottom: basePadV * scale, left: basePadH * scale, right: basePadH * scale },
       overflow: "linebreak",
