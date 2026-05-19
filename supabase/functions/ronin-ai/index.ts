@@ -10,7 +10,7 @@ const corsHeaders = {
 // ─── PERMISSIONS WRITER ───────────────────────────────────────────────────────
 // Single source of truth: the `user_section_permissions` table. Callers pass
 // pre-built rows (built client-side) — no JSONB blob is involved anywhere.
-// Drafts (no auth.users row) are skipped — caller must guard those.
+// Draft profiles are supported because rows link to public.profiles, not auth.users.
 async function writeSectionPermissionRows(
   // deno-lint-ignore no-explicit-any
   client: any,
@@ -26,7 +26,8 @@ async function writeSectionPermissionRows(
     notifications: r.notifications === true,
     scope: ["own", "department", "all"].includes(r.scope ?? "") ? r.scope : null,
   }));
-  await client.from("user_section_permissions").upsert(payload, { onConflict: "user_id,section" });
+  const { error } = await client.from("user_section_permissions").upsert(payload, { onConflict: "user_id,section" });
+  if (error) throw error;
 }
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
@@ -812,7 +813,7 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, is_draft } = body;
+      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, section_permissions_rows, is_draft } = body;
       // Allow saving without full_name when is_draft is true
       if (!is_draft && !full_name) {
         return new Response(JSON.stringify({ error: "Missing required fields: full_name" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -840,8 +841,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       await adminClient.from("user_roles").insert({ user_id: newId, role });
-      // Note: draft profiles have no auth.users row → can't write to user_section_permissions yet
-      // (foreign key constraint). Permissions will sync when send_invitation promotes them.
+      await writeSectionPermissionRows(adminClient, newId, section_permissions_rows);
       return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -850,7 +850,7 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { profile_id, full_name, email, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, section_permissions_rows, send_invitation } = body;
+      const { profile_id, full_name, email, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, contracted_days_per_week, contracted_hours_per_week, annual_leave_days, section_permissions_rows, send_invitation } = body;
       if (!profile_id) return new Response(JSON.stringify({ error: "Missing profile_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       // Update the profile
@@ -865,17 +865,15 @@ serve(async (req) => {
         phone: phone || null,
         assigned_property_ids: assigned_property_ids || [],
         quick_actions: Array.isArray(quick_actions) ? quick_actions : [],
+        contracted_days_per_week: contracted_days_per_week ?? null,
+        contracted_hours_per_week: contracted_hours_per_week ?? null,
+        annual_leave_days: annual_leave_days ?? null,
         // Only promote out of draft when sending invitation
         is_draft: send_invitation ? false : true,
       }).eq("id", profile_id);
       if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      // Write to user_section_permissions only if this profile is tied to a real auth user
-      // (drafts without an auth.users row would violate the FK constraint).
-      const { data: authUser } = await adminClient.auth.admin.getUserById(profile_id);
-      if (authUser?.user) {
-        await writeSectionPermissionRows(adminClient, profile_id, section_permissions_rows);
-      }
+      await writeSectionPermissionRows(adminClient, profile_id, section_permissions_rows);
 
       // Update role if provided
       if (role) {

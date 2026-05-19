@@ -29,6 +29,9 @@ export interface TeamMember {
   quick_actions: string[];
   role?: AppRole | null;
   is_draft?: boolean;
+  contracted_days_per_week?: number | null;
+  contracted_hours_per_week?: number | null;
+  annual_leave_days?: number | null;
 }
 
 export interface Property {

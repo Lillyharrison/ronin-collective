@@ -76,7 +76,7 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
 };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const CACHE_TTL_MS  = 5 * 60 * 1000;
 
 interface PermissionsCache {
