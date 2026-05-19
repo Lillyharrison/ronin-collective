@@ -742,14 +742,26 @@ export function MaintenanceSection() {
       ) : (
       <>
       {/* ─── Repairs content ─── */}
-      {loading ? (
+      {(() => {
+        const viewIssues = showResolved
+          ? displayIssues.filter(i => i.status === "resolved")
+          : displayIssues.filter(i => i.status !== "resolved");
+        return loading ? (
         <div className="px-4 grid grid-cols-2 gap-3">
           {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
         </div>
-      ) : displayIssues.length === 0 ? (
+      ) : viewIssues.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 text-center gap-3">
           <Wrench size={40} className="text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">{isL ? "Sin problemas encontrados" : "No issues found"}</p>
+          <p className="text-sm text-muted-foreground">
+            {showResolved ? (isL ? "Sin problemas resueltos" : "No resolved issues") : (isL ? "Sin problemas encontrados" : "No issues found")}
+          </p>
+        </div>
+      ) : showResolved ? (
+        <div className="px-4 pb-4 space-y-3">
+          {viewIssues.map(issue => (
+            <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+          ))}
         </div>
       ) : viewMode === "board" ? (
         <div className="px-4 pb-4">
