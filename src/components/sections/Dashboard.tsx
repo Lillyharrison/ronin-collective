@@ -309,7 +309,7 @@ export function Dashboard() {
       }
       setFeedLoading(false);
     });
-  }, [userId, isAdmin, permLoading]);
+  }, [userId, isAdmin, isMasterAdmin, assignedPropertyIds, permLoading]);
 
   // Realtime: refresh dashboard notifications when new ones arrive
   useEffect(() => {
