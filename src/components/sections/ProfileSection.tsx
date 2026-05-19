@@ -47,10 +47,10 @@ export function ProfileSection() {
 
   // ─── load profile on mount ────────────────────────────────────────────
   useEffect(() => {
-    if (!user) return;
+    if (!effectiveUserId) return;
     supabase.from("profiles")
       .select("full_name, phone, birthday, avatar_url")
-      .eq("id", user.id)
+      .eq("id", effectiveUserId)
       .maybeSingle()
       .then(({ data }) => {
         if (!data) return;
@@ -59,7 +59,10 @@ export function ProfileSection() {
         setLocalBirthday(data.birthday ?? "");
         setLocalAvatar(data.avatar_url ?? null);
       });
-  }, [user?.id]);
+    // Email is auth-bound — only show real user's email when not previewing
+    if (!isPreviewing) setLocalEmail(user?.email ?? "");
+    else setLocalEmail("");
+  }, [effectiveUserId, isPreviewing, user?.email]);
 
   // ─── open edit ────────────────────────────────────────────────────────
   const startEdit = (field: EditField) => {
