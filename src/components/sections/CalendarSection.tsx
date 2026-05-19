@@ -1642,9 +1642,17 @@ export function CalendarSection() {
             roninTab={roninTab}
             events={filteredActiveEvents}
             familyEvents={familyEvents}
-            onEventClick={setSelectedEvent}
+            onEventClick={(ev) => {
+              if ((ev._source === "maintenance" || ev._source === "planned_maintenance") && ev._source_id) {
+                setPendingMaintenanceIssueId(ev._source_id);
+                setActiveSection("maintenance");
+                return;
+              }
+              setSelectedEvent(ev);
+            }}
             selectedDay={selectedDay}
             currentMonth={currentMonth}
+            properties={properties}
           />
 
           {isMasterAdmin && mode === "family" && (
