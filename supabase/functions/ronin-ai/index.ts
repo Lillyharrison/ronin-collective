@@ -26,7 +26,8 @@ async function writeSectionPermissionRows(
     notifications: r.notifications === true,
     scope: ["own", "department", "all"].includes(r.scope ?? "") ? r.scope : null,
   }));
-  await client.from("user_section_permissions").upsert(payload, { onConflict: "user_id,section" });
+  const { error } = await client.from("user_section_permissions").upsert(payload, { onConflict: "user_id,section" });
+  if (error) throw error;
 }
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
