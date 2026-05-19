@@ -84,16 +84,17 @@ export function MeetTeamSection() {
     const userIds = profiles.map(p => p.id);
     const { data: permRows } = await supabase
       .from("user_section_permissions")
-      .select("user_id, section, can_view, can_edit, notifications")
+      .select("user_id, section, can_view, can_edit, notifications, scope")
       .in("user_id", userIds);
 
     const permsByUser: Record<string, SectionPermissions> = {};
-    for (const row of (permRows ?? []) as Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean }>) {
+    for (const row of (permRows ?? []) as Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope: "own" | "department" | "all" | null }>) {
       if (!permsByUser[row.user_id]) permsByUser[row.user_id] = {};
       permsByUser[row.user_id][row.section] = {
         view: row.can_view,
         edit: row.can_edit,
         notifications: row.notifications,
+        ...(row.scope ? { scope: row.scope } : {}),
       };
     }
 
@@ -436,8 +437,8 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             section_permissions_rows: Object.entries(finalPerms)
               .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
               .map(([section, v]) => {
-                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
-                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true };
+                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
+                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true, scope: p.scope ?? null };
               }),
             is_draft: isDraft,
           },
@@ -462,8 +463,8 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             section_permissions_rows: Object.entries(finalPerms)
               .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
               .map(([section, v]) => {
-                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
-                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true };
+                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
+                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true, scope: p.scope ?? null };
               }),
           },
         });
