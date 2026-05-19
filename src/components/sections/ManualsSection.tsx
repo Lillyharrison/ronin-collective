@@ -25,9 +25,9 @@ export function ManualsSection() {
   const { isAdmin, isMasterAdmin, isManager, assignedPropertyIds, canEdit } = usePermissions();
   const canManageManuals = isMasterAdmin || isAdmin || isManager || canEdit("manuals");
   const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail, activePropertyId, setActivePropertyId } = useNavigation();
-  const [tab, setTab] = useState<ManualTab>("care_guides");
+  const [tab, setTab] = useLocalStorage<ManualTab>("manuals.tab", "care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
+  const [selectedPropId, setSelectedPropId] = useLocalStorage<string | null>("manuals.selectedPropId", null);
   const [showPropPicker, setShowPropPicker] = useState(false);
 
 
