@@ -107,6 +107,26 @@ export function useStaffSchedules(
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Realtime: refetch (debounced) on any change to staff scheduling tables
+  // so multiple viewers see edits live without needing to refresh.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedRefetch = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { fetchData(); }, 300);
+    };
+    const channel = supabase
+      .channel("staff-schedule-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_shifts" }, debouncedRefetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_schedules" }, debouncedRefetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_leave_requests" }, debouncedRefetch)
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
+
   // ── Schedules ────────────────────────────────────────────────────────────────
 
   const createSchedule = async (
