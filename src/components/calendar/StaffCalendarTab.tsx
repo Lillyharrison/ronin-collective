@@ -181,7 +181,7 @@ export function StaffCalendarTab({
       setProperties(visibleProps);
       setProfilesLoading(false);
     });
-  }, []);
+  }, [canSeeAllProperties, assignedPropertyIds]);
 
   useEffect(() => {
     if (calView !== "month" || !showFamilyOverlay) {
