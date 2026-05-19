@@ -174,7 +174,11 @@ export function StaffCalendarTab({
       } else {
         setProfiles([]);
       }
-      setProperties((propRes.data as Property[]) ?? []);
+      const allProps = (propRes.data as Property[]) ?? [];
+      const visibleProps = canSeeAllProperties
+        ? allProps
+        : allProps.filter((p) => assignedPropertyIds.includes(p.id));
+      setProperties(visibleProps);
       setProfilesLoading(false);
     });
   }, []);
