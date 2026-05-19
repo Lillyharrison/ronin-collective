@@ -433,7 +433,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             birthday: form.birthday || null,
             notes: form.notes || null,
             assigned_property_ids: assignedProps,
-            quick_actions: [],
+            quick_actions: quickActions,
             section_permissions_rows: Object.entries(finalPerms)
               .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
               .map(([section, v]) => {
@@ -459,7 +459,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             notes: form.notes || null,
             phone: phone || null,
             assigned_property_ids: assignedProps,
-            quick_actions: [],
+            quick_actions: quickActions,
             section_permissions_rows: Object.entries(finalPerms)
               .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
               .map(([section, v]) => {
