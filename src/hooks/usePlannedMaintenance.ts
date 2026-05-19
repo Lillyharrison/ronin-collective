@@ -47,6 +47,12 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       return;
     }
 
+    if (scopedPropertyIds && scopedPropertyIds.length === 0) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     // Narrow columns — list rendering never needs `description` until edit modal opens
     const PM_COLS = "id, title, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
