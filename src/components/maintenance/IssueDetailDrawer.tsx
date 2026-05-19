@@ -21,7 +21,7 @@ interface Props {
 const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
   { value: "reported",    label: "Reported",    labelEs: "Reportado" },
   { value: "approved",    label: "Approved",    labelEs: "Aprobado" },
-  { value: "assigned",    label: "Assigned",    labelEs: "Asignado" },
+  
   { value: "scheduled",   label: "Scheduled",   labelEs: "Programado" },
   { value: "in_progress", label: "In Progress", labelEs: "En Progreso" },
   { value: "resolved",    label: "Resolved",    labelEs: "Resuelto" },
