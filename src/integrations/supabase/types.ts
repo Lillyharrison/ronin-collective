@@ -1823,6 +1823,7 @@ export type Database = {
           can_view: boolean
           id: string
           notifications: boolean
+          scope: string | null
           section: string
           updated_at: string
           user_id: string
@@ -1832,6 +1833,7 @@ export type Database = {
           can_view?: boolean
           id?: string
           notifications?: boolean
+          scope?: string | null
           section: string
           updated_at?: string
           user_id: string
@@ -1841,6 +1843,7 @@ export type Database = {
           can_view?: boolean
           id?: string
           notifications?: boolean
+          scope?: string | null
           section?: string
           updated_at?: string
           user_id?: string
