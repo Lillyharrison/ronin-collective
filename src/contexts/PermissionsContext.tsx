@@ -88,7 +88,7 @@ interface PermissionsCache {
   assignedPropertyIds: string[];
   fullName: string | null;
   avatarUrl: string | null;
-  sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null;
+  sectionPermissions: Record<string, SectionPermEntry> | null;
   cachedAt: number;
 }
 
@@ -167,7 +167,7 @@ function buildPermissions(
   assignedPropertyIds: string[],
   fullName: string | null,
   avatarUrl: string | null,
-  sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null,
+  sectionPermissions: Record<string, SectionPermEntry> | null,
   loading: boolean,
   preview: { isPreviewing: boolean; realUserId: string | null; realIsMasterAdmin: boolean; previewName: string | null },
 ): UserPermissions {
@@ -249,9 +249,9 @@ async function fetchPermissionsSnapshot(userId: string) {
       .select("level, department, assigned_property_ids, full_name, avatar_url")
       .eq("id", userId).maybeSingle(),
     (supabase.from("user_section_permissions" as never)
-      .select("section, can_view, can_edit, notifications")
+      .select("section, can_view, can_edit, notifications, scope")
       .eq("user_id", userId)) as unknown as Promise<{
-        data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean }[] | null
+        data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope: "own" | "department" | "all" | null }[] | null
       }>,
   ]);
 
@@ -262,12 +262,17 @@ async function fetchPermissionsSnapshot(userId: string) {
   const fullName = profile?.full_name ?? null;
   const avatarUrl = profile?.avatar_url ?? null;
 
-  let sectionPermissions: Record<string, { view: boolean; edit: boolean; notifications: boolean }> | null = null;
+  let sectionPermissions: Record<string, SectionPermEntry> | null = null;
   const rowPerms = rowPermsResult.data;
   if (rowPerms && rowPerms.length > 0) {
     sectionPermissions = {};
     for (const row of rowPerms) {
-      sectionPermissions[row.section] = { view: row.can_view, edit: row.can_edit, notifications: row.notifications };
+      sectionPermissions[row.section] = {
+        view: row.can_view,
+        edit: row.can_edit,
+        notifications: row.notifications,
+        ...(row.scope ? { scope: row.scope } : {}),
+      };
     }
   }
 
