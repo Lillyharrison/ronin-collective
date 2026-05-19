@@ -14,6 +14,47 @@ import autoTable from "jspdf-autotable";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import type { MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues";
+import interRegularUrl from "@/assets/fonts/Inter-Regular.ttf?url";
+import interSemiBoldUrl from "@/assets/fonts/Inter-SemiBold.ttf?url";
+
+const PDF_FONT = "InterPdf";
+const PDF_FONT_REGULAR_FILE = "Inter-Regular.ttf";
+const PDF_FONT_SEMIBOLD_FILE = "Inter-SemiBold.ttf";
+
+interface PdfFontData {
+  regular: string;
+  semibold: string;
+}
+
+let pdfFontDataPromise: Promise<PdfFontData> | null = null;
+
+async function fontUrlToBase64(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load PDF font: ${res.status}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function loadPdfFontData(): Promise<PdfFontData> {
+  pdfFontDataPromise ??= Promise.all([
+    fontUrlToBase64(interRegularUrl),
+    fontUrlToBase64(interSemiBoldUrl),
+  ]).then(([regular, semibold]) => ({ regular, semibold }));
+  return pdfFontDataPromise;
+}
+
+function installPdfFonts(doc: jsPDF, fonts: PdfFontData) {
+  doc.addFileToVFS(PDF_FONT_REGULAR_FILE, fonts.regular);
+  doc.addFont(PDF_FONT_REGULAR_FILE, PDF_FONT, "normal");
+  doc.addFileToVFS(PDF_FONT_SEMIBOLD_FILE, fonts.semibold);
+  doc.addFont(PDF_FONT_SEMIBOLD_FILE, PDF_FONT, "bold");
+  doc.setFont(PDF_FONT, "normal");
+}
 
 const STATUS_LABELS: Record<IssueStatus, string> = {
   reported:    "Reported",
