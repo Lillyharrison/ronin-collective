@@ -113,6 +113,10 @@ export function ProfileSection() {
 
   // ─── save password ────────────────────────────────────────────────────
   const savePassword = async () => {
+    if (isPreviewing) {
+      toast({ title: "Not allowed", description: "Use User Management to set this user's password.", variant: "destructive" });
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast({ title: language === "es" ? "Error" : "Error", description: language === "es" ? "Las contraseñas no coinciden." : "Passwords don't match.", variant: "destructive" });
       return;
