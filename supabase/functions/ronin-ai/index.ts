@@ -10,7 +10,7 @@ const corsHeaders = {
 // ─── PERMISSIONS WRITER ───────────────────────────────────────────────────────
 // Single source of truth: the `user_section_permissions` table. Callers pass
 // pre-built rows (built client-side) — no JSONB blob is involved anywhere.
-// Drafts (no auth.users row) are skipped — caller must guard those.
+// Draft profiles are supported because rows link to public.profiles, not auth.users.
 async function writeSectionPermissionRows(
   // deno-lint-ignore no-explicit-any
   client: any,
