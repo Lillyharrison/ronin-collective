@@ -139,6 +139,7 @@ export function MaintenanceSection() {
   // Reads from the ref (always current) so we don't miss the value when
   // the section first mounts in the same render cycle as navigation.
   useEffect(() => {
+    let cancelled = false;
     const pendingId = pendingMaintenanceIssueIdRef.current;
     if (!pendingId) return;
     if (loading) return;
@@ -147,14 +148,45 @@ export function MaintenanceSection() {
       setDetailIssue(issue);
       setActiveTab("repairs");
       setPendingMaintenanceIssueId(null);
-    } else if (issues.length > 0) {
-      // Issues loaded but this one isn't visible (RLS / property filter) — clear gracefully
-      setPendingMaintenanceIssueId(null);
+      return;
     }
+
+    (async () => {
+      const { data } = await supabase
+        .from("maintenance_issues")
+        .select("id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at")
+        .eq("id", pendingId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!data) { setPendingMaintenanceIssueId(null); return; }
+
+      const profileIds = [data.reported_by, data.assigned_to].filter(Boolean) as string[];
+      const [propsRes, profilesRes, relatedRes] = await Promise.all([
+        data.property_id ? supabase.from("properties").select("id, name").eq("id", data.property_id).maybeSingle() : Promise.resolve({ data: null }),
+        profileIds.length ? supabase.from("profiles").select("id, full_name, avatar_url").in("id", profileIds) : Promise.resolve({ data: [] }),
+        data.related_issue_id ? supabase.from("maintenance_issues").select("id, title").eq("id", data.related_issue_id).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      if (cancelled) return;
+
+      const profileMap = new Map((profilesRes.data ?? []).map((p: any) => [p.id, p]));
+      setDetailIssue({
+        ...(data as MaintenanceIssue),
+        property_name: propsRes.data?.name,
+        reporter_name: profileMap.get(data.reported_by)?.full_name ?? undefined,
+        assignee_name: data.assigned_to ? profileMap.get(data.assigned_to)?.full_name ?? undefined : undefined,
+        assignee_avatar: data.assigned_to ? profileMap.get(data.assigned_to)?.avatar_url ?? undefined : undefined,
+        related_issue_title: relatedRes.data?.title,
+      });
+      setActiveTab("repairs");
+      setPendingMaintenanceIssueId(null);
+    })();
+
+    return () => { cancelled = true; };
   }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
 
   // Deep-link: open a planned maintenance entry when arriving from the calendar.
   useEffect(() => {
+    let cancelled = false;
     const pendingId = pendingPlannedMaintenanceEntryIdRef.current;
     if (!pendingId) return;
     if (plannedLoading) return;
@@ -164,9 +196,24 @@ export function MaintenanceSection() {
       setEditPlanned(entry);
       setPlannedModalOpen(true);
       setPendingPlannedMaintenanceEntryId(null);
-    } else if (plannedEntries.length > 0) {
-      setPendingPlannedMaintenanceEntryId(null);
+      return;
     }
+
+    (async () => {
+      const { data } = await supabase
+        .from("planned_maintenance")
+        .select("*")
+        .eq("id", pendingId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!data) { setPendingPlannedMaintenanceEntryId(null); return; }
+      setActiveTab("planned");
+      setEditPlanned(data as PlannedMaintenanceEntry);
+      setPlannedModalOpen(true);
+      setPendingPlannedMaintenanceEntryId(null);
+    })();
+
+    return () => { cancelled = true; };
   }, [pendingPlannedMaintenanceEntryIdRef, pendingPlannedMaintenanceEntryId, plannedEntries, plannedLoading, setPendingPlannedMaintenanceEntryId, setActiveTab]);
 
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
