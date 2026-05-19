@@ -891,7 +891,8 @@ export function MaintenanceSection() {
             </tbody>
           </table>
         </div>
-      )}
+      );
+      })()}
       </>
       )}
 
