@@ -143,6 +143,7 @@ export function MaintenanceSection() {
 
   // Toggle between the active kanban and the resolved-only archive view
   const [showResolved, setShowResolved] = useState(false);
+  const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
 
   // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
   const filtered = useCallback(() => {
