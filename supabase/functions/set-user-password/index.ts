@@ -8,14 +8,18 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const { userId, password } = await req.json();
+  const { userId, password, email } = await req.json();
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const { error } = await supabase.auth.admin.updateUserById(userId, { password });
+  const updates: Record<string, unknown> = {};
+  if (password) updates.password = password;
+  if (email) { updates.email = email; updates.email_confirm = true; }
+
+  const { error } = await supabase.auth.admin.updateUserById(userId, updates);
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
