@@ -532,12 +532,13 @@ export async function exportRepairsPDF(ctx: RepairsExportContext): Promise<void>
   );
 
   try {
+    const fonts = await loadPdfFontData();
     let doc: jsPDF;
     if (ctx.viewMode === "list") {
-      doc = autoFitDoc((scale) => buildListDoc(ctx, scale));
+      doc = autoFitDoc((scale) => buildListDoc(ctx, scale, fonts));
     } else {
       const images = await preloadImages(ctx.issues);
-      doc = autoFitDoc((scale) => buildTileDoc(ctx, scale, images));
+      doc = autoFitDoc((scale) => buildTileDoc(ctx, scale, images, fonts));
     }
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
