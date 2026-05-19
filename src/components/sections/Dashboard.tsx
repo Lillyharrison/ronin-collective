@@ -7,7 +7,7 @@ import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
   Clock, ShoppingBag, TriangleAlert, CheckSquare,
   Activity, Zap, Shield, ClipboardList, X, Bell,
-  Pencil, Check, ExternalLink, MapPin, Car,
+  Pencil, Check, ExternalLink, MapPin, Car, CalendarClock,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,7 @@ const ALL_QUICK_ACTIONS_DASHBOARD = [
   { key: "orders",      labelKey: "orders" as const,       labelEs: "Pedidos",           icon: <ShoppingBag size={26} />,  section: "orders" as const },
   { key: "reportIssue", labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />,section: "maintenance" as const },
   { key: "calendar",    labelKey: "calendar" as const,     labelEs: "Calendario",        icon: <Clock size={26} />,        section: "calendar" as const },
+  { key: "staffSchedule", labelKey: "staffSchedule" as const, labelEs: "Horario del Personal", icon: <CalendarClock size={26} />, section: "staff-schedule" as const },
   { key: "tasks",       labelKey: "tasks" as const,        labelEs: "Tareas",            icon: <CheckSquare size={26} />,  section: "tasks" as const },
   { key: "maintenance", labelKey: "maintenance" as const,  labelEs: "Mantenimiento",     icon: <Zap size={26} />,          section: "maintenance" as const },
   { key: "messages",    labelKey: "messages" as const,     labelEs: "Mensajes",          icon: <Activity size={26} />,     section: "messages" as const },
@@ -645,10 +646,11 @@ export function Dashboard() {
         <div className="grid grid-cols-2 gap-3">
           {ALL_QUICK_ACTIONS_DASHBOARD
             .filter(a => {
+              if (!isMasterAdmin && !canSee(a.section)) return false;
               // If user has saved prefs, respect them; otherwise show defaults filtered by canSee
               if (userQuickActions !== null) return userQuickActions.includes(a.key);
               // Default: show first 4 that user can see
-              return isMasterAdmin || canSee(a.section);
+              return true;
             })
             .map((action) => (
             <button

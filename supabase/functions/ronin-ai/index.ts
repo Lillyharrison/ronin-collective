@@ -15,7 +15,7 @@ async function writeSectionPermissionRows(
   // deno-lint-ignore no-explicit-any
   client: any,
   userId: string,
-  rows: Array<{ section: string; can_view: boolean; can_edit: boolean; notifications: boolean }> | null | undefined,
+  rows: Array<{ section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope?: "own" | "department" | "all" | null }> | null | undefined,
 ): Promise<void> {
   if (!Array.isArray(rows) || rows.length === 0) return;
   const payload = rows.map(r => ({
@@ -24,6 +24,7 @@ async function writeSectionPermissionRows(
     can_view: r.can_view === true,
     can_edit: r.can_edit === true,
     notifications: r.notifications === true,
+    scope: ["own", "department", "all"].includes(r.scope ?? "") ? r.scope : null,
   }));
   await client.from("user_section_permissions").upsert(payload, { onConflict: "user_id,section" });
 }
