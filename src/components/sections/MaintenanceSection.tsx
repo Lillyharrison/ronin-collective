@@ -29,6 +29,7 @@ import { toast } from "sonner";
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 type ViewMode = "board" | "list" | "table";
 type MaintenanceTab = "repairs" | "planned";
+type StaffProfileRow = { id: string; full_name: string | null; avatar_url: string | null; level?: string | null };
 
 export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
@@ -98,7 +99,7 @@ export function MaintenanceSection() {
       .then(({ data }) => setAllProperties(sortProperties((data ?? []) as { id: string; name: string; is_primary?: boolean }[])));
     // Family members (principal / extended_family) are never assigned maintenance work — exclude from picker.
     supabase.from("profiles").select("id, full_name, avatar_url, level").order("full_name").limit(500)
-      .then(({ data }) => setProfiles(filterAssignableStaff(data ?? []).map((p: any) => ({
+      .then(({ data }) => setProfiles(filterAssignableStaff((data ?? []) as StaffProfileRow[]).map((p) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
     supabase.from("vendors").select("id, name").eq("is_active", true).order("name").limit(200)
@@ -168,7 +169,7 @@ export function MaintenanceSection() {
       ]);
       if (cancelled) return;
 
-      const profileMap = new Map((profilesRes.data ?? []).map((p: any) => [p.id, p]));
+      const profileMap = new Map(((profilesRes.data ?? []) as StaffProfileRow[]).map((p) => [p.id, p]));
       setDetailIssue({
         ...(data as MaintenanceIssue),
         property_name: propsRes.data?.name,
@@ -182,7 +183,7 @@ export function MaintenanceSection() {
     })();
 
     return () => { cancelled = true; };
-  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
+  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, setActiveTab]);
 
   // Deep-link: open a planned maintenance entry when arriving from the calendar.
   useEffect(() => {
@@ -325,7 +326,7 @@ export function MaintenanceSection() {
     let calStartDate: string | null = null;
     let calEndDate: string | null = null;
     if (entry.date_type === "specific" && entry.scheduled_date) {
-      const time = (entry as any).scheduled_time ? (entry as any).scheduled_time.slice(0, 5) : "09:00";
+      const time = entry.scheduled_time ? entry.scheduled_time.slice(0, 5) : "09:00";
       calStartDate = `${entry.scheduled_date}T${time}:00`;
       // End = start + 1 hour
       const [h, m] = time.split(":").map(Number);
@@ -392,7 +393,7 @@ export function MaintenanceSection() {
     let calStartDate: string;
     let calEndDate: string;
     if (payload.date_type === "specific" && payload.scheduled_date) {
-      const time = (payload as any).scheduled_time ? (payload as any).scheduled_time.slice(0, 5) : "09:00";
+      const time = payload.scheduled_time ? payload.scheduled_time.slice(0, 5) : "09:00";
       calStartDate = `${payload.scheduled_date}T${time}:00`;
       const [h, m] = time.split(":").map(Number);
       const endH = String(Math.min(h + 1, 23)).padStart(2, "0");
