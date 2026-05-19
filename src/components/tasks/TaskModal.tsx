@@ -143,7 +143,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       setProperties(canSeeAllProps ? allProps : allProps.filter(p => assignedPropertyIds.includes(p.id)));
       setChecklists((cl.data as ChecklistTemplate[]) ?? []);
     });
-  }, []);
+  }, [isMasterAdmin, isAdmin, isManager, assignedPropertyIds]);
 
   const handleUpload = async (file: File) => {
     if (!file) return;
