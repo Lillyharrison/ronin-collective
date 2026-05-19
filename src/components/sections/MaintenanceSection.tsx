@@ -143,6 +143,7 @@ export function MaintenanceSection() {
 
   // Toggle between the active kanban and the resolved-only archive view
   const [showResolved, setShowResolved] = useState(false);
+  const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
 
   // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
   const filtered = useCallback(() => {
@@ -768,10 +769,10 @@ export function MaintenanceSection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {STATUS_COLUMNS.map(col => {
               const colIssues = displayIssues.filter(i => i.status === col.key);
-              // On mobile: skip empty columns entirely to avoid wasted whitespace
               const isEmpty = colIssues.length === 0;
+              const isDragOver = dragOverCol === col.key;
               return (
-                <div key={col.key} className={cn("min-w-0", isEmpty && "hidden sm:block")}>
+                <div key={col.key} className={cn("min-w-0", isEmpty && !isDragOver && "hidden sm:block")}>
                   <div className="flex items-center justify-between px-3 py-2 bg-muted/40 rounded-t-xl border-b border-border">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-foreground">
@@ -782,9 +783,32 @@ export function MaintenanceSection() {
                       </span>
                     </div>
                   </div>
-                  <div className="bg-muted/20 rounded-b-xl p-2 space-y-2 min-h-[100px] max-h-[60vh] overflow-y-auto">
+                  <div
+                    onDragOver={canManage ? (e) => { e.preventDefault(); if (dragOverCol !== col.key) setDragOverCol(col.key); } : undefined}
+                    onDragLeave={canManage ? () => setDragOverCol(prev => prev === col.key ? null : prev) : undefined}
+                    onDrop={canManage ? async (e) => {
+                      e.preventDefault();
+                      setDragOverCol(null);
+                      const id = e.dataTransfer.getData("text/issue-id");
+                      const issue = issues.find(i => i.id === id);
+                      if (!issue || issue.status === col.key) return;
+                      const scheduledDate = col.key === "scheduled" ? new Date().toISOString() : undefined;
+                      await handleStatusChange(issue, col.key, scheduledDate);
+                    } : undefined}
+                    className={cn(
+                      "rounded-b-xl p-2 space-y-2 min-h-[100px] max-h-[60vh] overflow-y-auto transition-colors",
+                      isDragOver ? "bg-gold/10 ring-2 ring-gold/40" : "bg-muted/20"
+                    )}>
                     {colIssues.map(issue => (
-                      <div key={issue.id} className="relative group/card">
+                      <div
+                        key={issue.id}
+                        className="relative group/card"
+                        draggable={canManage}
+                        onDragStart={canManage ? (e) => {
+                          e.dataTransfer.setData("text/issue-id", issue.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        } : undefined}
+                      >
                         <IssueCard
                           issue={issue}
                           onClick={() => setDetailIssue(issue)}
@@ -804,7 +828,7 @@ export function MaintenanceSection() {
                     ))}
                     {colIssues.length === 0 && (
                       <p className="text-[10px] text-muted-foreground/40 italic text-center py-4">
-                        {isL ? "Sin problemas" : "No issues"}
+                        {isDragOver ? (isL ? "Suelta aquí" : "Drop here") : (isL ? "Sin problemas" : "No issues")}
                       </p>
                     )}
                   </div>
