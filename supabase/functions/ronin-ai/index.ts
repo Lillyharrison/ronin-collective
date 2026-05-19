@@ -1547,7 +1547,7 @@ When anyone reports a physical problem with a property (broken item, damage, lea
         adminClient.from("assets").select("id, name, category, make, model, serial_number, current_property_id").limit(50),
         adminClient.from("system_events").select("event_type, entity_type, created_at, payload").order("created_at", { ascending: false }).limit(15),
         adminClient.from("ronin_memories").select("id, summary, content, category, importance, tags, property_id, subject_user_id").order("importance", { ascending: false }).order("last_referenced_at", { ascending: false, nullsFirst: false }).limit(20),
-        adminClient.from("maintenance_issues").select("id, title, status, priority, category, created_at, property_id").in("status", ["reported", "approved", "assigned", "scheduled", "in_progress"]).order("created_at", { ascending: false }).limit(20),
+        adminClient.from("maintenance_issues").select("id, title, status, priority, category, created_at, property_id").in("status", ["reported", "approved", "scheduled", "in_progress"]).order("created_at", { ascending: false }).limit(20),
       ]);
 
       const contextSections: string[] = [];
