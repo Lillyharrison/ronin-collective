@@ -1632,7 +1632,22 @@ export function CalendarSection() {
                   selectedDay={selectedDay}
                   currentMonth={currentMonth}
                   onDaySelect={(day) => setSelectedDay(isSameDay(day, selectedDay ?? new Date(-1)) ? null : day)}
-                  onEventClick={(ev, e) => { e.stopPropagation(); setSelectedEvent(ev); }}
+                  onEventClick={(ev, e) => {
+                    e.stopPropagation();
+                    if (ev._source === "maintenance" && ev._source_id) {
+                      try { window.localStorage.setItem("maintenance_tab", JSON.stringify("repairs")); } catch {}
+                      setPendingMaintenanceIssueId(ev._source_id);
+                      setActiveSection("maintenance");
+                      return;
+                    }
+                    if (ev._source === "planned_maintenance") {
+                      try { window.localStorage.setItem("maintenance_tab", JSON.stringify("planned")); } catch {}
+                      if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
+                      setActiveSection("maintenance");
+                      return;
+                    }
+                    setSelectedEvent(ev);
+                  }}
                   onDragStart={handleDragStart}
                   onDrop={handleDrop}
                 />
