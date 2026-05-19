@@ -178,17 +178,22 @@ function PushPromptBanner({ userId }: { userId: string }) {
 export function AppShell() {
   const { activeSection, checklistDetailId, checklistDetailPropId, isChatOpen } = useNavigation();
   const { user } = useAuth();
+  const { isMasterAdmin } = usePermissions();
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
 
   // React Query: dedupes & caches the checklist template across navigations.
   // Switching back to the same checklist is now instant (served from cache).
   const { data: detailTemplate } = useQuery({
-    queryKey: ["checklist-template-detail", checklistDetailId],
+    queryKey: ["checklist-template-detail", checklistDetailId, isMasterAdmin],
     enabled: !!checklistDetailId,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("checklist_templates").select("*").eq("id", checklistDetailId!).single();
+      let q = supabase
+        .from("checklist_templates")
+        .select("*")
+        .eq("id", checklistDetailId!);
+      if (!isMasterAdmin) q = q.eq("is_published", true);
+      const { data } = await q.maybeSingle();
       return (data as unknown as ChecklistTemplate) ?? null;
     },
   });

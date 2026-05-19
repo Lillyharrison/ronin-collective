@@ -74,6 +74,7 @@ export function useChecklistTemplates(
 ) {
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isMasterAdmin, isAdmin, isManager, department, role } = usePermissions();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,6 +85,7 @@ export function useChecklistTemplates(
       .order("sort_order")
       .limit(500);
     if (category) q = q.eq("category", category);
+    if (!isMasterAdmin) q = q.eq("is_published", true);
     if (propertyId !== undefined) {
       if (propertyId === null) {
         q = q.is("property_id", null);
@@ -96,9 +98,18 @@ export function useChecklistTemplates(
       q = q.in("subcategory", subcategories);
     }
     const { data } = await q;
-    setTemplates((data as unknown as ChecklistTemplate[]) ?? []);
+    const rows = ((data as unknown as ChecklistTemplate[]) ?? []).filter((tpl) => {
+      if (!isMasterAdmin && !tpl.is_published) return false;
+      if (isMasterAdmin || isAdmin || isManager) return true;
+      return (
+        (!tpl.assigned_department && !tpl.assigned_role) ||
+        (!!tpl.assigned_department && tpl.assigned_department === department) ||
+        (!!tpl.assigned_role && tpl.assigned_role === role)
+      );
+    });
+    setTemplates(rows);
     setLoading(false);
-  }, [category, propertyId, subcategories?.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [category, propertyId, subcategories?.join(","), isMasterAdmin, isAdmin, isManager, department, role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
   return { templates, loading, reload: load };

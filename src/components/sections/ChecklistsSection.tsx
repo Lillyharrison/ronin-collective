@@ -30,6 +30,7 @@ export function ChecklistsSection() {
   const { language, t } = useLanguage();
   const { isAdmin, isMasterAdmin, isManager, assignedPropertyIds, canEdit } = usePermissions();
   const canManageChecklists = isMasterAdmin || isAdmin || isManager || canEdit("checklists");
+  const canSeeAllProperties = isMasterAdmin || isAdmin || isManager;
   const { openChecklistDetail, checklistsForPropertyId, setChecklistsForPropertyId } = useNavigation();
   const [tab, setTab] = useLocalStorage<Tab>("checklists.tab", "cleaning");
   const [properties, setProperties] = useState<Property[]>([]);
@@ -43,16 +44,24 @@ export function ChecklistsSection() {
   ];
 
   useEffect(() => {
+    if (!canSeeAllProperties && assignedPropertyIds.length === 0) {
+      setProperties([]);
+      setSelectedPropId(null);
+      return;
+    }
     let q = supabase.from("properties").select("id, name, is_primary");
-    if (!isAdmin && assignedPropertyIds.length > 0) q = q.in("id", assignedPropertyIds);
+    if (!canSeeAllProperties) q = q.in("id", assignedPropertyIds);
     q.then(({ data }) => {
       const props = sortProperties((data as Property[]) ?? []);
       setProperties(props);
+      if (selectedPropId && !props.some(p => p.id === selectedPropId)) {
+        setSelectedPropId(null);
+      }
       if (checklistsForPropertyId && !selectedPropId) {
         setSelectedPropId(checklistsForPropertyId);
       }
     });
-  }, [isAdmin, assignedPropertyIds]);
+  }, [canSeeAllProperties, assignedPropertyIds, selectedPropId, checklistsForPropertyId]);
 
   // Persist the selected property in navigation context so it survives
   // unmount when the user opens a checklist detail and presses back.

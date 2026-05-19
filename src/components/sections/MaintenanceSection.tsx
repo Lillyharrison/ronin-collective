@@ -96,9 +96,11 @@ export function MaintenanceSection() {
       .then(({ data }) => setVendors(data ?? []));
   }, []);
 
-  // Default to the primary property if the user has access; only once on load
+  // Default managers/admins to the primary property. View-only users must start on
+  // All assigned properties so one property is never silently hidden.
   useEffect(() => {
     if (defaultPropApplied || properties.length === 0) return;
+    if (!canManage) { setDefaultPropApplied(true); return; }
     // Don't override if a deep-link already set the filter
     if (filterProp) { setDefaultPropApplied(true); return; }
     const primary = properties.find(p => p.is_primary);
@@ -106,7 +108,14 @@ export function MaintenanceSection() {
       setFilterProp(primary.id);
     }
     setDefaultPropApplied(true);
-  }, [properties, defaultPropApplied, filterProp]);
+  }, [properties, defaultPropApplied, filterProp, canManage]);
+
+  // If permissions change (including preview mode), discard any stale property
+  // filter that the effective user is not allowed to see.
+  useEffect(() => {
+    if (!filterProp || properties.length === 0) return;
+    if (!properties.some(p => p.id === filterProp)) setFilterProp("");
+  }, [filterProp, properties]);
 
   // Pre-filter by property when arriving from Property section deep-link
   useEffect(() => {
@@ -490,6 +499,25 @@ export function MaintenanceSection() {
             {isL ? "Planificado" : "Planned"}
           </button>
         </div>
+
+        {properties.length > 0 && (
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+            <button onClick={() => setFilterProp("")}
+              className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
+                !filterProp ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
+              )}>
+              {isL ? "Todas" : "All"}
+            </button>
+            {properties.map(p => (
+              <button key={p.id} onClick={() => setFilterProp(p.id)}
+                className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
+                  filterProp === p.id ? "bg-gold/10 border-gold/50 text-gold" : "border-border text-muted-foreground hover:border-gold/30"
+                )}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {activeTab === "repairs" ? (
           <div className="space-y-3">
