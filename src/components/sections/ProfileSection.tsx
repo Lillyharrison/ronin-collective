@@ -21,7 +21,7 @@ export function ProfileSection() {
   const { setActiveSection } = useNavigation();
   const { language } = useLanguage();
   const { user } = useAuth();
-  const { fullName, role, avatarUrl, canSee, loading: permLoading } = usePermissions();
+  const { userId: effectiveUserId, fullName, role, avatarUrl, canSee, loading: permLoading, isPreviewing, previewName } = usePermissions();
   const { toast } = useToast();
   const { supported: pushSupported, permission: pushPermission, subscribed: pushSubscribed, requestAndSubscribe } = usePushNotifications(user?.id ?? null);
   const [enablingPush, setEnablingPush] = useState(false);
@@ -32,7 +32,7 @@ export function ProfileSection() {
 
   // Local state for editable fields (pre-populated from profile)
   const [localName, setLocalName] = useState("");
-  const [localEmail, setLocalEmail] = useState(user?.email ?? "");
+  const [localEmail, setLocalEmail] = useState(isPreviewing ? "" : (user?.email ?? ""));
   const [localPhone, setLocalPhone] = useState("");
   const [localBirthday, setLocalBirthday] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -47,10 +47,10 @@ export function ProfileSection() {
 
   // ─── load profile on mount ────────────────────────────────────────────
   useEffect(() => {
-    if (!user) return;
+    if (!effectiveUserId) return;
     supabase.from("profiles")
       .select("full_name, phone, birthday, avatar_url")
-      .eq("id", user.id)
+      .eq("id", effectiveUserId)
       .maybeSingle()
       .then(({ data }) => {
         if (!data) return;
@@ -59,7 +59,10 @@ export function ProfileSection() {
         setLocalBirthday(data.birthday ?? "");
         setLocalAvatar(data.avatar_url ?? null);
       });
-  }, [user?.id]);
+    // Email is auth-bound — only show real user's email when not previewing
+    if (!isPreviewing) setLocalEmail(user?.email ?? "");
+    else setLocalEmail("");
+  }, [effectiveUserId, isPreviewing, user?.email]);
 
   // ─── open edit ────────────────────────────────────────────────────────
   const startEdit = (field: EditField) => {
@@ -71,11 +74,11 @@ export function ProfileSection() {
 
   // ─── save profile field ───────────────────────────────────────────────
   const saveProfile = async (updates: Record<string, string | null>) => {
-    if (!user) return;
+    if (!effectiveUserId) return;
     setSaving(true);
     const { error } = await supabase.from("profiles")
       .update(updates)
-      .eq("id", user.id);
+      .eq("id", effectiveUserId);
     setSaving(false);
     if (error) {
       toast({ title: language === "es" ? "Error" : "Error", description: error.message, variant: "destructive" });
@@ -87,6 +90,10 @@ export function ProfileSection() {
 
   // ─── save email (auth + profile) ─────────────────────────────────────
   const saveEmail = async () => {
+    if (isPreviewing) {
+      toast({ title: "Not allowed", description: "Email is auth-bound — exit preview to change your own email, or set it from User Management.", variant: "destructive" });
+      return;
+    }
     if (!localEmail.trim()) return;
     setSaving(true);
     const { error } = await supabase.auth.updateUser({ email: localEmail.trim() });
@@ -106,6 +113,10 @@ export function ProfileSection() {
 
   // ─── save password ────────────────────────────────────────────────────
   const savePassword = async () => {
+    if (isPreviewing) {
+      toast({ title: "Not allowed", description: "Use User Management to set this user's password.", variant: "destructive" });
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast({ title: language === "es" ? "Error" : "Error", description: language === "es" ? "Las contraseñas no coinciden." : "Passwords don't match.", variant: "destructive" });
       return;
@@ -130,14 +141,14 @@ export function ProfileSection() {
   // ─── avatar upload ────────────────────────────────────────────────────
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !effectiveUserId) return;
     if (file.size > 5 * 1024 * 1024) {
       toast({ title: "Error", description: language === "es" ? "El archivo debe ser menor a 5MB." : "File must be under 5MB.", variant: "destructive" });
       return;
     }
     setUploading(true);
     const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
+    const path = `${effectiveUserId}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(path, file, { upsert: true, contentType: file.type });
@@ -151,7 +162,7 @@ export function ProfileSection() {
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
     const publicUrl = urlData.publicUrl + `?t=${Date.now()}`;
 
-    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", effectiveUserId);
     setLocalAvatar(publicUrl);
     setUploading(false);
     toast({ title: language === "es" ? "¡Foto actualizada!" : "Photo updated!", description: "" });
