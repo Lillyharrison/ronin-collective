@@ -47,12 +47,17 @@ export function ChecklistsSection() {
     q.then(({ data }) => {
       const props = sortProperties((data as Property[]) ?? []);
       setProperties(props);
-      if (checklistsForPropertyId) {
+      if (checklistsForPropertyId && !selectedPropId) {
         setSelectedPropId(checklistsForPropertyId);
-        setChecklistsForPropertyId(null);
       }
     });
   }, [isAdmin, assignedPropertyIds]);
+
+  // Persist the selected property in navigation context so it survives
+  // unmount when the user opens a checklist detail and presses back.
+  useEffect(() => {
+    setChecklistsForPropertyId(selectedPropId);
+  }, [selectedPropId, setChecklistsForPropertyId]);
 
   const selectedProp = properties.find(p => p.id === selectedPropId);
 
