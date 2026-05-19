@@ -38,6 +38,7 @@ export function PreviewModeBanner() {
       <p className="flex-1 text-xs font-semibold leading-tight truncate">
         Viewing as <span className="font-bold">{previewName ?? "User"}</span>
         {subLabel && <span className="font-normal opacity-75"> — {subLabel}</span>}
+        <span className="font-normal opacity-75 hidden sm:inline"> · writes affect their real data</span>
       </p>
       <button
         onClick={exitPreview}
