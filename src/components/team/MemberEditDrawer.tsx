@@ -167,13 +167,14 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       const permRows = Object.entries(perms)
         .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
         .map(([section, v]) => {
-          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
+          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
           return {
             user_id: member.id,
             section,
             can_view: p.view === true,
             can_edit: p.edit === true,
             notifications: p.notifications === true,
+            scope: p.scope ?? null,
           };
         });
 
@@ -240,13 +241,14 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       const permRows = Object.entries(perms)
         .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
         .map(([section, v]) => {
-          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean };
+          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
           return {
             user_id: member.id,
             section,
             can_view: p.view === true,
             can_edit: p.edit === true,
             notifications: p.notifications === true,
+            scope: p.scope ?? null,
           };
         });
       const { error } = await supabase.functions.invoke("ronin-ai", {
