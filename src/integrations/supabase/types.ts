@@ -2102,6 +2102,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_staff_schedule_profiles: {
+        Args: never
+        Returns: {
+          annual_leave_days: number
+          assigned_property_ids: string[]
+          avatar_url: string
+          contracted_days_per_week: number
+          contracted_hours_per_week: number
+          department: string
+          full_name: string
+          id: string
+          is_draft: boolean
+          job_title: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
