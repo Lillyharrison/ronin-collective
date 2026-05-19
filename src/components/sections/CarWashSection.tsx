@@ -1014,7 +1014,9 @@ export function CarWashSection() {
       supabase.from("profiles").select("id, full_name, avatar_url, job_title, level").order("full_name").limit(500),
     ]);
 
-    const props: Property[] = sortProperties((pData ?? []) as (Property & { is_primary?: boolean })[]);
+    const canSeeAllProps = isMasterAdmin || isAdmin || isManager;
+    const allProps: Property[] = sortProperties((pData ?? []) as (Property & { is_primary?: boolean })[]);
+    const props: Property[] = canSeeAllProps ? allProps : allProps.filter(p => assignedPropertyIds.includes(p.id));
     // Family members (principal / extended_family) are never assigned car-wash work — exclude from picker.
     const profs: Profile[] = filterAssignableStaff((prData ?? []) as (Profile & { level?: string | null })[]) as Profile[];
     const profMap = Object.fromEntries(profs.map(p => [p.id, p]));
