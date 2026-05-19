@@ -74,11 +74,11 @@ export function ProfileSection() {
 
   // ─── save profile field ───────────────────────────────────────────────
   const saveProfile = async (updates: Record<string, string | null>) => {
-    if (!user) return;
+    if (!effectiveUserId) return;
     setSaving(true);
     const { error } = await supabase.from("profiles")
       .update(updates)
-      .eq("id", user.id);
+      .eq("id", effectiveUserId);
     setSaving(false);
     if (error) {
       toast({ title: language === "es" ? "Error" : "Error", description: error.message, variant: "destructive" });
