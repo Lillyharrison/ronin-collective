@@ -21,7 +21,7 @@ export function ProfileSection() {
   const { setActiveSection } = useNavigation();
   const { language } = useLanguage();
   const { user } = useAuth();
-  const { fullName, role, avatarUrl, canSee, loading: permLoading } = usePermissions();
+  const { userId: effectiveUserId, fullName, role, avatarUrl, canSee, loading: permLoading, isPreviewing, previewName } = usePermissions();
   const { toast } = useToast();
   const { supported: pushSupported, permission: pushPermission, subscribed: pushSubscribed, requestAndSubscribe } = usePushNotifications(user?.id ?? null);
   const [enablingPush, setEnablingPush] = useState(false);
