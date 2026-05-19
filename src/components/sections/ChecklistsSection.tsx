@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -30,7 +31,7 @@ export function ChecklistsSection() {
   const { isAdmin, isMasterAdmin, isManager, assignedPropertyIds, canEdit } = usePermissions();
   const canManageChecklists = isMasterAdmin || isAdmin || isManager || canEdit("checklists");
   const { openChecklistDetail, checklistsForPropertyId, setChecklistsForPropertyId } = useNavigation();
-  const [tab, setTab] = useState<Tab>("cleaning");
+  const [tab, setTab] = useLocalStorage<Tab>("checklists.tab", "cleaning");
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string | null>(checklistsForPropertyId ?? null);
   const [showPropPicker, setShowPropPicker] = useState(false);

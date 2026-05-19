@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -24,9 +25,9 @@ export function ManualsSection() {
   const { isAdmin, isMasterAdmin, isManager, assignedPropertyIds, canEdit } = usePermissions();
   const canManageManuals = isMasterAdmin || isAdmin || isManager || canEdit("manuals");
   const { careGuideDetailId, openCareGuideDetail, closeCareGuideDetail, activePropertyId, setActivePropertyId } = useNavigation();
-  const [tab, setTab] = useState<ManualTab>("care_guides");
+  const [tab, setTab] = useLocalStorage<ManualTab>("manuals.tab", "care_guides");
   const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
+  const [selectedPropId, setSelectedPropId] = useLocalStorage<string | null>("manuals.selectedPropId", null);
   const [showPropPicker, setShowPropPicker] = useState(false);
 
 
@@ -44,7 +45,11 @@ export function ManualsSection() {
     q.then(({ data }) => {
       const props = sortProperties((data as Property[]) ?? []);
       setProperties(props);
-      if (props.length > 0 && !activePropertyId) setSelectedPropId(props[0].id);
+      if (props.length > 0 && !activePropertyId && !selectedPropId) setSelectedPropId(props[0].id);
+      // Drop persisted selection if user no longer has access to that property
+      if (selectedPropId && !props.some(p => p.id === selectedPropId)) {
+        setSelectedPropId(props[0]?.id ?? null);
+      }
     });
   }, [isAdmin, assignedPropertyIds]); // eslint-disable-line react-hooks/exhaustive-deps
 

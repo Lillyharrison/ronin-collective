@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -364,7 +365,7 @@ export function RulesSection() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(BLANK_FORM);
-  const [activeFilter, setActiveFilter] = useState<"active" | "inactive" | "all">("active");
+  const [activeFilter, setActiveFilter] = useLocalStorage<"active" | "inactive" | "all">("rules.activeFilter", "active");
 
   const load = useCallback(async () => {
     setLoading(true);

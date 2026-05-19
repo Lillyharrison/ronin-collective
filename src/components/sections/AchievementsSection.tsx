@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { fireConfetti, fireMiniConfetti } from "@/lib/confetti";
@@ -44,7 +45,7 @@ export function AchievementsSection() {
   const { language } = useLanguage();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [stats] = useState<UserStats>(DEMO_STATS);
-  const [activeTab, setActiveTab] = useState<"earned" | "all">("earned");
+  const [activeTab, setActiveTab] = useLocalStorage<"earned" | "all">("achievements.tab", "earned");
   const [justEarned, setJustEarned] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
