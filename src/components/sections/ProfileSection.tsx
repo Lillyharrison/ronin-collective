@@ -32,7 +32,7 @@ export function ProfileSection() {
 
   // Local state for editable fields (pre-populated from profile)
   const [localName, setLocalName] = useState("");
-  const [localEmail, setLocalEmail] = useState(user?.email ?? "");
+  const [localEmail, setLocalEmail] = useState(isPreviewing ? "" : (user?.email ?? ""));
   const [localPhone, setLocalPhone] = useState("");
   const [localBirthday, setLocalBirthday] = useState("");
   const [newPassword, setNewPassword] = useState("");
