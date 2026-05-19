@@ -13,6 +13,7 @@ export const PROPERTY_COLORS = [
   { bg: "bg-rose-500/15 border-rose-500/30",    text: "text-rose-400",    dot: "bg-rose-400" },
   { bg: "bg-teal-500/15 border-teal-500/30",    text: "text-teal-400",    dot: "bg-teal-400" },
   { bg: "bg-indigo-500/15 border-indigo-500/30", text: "text-indigo-400", dot: "bg-indigo-400" },
+  { bg: "bg-slate-300/20 border-slate-300/40",  text: "text-slate-300",   dot: "bg-slate-300" },
 ];
 
 /** Explicit color assignments for key properties to avoid similar-looking colors */
@@ -27,6 +28,8 @@ export const PROPERTY_COLOR_OVERRIDES: Record<string, number> = {
   montana: 7,    // rose
   grosvenor: 8,  // teal
   aman: 9,       // indigo
+  "new york": 10, // light grey
+  newyork: 10,
 };
 
 export const LEAVE_TYPES = ["vacation", "sick", "personal", "public_holiday", "other"];
