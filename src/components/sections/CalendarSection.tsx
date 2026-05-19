@@ -1086,6 +1086,7 @@ function RightPanel({
   onEventClick,
   selectedDay,
   currentMonth,
+  properties,
 }: {
   mode: CalendarMode;
   roninTab: RoninTab;
@@ -1094,6 +1095,7 @@ function RightPanel({
   onEventClick: (ev: CalEvent) => void;
   selectedDay: Date | null;
   currentMonth: Date;
+  properties: Property[];
 }) {
   // Combine both sources for the right panel — show everything
   const source = mode === "family" ? familyEvents : events;
