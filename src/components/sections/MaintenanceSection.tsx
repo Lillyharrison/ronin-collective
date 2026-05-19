@@ -502,7 +502,7 @@ export function MaintenanceSection() {
             entries={plannedEntries}
             loading={plannedLoading}
             canManage={canEdit("maintenance")}
-            properties={allProperties}
+            properties={properties}
             propertyFilter={filterProp}
             onPropertyFilterChange={setFilterProp}
             onAdd={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
