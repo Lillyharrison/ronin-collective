@@ -14,6 +14,47 @@ import autoTable from "jspdf-autotable";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import type { MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues";
+import interRegularUrl from "@/assets/fonts/Inter-Regular.ttf?url";
+import interSemiBoldUrl from "@/assets/fonts/Inter-SemiBold.ttf?url";
+
+const PDF_FONT = "InterPdf";
+const PDF_FONT_REGULAR_FILE = "Inter-Regular.ttf";
+const PDF_FONT_SEMIBOLD_FILE = "Inter-SemiBold.ttf";
+
+interface PdfFontData {
+  regular: string;
+  semibold: string;
+}
+
+let pdfFontDataPromise: Promise<PdfFontData> | null = null;
+
+async function fontUrlToBase64(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load PDF font: ${res.status}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function loadPdfFontData(): Promise<PdfFontData> {
+  pdfFontDataPromise ??= Promise.all([
+    fontUrlToBase64(interRegularUrl),
+    fontUrlToBase64(interSemiBoldUrl),
+  ]).then(([regular, semibold]) => ({ regular, semibold }));
+  return pdfFontDataPromise;
+}
+
+function installPdfFonts(doc: jsPDF, fonts: PdfFontData) {
+  doc.addFileToVFS(PDF_FONT_REGULAR_FILE, fonts.regular);
+  doc.addFont(PDF_FONT_REGULAR_FILE, PDF_FONT, "normal");
+  doc.addFileToVFS(PDF_FONT_SEMIBOLD_FILE, fonts.semibold);
+  doc.addFont(PDF_FONT_SEMIBOLD_FILE, PDF_FONT, "bold");
+  doc.setFont(PDF_FONT, "normal");
+}
 
 const STATUS_LABELS: Record<IssueStatus, string> = {
   reported:    "Reported",
@@ -126,7 +167,7 @@ async function preloadImages(issues: MaintenanceIssue[]): Promise<Map<string, Pr
 // ──────────────────────────────────────────────────────────────────────────────
 
 function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, marginL: number): number {
-  doc.setFont("helvetica", "bold");
+  doc.setFont(PDF_FONT, "bold");
   doc.setFontSize(14);
   doc.setTextColor(28, 29, 32);
   doc.text("Repairs", marginL, 14);
@@ -138,7 +179,7 @@ function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, ma
   if (ctx.filters.priority) parts.push(`Priority: ${PRIORITY_LABELS[ctx.filters.priority] ?? ctx.filters.priority}`);
   if (ctx.filters.search)   parts.push(`Search: "${ctx.filters.search}"`);
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(110, 110, 110);
   doc.text(parts.join("  ·  "), marginL, 19.5);
@@ -156,7 +197,7 @@ function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, ma
 
 function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
   const pageCount = doc.getNumberOfPages();
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(140, 140, 140);
   for (let i = 1; i <= pageCount; i++) {
@@ -172,8 +213,9 @@ function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
 // LIST / TABLE export — landscape A4, no images
 // ──────────────────────────────────────────────────────────────────────────────
 
-function buildListDoc(ctx: RepairsExportContext, scale: number): jsPDF {
+function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontData): jsPDF {
   const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+  installPdfFonts(doc, fonts);
   const pageWidth = doc.internal.pageSize.getWidth();   // 297
   const marginL = 10;
   const marginR = 10;
@@ -207,6 +249,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number): jsPDF {
     head,
     body,
     headStyles: {
+      font: PDF_FONT,
       fillColor: [28, 29, 32],
       textColor: [245, 240, 232],
       fontStyle: "bold",
@@ -215,6 +258,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number): jsPDF {
       halign: "left",
     },
     bodyStyles: {
+      font: PDF_FONT,
       fontSize: baseFont * scale,
       cellPadding: { top: basePadV * scale, bottom: basePadV * scale, left: basePadH * scale, right: basePadH * scale },
       overflow: "linebreak",
@@ -281,8 +325,10 @@ function buildTileDoc(
   ctx: RepairsExportContext,
   scale: number,
   images: Map<string, PreparedImage>,
+  fonts: PdfFontData,
 ): jsPDF {
   const doc = new jsPDF({ orientation: "portrait", format: "a4" });
+  installPdfFonts(doc, fonts);
   const pageWidth = doc.internal.pageSize.getWidth();   // 210
   const pageHeight = doc.internal.pageSize.getHeight(); // 297
   const marginL = 12;
@@ -342,7 +388,7 @@ function buildTileDoc(
       doc.setDrawColor(220, 220, 220);
       doc.setLineWidth(0.2);
       doc.rect(ox, oy, photoBox, photoBox, "FD");
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setFontSize(7);
       doc.setTextColor(160, 160, 160);
       doc.text("No photo", ox + photoBox / 2, oy + photoBox / 2 + 1, { align: "center" });
@@ -369,7 +415,7 @@ function buildTileDoc(
     drawPhoto(issue, marginL + cardPad, y + cardPad);
 
     // Title + description (middle column)
-    doc.setFont("helvetica", "bold");
+    doc.setFont(PDF_FONT, "bold");
     doc.setFontSize(titleSize);
     doc.setTextColor(28, 29, 32);
     const titleLines = doc.splitTextToSize(issue.title, titleW).slice(0, 2);
@@ -379,7 +425,7 @@ function buildTileDoc(
     ty += titleLines.length * titleLineH + 0.5;
 
     if (issue.description) {
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setFontSize(descSize);
       doc.setTextColor(95, 95, 95);
       const descLineH = descSize * 0.42;
@@ -416,10 +462,10 @@ function buildTileDoc(
     let my = y + cardPad + metaSize * 0.35 + 1;
     doc.setFontSize(metaSize);
     visiblePairs.forEach(([label, value]) => {
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setTextColor(135, 135, 135);
       doc.text(label, labelX, my);
-      doc.setFont("helvetica", "bold");
+      doc.setFont(PDF_FONT, "bold");
       doc.setTextColor(40, 40, 40);
       const v = doc.splitTextToSize(value, valueW)[0] ?? value;
       doc.text(v, valueX, my);
@@ -486,12 +532,13 @@ export async function exportRepairsPDF(ctx: RepairsExportContext): Promise<void>
   );
 
   try {
+    const fonts = await loadPdfFontData();
     let doc: jsPDF;
     if (ctx.viewMode === "list") {
-      doc = autoFitDoc((scale) => buildListDoc(ctx, scale));
+      doc = autoFitDoc((scale) => buildListDoc(ctx, scale, fonts));
     } else {
       const images = await preloadImages(ctx.issues);
-      doc = autoFitDoc((scale) => buildTileDoc(ctx, scale, images));
+      doc = autoFitDoc((scale) => buildTileDoc(ctx, scale, images, fonts));
     }
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
