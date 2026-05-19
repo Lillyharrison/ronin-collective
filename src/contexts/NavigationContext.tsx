@@ -99,6 +99,9 @@ interface NavigationContextType {
   pendingMaintenanceIssueId: string | null;
   setPendingMaintenanceIssueId: (id: string | null) => void;
   pendingMaintenanceIssueIdRef: React.MutableRefObject<string | null>;
+  pendingPlannedMaintenanceEntryId: string | null;
+  setPendingPlannedMaintenanceEntryId: (id: string | null) => void;
+  pendingPlannedMaintenanceEntryIdRef: React.MutableRefObject<string | null>;
   canGoBack: boolean;
   goBack: () => void;
   isChatOpen: boolean;
@@ -138,6 +141,9 @@ const NavigationContext = createContext<NavigationContextType>({
   pendingMaintenanceIssueId: null,
   setPendingMaintenanceIssueId: () => {},
   pendingMaintenanceIssueIdRef: { current: null },
+  pendingPlannedMaintenanceEntryId: null,
+  setPendingPlannedMaintenanceEntryId: () => {},
+  pendingPlannedMaintenanceEntryIdRef: { current: null },
   canGoBack: false,
   goBack: () => {},
   isChatOpen: false,
@@ -165,6 +171,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
   const [pendingMaintenanceIssueId, setPendingMaintenanceIssueIdState] = useState<string | null>(null);
   const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
+  const [pendingPlannedMaintenanceEntryId, setPendingPlannedMaintenanceEntryIdState] = useState<string | null>(null);
+  const pendingPlannedMaintenanceEntryIdRef = useRef<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [totalUnread, setTotalUnread] = useState(0);
   // In-memory breadcrumb stack for the back button (sections only, not browser history)
@@ -180,6 +188,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const setPendingMaintenanceIssueId = (id: string | null) => {
     pendingMaintenanceIssueIdRef.current = id;
     setPendingMaintenanceIssueIdState(id);
+  };
+
+  const setPendingPlannedMaintenanceEntryId = (id: string | null) => {
+    pendingPlannedMaintenanceEntryIdRef.current = id;
+    setPendingPlannedMaintenanceEntryIdState(id);
   };
 
   const setActiveSection = useCallback((section: ActiveSection) => {
@@ -287,6 +300,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         pendingMaintenanceIssueId,
         setPendingMaintenanceIssueId,
         pendingMaintenanceIssueIdRef,
+        pendingPlannedMaintenanceEntryId,
+        setPendingPlannedMaintenanceEntryId,
+        pendingPlannedMaintenanceEntryIdRef,
         canGoBack,
         goBack,
         isChatOpen,
