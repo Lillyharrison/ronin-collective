@@ -646,10 +646,11 @@ export function Dashboard() {
         <div className="grid grid-cols-2 gap-3">
           {ALL_QUICK_ACTIONS_DASHBOARD
             .filter(a => {
+              if (!isMasterAdmin && !canSee(a.section)) return false;
               // If user has saved prefs, respect them; otherwise show defaults filtered by canSee
               if (userQuickActions !== null) return userQuickActions.includes(a.key);
               // Default: show first 4 that user can see
-              return isMasterAdmin || canSee(a.section);
+              return true;
             })
             .map((action) => (
             <button
