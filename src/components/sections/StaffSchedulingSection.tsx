@@ -15,10 +15,12 @@ import { supabase } from "@/integrations/supabase/client";
  * StaffCalendarTab via the `scopeFilterIds` prop (null = no filter / all).
  */
 export function StaffSchedulingSection() {
-  const { userId, isMasterAdmin, isAdmin, isManager, department, sectionPermissions, canEdit: permCanEdit } = usePermissions();
+  const { userId, role, isMasterAdmin, isAdmin, isManager, department, sectionPermissions, canEdit: permCanEdit } = usePermissions();
 
+  const isPrincipal = role === "principal";
   const canEdit = isMasterAdmin || isAdmin || isManager || permCanEdit("staff-schedule");
-  const elevated = isMasterAdmin || isAdmin || isManager;
+  // Principals are family/owners → see all staff schedules like managers/admins.
+  const elevated = isMasterAdmin || isAdmin || isManager || isPrincipal;
 
   // Read user-configured scope; admins/managers override to "all".
   const storedScope = sectionPermissions?.["staff-schedule"]?.scope ?? "own";
