@@ -74,7 +74,7 @@ async function findLinkedOrder(taskId: string): Promise<{ id: string; status: st
 
 export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Props) {
   const { language } = useLanguage();
-  const { userId, isAdmin, isMasterAdmin, isManager, department } = usePermissions();
+  const { userId, isAdmin, isMasterAdmin, isManager, department, assignedPropertyIds } = usePermissions();
   const syncCtx = useContext(OfflineSyncContext);
   const isL = language === "es";
   const fileRef = useRef<HTMLInputElement>(null);
