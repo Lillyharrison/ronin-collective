@@ -78,15 +78,15 @@ export function CareGuideCard({ template, onOpen, onChanged }: Props) {
           {isMasterAdmin && (
             <button
               onClick={togglePublish}
-              title={isDraft ? "Publish" : "Unpublish"}
+              title={isDraft ? "Publish this care guide" : "Unpublish (hide from staff)"}
               className={cn(
-                "p-1.5 rounded-lg border transition-all",
+                "flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold tracking-wide transition-all",
                 isDraft
-                  ? "border-muted-foreground/20 text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-[hsl(var(--gold))]"
+                  ? "border-[hsl(var(--gold)/0.5)] bg-[hsl(var(--gold)/0.1)] text-[hsl(var(--gold))] hover:bg-[hsl(var(--gold)/0.2)]"
                   : "border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))] hover:border-[hsl(var(--status-done)/0.6)]"
               )}
             >
-              {isDraft ? <Eye size={13} /> : <EyeOff size={13} />}
+              {isDraft ? <><Eye size={12} /> PUBLISH</> : <><EyeOff size={12} /> LIVE</>}
             </button>
           )}
           <ChevronRight size={14} className="text-muted-foreground/50" />
