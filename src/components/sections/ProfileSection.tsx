@@ -133,14 +133,14 @@ export function ProfileSection() {
   // ─── avatar upload ────────────────────────────────────────────────────
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !effectiveUserId) return;
     if (file.size > 5 * 1024 * 1024) {
       toast({ title: "Error", description: language === "es" ? "El archivo debe ser menor a 5MB." : "File must be under 5MB.", variant: "destructive" });
       return;
     }
     setUploading(true);
     const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
+    const path = `${effectiveUserId}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(path, file, { upsert: true, contentType: file.type });
@@ -154,7 +154,7 @@ export function ProfileSection() {
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
     const publicUrl = urlData.publicUrl + `?t=${Date.now()}`;
 
-    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", effectiveUserId);
     setLocalAvatar(publicUrl);
     setUploading(false);
     toast({ title: language === "es" ? "¡Foto actualizada!" : "Photo updated!", description: "" });
