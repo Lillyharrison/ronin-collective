@@ -1375,8 +1375,12 @@ export function CalendarSection() {
   useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
-    supabase.from("properties").select("id, name").order("sort_order").then(({ data }) => setProperties((data as Property[]) ?? []));
-  }, []);
+    const canSeeAll = isMasterAdmin || isAdmin || isManager;
+    supabase.from("properties").select("id, name").order("sort_order").then(({ data }) => {
+      const all = (data as Property[]) ?? [];
+      setProperties(canSeeAll ? all : all.filter(p => assignedPropertyIds.includes(p.id)));
+    });
+  }, [isMasterAdmin, isAdmin, isManager, assignedPropertyIds]);
 
   // Realtime
   useEffect(() => {
