@@ -4,7 +4,7 @@ import type { IssueStatus, IssuePriority } from "@/hooks/useMaintenanceIssues";
 const STATUS_CONFIG: Record<IssueStatus, { label: string; className: string; dot: string }> = {
   reported:    { label: "Reported",    className: "bg-[hsl(var(--status-urgent)/0.12)] text-[hsl(var(--status-urgent))] border-[hsl(var(--status-urgent)/0.3)]",  dot: "bg-[hsl(var(--status-urgent))]" },
   approved:    { label: "Approved",    className: "bg-[hsl(var(--gold)/0.12)] text-[hsl(var(--gold))] border-[hsl(var(--gold)/0.3)]",                            dot: "bg-[hsl(var(--gold))]" },
-  assigned:    { label: "Assigned",    className: "bg-[hsl(220_70%_60%/0.12)] text-[hsl(220_70%_65%)] border-[hsl(220_70%_60%/0.3)]",                           dot: "bg-[hsl(220_70%_60%)]" },
+  
   scheduled:   { label: "Scheduled",  className: "bg-[hsl(270_60%_65%/0.12)] text-[hsl(270_60%_70%)] border-[hsl(270_60%_65%/0.3)]",                           dot: "bg-[hsl(270_60%_65%)]" },
   in_progress: { label: "In Progress", className: "bg-[hsl(var(--status-pending)/0.12)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)/0.3)]", dot: "bg-[hsl(var(--status-pending))]" },
   resolved:    { label: "Resolved",   className: "bg-[hsl(var(--status-done)/0.12)] text-[hsl(var(--status-done))] border-[hsl(var(--status-done)/0.3)]",       dot: "bg-[hsl(var(--status-done))]" },
