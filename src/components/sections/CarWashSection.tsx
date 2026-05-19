@@ -981,7 +981,7 @@ function ScheduleView({
 // ── Main Section ──────────────────────────────────────────────────────────────
 
 export function CarWashSection() {
-  const { userId, isMasterAdmin, isAdmin, isManager, canEdit: permCanEdit } = usePermissions();
+  const { userId, isMasterAdmin, isAdmin, isManager, canEdit: permCanEdit, assignedPropertyIds } = usePermissions();
   const canEdit = isMasterAdmin || isAdmin || isManager || permCanEdit("car-wash");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
