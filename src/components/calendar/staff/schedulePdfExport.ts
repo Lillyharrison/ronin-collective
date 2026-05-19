@@ -23,6 +23,7 @@ const EXPORT_PROP_COLORS = [
   { bg: "FFE4E6", text: "9F1239" },
   { bg: "CCFBF1", text: "134E4A" },
   { bg: "E0E7FF", text: "3730A3" },
+  { bg: "E5E7EB", text: "374151" },
 ];
 
 function getExportPropColor(propId: string | null, properties: Property[]) {
