@@ -180,7 +180,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
 
       if (isDraft) {
         // Draft profiles: save via edge function so is_draft flag is preserved
-        await supabase.functions.invoke("ronin-ai", {
+        const { error: draftErr } = await supabase.functions.invoke("ronin-ai", {
           body: {
             action: "save_draft_user",
             profile_id: member.id,
@@ -194,11 +194,15 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
             notes: notes || null,
             assigned_property_ids: assignedProps,
             quick_actions: quickActions,
+            contracted_days_per_week: contractedDays === "" ? null : Number(contractedDays),
+            contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
+            annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
             section_permissions_rows: permRows,
             role: roleToSet,
             send_invitation: false,
           },
         });
+        if (draftErr) throw draftErr;
       } else {
         // Regular (non-draft) profiles: update directly
         const { error: profileErr } = await supabase.from("profiles").update({
@@ -234,7 +238,23 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       }
 
       toast.success(isEN ? "Saved" : "Guardado");
-      onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: perms, quick_actions: quickActions, role: roleToSet, is_draft: isDraft });
+      onSaved({
+        ...member,
+        full_name: fullName,
+        job_title: jobTitle,
+        phone,
+        level,
+        department,
+        notes,
+        assigned_property_ids: assignedProps,
+        section_permissions: perms,
+        quick_actions: quickActions,
+        role: roleToSet,
+        is_draft: isDraft,
+        contracted_days_per_week: contractedDays === "" ? null : Number(contractedDays),
+        contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
+        annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
+      });
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : (isEN ? "Failed to save changes" : "No se pudieron guardar los cambios");
