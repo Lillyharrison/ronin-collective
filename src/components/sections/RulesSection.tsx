@@ -365,7 +365,7 @@ export function RulesSection() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(BLANK_FORM);
-  const [activeFilter, setActiveFilter] = useState<"active" | "inactive" | "all">("active");
+  const [activeFilter, setActiveFilter] = useLocalStorage<"active" | "inactive" | "all">("rules.activeFilter", "active");
 
   const load = useCallback(async () => {
     setLoading(true);
