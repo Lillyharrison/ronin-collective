@@ -28,6 +28,8 @@ export const PROPERTY_COLOR_OVERRIDES: Record<string, number> = {
   montana: 7,    // rose
   grosvenor: 8,  // teal
   aman: 9,       // indigo
+  "new york": 10, // light grey
+  newyork: 10,
 };
 
 export const LEAVE_TYPES = ["vacation", "sick", "personal", "public_holiday", "other"];
