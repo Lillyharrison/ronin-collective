@@ -53,8 +53,8 @@ export default function MemorySection() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterImportance, setFilterImportance] = useState("all");
+  const [filterCategory, setFilterCategory] = useLocalStorage<string>("memory.filterCategory", "all");
+  const [filterImportance, setFilterImportance] = useLocalStorage<string>("memory.filterImportance", "all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
