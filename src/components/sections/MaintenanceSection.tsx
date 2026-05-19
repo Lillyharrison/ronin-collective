@@ -815,7 +815,7 @@ export function MaintenanceSection() {
         </div>
       ) : viewMode === "list" ? (
         <div className="px-4 pb-4 space-y-3">
-          {displayIssues.map(issue => (
+          {viewIssues.map(issue => (
             <IssueCard
               key={issue.id}
               issue={issue}
