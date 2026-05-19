@@ -284,131 +284,149 @@ function buildTileDoc(
 ): jsPDF {
   const doc = new jsPDF({ orientation: "portrait", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();   // 210
+  const pageHeight = doc.internal.pageSize.getHeight(); // 297
   const marginL = 12;
   const marginR = 12;
-  const startY = drawHeader(doc, ctx, pageWidth, marginL);
+  const marginB = 14;
+  let y = drawHeader(doc, ctx, pageWidth, marginL);
 
-  // 3 columns: photo (square) | title+description (wide) | meta (mono)
-  const usable = pageWidth - marginL - marginR; // 186
-  const photoW = THUMB_MM;                       // 28
-  const metaW  = 64;
-  const titleW = usable - photoW - metaW;        // 94
+  const usableW = pageWidth - marginL - marginR;        // 186
+  const cardPad = 3;
+  const photoBox = THUMB_MM;                            // 28
+  const gapAfterPhoto = 4;
+  const cardH = photoBox + cardPad * 2;                 // 34
 
-  const body = ctx.issues.map((i) => {
-    const left = ""; // image is drawn in didDrawCell
-    const middle = i.description ? `${i.title}\n${i.description}` : i.title;
-    const meta: string[] = [];
-    meta.push(`Status:    ${STATUS_LABELS[i.status] ?? i.status}`);
-    meta.push(`Priority:  ${PRIORITY_LABELS[i.priority] ?? i.priority}`);
-    meta.push(`Category:  ${i.category ?? "—"}`);
-    meta.push(`Property:  ${i.property_name ?? "—"}`);
-    if (i.location_detail) meta.push(`Location:  ${i.location_detail}`);
-    meta.push(`Reported:  ${format(parseISO(i.created_at), "dd MMM yyyy")}`);
-    if (i.assignee_name) meta.push(`Assigned:  ${firstName(i.assignee_name)}`);
-    if (i.status === "resolved" && i.resolved_at) {
-      meta.push(`Resolved:  ${format(parseISO(i.resolved_at), "dd MMM yyyy")}`);
-    } else {
-      meta.push(`Age:       ${ageDays(i.created_at)} days`);
-    }
-    return [left, middle, meta.join("\n")];
-  });
+  const metaW = 58;
+  const metaColX = marginL + usableW - metaW;
+  const titleX = marginL + cardPad + photoBox + gapAfterPhoto;
+  const titleW = metaColX - titleX - 3;
 
-  // Row height needs to accommodate the photo thumbnail comfortably.
-  const rowMin = THUMB_MM + 4; // 32mm
+  const titleSize = Math.max(8.5, 10 * scale);
+  const descSize = Math.max(7.5, 8.8 * scale);
+  const metaSize = Math.max(7, 8 * scale);
 
-  autoTable(doc, {
-    startY,
-    head: [],
-    body,
-    theme: "plain",
-    bodyStyles: {
-      fontSize: 9 * scale,
-      cellPadding: { top: 3 * scale, bottom: 3 * scale, left: 3 * scale, right: 3 * scale },
-      overflow: "linebreak",
-      valign: "top",
-      lineWidth: 0.2,
-      lineColor: [220, 220, 220],
-      textColor: [40, 40, 40],
-      fillColor: [255, 255, 255],
-      minCellHeight: rowMin,
-    },
-    columnStyles: {
-      0: { cellWidth: photoW, minCellHeight: rowMin },
-      1: { cellWidth: titleW, fontStyle: "bold", fontSize: 10 * scale },
-      2: { cellWidth: metaW, font: "courier", fontSize: 8 * scale, textColor: [70, 70, 70] },
-    },
-    didParseCell: (data) => {
-      if (data.section !== "body") return;
-      if (data.row.index % 2 === 1) {
-        data.cell.styles.fillColor = [250, 249, 245];
-      }
-    },
-    didDrawCell: (data) => {
-      if (data.section !== "body" || data.column.index !== 0) return;
-      const issue = ctx.issues[data.row.index];
-      if (!issue) return;
-      const img = images.get(issue.id);
-      const cx = data.cell.x;
-      const cy = data.cell.y;
-      const cw = data.cell.width;
-      const ch = data.cell.height;
-      // Draw centered square thumbnail (THUMB_MM mm, capped to cell)
-      const box = Math.min(THUMB_MM, cw - 2, ch - 2);
-      const ox = cx + (cw - box) / 2;
-      const oy = cy + (ch - box) / 2;
-      if (img) {
-        // Cover-fit: scale to fill the square box, centered crop
-        const imgRatio = img.width / img.height;
-        let drawW = box, drawH = box, sx = ox, sy = oy;
-        if (imgRatio > 1) {
-          drawH = box;
-          drawW = box * imgRatio;
-          sx = ox - (drawW - box) / 2;
-        } else {
-          drawW = box;
-          drawH = box / imgRatio;
-          sy = oy - (drawH - box) / 2;
-        }
-        // Use a clipping path so the cover-cropped image stays within the box
-        const internal = doc as unknown as {
-          internal: { write: (s: string) => void };
-          saveGraphicsState?: () => void;
-          restoreGraphicsState?: () => void;
-        };
-        if (internal.saveGraphicsState) internal.saveGraphicsState();
-        // Clip rectangle (mm → user units identity here; pdf uses mm)
-        // Use jsPDF's rect+clip via the lower-level path API
-        try {
-          (doc as unknown as { rect: (x: number, y: number, w: number, h: number, style?: string) => void }).rect(ox, oy, box, box);
-          // Apply clip
-          (doc as unknown as { clip: () => void; discardPath?: () => void }).clip();
-          (doc as unknown as { discardPath?: () => void }).discardPath?.();
-        } catch {
-          /* Fallback: no clipping — image may slightly overflow */
-        }
-        try {
-          doc.addImage(img.dataUrl, "JPEG", sx, sy, drawW, drawH, undefined, "FAST");
-        } catch {
-          /* swallow image render errors so PDF still produces */
-        }
-        if (internal.restoreGraphicsState) internal.restoreGraphicsState();
-        // Subtle border
-        doc.setDrawColor(220, 220, 220);
-        doc.setLineWidth(0.2);
-        doc.rect(ox, oy, box, box);
+  const drawPhoto = (issue: MaintenanceIssue, ox: number, oy: number) => {
+    const img = images.get(issue.id);
+    if (img) {
+      const box = photoBox;
+      const imgRatio = img.width / img.height;
+      let drawW = box, drawH = box, sx = ox, sy = oy;
+      if (imgRatio > 1) {
+        drawH = box;
+        drawW = box * imgRatio;
+        sx = ox - (drawW - box) / 2;
       } else {
-        // Placeholder square
-        doc.setFillColor(245, 244, 240);
-        doc.setDrawColor(220, 220, 220);
-        doc.setLineWidth(0.2);
-        doc.rect(ox, oy, box, box, "FD");
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
-        doc.setTextColor(160, 160, 160);
-        doc.text("No photo", ox + box / 2, oy + box / 2 + 1, { align: "center" });
+        drawW = box;
+        drawH = box / imgRatio;
+        sy = oy - (drawH - box) / 2;
       }
-    },
-    margin: { left: marginL, right: marginR, bottom: 14 },
+      const internal = doc as unknown as {
+        saveGraphicsState?: () => void;
+        restoreGraphicsState?: () => void;
+      };
+      internal.saveGraphicsState?.();
+      try {
+        (doc as unknown as { rect: (x: number, y: number, w: number, h: number) => void }).rect(ox, oy, box, box);
+        (doc as unknown as { clip: () => void; discardPath?: () => void }).clip();
+        (doc as unknown as { discardPath?: () => void }).discardPath?.();
+      } catch { /* noop */ }
+      try {
+        doc.addImage(img.dataUrl, "JPEG", sx, sy, drawW, drawH, undefined, "FAST");
+      } catch { /* noop */ }
+      internal.restoreGraphicsState?.();
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.rect(ox, oy, box, box);
+    } else {
+      doc.setFillColor(245, 244, 240);
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.rect(ox, oy, photoBox, photoBox, "FD");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(160, 160, 160);
+      doc.text("No photo", ox + photoBox / 2, oy + photoBox / 2 + 1, { align: "center" });
+    }
+  };
+
+  ctx.issues.forEach((issue, idx) => {
+    // Page break
+    if (y + cardH > pageHeight - marginB) {
+      doc.addPage();
+      y = drawHeader(doc, ctx, pageWidth, marginL);
+    }
+
+    // Row background (alternating) + border
+    if (idx % 2 === 1) {
+      doc.setFillColor(250, 249, 245);
+      doc.rect(marginL, y, usableW, cardH, "F");
+    }
+    doc.setDrawColor(225, 223, 217);
+    doc.setLineWidth(0.2);
+    doc.rect(marginL, y, usableW, cardH);
+
+    // Photo
+    drawPhoto(issue, marginL + cardPad, y + cardPad);
+
+    // Title + description (middle column)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(titleSize);
+    doc.setTextColor(28, 29, 32);
+    const titleLines = doc.splitTextToSize(issue.title, titleW).slice(0, 2);
+    let ty = y + cardPad + titleSize * 0.35 + 1;
+    const titleLineH = titleSize * 0.42;
+    doc.text(titleLines, titleX, ty);
+    ty += titleLines.length * titleLineH + 0.5;
+
+    if (issue.description) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(descSize);
+      doc.setTextColor(95, 95, 95);
+      const descLineH = descSize * 0.42;
+      const remaining = (y + cardH - cardPad) - ty;
+      const maxLines = Math.max(0, Math.floor(remaining / descLineH));
+      if (maxLines > 0) {
+        const descLines = doc.splitTextToSize(issue.description, titleW).slice(0, maxLines);
+        doc.text(descLines, titleX, ty);
+      }
+    }
+
+    // Meta column (label/value pairs, two columns of typography)
+    const metaPairs: Array<[string, string]> = [
+      ["Status", STATUS_LABELS[issue.status] ?? issue.status],
+      ["Priority", PRIORITY_LABELS[issue.priority] ?? issue.priority],
+      ["Category", issue.category ?? "—"],
+      ["Property", issue.property_name ?? "—"],
+    ];
+    if (issue.location_detail) metaPairs.push(["Location", issue.location_detail]);
+    metaPairs.push(["Reported", format(parseISO(issue.created_at), "dd MMM yyyy")]);
+    if (issue.assignee_name) metaPairs.push(["Assigned", firstName(issue.assignee_name)]);
+    if (issue.status === "resolved" && issue.resolved_at) {
+      metaPairs.push(["Resolved", format(parseISO(issue.resolved_at), "dd MMM yyyy")]);
+    } else {
+      metaPairs.push(["Age", `${ageDays(issue.created_at)}d`]);
+    }
+
+    const metaLineH = metaSize * 0.45;
+    const maxMetaLines = Math.floor((cardH - cardPad * 2) / metaLineH);
+    const visiblePairs = metaPairs.slice(0, maxMetaLines);
+    const labelX = metaColX;
+    const valueX = metaColX + 16;
+    const valueW = metaW - 16;
+    let my = y + cardPad + metaSize * 0.35 + 1;
+    doc.setFontSize(metaSize);
+    visiblePairs.forEach(([label, value]) => {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(135, 135, 135);
+      doc.text(label, labelX, my);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(40, 40, 40);
+      const v = doc.splitTextToSize(value, valueW)[0] ?? value;
+      doc.text(v, valueX, my);
+      my += metaLineH;
+    });
+
+    y += cardH + 2;
   });
 
   return doc;
