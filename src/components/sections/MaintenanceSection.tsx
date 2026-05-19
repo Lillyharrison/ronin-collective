@@ -852,7 +852,7 @@ export function MaintenanceSection() {
               </tr>
             </thead>
             <tbody>
-              {displayIssues.map(issue => (
+              {viewIssues.map(issue => (
                 <tr
                   key={issue.id}
                   onClick={() => setDetailIssue(issue)}
