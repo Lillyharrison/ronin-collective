@@ -377,6 +377,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Preview controls ─────────────────────────────────────────────────────
+  // Remember the path the admin was on when entering preview so we can restore
+  // it on exit (otherwise gated sections redirect to dashboard during preview
+  // and the admin loses their place).
+  const preEnterPathRef = useRef<string | null>(null);
+
   const enterPreview = useCallback(async (targetUserId: string) => {
     const real = realSnapshotRef.current;
     if (!real) return;
@@ -385,6 +390,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (targetUserId === real.userId) return;
+
+    if (typeof window !== "undefined") {
+      preEnterPathRef.current = window.location.pathname + window.location.search;
+    }
 
     const target = await fetchPermissionsSnapshot(targetUserId);
     setPreviewState({ targetUserId, previewName: target.fullName ?? "User" });
@@ -406,6 +415,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       realIsMasterAdmin: real.role === "master_admin",
       previewName: null,
     });
+    // Restore the admin to the page they were on before entering preview.
+    const target = preEnterPathRef.current;
+    preEnterPathRef.current = null;
+    if (target && typeof window !== "undefined" && window.location.pathname + window.location.search !== target) {
+      window.history.pushState({}, "", target);
+      // Notify react-router (BrowserRouter listens to popstate).
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
   }, [applySnapshot]);
 
   return (
