@@ -1643,8 +1643,14 @@ export function CalendarSection() {
             events={filteredActiveEvents}
             familyEvents={familyEvents}
             onEventClick={(ev) => {
-              if ((ev._source === "maintenance" || ev._source === "planned_maintenance") && ev._source_id) {
+              if (ev._source === "maintenance" && ev._source_id) {
+                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("repairs")); } catch {}
                 setPendingMaintenanceIssueId(ev._source_id);
+                setActiveSection("maintenance");
+                return;
+              }
+              if (ev._source === "planned_maintenance") {
+                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("planned")); } catch {}
                 setActiveSection("maintenance");
                 return;
               }
