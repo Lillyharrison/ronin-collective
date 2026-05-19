@@ -135,6 +135,14 @@ function getRoninTabForEvent(ev: CalEvent): RoninTab {
   return "all";
 }
 
+function persistMaintenanceTab(tab: "repairs" | "planned") {
+  try {
+    window.localStorage.setItem("maintenance_tab", JSON.stringify(tab));
+  } catch {
+    // Ignore storage failures; navigation still works.
+  }
+}
+
 /** Returns true if an event spans more than one calendar day */
 function isMultiDay(ev: CalEvent): boolean {
   if (!ev.end_date) return false;
@@ -1635,13 +1643,13 @@ export function CalendarSection() {
                   onEventClick={(ev, e) => {
                     e.stopPropagation();
                     if (ev._source === "maintenance" && ev._source_id) {
-                      try { window.localStorage.setItem("maintenance_tab", JSON.stringify("repairs")); } catch {}
+                      persistMaintenanceTab("repairs");
                       setPendingMaintenanceIssueId(ev._source_id);
                       setActiveSection("maintenance");
                       return;
                     }
                     if (ev._source === "planned_maintenance") {
-                      try { window.localStorage.setItem("maintenance_tab", JSON.stringify("planned")); } catch {}
+                      persistMaintenanceTab("planned");
                       if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
                       setActiveSection("maintenance");
                       return;
@@ -1665,13 +1673,13 @@ export function CalendarSection() {
             familyEvents={familyEvents}
             onEventClick={(ev) => {
               if (ev._source === "maintenance" && ev._source_id) {
-                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("repairs")); } catch {}
+                persistMaintenanceTab("repairs");
                 setPendingMaintenanceIssueId(ev._source_id);
                 setActiveSection("maintenance");
                 return;
               }
               if (ev._source === "planned_maintenance") {
-                try { window.localStorage.setItem("maintenance_tab", JSON.stringify("planned")); } catch {}
+                persistMaintenanceTab("planned");
                 if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
                 setActiveSection("maintenance");
                 return;
