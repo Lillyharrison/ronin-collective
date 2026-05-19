@@ -178,6 +178,7 @@ function PushPromptBanner({ userId }: { userId: string }) {
 export function AppShell() {
   const { activeSection, checklistDetailId, checklistDetailPropId, isChatOpen } = useNavigation();
   const { user } = useAuth();
+  const { isMasterAdmin } = usePermissions();
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
 
   // React Query: dedupes & caches the checklist template across navigations.
@@ -188,7 +189,11 @@ export function AppShell() {
     staleTime: 60_000,
     queryFn: async () => {
       const { data } = await supabase
-        .from("checklist_templates").select("*").eq("id", checklistDetailId!).single();
+        .from("checklist_templates")
+        .select("*")
+        .eq("id", checklistDetailId!)
+        .eq("is_published", true)
+        .maybeSingle();
       return (data as unknown as ChecklistTemplate) ?? null;
     },
   });
