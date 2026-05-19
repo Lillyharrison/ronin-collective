@@ -201,7 +201,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
         });
       } else {
         // Regular (non-draft) profiles: update directly
-        await supabase.from("profiles").update({
+        const { error: profileErr } = await supabase.from("profiles").update({
           full_name: fullName,
           job_title: jobTitle,
           phone: phone || null,
@@ -216,20 +216,30 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
           contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
           annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
         } as never).eq("id", member.id);
+        if (profileErr) throw profileErr;
 
         // Write permissions to the dedicated table — the ONLY source of truth
         if (permRows.length > 0) {
-          await supabase.from("user_section_permissions").upsert(permRows, { onConflict: "user_id,section" });
+          const { error: permErr } = await supabase
+            .from("user_section_permissions")
+            .upsert(permRows, { onConflict: "user_id,section" });
+          if (permErr) throw permErr;
         }
 
         // Update role if changed
         if (roleToSet !== member.role) {
-          await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
+          const { error: roleErr } = await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
+          if (roleErr) throw roleErr;
         }
       }
 
+      toast.success(isEN ? "Saved" : "Guardado");
       onSaved({ ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes, assigned_property_ids: assignedProps, section_permissions: perms, quick_actions: quickActions, role: roleToSet, is_draft: isDraft });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      const msg = e instanceof Error ? e.message : (isEN ? "Failed to save changes" : "No se pudieron guardar los cambios");
+      toast.error(msg);
+    }
     setSaving(false);
   }
 
