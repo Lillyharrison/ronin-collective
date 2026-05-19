@@ -24,7 +24,7 @@ export function VendorsSection() {
   const { vendors, loading, createVendor, updateVendor, deleteVendor, createContact, updateContact, deleteContact } = useVendors();
 
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useLocalStorage<string>("vendors.categoryFilter", "all");
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
