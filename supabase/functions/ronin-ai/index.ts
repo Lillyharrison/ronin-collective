@@ -813,7 +813,7 @@ serve(async (req) => {
       if (!["master_admin", "admin"].includes(callerRole)) {
         return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, is_draft } = body;
+      const { full_name, job_title, level, department, role, start_date, birthday, notes, phone, assigned_property_ids, quick_actions, section_permissions_rows, is_draft } = body;
       // Allow saving without full_name when is_draft is true
       if (!is_draft && !full_name) {
         return new Response(JSON.stringify({ error: "Missing required fields: full_name" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -841,8 +841,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       await adminClient.from("user_roles").insert({ user_id: newId, role });
-      // Note: draft profiles have no auth.users row → can't write to user_section_permissions yet
-      // (foreign key constraint). Permissions will sync when send_invitation promotes them.
+      await writeSectionPermissionRows(adminClient, newId, section_permissions_rows);
       return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
