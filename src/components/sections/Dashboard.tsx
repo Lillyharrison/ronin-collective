@@ -278,7 +278,10 @@ export function Dashboard() {
             .contains("occupied_by_profile_ids", [principalUserId]),
         ]);
         const firstName = principalProfile?.full_name?.split(" ")[0] ?? "Principal";
-        const prop = occupiedProps?.[0];
+        const visibleOccupied = (isAdmin || isMasterAdmin)
+          ? (occupiedProps ?? [])
+          : (occupiedProps ?? []).filter(p => assignedPropertyIds.includes(p.id));
+        const prop = visibleOccupied[0];
         setPrincipalLocation(prop ? { name: firstName, propertyName: prop.name, propertyId: prop.id } : null);
       } else {
         setPrincipalLocation(null);
