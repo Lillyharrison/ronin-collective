@@ -57,7 +57,16 @@ export function MaintenanceSection() {
   }), [debouncedSearch, filterCat, filterPri]);
 
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
-  const { pendingMaintenanceIssueId, setPendingMaintenanceIssueId, pendingMaintenanceIssueIdRef, activePropertyId, setActivePropertyId } = useNavigation();
+  const {
+    pendingMaintenanceIssueId,
+    setPendingMaintenanceIssueId,
+    pendingMaintenanceIssueIdRef,
+    pendingPlannedMaintenanceEntryId,
+    setPendingPlannedMaintenanceEntryId,
+    pendingPlannedMaintenanceEntryIdRef,
+    activePropertyId,
+    setActivePropertyId,
+  } = useNavigation();
 
   // Planned maintenance
   const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
@@ -136,12 +145,29 @@ export function MaintenanceSection() {
     const issue = issues.find(i => i.id === pendingId);
     if (issue) {
       setDetailIssue(issue);
+      setActiveTab("repairs");
       setPendingMaintenanceIssueId(null);
     } else if (issues.length > 0) {
       // Issues loaded but this one isn't visible (RLS / property filter) — clear gracefully
       setPendingMaintenanceIssueId(null);
     }
   }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId]);
+
+  // Deep-link: open a planned maintenance entry when arriving from the calendar.
+  useEffect(() => {
+    const pendingId = pendingPlannedMaintenanceEntryIdRef.current;
+    if (!pendingId) return;
+    if (plannedLoading) return;
+    const entry = plannedEntries.find(e => e.id === pendingId);
+    if (entry) {
+      setActiveTab("planned");
+      setEditPlanned(entry);
+      setPlannedModalOpen(true);
+      setPendingPlannedMaintenanceEntryId(null);
+    } else if (plannedEntries.length > 0) {
+      setPendingPlannedMaintenanceEntryId(null);
+    }
+  }, [pendingPlannedMaintenanceEntryIdRef, pendingPlannedMaintenanceEntryId, plannedEntries, plannedLoading, setPendingPlannedMaintenanceEntryId, setActiveTab]);
 
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",    label: "Reported",     labelEs: "Reportado" },
