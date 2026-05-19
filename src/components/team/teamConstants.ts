@@ -86,6 +86,7 @@ export const ALL_QUICK_ACTIONS: { key: string; label: string; labelEs: string; i
   { key: "orders",      label: "Orders",         labelEs: "Pedidos",           icon: "🛍️" },
   { key: "reportIssue", label: "Report Issue",   labelEs: "Reportar Problema", icon: "⚠️" },
   { key: "calendar",    label: "Calendar",       labelEs: "Calendario",        icon: "🕐" },
+  { key: "staffSchedule", label: "Staff Schedule", labelEs: "Horario del Personal", icon: "📅" },
   { key: "tasks",       label: "Tasks",          labelEs: "Tareas",            icon: "✅" },
   { key: "maintenance", label: "Maintenance",    labelEs: "Mantenimiento",     icon: "🔧" },
   { key: "messages",    label: "Messages",       labelEs: "Mensajes",          icon: "💬" },
