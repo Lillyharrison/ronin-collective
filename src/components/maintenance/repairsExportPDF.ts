@@ -57,12 +57,12 @@ function installPdfFonts(doc: jsPDF, fonts: PdfFontData) {
 }
 
 const STATUS_LABELS: Record<IssueStatus, string> = {
-  reported:    "Reported",
-  approved:    "Approved",
-  
-  scheduled:   "Scheduled",
-  in_progress: "In Progress",
-  resolved:    "Resolved",
+  reported:            "Reported",
+  under_investigation: "Under Investigation",
+  approved:            "Approved",
+  scheduled:           "Scheduled/In Progress",
+  in_progress:         "Scheduled/In Progress",
+  resolved:            "Resolved",
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -74,12 +74,13 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 // Soft RGB pairs for status pills (background, text). Mirrors on-screen palette.
 const STATUS_PILL: Record<string, { bg: [number, number, number]; text: [number, number, number] }> = {
-  reported:    { bg: [254, 226, 226], text: [153, 27, 27] },   // red
-  approved:    { bg: [219, 234, 254], text: [30, 64, 175] },   // blue
-  assigned:    { bg: [237, 233, 254], text: [91, 33, 182] },   // purple
-  scheduled:   { bg: [254, 243, 199], text: [146, 64, 14] },   // amber
-  in_progress: { bg: [255, 237, 213], text: [154, 52, 18] },   // orange
-  resolved:    { bg: [209, 250, 229], text: [6, 95, 70] },     // emerald
+  reported:            { bg: [254, 226, 226], text: [153, 27, 27] },   // red
+  under_investigation: { bg: [254, 243, 199], text: [146, 64, 14] },   // amber
+  approved:            { bg: [219, 234, 254], text: [30, 64, 175] },   // blue
+  assigned:            { bg: [237, 233, 254], text: [91, 33, 182] },   // purple
+  scheduled:           { bg: [237, 233, 254], text: [91, 33, 182] },   // purple
+  in_progress:         { bg: [237, 233, 254], text: [91, 33, 182] },   // purple
+  resolved:            { bg: [209, 250, 229], text: [6, 95, 70] },     // emerald
 };
 
 const PRIORITY_PILL: Record<string, { bg: [number, number, number]; text: [number, number, number] }> = {
