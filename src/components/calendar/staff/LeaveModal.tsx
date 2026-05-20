@@ -11,6 +11,8 @@ import type { StaffLeaveRequest } from "@/hooks/useStaffSchedules";
 import { LEAVE_TYPES, LEAVE_TYPE_CONFIG } from "./constants";
 import { calcWorkdays, getDisplayName } from "./utils";
 import type { Profile } from "./types";
+import { isEmployedOn, normalizeDateKey } from "./leaveMath";
+import { toast } from "sonner";
 
 export function LeaveModal({
   open,
@@ -55,6 +57,9 @@ export function LeaveModal({
   if (!open) return null;
 
   const workdays = calcWorkdays(form.start_date, form.end_date);
+  const selectedPerson = profiles.find((p) => p.id === form.staff_id);
+  const staffStartDate = normalizeDateKey(selectedPerson?.start_date);
+  const startMin = staffStartDate && staffStartDate > today ? staffStartDate : today;
   const totalDays = form.start_date && form.end_date
     ? differenceInCalendarDays(parseISO(form.end_date), parseISO(form.start_date)) + 1
     : 0;
@@ -64,6 +69,10 @@ export function LeaveModal({
 
   const handleSave = async () => {
     if (!isValid) return;
+    if (!isEmployedOn(selectedPerson, form.start_date)) {
+      toast.error("Cannot request leave before this staff member's start date");
+      return;
+    }
     setSaving(true);
     const ok = await onSave({
       staff_id: form.staff_id,
@@ -150,7 +159,7 @@ export function LeaveModal({
                 <Input
                   type="date"
                   value={form.start_date}
-                  min={today}
+                  min={startMin}
                   onChange={(e) => {
                     const v = e.target.value;
                     setForm((f) => ({
