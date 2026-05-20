@@ -199,7 +199,9 @@ export function StaffCalendarTab({
     ? eachDayOfInterval({ start: monthStart, end: monthRangeEnd })
     : eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) });
 
-  const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
+  const visibleRangeStart = calView === "month" ? rangeStart : weekStart;
+  const visibleRangeEnd = calView === "month" ? monthRangeEnd : endOfWeek(weekStart, { weekStartsOn: 1 });
+  const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests, profiles);
 
   const staffToShow = !canEdit && userId && !scopeFilterIds
     ? profiles.filter((p) => p.id === userId)
@@ -207,17 +209,17 @@ export function StaffCalendarTab({
         const activeStaffIds = Array.from(
           new Set([
             ...displayShifts.map((s) => s.staff_id),
-            ...schedules.map((s) => s.staff_id),
           ])
         );
         let allStaff = profiles.filter((p) =>
-          filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff
+          (filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff)
+          && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)
         );
         if (scopeFilterIds) {
           const scopeSet = new Set(scopeFilterIds);
           allStaff = allStaff.filter((p) => scopeSet.has(p.id));
         }
-        let base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => !scopeFilterIds || scopeFilterIds.includes(p.id)) : profiles.filter((p) => p.id === filterStaff));
+        let base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => (!scopeFilterIds || scopeFilterIds.includes(p.id)) && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)) : profiles.filter((p) => p.id === filterStaff && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)));
 
         const q = filterSearch.trim().toLowerCase();
         if (q) {
