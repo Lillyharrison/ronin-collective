@@ -97,7 +97,7 @@ const RONIN_TOOLS = [
         type: "object",
         properties: {
           keyword: { type: "string", description: "Search keyword matched against issue title or description" },
-          status: { type: "string", enum: ["reported", "approved", "scheduled", "in_progress", "resolved", "all"] },
+          status: { type: "string", enum: ["reported", "under_investigation", "approved", "scheduled", "in_progress", "resolved", "all"] },
           property_name: { type: "string", description: "Filter by property name" },
         },
         required: [],

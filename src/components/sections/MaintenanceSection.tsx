@@ -218,10 +218,10 @@ export function MaintenanceSection() {
   }, [pendingPlannedMaintenanceEntryIdRef, pendingPlannedMaintenanceEntryId, plannedEntries, plannedLoading, setPendingPlannedMaintenanceEntryId, setActiveTab]);
 
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
-    { key: "reported",    label: "Reported",     labelEs: "Reportado" },
-    { key: "approved",    label: "Approved",     labelEs: "Aprobado" },
-    { key: "scheduled",   label: "Scheduled",    labelEs: "Programado" },
-    { key: "in_progress", label: "In Progress",  labelEs: "En Progreso" },
+    { key: "reported",            label: "Reported",              labelEs: "Reportado" },
+    { key: "under_investigation", label: "Under Investigation",   labelEs: "En Investigación" },
+    { key: "approved",            label: "Approved",              labelEs: "Aprobado" },
+    { key: "scheduled",           label: "Scheduled/In Progress", labelEs: "Programado/En Progreso" },
   ];
 
   // Toggle between the active kanban and the resolved-only archive view
@@ -870,7 +870,7 @@ export function MaintenanceSection() {
         <div className="px-4 pb-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {STATUS_COLUMNS.map(col => {
-              const colIssues = displayIssues.filter(i => i.status === col.key);
+              const colIssues = displayIssues.filter(i => i.status === col.key || (col.key === "scheduled" && i.status === "in_progress"));
               const isEmpty = colIssues.length === 0;
               const isDragOver = dragOverCol === col.key;
               return (
