@@ -870,7 +870,7 @@ export function MaintenanceSection() {
         <div className="px-4 pb-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {STATUS_COLUMNS.map(col => {
-              const colIssues = displayIssues.filter(i => i.status === col.key);
+              const colIssues = displayIssues.filter(i => i.status === col.key || (col.key === "scheduled" && i.status === "in_progress"));
               const isEmpty = colIssues.length === 0;
               const isDragOver = dragOverCol === col.key;
               return (
