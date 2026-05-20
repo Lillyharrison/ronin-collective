@@ -37,12 +37,11 @@ function ModalContent({
   ];
 
   const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
-    { value: "reported",    label: "Reported",     labelEs: "Reportado" },
-    { value: "approved",    label: "Approved",     labelEs: "Aprobado" },
-    
-    { value: "scheduled",   label: "Scheduled",    labelEs: "Programado" },
-    { value: "in_progress", label: "In Progress",  labelEs: "En Progreso" },
-    { value: "resolved",    label: "Resolved",     labelEs: "Resuelto" },
+    { value: "reported",            label: "Reported",              labelEs: "Reportado" },
+    { value: "under_investigation", label: "Under Investigation",   labelEs: "En Investigación" },
+    { value: "approved",            label: "Approved",              labelEs: "Aprobado" },
+    { value: "scheduled",           label: "Scheduled/In Progress", labelEs: "Programado/En Progreso" },
+    { value: "resolved",            label: "Resolved",              labelEs: "Resuelto" },
   ];
 
   const [title, setTitle]             = useState(initial.title ?? "");
