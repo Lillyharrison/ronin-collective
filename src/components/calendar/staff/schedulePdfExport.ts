@@ -1,12 +1,13 @@
 import {
   format, eachDayOfInterval, startOfWeek, endOfWeek, addWeeks,
-  startOfMonth, endOfMonth, addMonths, differenceInCalendarDays, parseISO,
+  startOfMonth, endOfMonth, addMonths,
 } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { PROPERTY_COLOR_OVERRIDES } from "./constants";
 import { getDisplayName, formatTime } from "./utils";
+import { calculateAccruedAnnualLeave, calculateAnnualLeaveTakenYTD, calculateExpectedWork, formatLeaveDays } from "./leaveMath";
 import type { DisplayShift, Profile, Property } from "./types";
 import type { StaffLeaveRequest } from "@/hooks/useStaffSchedules";
 import type { PdfExportLayout } from "./PdfExportModal";
@@ -443,10 +444,6 @@ function renderTracking(
 
   drawHeader(doc, "Staff Hours Tracking", rangeLabel, marginL);
 
-  const totalDays = eachDayOfInterval({ start: rangeStart, end: rangeEnd }).length;
-  const weeksInRange = totalDays / 7;
-  const yearStart = `${rangeStart.getFullYear()}-01-01`;
-  const yearEnd = `${rangeStart.getFullYear()}-12-31`;
   const startStr = format(rangeStart, "yyyy-MM-dd");
   const endStr = format(rangeEnd, "yyyy-MM-dd");
 
@@ -466,20 +463,9 @@ function renderTracking(
       const [eh, em] = s.end_time.split(":").map(Number);
       return sum + Math.max(0, (eh + em / 60) - (sh + sm / 60));
     }, 0);
-    const dpw = person.contracted_days_per_week ?? 5;
-    const hpw = person.contracted_hours_per_week ?? 40;
-    const allowance = person.annual_leave_days ?? 25;
-    const daysExpected = Math.round(dpw * weeksInRange);
-    const hoursExpected = Math.round(hpw * weeksInRange);
-
-    const leaveTakenYTD = leaveRequests
-      .filter((lr) => lr.staff_id === person.id && lr.status === "approved")
-      .reduce((sum, lr) => {
-        const ls = lr.start_date > yearStart ? lr.start_date : yearStart;
-        const le = lr.end_date < yearEnd ? lr.end_date : yearEnd;
-        if (ls > le) return sum;
-        return sum + differenceInCalendarDays(parseISO(le), parseISO(ls)) + 1;
-      }, 0);
+    const { daysExpected, hoursExpected } = calculateExpectedWork(person, rangeStart, rangeEnd);
+    const allowance = calculateAccruedAnnualLeave(person, rangeEnd);
+    const leaveTakenYTD = calculateAnnualLeaveTakenYTD(person, leaveRequests, rangeEnd);
     const leaveLeft = Math.max(0, allowance - leaveTakenYTD);
     const daysDelta = daysWorked - daysExpected;
     const hoursDelta = hoursWorked - hoursExpected;
@@ -491,8 +477,8 @@ function renderTracking(
       daysDelta === 0 ? "" : (daysDelta > 0 ? `+${daysDelta}d` : `${daysDelta}d`),
       `${hoursWorked.toFixed(1)} / ${hoursExpected}`,
       hoursDelta === 0 ? "" : (hoursDelta > 0 ? `+${Math.round(hoursDelta)}h` : `${Math.round(hoursDelta)}h`),
-      `${leaveTakenYTD} / ${allowance}`,
-      `${leaveLeft}`,
+      `${formatLeaveDays(leaveTakenYTD)} / ${formatLeaveDays(allowance)}`,
+      `${formatLeaveDays(leaveLeft)}`,
     ];
   });
 
