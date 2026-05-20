@@ -543,24 +543,9 @@ export function StaffCalendarTab({
             return sum + Math.max(0, (eh + em / 60) - (sh + sm / 60));
           }, 0);
 
-          const dpw = singleStaff.contracted_days_per_week ?? 5;
-          const hpw = singleStaff.contracted_hours_per_week ?? 40;
-          const allowance = singleStaff.annual_leave_days ?? 25;
-
-          const weeksInMonth = monthDays.length / 7;
-          const daysExpected = Math.round(dpw * weeksInMonth);
-          const hoursExpected = hpw * weeksInMonth;
-
-          const yearStart = `${monthStart.getFullYear()}-01-01`;
-          const yearEnd = `${monthStart.getFullYear()}-12-31`;
-          const leaveTakenYTD = leaveRequests
-            .filter((lr) => lr.staff_id === singleStaff.id && lr.status === "approved")
-            .reduce((sum, lr) => {
-              const start = lr.start_date > yearStart ? lr.start_date : yearStart;
-              const end = lr.end_date < yearEnd ? lr.end_date : yearEnd;
-              if (start > end) return sum;
-              return sum + differenceInCalendarDays(parseISO(end), parseISO(start)) + 1;
-            }, 0);
+          const { daysExpected, hoursExpected } = calculateExpectedWork(singleStaff, monthStart, monthRangeEnd);
+          const allowance = calculateAccruedAnnualLeave(singleStaff, monthRangeEnd);
+          const leaveTakenYTD = calculateAnnualLeaveTakenYTD(singleStaff, leaveRequests, monthRangeEnd);
 
           calc = {
             daysWorked, daysExpected, hoursWorked, hoursExpected,
