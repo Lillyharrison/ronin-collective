@@ -205,7 +205,7 @@ export function StaffCalendarTab({
   const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests, profiles);
 
   const staffToShow = !canEdit && userId && !scopeFilterIds
-    ? profiles.filter((p) => p.id === userId)
+    ? profiles.filter((p) => p.id === userId && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd))
     : (() => {
         const activeStaffIds = Array.from(
           new Set([
@@ -524,8 +524,6 @@ export function StaffCalendarTab({
       )}
 
       {calView === "month" && (() => {
-        const monthDays = eachDayOfInterval({ start: monthStart, end: monthRangeEnd });
-
         const singleStaff = filterStaff !== "all"
           ? profiles.find((p) => p.id === filterStaff)
           : null;
