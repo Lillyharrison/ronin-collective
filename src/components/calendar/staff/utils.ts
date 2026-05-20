@@ -5,6 +5,7 @@ import { format, getDay, eachDayOfInterval, parseISO, isWeekend } from "date-fns
 import type { StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useStaffSchedules";
 import { PROPERTY_COLORS, PROPERTY_COLOR_OVERRIDES } from "./constants";
 import type { Profile, Property, DisplayShift } from "./types";
+import { isEmployedOn } from "./leaveMath";
 
 /** Returns a human-readable label for a profile, using job title for drafts. */
 export function getDisplayName(p: Profile | undefined | null, fallback = "Staff"): string {
@@ -46,6 +47,7 @@ export function buildDisplayShifts(
   schedules: StaffSchedule[],
   concreteShifts: StaffShift[],
   leaveRequests: StaffLeaveRequest[],
+  profiles: Profile[] = [],
 ): DisplayShift[] {
   const result: DisplayShift[] = [];
 
@@ -55,10 +57,12 @@ export function buildDisplayShifts(
 
     // ─ Pattern-based shifts for this day ──────────────────────────────────────
     for (const sched of schedules) {
+      const person = profiles.find((p) => p.id === sched.staff_id);
       if (sched.day_of_week !== dow) continue;
       if (!sched.is_active) continue;
       if (sched.effective_from > dateStr) continue;
       if (sched.effective_to && sched.effective_to < dateStr) continue;
+      if (!isEmployedOn(person, dateStr)) continue;
 
       const staffId = sched.staff_id;
 
@@ -134,7 +138,9 @@ export function buildDisplayShifts(
 
     // ─ Concrete one-off shifts (no schedule_id) ───────────────────────────────
     for (const shift of concreteShifts) {
+      const person = profiles.find((p) => p.id === shift.staff_id);
       if (shift.shift_date !== dateStr || shift.schedule_id || shift.status !== "scheduled") continue;
+      if (!isEmployedOn(person, dateStr)) continue;
       result.push({
         key: shift.id,
         staff_id: shift.staff_id,
