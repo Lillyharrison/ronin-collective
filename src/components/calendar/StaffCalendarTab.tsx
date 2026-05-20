@@ -15,6 +15,7 @@ import {
   calculateAccruedAnnualLeave,
   calculateAnnualLeaveTakenYTD,
   calculateExpectedWork,
+  isEmployedOn,
   isEmployedDuringRange,
 } from "./staff/leaveMath";
 import { FamilyOverlayBand } from "./staff/FamilyOverlayBand";
@@ -279,6 +280,10 @@ export function StaffCalendarTab({
     dragRef.current = null;
     if (!dragged || dragged.is_leave) return;
     if (dragged.shift_date === targetDate) return;
+    if (!isEmployedOn(profiles.find((p) => p.id === dragged.staff_id), targetDate)) {
+      toast.error("Cannot schedule before this staff member's start date");
+      return;
+    }
 
     if (dragged.is_virtual) {
       await supabase.from("staff_shifts").insert([
@@ -311,10 +316,14 @@ export function StaffCalendarTab({
       toast.success("Shift rescheduled");
     }
     refetch();
-  }, [userId, refetch]);
+  }, [userId, refetch, profiles]);
 
   const handleCellClick = (dateStr: string, staffId: string) => {
     if (!canEdit) return;
+    if (!isEmployedOn(profiles.find((p) => p.id === staffId), dateStr)) {
+      toast.error("Cannot schedule before this staff member's start date");
+      return;
+    }
     setPrefillDate(dateStr);
     setPrefillStaff(staffId);
     setShowShiftModal(true);
@@ -459,6 +468,7 @@ export function StaffCalendarTab({
       (shiftRes.data ?? []) as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (leaveRes.data ?? []) as any,
+      staffToShow,
     );
 
     exportSchedulePDFv2({
