@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   format, startOfWeek, endOfWeek, eachDayOfInterval,
   addWeeks, subWeeks, isSameDay,
-  differenceInCalendarDays, parseISO,
   startOfMonth, endOfMonth, addMonths, subMonths,
 } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +11,13 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 import type { Profile, Property, DisplayShift, FamilyEvent, RosterStats } from "./staff/types";
 import { getDisplayName, buildDisplayShifts } from "./staff/utils";
+import {
+  calculateAccruedAnnualLeave,
+  calculateAnnualLeaveTakenYTD,
+  calculateExpectedWork,
+  isEmployedOn,
+  isEmployedDuringRange,
+} from "./staff/leaveMath";
 import { FamilyOverlayBand } from "./staff/FamilyOverlayBand";
 import { CalculatorPanel } from "./staff/CalculatorPanel";
 import { ShiftModal } from "./staff/ShiftModal";
@@ -194,25 +200,27 @@ export function StaffCalendarTab({
     ? eachDayOfInterval({ start: monthStart, end: monthRangeEnd })
     : eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) });
 
-  const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests);
+  const visibleRangeStart = calView === "month" ? rangeStart : weekStart;
+  const visibleRangeEnd = calView === "month" ? monthRangeEnd : endOfWeek(weekStart, { weekStartsOn: 1 });
+  const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests, profiles);
 
   const staffToShow = !canEdit && userId && !scopeFilterIds
-    ? profiles.filter((p) => p.id === userId)
+    ? profiles.filter((p) => p.id === userId && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd))
     : (() => {
         const activeStaffIds = Array.from(
           new Set([
             ...displayShifts.map((s) => s.staff_id),
-            ...schedules.map((s) => s.staff_id),
           ])
         );
         let allStaff = profiles.filter((p) =>
-          filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff
+          (filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff)
+          && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)
         );
         if (scopeFilterIds) {
           const scopeSet = new Set(scopeFilterIds);
           allStaff = allStaff.filter((p) => scopeSet.has(p.id));
         }
-        let base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => !scopeFilterIds || scopeFilterIds.includes(p.id)) : profiles.filter((p) => p.id === filterStaff));
+        let base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => (!scopeFilterIds || scopeFilterIds.includes(p.id)) && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)) : profiles.filter((p) => p.id === filterStaff && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)));
 
         const q = filterSearch.trim().toLowerCase();
         if (q) {
@@ -272,6 +280,10 @@ export function StaffCalendarTab({
     dragRef.current = null;
     if (!dragged || dragged.is_leave) return;
     if (dragged.shift_date === targetDate) return;
+    if (!isEmployedOn(profiles.find((p) => p.id === dragged.staff_id), targetDate)) {
+      toast.error("Cannot schedule before this staff member's start date");
+      return;
+    }
 
     if (dragged.is_virtual) {
       await supabase.from("staff_shifts").insert([
@@ -304,10 +316,14 @@ export function StaffCalendarTab({
       toast.success("Shift rescheduled");
     }
     refetch();
-  }, [userId, refetch]);
+  }, [userId, refetch, profiles]);
 
   const handleCellClick = (dateStr: string, staffId: string) => {
     if (!canEdit) return;
+    if (!isEmployedOn(profiles.find((p) => p.id === staffId), dateStr)) {
+      toast.error("Cannot schedule before this staff member's start date");
+      return;
+    }
     setPrefillDate(dateStr);
     setPrefillStaff(staffId);
     setShowShiftModal(true);
@@ -452,6 +468,7 @@ export function StaffCalendarTab({
       (shiftRes.data ?? []) as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (leaveRes.data ?? []) as any,
+      staffToShow,
     );
 
     exportSchedulePDFv2({
@@ -507,8 +524,6 @@ export function StaffCalendarTab({
       )}
 
       {calView === "month" && (() => {
-        const monthDays = eachDayOfInterval({ start: monthStart, end: monthRangeEnd });
-
         const singleStaff = filterStaff !== "all"
           ? profiles.find((p) => p.id === filterStaff)
           : null;
@@ -526,24 +541,9 @@ export function StaffCalendarTab({
             return sum + Math.max(0, (eh + em / 60) - (sh + sm / 60));
           }, 0);
 
-          const dpw = singleStaff.contracted_days_per_week ?? 5;
-          const hpw = singleStaff.contracted_hours_per_week ?? 40;
-          const allowance = singleStaff.annual_leave_days ?? 25;
-
-          const weeksInMonth = monthDays.length / 7;
-          const daysExpected = Math.round(dpw * weeksInMonth);
-          const hoursExpected = hpw * weeksInMonth;
-
-          const yearStart = `${monthStart.getFullYear()}-01-01`;
-          const yearEnd = `${monthStart.getFullYear()}-12-31`;
-          const leaveTakenYTD = leaveRequests
-            .filter((lr) => lr.staff_id === singleStaff.id && lr.status === "approved")
-            .reduce((sum, lr) => {
-              const start = lr.start_date > yearStart ? lr.start_date : yearStart;
-              const end = lr.end_date < yearEnd ? lr.end_date : yearEnd;
-              if (start > end) return sum;
-              return sum + differenceInCalendarDays(parseISO(end), parseISO(start)) + 1;
-            }, 0);
+          const { daysExpected, hoursExpected } = calculateExpectedWork(singleStaff, monthStart, monthRangeEnd);
+          const allowance = calculateAccruedAnnualLeave(singleStaff, monthRangeEnd);
+          const leaveTakenYTD = calculateAnnualLeaveTakenYTD(singleStaff, leaveRequests, monthRangeEnd);
 
           calc = {
             daysWorked, daysExpected, hoursWorked, hoursExpected,

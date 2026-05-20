@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, endOfWeek } from "date-fns";
+import { format, endOfWeek, startOfYear } from "date-fns";
 import { toast } from "sonner";
 
 export interface StaffSchedule {
@@ -58,6 +58,7 @@ export function useStaffSchedules(
   const weekEnd = endDateOverride ?? endOfWeek(weekStart, { weekStartsOn: 1 });
   const weekStartStr = format(weekStart, "yyyy-MM-dd");
   const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+  const leaveYearStartStr = format(startOfYear(weekStart), "yyyy-MM-dd");
 
   // Staff (non-admin) only see their own shifts/schedules/leave
   const isAdmin = canEdit === true;
@@ -84,7 +85,7 @@ export function useStaffSchedules(
       .from("staff_leave_requests")
       .select("id, staff_id, start_date, end_date, leave_type, status, reason, reviewed_at, reviewed_by, created_by, created_at")
       .lte("start_date", weekEndStr)
-      .gte("end_date", weekStartStr)
+      .gte("end_date", leaveYearStartStr)
       .limit(500);
 
     // Non-admins only see their own data
@@ -103,7 +104,7 @@ export function useStaffSchedules(
     setShifts((shiftsRes.data as StaffShift[]) ?? []);
     setLeaveRequests((leaveRes.data as StaffLeaveRequest[]) ?? []);
     setLoading(false);
-  }, [weekStartStr, weekEndStr, isAdmin, currentUserId]);
+  }, [weekStartStr, weekEndStr, leaveYearStartStr, isAdmin, currentUserId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

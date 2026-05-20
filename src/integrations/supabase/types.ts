@@ -2123,6 +2123,7 @@ export type Database = {
           id: string
           is_draft: boolean
           job_title: string
+          start_date: string
         }[]
       }
       has_role: {

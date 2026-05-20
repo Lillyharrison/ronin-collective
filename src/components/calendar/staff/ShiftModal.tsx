@@ -15,6 +15,8 @@ import type { StaffSchedule, StaffShift } from "@/hooks/useStaffSchedules";
 import { DOW_FULL, DOW_LABELS } from "./constants";
 import { getDisplayName } from "./utils";
 import type { DisplayShift, Profile, Property } from "./types";
+import { isEmployedOn } from "./leaveMath";
+import { toast } from "sonner";
 
 type ShiftMode = "single" | "range" | "recurring";
 
@@ -102,6 +104,12 @@ export function ShiftModal({
 
   const handleSave = async () => {
     if (!form.staff_id) return;
+    const selectedPerson = profiles.find((p) => p.id === form.staff_id);
+    const firstRequestedDate = mode === "recurring" ? form.effective_from : form.shift_date;
+    if (firstRequestedDate && !isEmployedOn(selectedPerson, firstRequestedDate)) {
+      toast.error("Cannot schedule before this staff member's start date");
+      return;
+    }
 
     // Editing a virtual recurring shift → ask whether to change just this
     // occurrence or the whole series before mutating anything.
@@ -182,6 +190,10 @@ export function ShiftModal({
   // staff_shifts override that supersedes the schedule occurrence.
   const applyEditToSingleDay = async () => {
     if (!editShift?.schedule_id) return;
+    if (!isEmployedOn(profiles.find((p) => p.id === form.staff_id), editShift.shift_date)) {
+      toast.error("Cannot schedule before this staff member's start date");
+      return;
+    }
     setSaving(true);
     const noteVal = locationNote(form.notes, form.location);
     const ok = await onSave({

@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { differenceInCalendarDays, parseISO, eachDayOfInterval, format } from "date-fns";
+import { format } from "date-fns";
 import { CalendarDays, Clock, Plane, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDisplayName } from "./utils";
 import type { Profile, DisplayShift } from "./types";
 import type { StaffLeaveRequest } from "@/hooks/useStaffSchedules";
+import { calculateAccruedAnnualLeave, calculateAnnualLeaveTakenYTD, calculateExpectedWork } from "./leaveMath";
 
 /**
  * Per-staff tally bar across the selected date range.
@@ -29,10 +30,6 @@ export function StaffDaysSummary({
   rangeEnd: Date;
 }) {
   const rows = useMemo(() => {
-    const totalDays = eachDayOfInterval({ start: rangeStart, end: rangeEnd }).length;
-    const weeksInRange = totalDays / 7;
-    const yearStart = `${rangeStart.getFullYear()}-01-01`;
-    const yearEnd = `${rangeStart.getFullYear()}-12-31`;
     const startStr = format(rangeStart, "yyyy-MM-dd");
     const endStr = format(rangeEnd, "yyyy-MM-dd");
 
@@ -53,22 +50,9 @@ export function StaffDaysSummary({
         return sum + Math.max(0, (eh + em / 60) - (sh + sm / 60));
       }, 0);
 
-      const dpw = person.contracted_days_per_week ?? 5;
-      const hpw = person.contracted_hours_per_week ?? 40;
-      const allowance = person.annual_leave_days ?? 25;
-
-      const daysExpected = Math.round(dpw * weeksInRange);
-      const hoursExpected = Math.round(hpw * weeksInRange);
-
-      // Leave taken YTD (calendar year, not just the range)
-      const leaveTakenYTD = leaveRequests
-        .filter((lr) => lr.staff_id === person.id && lr.status === "approved")
-        .reduce((sum, lr) => {
-          const start = lr.start_date > yearStart ? lr.start_date : yearStart;
-          const end = lr.end_date < yearEnd ? lr.end_date : yearEnd;
-          if (start > end) return sum;
-          return sum + differenceInCalendarDays(parseISO(end), parseISO(start)) + 1;
-        }, 0);
+      const { daysExpected, hoursExpected } = calculateExpectedWork(person, rangeStart, rangeEnd);
+      const allowance = calculateAccruedAnnualLeave(person, rangeEnd);
+      const leaveTakenYTD = calculateAnnualLeaveTakenYTD(person, leaveRequests, rangeEnd);
       const leaveLeft = Math.max(0, allowance - leaveTakenYTD);
 
       const daysDelta = daysWorked - daysExpected;
