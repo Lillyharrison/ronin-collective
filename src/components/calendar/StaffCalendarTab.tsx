@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   format, startOfWeek, endOfWeek, eachDayOfInterval,
   addWeeks, subWeeks, isSameDay,
-  differenceInCalendarDays, parseISO,
   startOfMonth, endOfMonth, addMonths, subMonths,
 } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +11,12 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 import type { Profile, Property, DisplayShift, FamilyEvent, RosterStats } from "./staff/types";
 import { getDisplayName, buildDisplayShifts } from "./staff/utils";
+import {
+  calculateAccruedAnnualLeave,
+  calculateAnnualLeaveTakenYTD,
+  calculateExpectedWork,
+  isEmployedDuringRange,
+} from "./staff/leaveMath";
 import { FamilyOverlayBand } from "./staff/FamilyOverlayBand";
 import { CalculatorPanel } from "./staff/CalculatorPanel";
 import { ShiftModal } from "./staff/ShiftModal";
