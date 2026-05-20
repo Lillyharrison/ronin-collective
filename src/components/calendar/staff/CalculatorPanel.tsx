@@ -1,4 +1,5 @@
 import type { RosterStats } from "./types";
+import { formatLeaveDays } from "./leaveMath";
 
 export function CalculatorPanel({
   personName,
@@ -32,8 +33,8 @@ export function CalculatorPanel({
         />
         <Stat
           label="Annual leave"
-          value={`${leaveRemaining} left`}
-          sub={`${stats.leaveTakenYTD} taken of ${stats.leaveAllowance}`}
+          value={`${formatLeaveDays(leaveRemaining)} left`}
+          sub={`${formatLeaveDays(stats.leaveTakenYTD)} taken of ${formatLeaveDays(stats.leaveAllowance)}`}
         />
       </div>
     </div>
