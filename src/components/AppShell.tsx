@@ -38,6 +38,7 @@ const AlertsSection      = lazy(() => import("@/components/sections/AlertsSectio
 const RulesSection       = lazy(() => import("@/components/sections/RulesSection").then(m => ({ default: m.RulesSection })));
 const CarWashSection     = lazy(() => import("@/components/sections/CarWashSection").then(m => ({ default: m.CarWashSection })));
 const StaffSchedulingSection = lazy(() => import("@/components/sections/StaffSchedulingSection").then(m => ({ default: m.StaffSchedulingSection })));
+const TimelineSection    = lazy(() => import("@/components/sections/TimelineSection").then(m => ({ default: m.TimelineSection })));
 const ChecklistDetailPage= lazy(() => import("@/components/sections/ChecklistDetailPage").then(m => ({ default: m.ChecklistDetailPage })));
 
 // ── Section loading skeleton ──────────────────────────────────────────────────
