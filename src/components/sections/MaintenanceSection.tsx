@@ -661,7 +661,7 @@ export function MaintenanceSection() {
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
             onEdit={detailIssue.reported_by === userId && detailIssue.status === "reported"
-              ? (issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }
+              ? openIssueEditor
               : undefined}
             categories={categories} />
         )}
@@ -940,7 +940,7 @@ export function MaintenanceSection() {
       ) : showResolved ? (
         <div className="px-4 pb-4 space-y-3">
           {viewIssues.map(issue => (
-            <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+            <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
           ))}
         </div>
       ) : viewMode === "board" ? (
@@ -990,7 +990,7 @@ export function MaintenanceSection() {
                       >
                         <IssueCard
                           issue={issue}
-                          onClick={() => setDetailIssue(issue)}
+                          onClick={() => openIssueDetail(issue)}
                           compact
                         />
                         {/* Quick approve button — only on Reported column for admins */}
