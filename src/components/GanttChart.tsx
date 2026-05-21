@@ -430,8 +430,8 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
             const ce = Math.min(exportMonths, mo(ph.end[0], ph.end[1], esy, esm));
             if (ce <= cs) return "";
             const multi = proj.phases.length > 1;
-            const top = multi ? (idx % 2 === 0 ? 4 : 25) : 4;
-            const height = multi ? 19 : 40;
+            const top = multi ? (idx % 2 === 0 ? 5 : 28) : 5;
+            const height = multi ? 21 : 44;
             const left = cs * monthW + 2;
             const width = Math.max(12, (ce - cs) * monthW - 4);
             const barColor = COLORS[ph.type]?.bar ?? COLORS.complete.bar;
