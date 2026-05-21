@@ -612,6 +612,23 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
             </tbody>
           </table>
         </div>
+        {stickyHead.show && (
+          <div style={{ position: "fixed", top: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", left: stickyHead.left, width: stickyHead.width, overflow: "hidden", zIndex: 45, pointerEvents: "none", boxShadow: "0 2px 6px rgba(0,0,0,0.12)" }}>
+            <table style={{ borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", width: TABLE_W, transform: `translateX(${-stickyHead.scrollLeft}px)` }}>
+              <colgroup>
+                <col style={{ width: 200 }} /><col style={{ width: 96 }} /><col style={{ width: 108 }} />
+                {Array.from({ length: TOTAL_MONTHS }, (_, i) => <col key={i} style={{ width: COL_W }} />)}
+              </colgroup>
+              <thead>
+                <tr>
+                  {["Property", "Status", "Due / Milestone"].map((h) => <th key={h} rowSpan={2} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a", verticalAlign: "middle" }}>{h}</th>)}
+                  {yearSpans.map(({ year, span }, i) => <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: 1 }}>{year}</th>)}
+                </tr>
+                <tr>{Array.from({ length: TOTAL_MONTHS }, (_, i) => { const absM = vsm - 1 + i; const mIdx = ((absM % 12) + 12) % 12; const colYear = vsy + Math.floor(absM / 12); const isToday = colYear === CSY && mIdx === CSM - 1; return <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>{MONTHS[mIdx]}</th>; })}</tr>
+              </thead>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* PRINT MODAL */}
