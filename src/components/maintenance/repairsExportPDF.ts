@@ -228,7 +228,11 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
   // full-width sub-row containing the issue's description (if any).
   type Row = (string | { content: string; colSpan: number; styles: Record<string, unknown> })[];
   const body: Row[] = [];
-  ctx.issues.forEach((i) => {
+  // Parallel array: for each body row, store the index in ctx.issues it belongs
+  // to (issue row), or -1 for a notes/sub-row. autoTable's didParseCell uses
+  // data.row.index against `body`, so we need this to recover the source issue.
+  const issueIndexByRow: number[] = [];
+  ctx.issues.forEach((i, srcIdx) => {
     body.push([
       i.title,
       STATUS_LABELS[i.status] ?? i.status,
@@ -242,6 +246,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
         ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM")}`
         : `${ageDays(i.created_at)}d`,
     ]);
+    issueIndexByRow.push(srcIdx);
     if (ctx.includeNotes && i.description && i.description.trim()) {
       body.push([
         {
@@ -256,6 +261,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
           },
         },
       ]);
+      issueIndexByRow.push(-1);
     }
   });
 
