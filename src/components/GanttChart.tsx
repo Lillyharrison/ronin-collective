@@ -172,28 +172,22 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
         const barH = multiPhase ? HALF_H : FULL_H;
         const barTop = multiPhase ? (lane === 0 ? PAD : PAD + HALF_H + 2) : PAD;
         const barW = (ce - cs) * COL_W - 4;
-        const lblTop = barTop + Math.floor(barH / 2) - 7;
         return (
-          <div key={idx}>
-            <div
-              title={ph.label}
-              style={{
-                position: "absolute", top: barTop, height: barH,
-                borderRadius: 3, cursor: "default", zIndex: 2,
-                background: bc.bar,
-                left: cs * COL_W + 2, width: barW,
-              }}
-            />
-            <div
-              style={{
-                position: "absolute", top: lblTop, left: cs * COL_W + 8,
-                height: 14, lineHeight: "14px", fontSize: 9, fontWeight: 700,
-                color: "#1a1a1a", whiteSpace: "nowrap", zIndex: 4 + lane,
-                pointerEvents: "none",
-              }}
-            >
-              {ph.label}
-            </div>
+          <div
+            key={idx}
+            title={ph.label}
+            style={{
+              position: "absolute", top: barTop, height: barH,
+              borderRadius: 3, cursor: "default", zIndex: 2,
+              background: bc.bar,
+              left: cs * COL_W + 2, width: barW,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "0 6px", boxSizing: "border-box", overflow: "hidden",
+              color: "#1a1a1a", whiteSpace: "nowrap", textOverflow: "ellipsis",
+              fontSize: 9, fontWeight: 700, lineHeight: "14px",
+            }}
+          >
+            {ph.label}
           </div>
         );
       })}
