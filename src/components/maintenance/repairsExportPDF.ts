@@ -301,8 +301,8 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
     }
   });
 
-  // 9 cols on landscape A4 (usable 277mm). Tuned so Status/Priority fit one line.
-  const colWidths = [60, 28, 22, 28, 32, 36, 26, 24, 21]; // sum = 277
+  // 9 cols on landscape A4 (usable 277mm).
+  const colWidths = [58, 28, 22, 28, 32, 33, 26, 26, 24]; // sum = 277
 
   const baseFont = 8;
   const baseHeadFont = 8;
