@@ -102,6 +102,7 @@ function ageDays(iso: string): number {
 export interface RepairsExportContext {
   issues: MaintenanceIssue[];          // already filtered + sorted (the list the user sees)
   viewMode: "tile" | "list";           // "tile" = cards w/ photos, "list" = compact table
+  includeNotes?: boolean;              // when true, render notes/description in the PDF
   filters: {
     propertyName?: string | null;
     category?: string | null;
