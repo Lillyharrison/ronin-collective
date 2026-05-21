@@ -54,8 +54,8 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
     }
 
     setLoading(true);
-    // Narrow columns — list rendering never needs `description` until edit modal opens
-    const PM_COLS = "id, title, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
+    // Named columns only; include description so edit dialogs never reopen with blank notes and overwrite them.
+    const PM_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
     let query = supabase
       .from("planned_maintenance")
       .select(PM_COLS)
@@ -92,11 +92,8 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
     (propsRes.data ?? []).forEach((p: any) => { propMap[p.id] = p.name; });
     (profilesRes.data ?? []).forEach((p: any) => { profileMap[p.id] = { name: p.full_name ?? "Unknown", avatar: p.avatar_url }; });
 
-    // Re-fetch description separately would defeat the point — fetch lazily in modal instead.
-    // For now, mark description as null on list rows; detail modal can re-load if needed.
     const enriched: PlannedMaintenanceEntry[] = (data as any[]).map((e) => ({
       ...e,
-      description: null,
       vendor_name:    e.vendor_id    ? vendorMap[e.vendor_id]              : undefined,
       property_name:  e.property_id  ? propMap[e.property_id]              : undefined,
       assignee_name:  e.assigned_to  ? profileMap[e.assigned_to]?.name    : undefined,
