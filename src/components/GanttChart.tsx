@@ -646,6 +646,34 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
           <button onClick={() => addProject()} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #c9a84c", background: "transparent", color: "#c9a84c", cursor: "pointer", fontSize: 11, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit" }}>
             + Add Project
           </button>
+          {!isShared && (
+            <button onClick={async () => {
+              let token = "";
+              try { token = localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { /* ignore */ }
+              if (!token) {
+                token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 40);
+                try { localStorage.setItem(SHARE_TOKEN_KEY, token); } catch { /* ignore */ }
+              }
+              try {
+                const { error } = await supabase.functions.invoke("timeline-share-save", {
+                  body: { token, projects, next_id: nextId, create_if_missing: true },
+                });
+                if (error) throw error;
+                const url = `${window.location.origin}/share/timeline/${token}`;
+                try { await navigator.clipboard.writeText(url); } catch { /* clipboard may be blocked */ }
+                toast.success("Share link copied", { description: url });
+              } catch (e: any) {
+                toast.error("Could not create share link", { description: e?.message ?? "Try again." });
+              }
+            }} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #c9a84c", background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, letterSpacing: ".3px", fontFamily: "inherit" }}>
+              🔗 Share Link
+            </button>
+          )}
+          {isShared && (
+            <span style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #c9a84c", color: "#c9a84c", fontSize: 10, fontWeight: 700, letterSpacing: ".5px", textTransform: "uppercase" }}>
+              ● Live Shared
+            </span>
+          )}
           <button onClick={() => setShowPrintModal(true)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #444", background: "transparent", color: "#f0ece4", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
             Print / Export PDF
           </button>
