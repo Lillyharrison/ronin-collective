@@ -546,6 +546,15 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
           style={{ marginLeft: "auto", padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
           Export PDF
         </button>
+        <button onClick={() => {
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+          });
+        }}
+          style={{ padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+          {linkCopied ? "Link Copied!" : "Share Link"}
+        </button>
       </div>
 
       <div style={{ padding: "20px 24px", background: "transparent" }}>
