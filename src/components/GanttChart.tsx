@@ -37,6 +37,7 @@ const COLORS = {
   design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
   complete:     { bar: "#cccccc", pill: "#e8e8e8", pillText: "#444444" },
 };
+const DEFAULT_SHARE_TOKEN = "f21d3c13020d4cdc9b19868ae765ab578d3e3089";
 const TYPE_LABEL = {
   construction: "Construction", install: "Install", maintenance: "Maintenance",
   design: "Design", complete: "Complete",
