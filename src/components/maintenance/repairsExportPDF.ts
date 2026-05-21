@@ -300,7 +300,9 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
     columnStyles: Object.fromEntries(colWidths.map((w, i) => [i, { cellWidth: w }])),
     didParseCell: (data) => {
       if (data.section !== "body") return;
-      const issue = ctx.issues[data.row.index];
+      const srcIdx = issueIndexByRow[data.row.index];
+      if (srcIdx == null || srcIdx < 0) return; // skip notes sub-rows
+      const issue = ctx.issues[srcIdx];
       if (!issue) return;
 
       // Title bold
