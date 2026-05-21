@@ -9,6 +9,7 @@ import { OfflineSyncProvider } from "@/hooks/useOfflineSync";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
+import SharedTimeline from "./pages/SharedTimeline";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
