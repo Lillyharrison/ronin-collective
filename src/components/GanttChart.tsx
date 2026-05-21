@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 
 interface Phase {
   type: "construction" | "install" | "maintenance" | "design" | "complete";
@@ -483,7 +483,6 @@ export default function GanttChart() {
   const [viewTo, setViewTo] = useState<[number, number]>([CSY + 2, CSM]);
   const viewMonths = Math.max(1, (viewTo[0] - viewFrom[0]) * 12 + (viewTo[1] - viewFrom[1]));
 
-  const todayStr = `${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
   const locations = [...new Set(projects.map((p) => p.location))];
 
   function openEditor(id: number) {
