@@ -400,10 +400,37 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       // Extra tick to settle layout
       await new Promise((r) => setTimeout(r, 60));
 
-      const fullW = table.scrollWidth;
-      const fullH = table.scrollHeight;
+      const exportTable = table.cloneNode(true) as HTMLTableElement;
+      const exportHost = document.createElement("div");
+      exportHost.style.cssText = "position:fixed;left:-10000px;top:0;background:#fff;padding:0;margin:0;overflow:visible;z-index:-1;";
+      exportTable.style.width = `${table.scrollWidth}px`;
+      exportTable.style.borderRadius = "0";
 
-      const canvas = await html2canvas(table, {
+      exportTable.querySelectorAll("tr").forEach((row) => {
+        if ((row.textContent || "").trim().startsWith("+ Add project")) {
+          (row as HTMLTableRowElement).style.display = "none";
+        }
+        row.querySelectorAll<HTMLElement>("td, th").forEach((cell) => {
+          cell.style.paddingTop = "3px";
+          cell.style.paddingBottom = "3px";
+        });
+      });
+      exportTable.querySelectorAll<HTMLTableCellElement>("tbody tr td:first-child").forEach((cell) => {
+        cell.style.height = "28px";
+      });
+      exportTable.querySelectorAll<HTMLDivElement>('td[colspan] > div[style*="height: 42px"]').forEach((barWrap) => {
+        barWrap.style.height = "28px";
+        barWrap.style.transform = "scaleY(0.66)";
+        barWrap.style.transformOrigin = "left top";
+      });
+
+      exportHost.appendChild(exportTable);
+      document.body.appendChild(exportHost);
+
+      const fullW = exportTable.scrollWidth;
+      const fullH = exportTable.scrollHeight;
+
+      const canvas = await html2canvas(exportTable, {
         backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
@@ -418,16 +445,18 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       const pdf = new jsPDF({ orientation: "landscape", format: "a3", unit: "mm" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 8;
+      document.body.removeChild(exportHost);
+
+      const margin = 5;
       const availW = pageW - margin * 2;
       const availH = pageH - margin * 2;
 
-      // Scale to fit within both width and height, preserving aspect ratio
+      // Prefer filling the page width; fall back to height only if the compact export is still too tall.
       const scale = Math.min(availW / canvas.width, availH / canvas.height);
       const imgW = canvas.width * scale;
       const imgH = canvas.height * scale;
       const xOff = margin + (availW - imgW) / 2;
-      const yOff = margin + (availH - imgH) / 2;
+      const yOff = margin;
 
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", xOff, yOff, imgW, imgH);
 
