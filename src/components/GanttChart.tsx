@@ -260,9 +260,12 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
   const now = new Date();
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
+  const { toast } = useToast();
 
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [nextId, setNextId] = useState(23);
+  const [isLoadingBoard, setIsLoadingBoard] = useState(true);
+  const [isSavingBoard, setIsSavingBoard] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editorLoc, setEditorLoc] = useState("");
   const [editorProp, setEditorProp] = useState("");
@@ -280,6 +283,49 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
   const viewMonths = Math.max(1, (viewTo[0]-viewFrom[0])*12+(viewTo[1]-viewFrom[1]));
 
   const locations = [...new Set(projects.map((p) => p.location))];
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBoard() {
+      setIsLoadingBoard(true);
+      const { data, error } = await supabase
+        .from("gantt_shared_boards")
+        .select("projects, next_id")
+        .eq("share_token", SHARE_TOKEN)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        toast({ title: "Timeline not loaded", description: error.message, variant: "destructive" });
+      } else if (data) {
+        setProjects(data.projects as unknown as Project[]);
+        setNextId(data.next_id);
+      }
+      setIsLoadingBoard(false);
+    }
+    loadBoard();
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  async function saveBoard(nextProjects: Project[], nextNextId = nextId) {
+    setIsSavingBoard(true);
+    const { error } = await supabase
+      .from("gantt_shared_boards")
+      .upsert({
+        share_token: SHARE_TOKEN,
+        projects: nextProjects as unknown as Json,
+        next_id: nextNextId,
+        total_months: viewMonths,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "share_token" });
+
+    setIsSavingBoard(false);
+    if (error) {
+      toast({ title: "Timeline not saved", description: error.message, variant: "destructive" });
+      return false;
+    }
+    return true;
+  }
 
   function openEditor(id: number) {
     const proj = projects.find((p) => p.id === id);
