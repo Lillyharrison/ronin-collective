@@ -387,35 +387,14 @@ function buildTileDoc(
   const drawPhoto = (issue: MaintenanceIssue, ox: number, oy: number) => {
     const img = images.get(issue.id);
     if (img) {
-      const box = photoBox;
-      const imgRatio = img.width / img.height;
-      let drawW = box, drawH = box, sx = ox, sy = oy;
-      if (imgRatio > 1) {
-        drawH = box;
-        drawW = box * imgRatio;
-        sx = ox - (drawW - box) / 2;
-      } else {
-        drawW = box;
-        drawH = box / imgRatio;
-        sy = oy - (drawH - box) / 2;
-      }
-      const internal = doc as unknown as {
-        saveGraphicsState?: () => void;
-        restoreGraphicsState?: () => void;
-      };
-      internal.saveGraphicsState?.();
+      // Image is pre-cropped to a square by fetchImageAsThumb, so we can draw
+      // it straight into the photo box with no clipping math required.
       try {
-        (doc as unknown as { rect: (x: number, y: number, w: number, h: number) => void }).rect(ox, oy, box, box);
-        (doc as unknown as { clip: () => void; discardPath?: () => void }).clip();
-        (doc as unknown as { discardPath?: () => void }).discardPath?.();
+        doc.addImage(img.dataUrl, "JPEG", ox, oy, photoBox, photoBox, undefined, "FAST");
       } catch { /* noop */ }
-      try {
-        doc.addImage(img.dataUrl, "JPEG", sx, sy, drawW, drawH, undefined, "FAST");
-      } catch { /* noop */ }
-      internal.restoreGraphicsState?.();
       doc.setDrawColor(220, 220, 220);
       doc.setLineWidth(0.2);
-      doc.rect(ox, oy, box, box);
+      doc.rect(ox, oy, photoBox, photoBox);
     } else {
       doc.setFillColor(245, 244, 240);
       doc.setDrawColor(220, 220, 220);
@@ -428,108 +407,192 @@ function buildTileDoc(
     }
   };
 
-  ctx.issues.forEach((issue, idx) => {
-    // Page break
-    if (y + cardH > pageHeight - marginB) {
+  // Coloured pill (used for status + priority on each card).
+  const drawPill = (
+    text: string,
+    x: number,
+    yy: number,
+    palette: { bg: [number, number, number]; text: [number, number, number] },
+  ): number => {
+    doc.setFont(PDF_FONT, "bold");
+    doc.setFontSize(7.2);
+    const padX = 2;
+    const w = doc.getTextWidth(text) + padX * 2;
+    const h = 3.6;
+    doc.setFillColor(...palette.bg);
+    doc.setDrawColor(...palette.bg);
+    (doc as unknown as { roundedRect: (x: number, y: number, w: number, h: number, rx: number, ry: number, style: string) => void })
+      .roundedRect(x, yy - h + 1, w, h, 0.8, 0.8, "F");
+    doc.setTextColor(...palette.text);
+    doc.text(text, x + padX, yy - 0.4);
+    return w;
+  };
+
+  // Group the issues by status so the tile/board export reads like a kanban —
+  // each status becomes a labelled section, matching the on-screen grouping.
+  const STATUS_ORDER: IssueStatus[] = [
+    "reported",
+    "under_investigation",
+    "approved",
+    "scheduled",
+    "in_progress",
+    "resolved",
+  ];
+  const groups = new Map<IssueStatus, MaintenanceIssue[]>();
+  ctx.issues.forEach((i) => {
+    const key = (i.status === "in_progress" ? "scheduled" : i.status) as IssueStatus;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(i);
+  });
+
+  const drawSectionHeader = (status: IssueStatus, count: number) => {
+    const palette = STATUS_PILL[status] ?? STATUS_PILL.reported;
+    const barH = 7;
+    if (y + barH + cardH > pageHeight - marginB) {
       doc.addPage();
       y = drawHeader(doc, ctx, pageWidth, marginL);
     }
-
-    // Row background (alternating) + border
-    if (idx % 2 === 1) {
-      doc.setFillColor(250, 249, 245);
-      doc.rect(marginL, y, usableW, cardH, "F");
-    }
-    doc.setDrawColor(225, 223, 217);
-    doc.setLineWidth(0.2);
-    doc.rect(marginL, y, usableW, cardH);
-
-    // Photo
-    drawPhoto(issue, marginL + cardPad, y + cardPad);
-
-    // Title + description (middle column)
+    doc.setFillColor(...palette.bg);
+    doc.setDrawColor(...palette.bg);
+    (doc as unknown as { roundedRect: (x: number, y: number, w: number, h: number, rx: number, ry: number, style: string) => void })
+      .roundedRect(marginL, y, usableW, barH, 1.2, 1.2, "F");
+    // Status accent bar on the left edge
+    doc.setFillColor(...palette.text);
+    doc.rect(marginL, y, 1.4, barH, "F");
     doc.setFont(PDF_FONT, "bold");
-    doc.setFontSize(titleSize);
-    doc.setTextColor(28, 29, 32);
-    const titleLines = doc.splitTextToSize(issue.title, titleW).slice(0, 2);
-    let ty = y + cardPad + titleSize * 0.35 + 1;
-    const titleLineH = titleSize * 0.42;
-    doc.text(titleLines, titleX, ty);
-    ty += titleLines.length * titleLineH + 0.5;
+    doc.setFontSize(9.5);
+    doc.setTextColor(...palette.text);
+    doc.text(STATUS_LABELS[status] ?? status, marginL + 4, y + barH - 2);
+    const countText = `${count} ${count === 1 ? "issue" : "issues"}`;
+    const cw = doc.getTextWidth(countText);
+    doc.setFont(PDF_FONT, "normal");
+    doc.setFontSize(8.5);
+    doc.text(countText, marginL + usableW - cw - 3, y + barH - 2);
+    y += barH + 2;
+  };
 
-    if (issue.description) {
-      doc.setFont(PDF_FONT, "normal");
-      doc.setFontSize(descSize);
-      doc.setTextColor(95, 95, 95);
-      const descLineH = descSize * 0.42;
-      const remaining = (y + cardH - cardPad) - ty;
-      const maxLines = Math.max(0, Math.floor(remaining / descLineH));
-      if (maxLines > 0) {
-        const descLines = doc.splitTextToSize(issue.description, titleW).slice(0, maxLines);
-        doc.text(descLines, titleX, ty);
-      }
-    }
+  let cardIdx = 0;
+  STATUS_ORDER.forEach((status) => {
+    const list = groups.get(status);
+    if (!list || list.length === 0) return;
+    drawSectionHeader(status, list.length);
 
-    // Meta column (label/value pairs, two columns of typography)
-    const metaPairs: Array<[string, string]> = [
-      ["Status", STATUS_LABELS[issue.status] ?? issue.status],
-      ["Priority", PRIORITY_LABELS[issue.priority] ?? issue.priority],
-      ["Category", issue.category ?? "—"],
-      ["Property", issue.property_name ?? "—"],
-    ];
-    if (issue.location_detail) metaPairs.push(["Location", issue.location_detail]);
-    metaPairs.push(["Reported", format(parseISO(issue.created_at), "dd MMM yyyy")]);
-    if (issue.assignee_name) metaPairs.push(["Assigned", firstName(issue.assignee_name)]);
-    if (issue.status === "resolved" && issue.resolved_at) {
-      metaPairs.push(["Resolved", format(parseISO(issue.resolved_at), "dd MMM yyyy")]);
-    } else {
-      metaPairs.push(["Age", `${ageDays(issue.created_at)}d`]);
-    }
-
-    const metaLineH = metaSize * 0.45;
-    const maxMetaLines = Math.floor((cardH - cardPad * 2) / metaLineH);
-    const visiblePairs = metaPairs.slice(0, maxMetaLines);
-    const labelX = metaColX;
-    const valueX = metaColX + 16;
-    const valueW = metaW - 16;
-    let my = y + cardPad + metaSize * 0.35 + 1;
-    doc.setFontSize(metaSize);
-    visiblePairs.forEach(([label, value]) => {
-      doc.setFont(PDF_FONT, "normal");
-      doc.setTextColor(135, 135, 135);
-      doc.text(label, labelX, my);
-      doc.setFont(PDF_FONT, "bold");
-      doc.setTextColor(40, 40, 40);
-      const v = doc.splitTextToSize(value, valueW)[0] ?? value;
-      doc.text(v, valueX, my);
-      my += metaLineH;
-    });
-
-    y += cardH + 2;
-
-    // Extended notes block (full width, beneath the card) when requested.
-    if (ctx.includeNotes && issue.description && issue.description.trim()) {
-      const noteSize = Math.max(7.2, 8.4 * scale);
-      const noteLineH = noteSize * 0.45;
-      const wrapW = usableW - 6;
-      const noteLines = doc.splitTextToSize(`Notes: ${issue.description.trim()}`, wrapW);
-      const blockH = noteLines.length * noteLineH + 4;
-
-      // Page break if the notes block won't fit
-      if (y + blockH > pageHeight - marginB) {
+    list.forEach((issue) => {
+      // Page break
+      if (y + cardH > pageHeight - marginB) {
         doc.addPage();
         y = drawHeader(doc, ctx, pageWidth, marginL);
+        drawSectionHeader(status, list.length);
       }
-      doc.setFillColor(252, 251, 247);
+
+      // Row background (alternating) + border
+      if (cardIdx % 2 === 1) {
+        doc.setFillColor(250, 249, 245);
+        doc.rect(marginL, y, usableW, cardH, "F");
+      }
       doc.setDrawColor(225, 223, 217);
       doc.setLineWidth(0.2);
-      doc.rect(marginL, y, usableW, blockH, "FD");
-      doc.setFont(PDF_FONT, "normal");
-      doc.setFontSize(noteSize);
-      doc.setTextColor(75, 75, 75);
-      doc.text(noteLines, marginL + 3, y + noteLineH + 0.5);
-      y += blockH + 2;
-    }
+      doc.rect(marginL, y, usableW, cardH);
+
+      // Status accent stripe (matches list-view colour coding)
+      const accent = STATUS_PILL[issue.status] ?? STATUS_PILL.reported;
+      doc.setFillColor(...accent.text);
+      doc.rect(marginL, y, 1.2, cardH, "F");
+
+      // Photo
+      drawPhoto(issue, marginL + cardPad, y + cardPad);
+
+      // Title + pills (middle column)
+      doc.setFont(PDF_FONT, "bold");
+      doc.setFontSize(titleSize);
+      doc.setTextColor(28, 29, 32);
+      const titleLines = doc.splitTextToSize(issue.title, titleW).slice(0, 2);
+      let ty = y + cardPad + titleSize * 0.35 + 1;
+      const titleLineH = titleSize * 0.42;
+      doc.text(titleLines, titleX, ty);
+      ty += titleLines.length * titleLineH + 1.5;
+
+      // Pills row: status + priority
+      const statusPill = STATUS_PILL[issue.status] ?? STATUS_PILL.reported;
+      const priorityPill = PRIORITY_PILL[issue.priority] ?? PRIORITY_PILL.medium;
+      const sw = drawPill(STATUS_LABELS[issue.status] ?? issue.status, titleX, ty + 2, statusPill);
+      drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
+      ty += 5;
+
+      if (issue.description) {
+        doc.setFont(PDF_FONT, "normal");
+        doc.setFontSize(descSize);
+        doc.setTextColor(95, 95, 95);
+        const descLineH = descSize * 0.42;
+        const remaining = (y + cardH - cardPad) - ty;
+        const maxLines = Math.max(0, Math.floor(remaining / descLineH));
+        if (maxLines > 0) {
+          const descLines = doc.splitTextToSize(issue.description, titleW).slice(0, maxLines);
+          doc.text(descLines, titleX, ty);
+        }
+      }
+
+      // Meta column (label/value pairs) — status/priority removed since they're now pills
+      const metaPairs: Array<[string, string]> = [
+        ["Category", issue.category ?? "—"],
+        ["Property", issue.property_name ?? "—"],
+      ];
+      if (issue.location_detail) metaPairs.push(["Location", issue.location_detail]);
+      metaPairs.push(["Reported", format(parseISO(issue.created_at), "dd MMM yyyy")]);
+      if (issue.assignee_name) metaPairs.push(["Assigned", firstName(issue.assignee_name)]);
+      if (issue.status === "resolved" && issue.resolved_at) {
+        metaPairs.push(["Resolved", format(parseISO(issue.resolved_at), "dd MMM yyyy")]);
+      } else {
+        metaPairs.push(["Age", `${ageDays(issue.created_at)}d`]);
+      }
+
+      const metaLineH = metaSize * 0.45;
+      const maxMetaLines = Math.floor((cardH - cardPad * 2) / metaLineH);
+      const visiblePairs = metaPairs.slice(0, maxMetaLines);
+      const labelX = metaColX;
+      const valueX = metaColX + 16;
+      const valueW = metaW - 16;
+      let my = y + cardPad + metaSize * 0.35 + 1;
+      doc.setFontSize(metaSize);
+      visiblePairs.forEach(([label, value]) => {
+        doc.setFont(PDF_FONT, "normal");
+        doc.setTextColor(135, 135, 135);
+        doc.text(label, labelX, my);
+        doc.setFont(PDF_FONT, "bold");
+        doc.setTextColor(40, 40, 40);
+        const v = doc.splitTextToSize(value, valueW)[0] ?? value;
+        doc.text(v, valueX, my);
+        my += metaLineH;
+      });
+
+      y += cardH + 2;
+      cardIdx += 1;
+
+      // Extended notes block (full width, beneath the card) when requested.
+      if (ctx.includeNotes && issue.description && issue.description.trim()) {
+        const noteSize = Math.max(7.2, 8.4 * scale);
+        const noteLineH = noteSize * 0.45;
+        const wrapW = usableW - 6;
+        const noteLines = doc.splitTextToSize(`Notes: ${issue.description.trim()}`, wrapW);
+        const blockH = noteLines.length * noteLineH + 4;
+
+        if (y + blockH > pageHeight - marginB) {
+          doc.addPage();
+          y = drawHeader(doc, ctx, pageWidth, marginL);
+        }
+        doc.setFillColor(252, 251, 247);
+        doc.setDrawColor(225, 223, 217);
+        doc.setLineWidth(0.2);
+        doc.rect(marginL, y, usableW, blockH, "FD");
+        doc.setFont(PDF_FONT, "normal");
+        doc.setFontSize(noteSize);
+        doc.setTextColor(75, 75, 75);
+        doc.text(noteLines, marginL + 3, y + noteLineH + 0.5);
+        y += blockH + 2;
+      }
+    });
+
+    y += 2; // breathing room between status groups
   });
 
   return doc;
