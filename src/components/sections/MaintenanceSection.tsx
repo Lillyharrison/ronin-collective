@@ -986,19 +986,33 @@ export function MaintenanceSection() {
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {[
-                  isL ? "Título" : "Title",
-                  isL ? "Estado" : "Status",
-                  isL ? "Prioridad" : "Priority",
-                  isL ? "Categoría" : "Category",
-                  isL ? "Propiedad" : "Property",
-                  isL ? "Asignado a" : "Assigned",
-                  isL ? "Fecha" : "Date",
-                ].map((h, i) => (
-                  <th key={i} className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    {h}
-                  </th>
-                ))}
+                {([
+                  { key: "title",    label: isL ? "Título" : "Title" },
+                  { key: "status",   label: isL ? "Estado" : "Status" },
+                  { key: "priority", label: isL ? "Prioridad" : "Priority" },
+                  { key: "category", label: isL ? "Categoría" : "Category" },
+                  { key: "property", label: isL ? "Propiedad" : "Property" },
+                  { key: "assignee", label: isL ? "Asignado a" : "Assigned" },
+                  { key: "date",     label: isL ? "Fecha" : "Date" },
+                ] as { key: TableSortKey; label: string }[]).map(h => {
+                  const active = tableSort.key === h.key;
+                  return (
+                    <th
+                      key={h.key}
+                      onClick={() => toggleTableSort(h.key)}
+                      onTouchEnd={(e) => { e.preventDefault(); toggleTableSort(h.key); }}
+                      className={cn(
+                        "px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors",
+                        active ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {h.label}
+                        {active && (tableSort.dir === "asc" ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
