@@ -25,7 +25,8 @@ export type ActiveSection =
   | "alerts"
   | "rules"
   | "car-wash"
-  | "staff-schedule";
+  | "staff-schedule"
+  | "timeline";
 
 // ── Path ↔ section mapping ────────────────────────────────────────────────────
 const SECTION_TO_PATH: Record<ActiveSection, string> = {
