@@ -291,7 +291,7 @@ export function MaintenanceSection() {
   const reportedCount = displayIssues.filter(i => i.status === "reported").length;
 
   const handleCreate = async (payload: Partial<MaintenanceIssue>) => {
-    if (!userId) return;
+    if (!userId) return false;
     const { data: newIssue } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
     if (newIssue) {
       const key = `create-${newIssue.id}`;
@@ -308,12 +308,14 @@ export function MaintenanceSection() {
       }, userId);
       setTimeout(() => notifyingRef.current.delete(key), 5000);
     }
+    return Boolean(newIssue);
   };
 
   const handleEdit = async (patch: Partial<MaintenanceIssue>) => {
-    if (!editIssue) return;
+    if (!editIssue) return false;
     const { error } = await updateIssue(editIssue.id, patch);
     if (!error) setEditIssue(null);
+    return !error;
   };
 
   const handleStatusChange = async (issue: MaintenanceIssue, newStatus: IssueStatus, scheduledDate?: string) => {
