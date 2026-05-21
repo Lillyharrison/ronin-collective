@@ -517,9 +517,11 @@ function buildTileDoc(
       const priorityPill = PRIORITY_PILL[issue.priority] ?? PRIORITY_PILL.medium;
       const sw = drawPill(STATUS_LABELS[issue.status] ?? issue.status, titleX, ty + 2, statusPill);
       drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
-      ty += 5;
+      ty += 7;
 
-      if (issue.description) {
+      // Skip the inline description when notes are rendered in their own
+      // full-width block below — otherwise the same text shows twice.
+      if (issue.description && !ctx.includeNotes) {
         doc.setFont(PDF_FONT, "normal");
         doc.setFontSize(descSize);
         doc.setTextColor(95, 95, 95);
