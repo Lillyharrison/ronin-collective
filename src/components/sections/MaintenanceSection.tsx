@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
-  Plus, Search, Filter, SortAsc, Wrench, ChevronDown,
+  Plus, Search, Filter, SortAsc, Wrench, ChevronDown, ChevronUp,
   LayoutGrid, Table2, RefreshCw, MapPin, User, Calendar,
   Flag, Tag, Clock, CheckCircle2, CalendarClock, Download,
 } from "lucide-react";
@@ -227,6 +227,30 @@ export function MaintenanceSection() {
   // Toggle between the active kanban and the resolved-only archive view
   const [showResolved, setShowResolved] = useState(false);
   const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
+
+  // Sortable column headers in the table view
+  type TableSortKey = "title" | "status" | "priority" | "category" | "property" | "assignee" | "date";
+  const [tableSort, setTableSort] = useState<{ key: TableSortKey; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
+  const toggleTableSort = (key: TableSortKey) => {
+    setTableSort(prev => prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" });
+  };
+  const STATUS_ORDER: Record<string, number> = { reported: 0, under_investigation: 1, approved: 2, scheduled: 3, in_progress: 3, resolved: 4 };
+  const sortForTable = (list: MaintenanceIssue[]): MaintenanceIssue[] => {
+    const { key, dir } = tableSort;
+    const mul = dir === "asc" ? 1 : -1;
+    const cmp = (a: MaintenanceIssue, b: MaintenanceIssue): number => {
+      switch (key) {
+        case "title":    return (a.title ?? "").localeCompare(b.title ?? "") * mul;
+        case "status":   return ((STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)) * mul;
+        case "priority": return ((PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)) * mul;
+        case "category": return (a.category ?? "").localeCompare(b.category ?? "") * mul;
+        case "property": return (a.property_name ?? "").localeCompare(b.property_name ?? "") * mul;
+        case "assignee": return (a.assignee_name ?? "").localeCompare(b.assignee_name ?? "") * mul;
+        case "date":     return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * mul;
+      }
+    };
+    return [...list].sort(cmp);
+  };
 
   // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
   const filtered = useCallback(() => {
@@ -962,23 +986,37 @@ export function MaintenanceSection() {
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {[
-                  isL ? "Título" : "Title",
-                  isL ? "Estado" : "Status",
-                  isL ? "Prioridad" : "Priority",
-                  isL ? "Categoría" : "Category",
-                  isL ? "Propiedad" : "Property",
-                  isL ? "Asignado a" : "Assigned",
-                  isL ? "Fecha" : "Date",
-                ].map((h, i) => (
-                  <th key={i} className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    {h}
-                  </th>
-                ))}
+                {([
+                  { key: "title",    label: isL ? "Título" : "Title" },
+                  { key: "status",   label: isL ? "Estado" : "Status" },
+                  { key: "priority", label: isL ? "Prioridad" : "Priority" },
+                  { key: "category", label: isL ? "Categoría" : "Category" },
+                  { key: "property", label: isL ? "Propiedad" : "Property" },
+                  { key: "assignee", label: isL ? "Asignado a" : "Assigned" },
+                  { key: "date",     label: isL ? "Fecha" : "Date" },
+                ] as { key: TableSortKey; label: string }[]).map(h => {
+                  const active = tableSort.key === h.key;
+                  return (
+                    <th
+                      key={h.key}
+                      onClick={() => toggleTableSort(h.key)}
+                      onTouchEnd={(e) => { e.preventDefault(); toggleTableSort(h.key); }}
+                      className={cn(
+                        "px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors",
+                        active ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {h.label}
+                        {active && (tableSort.dir === "asc" ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {viewIssues.map(issue => (
+              {sortForTable(viewIssues).map(issue => (
                 <tr
                   key={issue.id}
                   onClick={() => setDetailIssue(issue)}
