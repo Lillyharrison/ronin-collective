@@ -20,7 +20,6 @@ interface Project {
 }
 
 const COL_W = 46;
-const TOTAL_MONTHS = 24;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_NAMES = [
   "January",
@@ -1182,10 +1181,7 @@ export default function GanttChart() {
                               </>
                             )}
                           </td>
-                          <td
-                            colSpan={TOTAL_MONTHS}
-                            style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}
-                          >
+                          <td colSpan={viewMonths} style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}>
                             <BarCanvas proj={proj} csy={viewFrom[0]} csm={viewFrom[1]} totalMonths={viewMonths} />
                           </td>
                         </tr>
