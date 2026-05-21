@@ -631,18 +631,9 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
           </button>
           {!isShared && (
             <button onClick={async () => {
-              let token = "";
-              try { token = localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { /* ignore */ }
-              if (!token) {
-                token = currentShareToken || DEFAULT_SHARE_TOKEN;
-                try { localStorage.setItem(SHARE_TOKEN_KEY, token); } catch { /* ignore */ }
-              }
-              setCurrentShareToken(token);
+              const token = DEFAULT_SHARE_TOKEN;
               try {
-                const { error } = await supabase.functions.invoke("timeline-share-save", {
-                  body: { token, projects, next_id: nextId, create_if_missing: true },
-                });
-                if (error) throw error;
+                await saveBoardToCloud(projects, nextId);
                 const url = `${window.location.origin}/share/timeline/${token}`;
                 try { await navigator.clipboard.writeText(url); } catch { /* clipboard may be blocked */ }
                 toast.success("Share link copied", { description: url });
