@@ -130,17 +130,19 @@ async function fetchImageAsThumb(url: string): Promise<PreparedImage | null> {
     if (!res.ok) return null;
     const blob = await res.blob();
     const bitmap = await createImageBitmap(blob);
-    const longest = Math.max(bitmap.width, bitmap.height);
-    const scale = longest > THUMB_MAX_PX ? THUMB_MAX_PX / longest : 1;
-    const w = Math.max(1, Math.round(bitmap.width * scale));
-    const h = Math.max(1, Math.round(bitmap.height * scale));
+    // Always produce a SQUARE cover-cropped thumbnail so every photo in the
+    // PDF renders with identical framing regardless of the source aspect.
+    const size = THUMB_MAX_PX;
+    const srcSize = Math.min(bitmap.width, bitmap.height);
+    const sx = (bitmap.width - srcSize) / 2;
+    const sy = (bitmap.height - srcSize) / 2;
     const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.drawImage(bitmap, 0, 0, w, h);
-    return { dataUrl: canvas.toDataURL("image/jpeg", 0.78), width: w, height: h };
+    ctx.drawImage(bitmap, sx, sy, srcSize, srcSize, 0, 0, size, size);
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.82), width: size, height: size };
   } catch {
     return null;
   }
