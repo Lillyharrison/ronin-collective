@@ -300,12 +300,6 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
         const d = data as { projects: Project[]; next_id: number; total_months: number };
         setProjects(Array.isArray(d.projects) ? d.projects : []);
         setNextId(typeof d.next_id === "number" ? d.next_id : 1);
-        if (!isShared) {
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.isArray(d.projects) ? d.projects : [])); } catch { /* ignore */ }
-          try { localStorage.setItem(NEXTID_KEY, String(typeof d.next_id === "number" ? d.next_id : 1)); } catch { /* ignore */ }
-          try { localStorage.setItem(SHARE_TOKEN_KEY, boardToken); } catch { /* ignore */ }
-          setCurrentShareToken(boardToken);
-        }
         remoteLoadedRef.current = true;
         setRemoteStatus("ready");
       } catch {
@@ -314,24 +308,6 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     })();
     return () => { cancelled = true; };
   }, [usesCloudBoard, boardToken, isShared]);
-
-  // Persist locally OR remotely depending on mode
-  useEffect(() => {
-    if (usesCloudBoard) {
-      if (!remoteLoadedRef.current) return;
-      const handle = setTimeout(() => {
-        supabase.functions.invoke("timeline-share-save", {
-          body: { token: boardToken, projects, next_id: nextId, create_if_missing: !isShared },
-        }).catch(() => { /* silent — toast on error would spam during typing */ });
-      }, 600);
-      return () => clearTimeout(handle);
-    }
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore */ }
-  }, [projects, nextId, isShared, usesCloudBoard, boardToken]);
-  useEffect(() => {
-    if (isShared) return;
-    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore */ }
-  }, [nextId, isShared]);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editorLoc, setEditorLoc] = useState("");
