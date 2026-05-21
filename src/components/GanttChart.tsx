@@ -257,8 +257,29 @@ export default function GanttChart() {
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
 
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [nextId, setNextId] = useState(23);
+  const STORAGE_KEY = "ronin-gantt-projects-v1";
+  const NEXTID_KEY = "ronin-gantt-nextid-v1";
+  const [projects, setProjects] = useState<Project[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw) as Project[];
+    } catch {}
+    return INITIAL_PROJECTS;
+  });
+  const [nextId, setNextId] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(NEXTID_KEY);
+      if (raw) return parseInt(raw, 10) || 23;
+    } catch {}
+    return 23;
+  });
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch {}
+  }, [projects]);
+  useEffect(() => {
+    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch {}
+  }, [nextId]);
+
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editorLoc, setEditorLoc] = useState("");
   const [editorProp, setEditorProp] = useState("");
@@ -357,6 +378,25 @@ export default function GanttChart() {
   return (
     <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "#f2f2f2", minHeight: "100vh", color: "#1a1a1a" }}>
 
+      {/* VIEW DATE RANGE — sits in the space above the Property Portfolio header */}
+      <div style={{ background: "#f2f2f2", padding: "8px 24px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#666", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
+        <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
+          style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
+        <span style={{ fontSize: 11, color: "#888" }}>→</span>
+        <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
+          style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
+        {[12, 24, 36].map((m) => (
+          <button key={m} onClick={() => {
+            setViewFrom(fmtYM(CSY, CSM));
+            const d = new Date(CSY, CSM - 1 + (m - 1), 1);
+            setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
+          }} style={{ padding: "4px 10px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#555", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+            {m}m
+          </button>
+        ))}
+      </div>
+
       {/* TOP BAR */}
       <div style={{ background: "#1a1a1a", color: "#f0ece4", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", borderBottom: "1px solid #2a2a2a" }}>
         <div>
@@ -364,23 +404,6 @@ export default function GanttChart() {
           <div style={{ fontSize: 10, color: "#888", marginTop: 2, letterSpacing: ".3px" }}>Click any project name to edit &nbsp;|&nbsp; {todayStr}</div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", border: "1px solid #333", borderRadius: 6, background: "#111" }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
-            <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
-              style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #333", background: "#1a1a1a", color: "#f0ece4", fontSize: 11, fontFamily: "inherit" }} />
-            <span style={{ fontSize: 10, color: "#666" }}>→</span>
-            <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
-              style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #333", background: "#1a1a1a", color: "#f0ece4", fontSize: 11, fontFamily: "inherit" }} />
-            {[12, 24, 36].map((m) => (
-              <button key={m} onClick={() => {
-                setViewFrom(fmtYM(CSY, CSM));
-                const d = new Date(CSY, CSM - 1 + (m - 1), 1);
-                setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
-              }} style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid #333", background: "transparent", color: "#888", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
-                {m}m
-              </button>
-            ))}
-          </div>
           <button onClick={() => addProject()} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #c9a84c", background: "transparent", color: "#c9a84c", cursor: "pointer", fontSize: 11, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit" }}>
             + Add Project
           </button>
@@ -475,7 +498,7 @@ export default function GanttChart() {
         )}
 
         {/* GANTT TABLE */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "clip", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
           <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: 200 }} />
