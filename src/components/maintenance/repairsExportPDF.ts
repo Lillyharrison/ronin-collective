@@ -102,6 +102,7 @@ function ageDays(iso: string): number {
 export interface RepairsExportContext {
   issues: MaintenanceIssue[];          // already filtered + sorted (the list the user sees)
   viewMode: "tile" | "list";           // "tile" = cards w/ photos, "list" = compact table
+  includeNotes?: boolean;              // when true, render notes/description in the PDF
   filters: {
     propertyName?: string | null;
     category?: string | null;
@@ -223,19 +224,46 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
   const startY = drawHeader(doc, ctx, pageWidth, marginL);
 
   const head = [["Title", "Status", "Priority", "Category", "Property", "Location", "Reported", "Assigned", "Age"]];
-  const body = ctx.issues.map((i) => [
-    i.title,
-    STATUS_LABELS[i.status] ?? i.status,
-    PRIORITY_LABELS[i.priority] ?? i.priority,
-    i.category ?? "—",
-    i.property_name ?? "—",
-    i.location_detail ?? "—",
-    format(parseISO(i.created_at), "dd MMM yyyy"),
-    firstName(i.assignee_name),
-    i.status === "resolved" && i.resolved_at
-      ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM")}`
-      : `${ageDays(i.created_at)}d`,
-  ]);
+  // Row builder — when includeNotes is set, follow each issue row with a
+  // full-width sub-row containing the issue's description (if any).
+  type Row = (string | { content: string; colSpan: number; styles: Record<string, unknown> })[];
+  const body: Row[] = [];
+  // Parallel array: for each body row, store the index in ctx.issues it belongs
+  // to (issue row), or -1 for a notes/sub-row. autoTable's didParseCell uses
+  // data.row.index against `body`, so we need this to recover the source issue.
+  const issueIndexByRow: number[] = [];
+  ctx.issues.forEach((i, srcIdx) => {
+    body.push([
+      i.title,
+      STATUS_LABELS[i.status] ?? i.status,
+      PRIORITY_LABELS[i.priority] ?? i.priority,
+      i.category ?? "—",
+      i.property_name ?? "—",
+      i.location_detail ?? "—",
+      format(parseISO(i.created_at), "dd MMM yyyy"),
+      firstName(i.assignee_name),
+      i.status === "resolved" && i.resolved_at
+        ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM")}`
+        : `${ageDays(i.created_at)}d`,
+    ]);
+    issueIndexByRow.push(srcIdx);
+    if (ctx.includeNotes && i.description && i.description.trim()) {
+      body.push([
+        {
+          content: `Notes: ${i.description.trim()}`,
+          colSpan: 9,
+          styles: {
+            fontStyle: "normal",
+            fontSize: 7.5 * scale,
+            textColor: [75, 75, 75],
+            fillColor: [252, 251, 247],
+            cellPadding: { top: 1.5 * scale, bottom: 2.5 * scale, left: 4 * scale, right: 4 * scale },
+          },
+        },
+      ]);
+      issueIndexByRow.push(-1);
+    }
+  });
 
   // 9 cols on landscape A4 (usable 277mm). Tuned so Status/Priority fit one line.
   const colWidths = [60, 28, 22, 28, 32, 36, 26, 24, 21]; // sum = 277
@@ -272,7 +300,9 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
     columnStyles: Object.fromEntries(colWidths.map((w, i) => [i, { cellWidth: w }])),
     didParseCell: (data) => {
       if (data.section !== "body") return;
-      const issue = ctx.issues[data.row.index];
+      const srcIdx = issueIndexByRow[data.row.index];
+      if (srcIdx == null || srcIdx < 0) return; // skip notes sub-rows
+      const issue = ctx.issues[srcIdx];
       if (!issue) return;
 
       // Title bold
@@ -474,6 +504,30 @@ function buildTileDoc(
     });
 
     y += cardH + 2;
+
+    // Extended notes block (full width, beneath the card) when requested.
+    if (ctx.includeNotes && issue.description && issue.description.trim()) {
+      const noteSize = Math.max(7.2, 8.4 * scale);
+      const noteLineH = noteSize * 0.45;
+      const wrapW = usableW - 6;
+      const noteLines = doc.splitTextToSize(`Notes: ${issue.description.trim()}`, wrapW);
+      const blockH = noteLines.length * noteLineH + 4;
+
+      // Page break if the notes block won't fit
+      if (y + blockH > pageHeight - marginB) {
+        doc.addPage();
+        y = drawHeader(doc, ctx, pageWidth, marginL);
+      }
+      doc.setFillColor(252, 251, 247);
+      doc.setDrawColor(225, 223, 217);
+      doc.setLineWidth(0.2);
+      doc.rect(marginL, y, usableW, blockH, "FD");
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(noteSize);
+      doc.setTextColor(75, 75, 75);
+      doc.text(noteLines, marginL + 3, y + noteLineH + 0.5);
+      y += blockH + 2;
+    }
   });
 
   return doc;

@@ -80,6 +80,7 @@ export function MaintenanceSection() {
 
   // filterProp stays client-side (property picker in the UI — no DB round-trip needed)
   const [viewMode,    setViewMode]    = useLocalStorage<ViewMode>("maintenance_view_mode", "board");
+  const [includeNotes, setIncludeNotes] = useLocalStorage<boolean>("maintenance_pdf_include_notes", false);
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
@@ -260,6 +261,7 @@ export function MaintenanceSection() {
       if (sortBy === "newest")   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === "oldest")   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       if (sortBy === "priority") return (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
+      if (sortBy === "status")   return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
       return 0;
     });
     return list;
@@ -761,24 +763,49 @@ export function MaintenanceSection() {
                 <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               </div>
 
-              {/* Download PDF (current filters/view) */}
+              {/* Include notes toggle (affects PDF download) */}
+              <label
+                title={isL ? "Incluir notas en el PDF" : "Include notes in PDF"}
+                className="flex-shrink-0 flex items-center gap-1.5 text-[11px] text-muted-foreground ml-auto cursor-pointer select-none"
+              >
+                <input
+                  type="checkbox"
+                  checked={includeNotes}
+                  onChange={(e) => setIncludeNotes(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-border accent-gold cursor-pointer"
+                />
+                {isL ? "Notas" : "Notes"}
+              </label>
+
+              {/* Download PDF (current filters/view + current sort) */}
               <button
-                onClick={() => exportRepairsPDF({
-                  issues: displayIssues,
-                  // table view → clean spreadsheet PDF; board/list → tile PDF with photos
-                  viewMode: viewMode === "table" ? "list" : "tile",
-                  filters: {
-                    propertyName: filterProp
-                      ? properties.find(p => p.id === filterProp)?.name ?? null
-                      : null,
-                    category: filterCat || null,
-                    priority: filterPri || null,
-                    search: search || null,
-                  },
-                })}
+                onClick={() => {
+                  const sortedForExport =
+                    viewMode === "table"
+                      ? sortForTable(displayIssues)
+                      : viewMode === "board"
+                        ? [...displayIssues].sort(
+                            (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9),
+                          )
+                        : displayIssues;
+                  exportRepairsPDF({
+                    issues: sortedForExport,
+                    // table view → clean spreadsheet PDF; board/list → tile PDF with photos
+                    viewMode: viewMode === "table" ? "list" : "tile",
+                    includeNotes,
+                    filters: {
+                      propertyName: filterProp
+                        ? properties.find(p => p.id === filterProp)?.name ?? null
+                        : null,
+                      category: filterCat || null,
+                      priority: filterPri || null,
+                      search: search || null,
+                    },
+                  });
+                }}
                 disabled={displayIssues.length === 0}
                 title="Download current view as PDF"
-                className="flex-shrink-0 p-1.5 rounded-full border border-border hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed ml-auto">
+                className="flex-shrink-0 p-1.5 rounded-full border border-border hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                 <Download size={13} />
               </button>
 
