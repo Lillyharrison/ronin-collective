@@ -528,8 +528,8 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         )}
 
         {/* GANTT TABLE */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
-          <table style={{ borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", width: 200 + 96 + 108 + TOTAL_MONTHS * COL_W }}>
+        <div ref={tableWrapRef} onScroll={(e) => setStickyHead((s) => ({ ...s, scrollLeft: e.currentTarget.scrollLeft }))} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+          <table style={{ borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", width: TABLE_W }}>
             <colgroup>
               <col style={{ width: 200 }} />
               <col style={{ width: 96 }} />
