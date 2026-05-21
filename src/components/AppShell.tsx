@@ -77,6 +77,7 @@ const sectionTitles: Record<string, string> = {
   rules:           "Property Rules",
   "car-wash":      "Car Wash",
   "staff-schedule":"Staff Schedule",
+  timeline:        "Property Timeline",
 };
 
 function ActiveSection() {
