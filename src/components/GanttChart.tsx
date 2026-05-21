@@ -257,8 +257,29 @@ export default function GanttChart() {
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
 
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [nextId, setNextId] = useState(23);
+  const STORAGE_KEY = "ronin-gantt-projects-v1";
+  const NEXTID_KEY = "ronin-gantt-nextid-v1";
+  const [projects, setProjects] = useState<Project[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw) as Project[];
+    } catch {}
+    return INITIAL_PROJECTS;
+  });
+  const [nextId, setNextId] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(NEXTID_KEY);
+      if (raw) return parseInt(raw, 10) || 23;
+    } catch {}
+    return 23;
+  });
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch {}
+  }, [projects]);
+  useEffect(() => {
+    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch {}
+  }, [nextId]);
+
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editorLoc, setEditorLoc] = useState("");
   const [editorProp, setEditorProp] = useState("");
