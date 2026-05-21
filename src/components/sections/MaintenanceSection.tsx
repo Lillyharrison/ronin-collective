@@ -228,6 +228,30 @@ export function MaintenanceSection() {
   const [showResolved, setShowResolved] = useState(false);
   const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
 
+  // Sortable column headers in the table view
+  type TableSortKey = "title" | "status" | "priority" | "category" | "property" | "assignee" | "date";
+  const [tableSort, setTableSort] = useState<{ key: TableSortKey; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
+  const toggleTableSort = (key: TableSortKey) => {
+    setTableSort(prev => prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" });
+  };
+  const STATUS_ORDER: Record<string, number> = { reported: 0, under_investigation: 1, approved: 2, scheduled: 3, in_progress: 3, resolved: 4 };
+  const sortForTable = (list: MaintenanceIssue[]): MaintenanceIssue[] => {
+    const { key, dir } = tableSort;
+    const mul = dir === "asc" ? 1 : -1;
+    const cmp = (a: MaintenanceIssue, b: MaintenanceIssue): number => {
+      switch (key) {
+        case "title":    return (a.title ?? "").localeCompare(b.title ?? "") * mul;
+        case "status":   return ((STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)) * mul;
+        case "priority": return ((PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)) * mul;
+        case "category": return (a.category ?? "").localeCompare(b.category ?? "") * mul;
+        case "property": return (a.property_name ?? "").localeCompare(b.property_name ?? "") * mul;
+        case "assignee": return (a.assignee_name ?? "").localeCompare(b.assignee_name ?? "") * mul;
+        case "date":     return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * mul;
+      }
+    };
+    return [...list].sort(cmp);
+  };
+
   // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
   const filtered = useCallback(() => {
     let list = [...issues];
