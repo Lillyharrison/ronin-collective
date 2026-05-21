@@ -9,6 +9,7 @@ import { OfflineSyncProvider } from "@/hooks/useOfflineSync";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
+import SharedTimeline from "./pages/SharedTimeline";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/share/timeline/:token" element={<SharedTimeline />} />
               {/* All app sections share a single AppShell; the active section is
                   derived from the URL path inside NavigationContext. */}
               {SECTION_PATHS.map(path => (

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
 interface Phase {
@@ -249,14 +250,18 @@ function PhaseRow({
 }
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────
-export default function GanttChart({ onBack }: { onBack?: () => void }) {
+export default function GanttChart({ onBack, shareToken }: { onBack?: () => void; shareToken?: string }) {
   const now = new Date();
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
 
   const STORAGE_KEY = "ronin-gantt-projects-v1";
   const NEXTID_KEY = "ronin-gantt-nextid-v1";
+  const SHARE_TOKEN_KEY = "ronin-gantt-share-token-v1";
+  const isShared = !!shareToken;
+
   const [projects, setProjects] = useState<Project[]>(() => {
+    if (isShared) return [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw) as Project[];
@@ -264,18 +269,63 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
     return INITIAL_PROJECTS;
   });
   const [nextId, setNextId] = useState<number>(() => {
+    if (isShared) return 1;
     try {
       const raw = localStorage.getItem(NEXTID_KEY);
       if (raw) return parseInt(raw, 10) || 23;
     } catch { /* ignore invalid saved timeline id */ }
     return 23;
   });
+
+  // Track remote-load state so we don't echo the initial empty state back to the server
+  const remoteLoadedRef = useRef<boolean>(!isShared);
+  const [remoteStatus, setRemoteStatus] = useState<"loading" | "ready" | "missing" | "error">(
+    isShared ? "loading" : "ready"
+  );
+
+  // Initial load from remote when in shared mode
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore storage write failures */ }
-  }, [projects]);
+    if (!isShared) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("timeline-share-get", {
+          body: { token: shareToken },
+        });
+        if (cancelled) return;
+        if (error || !data || (data as any).error) {
+          setRemoteStatus((data as any)?.error === "Not found" ? "missing" : "error");
+          return;
+        }
+        const d = data as { projects: Project[]; next_id: number; total_months: number };
+        setProjects(Array.isArray(d.projects) ? d.projects : []);
+        setNextId(typeof d.next_id === "number" ? d.next_id : 1);
+        remoteLoadedRef.current = true;
+        setRemoteStatus("ready");
+      } catch {
+        if (!cancelled) setRemoteStatus("error");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isShared, shareToken]);
+
+  // Persist locally OR remotely depending on mode
   useEffect(() => {
-    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore storage write failures */ }
-  }, [nextId]);
+    if (isShared) {
+      if (!remoteLoadedRef.current) return;
+      const handle = setTimeout(() => {
+        supabase.functions.invoke("timeline-share-save", {
+          body: { token: shareToken, projects, next_id: nextId },
+        }).catch(() => { /* silent — toast on error would spam during typing */ });
+      }, 600);
+      return () => clearTimeout(handle);
+    }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore */ }
+  }, [projects, nextId, isShared, shareToken]);
+  useEffect(() => {
+    if (isShared) return;
+    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore */ }
+  }, [nextId, isShared]);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editorLoc, setEditorLoc] = useState("");
@@ -596,6 +646,34 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           <button onClick={() => addProject()} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #c9a84c", background: "transparent", color: "#c9a84c", cursor: "pointer", fontSize: 11, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit" }}>
             + Add Project
           </button>
+          {!isShared && (
+            <button onClick={async () => {
+              let token = "";
+              try { token = localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { /* ignore */ }
+              if (!token) {
+                token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 40);
+                try { localStorage.setItem(SHARE_TOKEN_KEY, token); } catch { /* ignore */ }
+              }
+              try {
+                const { error } = await supabase.functions.invoke("timeline-share-save", {
+                  body: { token, projects, next_id: nextId, create_if_missing: true },
+                });
+                if (error) throw error;
+                const url = `${window.location.origin}/share/timeline/${token}`;
+                try { await navigator.clipboard.writeText(url); } catch { /* clipboard may be blocked */ }
+                toast.success("Share link copied", { description: url });
+              } catch (e: any) {
+                toast.error("Could not create share link", { description: e?.message ?? "Try again." });
+              }
+            }} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #c9a84c", background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, letterSpacing: ".3px", fontFamily: "inherit" }}>
+              🔗 Share Link
+            </button>
+          )}
+          {isShared && (
+            <span style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #c9a84c", color: "#c9a84c", fontSize: 10, fontWeight: 700, letterSpacing: ".5px", textTransform: "uppercase" }}>
+              ● Live Shared
+            </span>
+          )}
           <button onClick={() => setShowPrintModal(true)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #444", background: "transparent", color: "#f0ece4", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
             Print / Export PDF
           </button>
