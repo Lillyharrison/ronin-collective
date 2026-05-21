@@ -266,21 +266,21 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw) as Project[];
-    } catch {}
+    } catch { /* ignore invalid saved timeline data */ }
     return INITIAL_PROJECTS;
   });
   const [nextId, setNextId] = useState<number>(() => {
     try {
       const raw = localStorage.getItem(NEXTID_KEY);
       if (raw) return parseInt(raw, 10) || 23;
-    } catch {}
+    } catch { /* ignore invalid saved timeline id */ }
     return 23;
   });
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore storage write failures */ }
   }, [projects]);
   useEffect(() => {
-    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch {}
+    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore storage write failures */ }
   }, [nextId]);
 
   const [editingId, setEditingId] = useState<number | null>(null);
