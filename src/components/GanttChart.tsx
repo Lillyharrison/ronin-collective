@@ -314,12 +314,13 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       window.removeEventListener("scroll", updateStickyHead);
       window.removeEventListener("resize", updateStickyHead);
     };
-  }, [TOTAL_MONTHS]);
+  }, [viewFrom, viewTo]);
 
   // Derive visible grid origin & length from viewFrom/viewTo
   const [vsy, vsm] = parseYM(viewFrom);
   const [vey, vem] = parseYM(viewTo);
   const TOTAL_MONTHS = Math.max(1, (vey - vsy) * 12 + (vem - vsm) + 1);
+  const TABLE_W = 200 + 96 + 108 + TOTAL_MONTHS * COL_W;
 
   const todayStr = `${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
   const locations = [...new Set(projects.map((p) => p.location))];
