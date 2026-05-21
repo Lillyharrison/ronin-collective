@@ -268,6 +268,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
   const [printFrom, setPrintFrom] = useState(fmtYM(CSY, CSM));
   const [printTo, setPrintTo] = useState(fmtYM(CSY + 1, CSM));
   const editorRef = useRef<HTMLDivElement>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [viewFrom, setViewFrom] = useState<[number,number]>([CSY, CSM]);
   const [viewTo, setViewTo] = useState<[number,number]>([CSY+2, CSM]);
