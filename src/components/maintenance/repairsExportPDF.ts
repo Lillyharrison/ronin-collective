@@ -257,7 +257,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
   const marginR = 10;
   const startY = drawHeader(doc, ctx, pageWidth, marginL);
 
-  const head = [["Title", "Status", "Priority", "Category", "Property", "Location", "Reported", "Assigned", "Age"]];
+  const head = [["Title", "Status", "Priority", "Category", "Property", "Location", "Reported", "Scheduled", "Assigned"]];
   // Row builder — when includeNotes is set, follow each issue row with a
   // full-width sub-row containing the issue's description (if any).
   type Row = (string | { content: string; colSpan: number; styles: Record<string, unknown> })[];
@@ -275,10 +275,12 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
       i.property_name ?? "—",
       i.location_detail ?? "—",
       format(parseISO(i.created_at), "dd MMM yyyy"),
-      firstName(i.assignee_name),
       i.status === "resolved" && i.resolved_at
-        ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM")}`
-        : `${ageDays(i.created_at)}d`,
+        ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM yyyy")}`
+        : i.scheduled_date
+          ? format(parseISO(i.scheduled_date), "dd MMM yyyy")
+          : "—",
+      firstName(i.assignee_name),
     ]);
     issueIndexByRow.push(srcIdx);
     if (ctx.includeNotes && i.description && i.description.trim()) {
@@ -299,8 +301,8 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
     }
   });
 
-  // 9 cols on landscape A4 (usable 277mm). Tuned so Status/Priority fit one line.
-  const colWidths = [60, 28, 22, 28, 32, 36, 26, 24, 21]; // sum = 277
+  // 9 cols on landscape A4 (usable 277mm).
+  const colWidths = [58, 28, 22, 28, 32, 33, 26, 26, 24]; // sum = 277
 
   const baseFont = 8;
   const baseHeadFont = 8;
@@ -362,16 +364,10 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
         data.cell.styles.halign = "center";
       }
 
-      // Age column urgency for unresolved
-      if (data.column.index === 8 && issue.status !== "resolved") {
-        const days = ageDays(issue.created_at);
-        if (days >= 30) {
-          data.cell.styles.textColor = [185, 28, 28];
-          data.cell.styles.fontStyle = "bold";
-        } else if (days >= 14) {
-          data.cell.styles.textColor = [194, 65, 12];
-          data.cell.styles.fontStyle = "bold";
-        }
+      // Scheduled column — highlight when set (column 7)
+      if (data.column.index === 7 && issue.scheduled_date && issue.status !== "resolved") {
+        data.cell.styles.textColor = [30, 64, 175];
+        data.cell.styles.fontStyle = "bold";
       }
 
       // Property cell — colour-code by property to match on-screen / schedule
@@ -601,8 +597,8 @@ function buildTileDoc(
       if (issue.assignee_name) metaPairs.push(["Assigned", firstName(issue.assignee_name)]);
       if (issue.status === "resolved" && issue.resolved_at) {
         metaPairs.push(["Resolved", format(parseISO(issue.resolved_at), "dd MMM yyyy")]);
-      } else {
-        metaPairs.push(["Age", `${ageDays(issue.created_at)}d`]);
+      } else if (issue.scheduled_date) {
+        metaPairs.push(["Scheduled", format(parseISO(issue.scheduled_date), "dd MMM yyyy")]);
       }
 
       const metaLineH = metaSize * 0.45;
