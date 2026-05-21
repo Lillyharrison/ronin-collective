@@ -181,9 +181,9 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
               borderRadius: 3, cursor: "default", zIndex: 2,
               background: bc.bar,
               left: cs * COL_W + 2, width: barW,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "0 6px", boxSizing: "border-box", overflow: "hidden",
-              color: "#1a1a1a", whiteSpace: "nowrap", textOverflow: "ellipsis",
+              display: "flex", alignItems: "center", justifyContent: "flex-start",
+              padding: "0 6px", boxSizing: "border-box", overflow: "visible",
+              color: "#1a1a1a", whiteSpace: "nowrap",
               fontSize: 9, fontWeight: 700, lineHeight: "14px",
             }}
           >
