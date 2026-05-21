@@ -182,6 +182,14 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       if (allowedPatch[key as keyof PlannedMaintenanceEntry] === undefined) delete allowedPatch[key as keyof PlannedMaintenanceEntry];
     });
 
+    if (!navigator.onLine) {
+      setEntries(prev => prev.map(entry => entry.id === id ? { ...entry, ...allowedPatch, updated_at: new Date().toISOString() } : entry));
+      await enqueue("planned_maintenance", "update", allowedPatch as unknown as Record<string, unknown>, { id });
+      syncCtx.notifyQueued();
+      toast.success("Entry changes queued to sync");
+      return true;
+    }
+
     const { error } = await supabase.from("planned_maintenance").update(allowedPatch).eq("id", id);
     if (error) { toast.error("Failed to update entry"); return false; }
     toast.success("Entry updated");
