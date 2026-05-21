@@ -398,7 +398,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       const [esy, esm] = parseYM(printFrom);
       const [eey, eem] = parseYM(printTo);
       const exportMonths = Math.max(1, (eey - esy) * 12 + (eem - esm) + 1);
-      const fixedW = 420;
+      const fixedW = 404;
       const targetW = 1620;
       const monthW = Math.max(32, Math.floor((targetW - fixedW) / exportMonths));
       const exportW = fixedW + exportMonths * monthW;
@@ -415,14 +415,6 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         col += span;
       }
 
-      const exportColors: Record<Phase["type"], { bar: string; pill: string; pillText: string }> = {
-        construction: { bar: "#1f78b4", pill: "#d8ecfa", pillText: "#0f5686" },
-        install: { bar: "#159260", pill: "#d8f3e7", pillText: "#0d6841" },
-        maintenance: { bar: "#d78313", pill: "#fae6c4", pillText: "#8a5207" },
-        design: { bar: "#6b4fbd", pill: "#e7defa", pillText: "#5135a1" },
-        complete: { bar: "#8a8a8a", pill: "#e8e8e8", pillText: "#555555" },
-      };
-
       const monthHeaders = Array.from({ length: exportMonths }, (_, i) => {
         const absM = esm - 1 + i;
         return `<th>${MONTHS[((absM % 12) + 12) % 12]}</th>`;
@@ -431,17 +423,17 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       const bodyRows = locations.map((loc) => {
         const rows = projects.filter((p) => p.location === loc).map((proj) => {
           const due = getDue(proj, CSY, CSM);
-          const color = exportColors[proj.status] || exportColors.complete;
+          const color = COLORS[proj.status] || COLORS.complete;
           const bars = proj.phases.map((ph, idx) => {
             const cs = Math.max(0, mo(ph.start[0], ph.start[1], esy, esm));
             const ce = Math.min(exportMonths, mo(ph.end[0], ph.end[1], esy, esm));
             if (ce <= cs) return "";
             const multi = proj.phases.length > 1;
-            const top = multi ? (idx % 2 === 0 ? 3 : 15) : 5;
-            const height = multi ? 10 : 18;
-            const left = cs * monthW + 3;
-            const width = Math.max(10, (ce - cs) * monthW - 6);
-            const barColor = exportColors[ph.type]?.bar ?? exportColors.complete.bar;
+            const top = multi ? (idx % 2 === 0 ? 3 : 22) : 3;
+            const height = multi ? 17 : 36;
+            const left = cs * monthW + 2;
+            const width = Math.max(12, (ce - cs) * monthW - 4);
+            const barColor = COLORS[ph.type]?.bar ?? COLORS.complete.bar;
             return `<div class="bar" style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;line-height:${height}px;background:${barColor};">${escapeHtml(ph.label)}</div>`;
           }).join("");
           return `<tr class="project-row">
