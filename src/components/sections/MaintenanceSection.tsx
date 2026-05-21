@@ -802,7 +802,7 @@ export function MaintenanceSection() {
                           )
                         : displayIssues;
 
-                  // The list query strips `description` for perf — fetch it on demand when notes are requested.
+                  // Ensure the export uses the latest notes from the database.
                   let issuesForExport = sortedForExport;
                   if (includeNotes && sortedForExport.length > 0) {
                     const ids = sortedForExport.map(i => i.id);
