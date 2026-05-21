@@ -37,6 +37,7 @@ const COLORS = {
   design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
   complete:     { bar: "#cccccc", pill: "#e8e8e8", pillText: "#444444" },
 };
+const DEFAULT_SHARE_TOKEN = "f21d3c13020d4cdc9b19868ae765ab578d3e3089";
 const TYPE_LABEL = {
   construction: "Construction", install: "Install", maintenance: "Maintenance",
   design: "Design", complete: "Complete",
@@ -263,14 +264,20 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     if (isShared) return "";
     try { return localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { return ""; }
   });
+  const boardToken = shareToken || DEFAULT_SHARE_TOKEN;
+  const usesCloudBoard = !!boardToken;
+  const hasLocalTimelineRef = useRef(false);
 
   const [projects, setProjects] = useState<Project[]>(() => {
     if (isShared) return [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) as Project[];
+      if (raw) {
+        hasLocalTimelineRef.current = true;
+        return JSON.parse(raw) as Project[];
+      }
     } catch { /* ignore invalid saved timeline data */ }
-    return INITIAL_PROJECTS;
+    return usesCloudBoard ? [] : INITIAL_PROJECTS;
   });
   const [nextId, setNextId] = useState<number>(() => {
     if (isShared) return 1;
@@ -282,28 +289,41 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
   });
 
   // Track remote-load state so we don't echo the initial empty state back to the server
-  const remoteLoadedRef = useRef<boolean>(!isShared);
+  const remoteLoadedRef = useRef<boolean>(!usesCloudBoard || (!isShared && hasLocalTimelineRef.current));
   const [remoteStatus, setRemoteStatus] = useState<"loading" | "ready" | "missing" | "error">(
-    isShared ? "loading" : "ready"
+    usesCloudBoard && !remoteLoadedRef.current ? "loading" : "ready"
   );
 
-  // Initial load from remote when in shared mode
+  // Initial load from cloud board so preview and real URLs share one source of truth
   useEffect(() => {
-    if (!isShared) return;
+    if (!usesCloudBoard || remoteLoadedRef.current) return;
     let cancelled = false;
     (async () => {
       try {
         const { data, error } = await supabase.functions.invoke("timeline-share-get", {
-          body: { token: shareToken },
+          body: { token: boardToken },
         });
         if (cancelled) return;
         if (error || !data || (data as any).error) {
-          setRemoteStatus((data as any)?.error === "Not found" ? "missing" : "error");
+          if (!isShared && (data as any)?.error === "Not found") {
+            setProjects(INITIAL_PROJECTS);
+            setNextId(23);
+            remoteLoadedRef.current = true;
+            setRemoteStatus("ready");
+          } else {
+            setRemoteStatus((data as any)?.error === "Not found" ? "missing" : "error");
+          }
           return;
         }
         const d = data as { projects: Project[]; next_id: number; total_months: number };
         setProjects(Array.isArray(d.projects) ? d.projects : []);
         setNextId(typeof d.next_id === "number" ? d.next_id : 1);
+        if (!isShared) {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.isArray(d.projects) ? d.projects : [])); } catch { /* ignore */ }
+          try { localStorage.setItem(NEXTID_KEY, String(typeof d.next_id === "number" ? d.next_id : 1)); } catch { /* ignore */ }
+          try { localStorage.setItem(SHARE_TOKEN_KEY, boardToken); } catch { /* ignore */ }
+          setCurrentShareToken(boardToken);
+        }
         remoteLoadedRef.current = true;
         setRemoteStatus("ready");
       } catch {
@@ -311,29 +331,21 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
       }
     })();
     return () => { cancelled = true; };
-  }, [isShared, shareToken]);
+  }, [usesCloudBoard, boardToken, isShared]);
 
   // Persist locally OR remotely depending on mode
   useEffect(() => {
-    if (isShared) {
+    if (usesCloudBoard) {
       if (!remoteLoadedRef.current) return;
       const handle = setTimeout(() => {
         supabase.functions.invoke("timeline-share-save", {
-          body: { token: shareToken, projects, next_id: nextId },
+          body: { token: boardToken, projects, next_id: nextId, create_if_missing: !isShared },
         }).catch(() => { /* silent — toast on error would spam during typing */ });
       }, 600);
       return () => clearTimeout(handle);
     }
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore */ }
-    if (currentShareToken) {
-      const handle = setTimeout(() => {
-        supabase.functions.invoke("timeline-share-save", {
-          body: { token: currentShareToken, projects, next_id: nextId, create_if_missing: true },
-        }).catch(() => { /* keep local edits even if remote sync is temporarily unavailable */ });
-      }, 600);
-      return () => clearTimeout(handle);
-    }
-  }, [projects, nextId, isShared, shareToken, currentShareToken]);
+  }, [projects, nextId, isShared, usesCloudBoard, boardToken]);
   useEffect(() => {
     if (isShared) return;
     try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore */ }
@@ -664,7 +676,7 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
               let token = "";
               try { token = localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { /* ignore */ }
               if (!token) {
-                token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 40);
+                token = currentShareToken || DEFAULT_SHARE_TOKEN;
                 try { localStorage.setItem(SHARE_TOKEN_KEY, token); } catch { /* ignore */ }
               }
               setCurrentShareToken(token);
