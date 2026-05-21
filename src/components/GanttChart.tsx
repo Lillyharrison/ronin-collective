@@ -456,24 +456,24 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           .pdf-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
           .pdf-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;}
           .pdf-table{border-collapse:collapse;table-layout:fixed;width:${exportW}px;font-size:10px;}
-          .pdf-table col.property-col{width:210px}.pdf-table col.status-col{width:100px}.pdf-table col.due-col{width:110px}.pdf-table col.month-col{width:${monthW}px}
+          .pdf-table col.property-col{width:200px}.pdf-table col.status-col{width:96px}.pdf-table col.due-col{width:108px}.pdf-table col.month-col{width:${monthW}px}
           .pdf-table th{background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;padding:0 10px;height:28px;text-align:left;vertical-align:middle;}
           .pdf-table th.year{text-align:center;height:28px;border-left:2px solid #333;}
           .pdf-table thead tr.months th{height:18px;color:#777;font-size:8px;font-weight:400;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
           .section-row td{height:24px;background:#202020;color:#c9a84c;font-size:9px;font-weight:800;letter-spacing:4px;text-transform:uppercase;padding:0 12px;border-bottom:1px solid #222;}
-          .project-row td{height:36px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
-          .project-row .property{padding:0 12px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+          .project-row td{height:42px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
+          .project-row .property{padding:0 14px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fbfbfb;}
           .project-row .status{text-align:center;padding:0 6px;}
-          .project-row .status span{display:inline-block;border-radius:8px;padding:3px 9px;font-size:7px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;white-space:nowrap;}
-          .project-row .due{padding:4px 10px;overflow:visible;}
-          .due-date{font-size:9px;line-height:12px;font-weight:800;color:#15304a;white-space:nowrap;}
-          .due-desc{font-size:7.5px;line-height:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+          .project-row .status span{display:inline-block;border-radius:4px;padding:3px 8px;font-size:7px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
+          .project-row .due{padding:4px 12px;overflow:visible;}
+          .due-date{font-size:10px;line-height:14px;font-weight:800;color:#1a2e44;white-space:nowrap;}
+          .due-desc{font-size:8px;line-height:12px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
           .chart{position:relative;padding:0;background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:${monthW}px 100%;overflow:hidden;}
-          .bar{position:absolute;border-radius:3px;color:#fff;font-size:7px;font-weight:800;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:7px;font-weight:800;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
         </style>
         <div class="pdf-root">
           <div class="pdf-legend"><div class="items">
-            <span><i style="background:#1f78b4"></i>Construction</span><span><i style="background:#159260"></i>Install / Fit-out</span><span><i style="background:#d78313"></i>Maintenance</span><span><i style="background:#6b4fbd"></i>Design / Planning</span><span><i style="background:#8a8a8a"></i>Complete</span>
+            <span><i style="background:${COLORS.construction.bar}"></i>Construction</span><span><i style="background:${COLORS.install.bar}"></i>Install / Fit-out</span><span><i style="background:${COLORS.maintenance.bar}"></i>Maintenance</span><span><i style="background:${COLORS.design.bar}"></i>Design / Planning</span><span><i style="background:${COLORS.complete.bar}"></i>Complete</span>
           </div><div>As of ${escapeHtml(todayStr)}</div></div>
           <table class="pdf-table">
             <colgroup><col class="property-col"/><col class="status-col"/><col class="due-col"/>${Array.from({ length: exportMonths }, () => `<col class="month-col"/>`).join("")}</colgroup>
