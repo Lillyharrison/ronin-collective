@@ -581,7 +581,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
             {label}
           </span>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#aaa", letterSpacing: ".3px" }}>Click any project name to edit</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#aaa", letterSpacing: ".3px" }}>{isLoadingBoard ? "Loading timeline..." : "Click any project name to edit"}</span>
       </div>
 
       {/* DATE RANGE CONTROLS */}
@@ -679,8 +679,8 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
               </button>
 
               <div style={{ display: "flex", gap: 10, paddingTop: 16, borderTop: "1px solid #eee", flexWrap: "wrap" }}>
-                <button onClick={saveProject} style={{ padding: "7px 20px", borderRadius: 6, border: "none", background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>✓ Save Changes</button>
-                <button onClick={deleteProject} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #3a2a2a", background: "transparent", color: "#e05555", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Delete</button>
+                <button onClick={saveProject} disabled={isSavingBoard} style={{ padding: "7px 20px", borderRadius: 6, border: "none", background: "#c9a84c", color: "#111", cursor: isSavingBoard ? "default" : "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px", opacity: isSavingBoard ? 0.7 : 1 }}>{isSavingBoard ? "Saving..." : "✓ Save Changes"}</button>
+                <button onClick={deleteProject} disabled={isSavingBoard} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #3a2a2a", background: "transparent", color: "#e05555", cursor: isSavingBoard ? "default" : "pointer", fontSize: 11, fontFamily: "inherit", opacity: isSavingBoard ? 0.7 : 1 }}>Delete</button>
                 <button onClick={() => setEditingId(null)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #ccc", background: "transparent", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
               </div>
             </div>
@@ -758,8 +758,8 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                       </tr>
                     );
                   })}
-                  <tr onClick={() => addProject(loc)}
-                    style={{ cursor: "pointer", background: "#fafaf8" }}
+                  <tr onClick={() => { if (!isSavingBoard) addProject(loc); }}
+                    style={{ cursor: isSavingBoard ? "default" : "pointer", background: "#fafaf8" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f0f7ff"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#fafaf8"; }}>
                     <td colSpan={3 + viewMonths} style={{ padding: "6px 14px", color: "#aaa", fontSize: 10, fontWeight: 500, letterSpacing: ".3px", borderBottom: "1px solid #ede8e0" }}>
