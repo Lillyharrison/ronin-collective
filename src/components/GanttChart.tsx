@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
@@ -256,43 +256,25 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
 
-  const STORAGE_KEY = "ronin-gantt-projects-v1";
-  const NEXTID_KEY = "ronin-gantt-nextid-v1";
-  const SHARE_TOKEN_KEY = "ronin-gantt-share-token-v1";
   const isShared = !!shareToken;
-  const [currentShareToken, setCurrentShareToken] = useState<string>(() => {
-    if (isShared) return "";
-    try { return localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { return ""; }
-  });
   const boardToken = shareToken || DEFAULT_SHARE_TOKEN;
   const usesCloudBoard = !!boardToken;
-  const hasLocalTimelineRef = useRef(false);
 
-  const [projects, setProjects] = useState<Project[]>(() => {
-    if (isShared) return [];
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        hasLocalTimelineRef.current = true;
-        return JSON.parse(raw) as Project[];
-      }
-    } catch { /* ignore invalid saved timeline data */ }
-    return usesCloudBoard ? [] : INITIAL_PROJECTS;
-  });
-  const [nextId, setNextId] = useState<number>(() => {
-    if (isShared) return 1;
-    try {
-      const raw = localStorage.getItem(NEXTID_KEY);
-      if (raw) return parseInt(raw, 10) || 23;
-    } catch { /* ignore invalid saved timeline id */ }
-    return 23;
-  });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [nextId, setNextId] = useState<number>(1);
 
   // Track remote-load state so we don't echo the initial empty state back to the server
-  const remoteLoadedRef = useRef<boolean>(!usesCloudBoard || (!isShared && hasLocalTimelineRef.current));
+  const remoteLoadedRef = useRef<boolean>(!usesCloudBoard);
   const [remoteStatus, setRemoteStatus] = useState<"loading" | "ready" | "missing" | "error">(
     usesCloudBoard && !remoteLoadedRef.current ? "loading" : "ready"
   );
+
+  const saveBoardToCloud = useCallback(async (nextProjects: Project[], nextNextId: number) => {
+    const { data, error } = await supabase.functions.invoke("timeline-share-save", {
+      body: { token: boardToken, projects: nextProjects, next_id: nextNextId, create_if_missing: !isShared },
+    });
+    if (error || (data as any)?.error) throw new Error(error?.message ?? (data as any)?.error ?? "Save failed");
+  }, [boardToken, isShared]);
 
   // Initial load from cloud board so preview and real URLs share one source of truth
   useEffect(() => {
@@ -318,12 +300,6 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
         const d = data as { projects: Project[]; next_id: number; total_months: number };
         setProjects(Array.isArray(d.projects) ? d.projects : []);
         setNextId(typeof d.next_id === "number" ? d.next_id : 1);
-        if (!isShared) {
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.isArray(d.projects) ? d.projects : [])); } catch { /* ignore */ }
-          try { localStorage.setItem(NEXTID_KEY, String(typeof d.next_id === "number" ? d.next_id : 1)); } catch { /* ignore */ }
-          try { localStorage.setItem(SHARE_TOKEN_KEY, boardToken); } catch { /* ignore */ }
-          setCurrentShareToken(boardToken);
-        }
         remoteLoadedRef.current = true;
         setRemoteStatus("ready");
       } catch {
@@ -332,24 +308,6 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     })();
     return () => { cancelled = true; };
   }, [usesCloudBoard, boardToken, isShared]);
-
-  // Persist locally OR remotely depending on mode
-  useEffect(() => {
-    if (usesCloudBoard) {
-      if (!remoteLoadedRef.current) return;
-      const handle = setTimeout(() => {
-        supabase.functions.invoke("timeline-share-save", {
-          body: { token: boardToken, projects, next_id: nextId, create_if_missing: !isShared },
-        }).catch(() => { /* silent — toast on error would spam during typing */ });
-      }, 600);
-      return () => clearTimeout(handle);
-    }
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore */ }
-  }, [projects, nextId, isShared, usesCloudBoard, boardToken]);
-  useEffect(() => {
-    if (isShared) return;
-    try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore */ }
-  }, [nextId, isShared]);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editorLoc, setEditorLoc] = useState("");
@@ -408,34 +366,62 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
 
-  function saveProject() {
-    setProjects((prev) => prev.map((p) => p.id === editingId
+  async function saveProject() {
+    const nextProjects = projects.map((p) => p.id === editingId
       ? { ...p, location: editorLoc, property: editorProp, status: editorStatus, phases: editorPhases, milestones: editorMs }
       : p
-    ));
-    setEditingId(null);
+    );
+    try {
+      await saveBoardToCloud(nextProjects, nextId);
+      setProjects(nextProjects);
+      setEditingId(null);
+      toast.success("Changes saved");
+    } catch (e: any) {
+      toast.error("Could not save changes", { description: e?.message ?? "Please try again." });
+    }
   }
 
-  function deleteProject() {
+  async function deleteProject() {
     if (!confirm("Delete this project?")) return;
-    setProjects((prev) => prev.filter((p) => p.id !== editingId));
-    setEditingId(null);
+    const nextProjects = projects.filter((p) => p.id !== editingId);
+    try {
+      await saveBoardToCloud(nextProjects, nextId);
+      setProjects(nextProjects);
+      setEditingId(null);
+      toast.success("Project deleted");
+    } catch (e: any) {
+      toast.error("Could not delete project", { description: e?.message ?? "Please try again." });
+    }
   }
 
-  function addProject(loc?: string) {
+  async function addProject(loc?: string) {
     const location = loc ?? prompt("City / location?") ?? "";
     if (!location) return;
     const property = prompt(`Property name in ${location}?`) ?? "";
     if (!property) return;
     const id = nextId;
-    setNextId((n) => n + 1);
     const newProj: Project = {
       id, location, property, status: "construction",
       phases: [{ type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "Works" }],
       milestones: [],
     };
-    setProjects((prev) => [...prev, newProj]);
-    openEditor(id);
+    const nextProjects = [...projects, newProj];
+    const nextNextId = nextId + 1;
+    try {
+      await saveBoardToCloud(nextProjects, nextNextId);
+      setNextId(nextNextId);
+      setProjects(nextProjects);
+      setEditingId(id);
+      setEditorLoc(newProj.location);
+      setEditorProp(newProj.property);
+      setEditorStatus(newProj.status);
+      setEditorPhases([...newProj.phases]);
+      setEditorMs([...newProj.milestones]);
+      setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+      toast.success("Project added");
+    } catch (e: any) {
+      toast.error("Could not add project", { description: e?.message ?? "Please try again." });
+    }
   }
 
   function setRange(months: number) {
@@ -673,18 +659,9 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
           </button>
           {!isShared && (
             <button onClick={async () => {
-              let token = "";
-              try { token = localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { /* ignore */ }
-              if (!token) {
-                token = currentShareToken || DEFAULT_SHARE_TOKEN;
-                try { localStorage.setItem(SHARE_TOKEN_KEY, token); } catch { /* ignore */ }
-              }
-              setCurrentShareToken(token);
+              const token = DEFAULT_SHARE_TOKEN;
               try {
-                const { error } = await supabase.functions.invoke("timeline-share-save", {
-                  body: { token, projects, next_id: nextId, create_if_missing: true },
-                });
-                if (error) throw error;
+                await saveBoardToCloud(projects, nextId);
                 const url = `${window.location.origin}/share/timeline/${token}`;
                 try { await navigator.clipboard.writeText(url); } catch { /* clipboard may be blocked */ }
                 toast.success("Share link copied", { description: url });
