@@ -22,7 +22,7 @@ interface Project {
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const COL_W = 46;
-const TOTAL_MONTHS = 24;
+const DEFAULT_TOTAL_MONTHS = 24;
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -146,7 +146,7 @@ function getDue(proj: Project, csy: number, csm: number) {
 }
 
 // ── BAR CANVAS COMPONENT ───────────────────────────────────────────────────
-function BarCanvas({ proj, csy, csm }: { proj: Project; csy: number; csm: number }) {
+function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number; csm: number; totalMonths: number }) {
   const ROW = 42, PAD = 3;
   const FULL_H = ROW - PAD * 2;
   const HALF_H = Math.floor(FULL_H / 2) - 1;
@@ -156,12 +156,12 @@ function BarCanvas({ proj, csy, csm }: { proj: Project; csy: number; csm: number
     .map((ph) => ({
       ph,
       cs: Math.max(0, mo(ph.start[0], ph.start[1], csy, csm)),
-      ce: Math.min(TOTAL_MONTHS, mo(ph.end[0], ph.end[1], csy, csm)),
+      ce: Math.min(totalMonths, mo(ph.end[0], ph.end[1], csy, csm)),
     }))
     .filter((item) => item.ce > item.cs);
 
   return (
-    <div style={{ position: "relative", width: TOTAL_MONTHS * COL_W, height: ROW, overflow: "visible" }}>
+    <div style={{ position: "relative", width: totalMonths * COL_W, height: ROW, overflow: "visible" }}>
       {visPhases.map((item, idx) => {
         const { ph, cs, ce } = item;
         const bc = COLORS[ph.type] || COLORS.complete;
@@ -268,7 +268,14 @@ export default function GanttChart() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printFrom, setPrintFrom] = useState(fmtYM(CSY, CSM));
   const [printTo, setPrintTo] = useState(fmtYM(CSY + 1, CSM));
+  const [viewFrom, setViewFrom] = useState(fmtYM(CSY, CSM));
+  const [viewTo, setViewTo] = useState(fmtYM(CSY + (CSM + 23 > 12 ? Math.floor((CSM - 1 + 23) / 12) : 0), ((CSM - 1 + 23) % 12) + 1));
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Derive visible grid origin & length from viewFrom/viewTo
+  const [vsy, vsm] = parseYM(viewFrom);
+  const [vey, vem] = parseYM(viewTo);
+  const TOTAL_MONTHS = Math.max(1, (vey - vsy) * 12 + (vem - vsm) + 1);
 
   const todayStr = `${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
   const locations = [...new Set(projects.map((p) => p.location))];
@@ -321,14 +328,14 @@ export default function GanttChart() {
     setPrintTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
   }
 
-  // Build year header spans
+  // Build year header spans from visible view range
   function buildYearSpans() {
     const spans: { year: number; span: number }[] = [];
     let col = 0;
     while (col < TOTAL_MONTHS) {
-      const absM = CSM - 1 + col;
-      const year = CSY + Math.floor(absM / 12);
-      const monthIdx = absM % 12;
+      const absM = vsm - 1 + col;
+      const year = vsy + Math.floor(absM / 12);
+      const monthIdx = ((absM % 12) + 12) % 12;
       const span = Math.min(12 - monthIdx, TOTAL_MONTHS - col);
       spans.push({ year, span });
       col += span;
@@ -357,6 +364,23 @@ export default function GanttChart() {
           <div style={{ fontSize: 10, color: "#888", marginTop: 2, letterSpacing: ".3px" }}>Click any project name to edit &nbsp;|&nbsp; {todayStr}</div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", border: "1px solid #333", borderRadius: 6, background: "#111" }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
+            <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
+              style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #333", background: "#1a1a1a", color: "#f0ece4", fontSize: 11, fontFamily: "inherit" }} />
+            <span style={{ fontSize: 10, color: "#666" }}>→</span>
+            <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
+              style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #333", background: "#1a1a1a", color: "#f0ece4", fontSize: 11, fontFamily: "inherit" }} />
+            {[12, 24, 36].map((m) => (
+              <button key={m} onClick={() => {
+                setViewFrom(fmtYM(CSY, CSM));
+                const d = new Date(CSY, CSM - 1 + (m - 1), 1);
+                setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
+              }} style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid #333", background: "transparent", color: "#888", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+                {m}m
+              </button>
+            ))}
+          </div>
           <button onClick={() => addProject()} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #c9a84c", background: "transparent", color: "#c9a84c", cursor: "pointer", fontSize: 11, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit" }}>
             + Add Project
           </button>
@@ -451,7 +475,7 @@ export default function GanttChart() {
         )}
 
         {/* GANTT TABLE */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflow: "auto", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
           <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: 200 }} />
@@ -459,7 +483,7 @@ export default function GanttChart() {
               <col style={{ width: 108 }} />
               {Array.from({ length: TOTAL_MONTHS }, (_, i) => <col key={i} style={{ width: COL_W }} />)}
             </colgroup>
-            <thead>
+            <thead style={{ position: "sticky", top: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", zIndex: 5 }}>
               {/* Year row */}
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
@@ -475,9 +499,10 @@ export default function GanttChart() {
                   <th key={i} style={{ background: "#222", padding: "5px 8px", borderRight: "1px solid #2a2a2a" }} />
                 ))}
                 {Array.from({ length: TOTAL_MONTHS }, (_, i) => {
-                  const absM = CSM - 1 + i;
-                  const mIdx = absM % 12;
-                  const isToday = i === 0;
+                  const absM = vsm - 1 + i;
+                  const mIdx = ((absM % 12) + 12) % 12;
+                  const colYear = vsy + Math.floor(absM / 12);
+                  const isToday = colYear === CSY && mIdx === CSM - 1;
                   return (
                     <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>
                       {MONTHS[mIdx]}
@@ -518,7 +543,7 @@ export default function GanttChart() {
                           </>}
                         </td>
                         <td colSpan={TOTAL_MONTHS} style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}>
-                          <BarCanvas proj={proj} csy={CSY} csm={CSM} />
+                          <BarCanvas proj={proj} csy={vsy} csm={vsm} totalMonths={TOTAL_MONTHS} />
                         </td>
                       </tr>
                     );
