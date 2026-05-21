@@ -559,7 +559,7 @@ export function MaintenanceSection() {
         ) : (
           <div className="space-y-3">
             {openIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
             ))}
           </div>
         )}
@@ -572,7 +572,7 @@ export function MaintenanceSection() {
           mode={editIssue ? "edit" : "create"} />
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
-            onEdit={(issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }}
+            onEdit={openIssueEditor}
             categories={categories} />
         )}
       </div>
@@ -632,7 +632,7 @@ export function MaintenanceSection() {
         {activeTab === "repairs" ? (
           <div className="space-y-3">
             {displayIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
             ))}
           </div>
         ) : (
