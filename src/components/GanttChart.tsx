@@ -364,6 +364,23 @@ export default function GanttChart() {
           <div style={{ fontSize: 10, color: "#888", marginTop: 2, letterSpacing: ".3px" }}>Click any project name to edit &nbsp;|&nbsp; {todayStr}</div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", border: "1px solid #333", borderRadius: 6, background: "#111" }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
+            <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
+              style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #333", background: "#1a1a1a", color: "#f0ece4", fontSize: 11, fontFamily: "inherit" }} />
+            <span style={{ fontSize: 10, color: "#666" }}>→</span>
+            <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
+              style={{ padding: "4px 6px", borderRadius: 4, border: "1px solid #333", background: "#1a1a1a", color: "#f0ece4", fontSize: 11, fontFamily: "inherit" }} />
+            {[12, 24, 36].map((m) => (
+              <button key={m} onClick={() => {
+                setViewFrom(fmtYM(CSY, CSM));
+                const d = new Date(CSY, CSM - 1 + (m - 1), 1);
+                setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
+              }} style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid #333", background: "transparent", color: "#888", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+                {m}m
+              </button>
+            ))}
+          </div>
           <button onClick={() => addProject()} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #c9a84c", background: "transparent", color: "#c9a84c", cursor: "pointer", fontSize: 11, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit" }}>
             + Add Project
           </button>
