@@ -357,6 +357,156 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     { color: "#cccccc", label: "Complete" },
   ];
 
+  function handlePrint() {
+    const [fy, fm] = parseYM(printFrom);
+    const [ty, tm] = parseYM(printTo);
+    const numMonths = Math.max(1, (ty - fy) * 12 + (tm - fm));
+    const CM = Math.max(30, Math.floor(1196 / numMonths));
+    const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    function moOff(y: number, m: number) { return (y - fy) * 12 + (m - fm); }
+
+    const pSpans: { year: number; span: number }[] = [];
+    let pc = 0;
+    while (pc < numMonths) {
+      const a = fm - 1 + pc;
+      const yr = fy + Math.floor(a / 12);
+      const mi = a % 12;
+      const sp = Math.min(12 - mi, numMonths - pc);
+      pSpans.push({ year: yr, span: sp });
+      pc += sp;
+    }
+
+    const locs = [...new Set(projects.map((p: Project) => p.location))];
+    let rows = "";
+
+    let yc = "";
+    yc += "<th style=\"width:200px;background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Property</th>";
+    yc += "<th style=\"width:96px;background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Status</th>";
+    yc += "<th style=\"width:108px;background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Due</th>";
+    pSpans.forEach(({ year, span }) => {
+      yc += "<th colspan=\"" + span + "\" style=\"background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 4px;text-align:center;border-left:1px solid #333\">" + year + "</th>";
+    });
+    rows += "<tr>" + yc + "</tr>";
+
+    let mc = "";
+    mc += "<th style=\"background:#222;padding:5px 8px\"></th>";
+    mc += "<th style=\"background:#222;padding:5px 8px\"></th>";
+    mc += "<th style=\"background:#222;padding:5px 8px\"></th>";
+    for (let i = 0; i < numMonths; i++) {
+      const a = fm - 1 + i;
+      const mIdx = a % 12;
+      const isNow = fy + Math.floor(a / 12) === CSY && mIdx === CSM - 1;
+      const bg = isNow ? "#c9a84c" : "#222";
+      const col = isNow ? "#111" : "#666";
+      const fw = isNow ? 700 : 500;
+      mc += "<th style=\"background:" + bg + ";color:" + col + ";font-size:9px;padding:5px 2px;text-align:center;font-weight:" + fw + "\">" + MN[mIdx] + "</th>";
+    }
+    rows += "<tr>" + mc + "</tr>";
+
+    const CLRS: Record<string, { bar: string; pill: string; pillText: string }> = {
+      construction: { bar: "#a8c8e8", pill: "#d0e8f8", pillText: "#0d4270" },
+      install:      { bar: "#a8d8b8", pill: "#cdf0e0", pillText: "#0d5236" },
+      maintenance:  { bar: "#f0cc88", pill: "#fde9c8", pillText: "#7a4a08" },
+      design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
+      complete:     { bar: "#cccccc", pill: "#e8e8e8", pillText: "#444" },
+    };
+    const TL: Record<string, string> = {
+      construction: "Construction", install: "Install",
+      maintenance: "Maintenance", design: "Design", complete: "Complete",
+    };
+
+    locs.forEach((loc: string) => {
+      rows += "<tr><td colspan=\"" + (3 + numMonths) + "\" style=\"background:#222;color:#c9a84c;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:6px 12px;border-top:1px solid #333\">" + loc + "</td></tr>";
+
+      projects.filter((p: Project) => p.location === loc).forEach((proj: Project) => {
+        const due = getDue(proj, fy, fm);
+        const c = CLRS[proj.status] || CLRS.complete;
+        const multi = proj.phases.length > 1;
+        const ROW_H = 38, PAD = 3;
+        const FH = ROW_H - PAD * 2;
+        const HH = Math.floor(FH / 2) - 1;
+
+        let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + (numMonths * CM) + "\" height=\"" + ROW_H + "\" style=\"display:block;overflow:visible\">";
+        proj.phases.forEach((ph: Phase, idx: number) => {
+          const s = moOff(ph.start[0], ph.start[1]);
+          const e = moOff(ph.end[0], ph.end[1]);
+          const cs = Math.max(0, s);
+          const ce = Math.min(numMonths, e);
+          if (ce <= cs) return;
+          const bc = CLRS[ph.type] || CLRS.complete;
+          const lane = idx % 2;
+          const barH = multi ? HH : FH;
+          const barTop = multi ? (lane === 0 ? PAD : PAD + HH + 2) : PAD;
+          const bx = cs * CM + 2;
+          const bw = (ce - cs) * CM - 4;
+          const lblY = barTop + Math.floor(barH / 2) + 4;
+          const maxC = Math.floor((bw - 8) / 5.5);
+          const lbl = ph.label.length > maxC ? ph.label.substring(0, maxC - 1) + "..." : ph.label;
+          svg += "<rect x=\"" + bx + "\" y=\"" + barTop + "\" width=\"" + bw + "\" height=\"" + barH + "\" rx=\"3\" fill=\"" + bc.bar + "\"/>";
+          if (bw > 20) {
+            svg += "<text x=\"" + (bx + 6) + "\" y=\"" + lblY + "\" font-family=\"Arial\" font-size=\"9\" font-weight=\"700\" fill=\"#1a1a1a\">" + lbl + "</text>";
+          }
+        });
+        svg += "</svg>";
+
+        const dueHtml = due
+          ? "<div style=\"font-size:10px;font-weight:700;color:#1a2e44\">" + due.label + "</div><div style=\"font-size:9px;color:#999\">" + due.desc + "</div>"
+          : "";
+
+        rows += "<tr style=\"border-bottom:1px solid #e8e3da\">";
+        rows += "<td style=\"padding:4px 12px;font-size:10px;font-weight:500;color:#222;background:#fbfbfb;border-right:1px solid #ddd\">" + proj.property + "</td>";
+        rows += "<td style=\"padding:3px 8px;text-align:center;background:#fafaf8;border-right:1px solid #ddd\"><span style=\"display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:3px;background:" + c.pill + ";color:" + c.pillText + ";text-transform:uppercase\">" + (TL[proj.status] || proj.status) + "</span></td>";
+        rows += "<td style=\"padding:3px 10px;background:#fff;border-right:1px solid #ddd\">" + dueHtml + "</td>";
+        rows += "<td colspan=\"" + numMonths + "\" style=\"padding:0\">" + svg + "</td>";
+        rows += "</tr>";
+      });
+    });
+
+    const leg = [
+      { color: "#a8c8e8", label: "Construction" },
+      { color: "#a8d8b8", label: "Install / Fit-out" },
+      { color: "#f0cc88", label: "Maintenance" },
+      { color: "#c8b8e8", label: "Design / Planning" },
+      { color: "#cccccc", label: "Complete" },
+    ].map(x =>
+      "<span style=\"display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#333;margin-right:16px\">" +
+      "<span style=\"display:inline-block;width:12px;height:12px;border-radius:2px;background:" + x.color + "\"></span>" +
+      x.label + "</span>"
+    ).join("");
+
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const titleStr = "Property Portfolio — " + MN[fm - 1] + " " + fy + " to " + MN[tm - 1] + " " + ty;
+
+    let html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Property Timeline</title>";
+    html += "<style>";
+    html += "*{box-sizing:border-box;margin:0;padding:0}";
+    html += "body{font-family:Arial,sans-serif;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}";
+    html += "@page{size:A3 landscape;margin:8mm}";
+    html += ".tip{background:#1a2e44;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-radius:6px}";
+    html += ".tip p{font-size:11px;color:#aac4e0;margin:0}";
+    html += ".tip button{background:#c9a84c;color:#111;border:none;padding:8px 20px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700}";
+    html += "@media print{.tip{display:none!important}}";
+    html += "table{border-collapse:collapse;width:100%}";
+    html += "</style></head><body>";
+    html += "<div class=\"tip\">";
+    html += "<div><div style=\"font-size:13px;font-weight:700;margin-bottom:2px\">" + titleStr + "</div>";
+    html += "<p>Paper = A3 &bull; Landscape &bull; Minimum margins &bull; Enable Background graphics</p></div>";
+    html += "<button onclick=\"window.print()\">Print / Save as PDF</button>";
+    html += "</div>";
+    html += "<div style=\"padding:4px\">";
+    html += "<div style=\"display:flex;flex-wrap:wrap;padding:8px 4px 10px;border-bottom:1px solid #ddd;margin-bottom:6px\">" + leg;
+    html += "<span style=\"margin-left:auto;font-size:10px;color:#999\">As of " + dateStr + "</span></div>";
+    html += "<table><tbody>" + rows + "</tbody></table>";
+    html += "</div></body></html>";
+
+    const pw = window.open("", "_blank", "width=1500,height=900");
+    if (pw) {
+      pw.document.write(html);
+      pw.document.close();
+    }
+  }
+
   return (
     <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "transparent", minHeight: "100vh", color: "#1a1a1a" }}>
       {/* LEGEND */}
@@ -577,7 +727,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setShowPrintModal(false)}
                 style={{ padding: "8px 18px", border: "1px solid #ccc", borderRadius: 6, background: "#fff", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
-              <button onClick={() => { window.print(); setShowPrintModal(false); }}
+              <button onClick={() => { handlePrint(); setShowPrintModal(false); }}
                 style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>
                 Open Print Preview →
               </button>
