@@ -75,6 +75,7 @@ const App = () => (
               <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/share/timeline/:token" element={<SharedTimeline />} />
+              <Route path="/timeline" element={<GanttChart />} />
               {/* All app sections share a single AppShell; the active section is
                   derived from the URL path inside NavigationContext. */}
               {SECTION_PATHS.map(path => (
