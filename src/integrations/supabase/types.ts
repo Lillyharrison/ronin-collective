@@ -538,6 +538,36 @@ export type Database = {
           },
         ]
       }
+      gantt_shared_boards: {
+        Row: {
+          created_at: string
+          id: string
+          next_id: number
+          projects: Json
+          share_token: string
+          total_months: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          next_id?: number
+          projects?: Json
+          share_token: string
+          total_months?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          next_id?: number
+          projects?: Json
+          share_token?: string
+          total_months?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       job_title_suggestions: {
         Row: {
           created_at: string
