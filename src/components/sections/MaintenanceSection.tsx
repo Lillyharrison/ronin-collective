@@ -1022,7 +1022,7 @@ export function MaintenanceSection() {
             <IssueCard
               key={issue.id}
               issue={issue}
-              onClick={() => setDetailIssue(issue)}
+              onClick={() => openIssueDetail(issue)}
               compact
             />
           ))}
@@ -1072,7 +1072,7 @@ export function MaintenanceSection() {
               {sortForTable(viewIssues).map(issue => (
                 <tr
                   key={issue.id}
-                  onClick={() => setDetailIssue(issue)}
+                  onClick={() => openIssueDetail(issue)}
                   className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors"
                 >
                   <td className="px-3 py-2.5">
@@ -1131,7 +1131,7 @@ export function MaintenanceSection() {
         <IssueDetailDrawer
           issue={detailIssue}
           onClose={() => setDetailIssue(null)}
-          onEdit={(issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }}
+          onEdit={openIssueEditor}
           onStatusChange={canManage ? handleStatusChange : undefined}
           onDelete={(isMasterAdmin || isAdmin) ? async (id) => { await deleteIssue(id); setDetailIssue(null); } : undefined}
           categories={categories}
