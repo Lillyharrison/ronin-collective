@@ -509,8 +509,8 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         )}
 
         {/* GANTT TABLE */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "clip", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
-          <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
+        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+          <table style={{ borderCollapse: "collapse", tableLayout: "fixed", width: 200 + 96 + 108 + TOTAL_MONTHS * COL_W }}>
             <colgroup>
               <col style={{ width: 200 }} />
               <col style={{ width: 96 }} />
@@ -521,7 +521,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
               {/* Year row */}
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
-                  <th key={h} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>{h}</th>
+                  <th key={h} rowSpan={2} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a", verticalAlign: "middle" }}>{h}</th>
                 ))}
                 {yearSpans.map(({ year, span }, i) => (
                   <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: 1 }}>{year}</th>
@@ -529,9 +529,6 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
               </tr>
               {/* Month row */}
               <tr>
-                {["", "", ""].map((_, i) => (
-                  <th key={i} style={{ background: "#222", padding: "5px 8px", borderRight: "1px solid #2a2a2a" }} />
-                ))}
                 {Array.from({ length: TOTAL_MONTHS }, (_, i) => {
                   const absM = vsm - 1 + i;
                   const mIdx = ((absM % 12) + 12) % 12;
