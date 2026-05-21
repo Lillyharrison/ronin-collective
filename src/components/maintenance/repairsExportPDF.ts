@@ -257,7 +257,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
   const marginR = 10;
   const startY = drawHeader(doc, ctx, pageWidth, marginL);
 
-  const head = [["Title", "Status", "Priority", "Category", "Property", "Location", "Reported", "Assigned", "Age"]];
+  const head = [["Title", "Status", "Priority", "Category", "Property", "Location", "Reported", "Scheduled", "Assigned"]];
   // Row builder — when includeNotes is set, follow each issue row with a
   // full-width sub-row containing the issue's description (if any).
   type Row = (string | { content: string; colSpan: number; styles: Record<string, unknown> })[];
@@ -275,10 +275,12 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
       i.property_name ?? "—",
       i.location_detail ?? "—",
       format(parseISO(i.created_at), "dd MMM yyyy"),
-      firstName(i.assignee_name),
       i.status === "resolved" && i.resolved_at
-        ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM")}`
-        : `${ageDays(i.created_at)}d`,
+        ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM yyyy")}`
+        : i.scheduled_date
+          ? format(parseISO(i.scheduled_date), "dd MMM yyyy")
+          : "—",
+      firstName(i.assignee_name),
     ]);
     issueIndexByRow.push(srcIdx);
     if (ctx.includeNotes && i.description && i.description.trim()) {
