@@ -146,7 +146,7 @@ function getDue(proj: Project, csy: number, csm: number) {
 }
 
 // ── BAR CANVAS COMPONENT ───────────────────────────────────────────────────
-function BarCanvas({ proj, csy, csm }: { proj: Project; csy: number; csm: number }) {
+function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number; csm: number; totalMonths: number }) {
   const ROW = 42, PAD = 3;
   const FULL_H = ROW - PAD * 2;
   const HALF_H = Math.floor(FULL_H / 2) - 1;
@@ -156,12 +156,12 @@ function BarCanvas({ proj, csy, csm }: { proj: Project; csy: number; csm: number
     .map((ph) => ({
       ph,
       cs: Math.max(0, mo(ph.start[0], ph.start[1], csy, csm)),
-      ce: Math.min(TOTAL_MONTHS, mo(ph.end[0], ph.end[1], csy, csm)),
+      ce: Math.min(totalMonths, mo(ph.end[0], ph.end[1], csy, csm)),
     }))
     .filter((item) => item.ce > item.cs);
 
   return (
-    <div style={{ position: "relative", width: TOTAL_MONTHS * COL_W, height: ROW, overflow: "visible" }}>
+    <div style={{ position: "relative", width: totalMonths * COL_W, height: ROW, overflow: "visible" }}>
       {visPhases.map((item, idx) => {
         const { ph, cs, ce } = item;
         const bc = COLORS[ph.type] || COLORS.complete;
