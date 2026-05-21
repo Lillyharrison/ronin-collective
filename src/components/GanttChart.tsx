@@ -421,13 +421,13 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         col += span;
       }
 
-      const exportColors = {
+      const exportColors: Record<Phase["type"], { bar: string; pill: string; pillText: string }> = {
         construction: { bar: "#1f78b4", pill: "#d8ecfa", pillText: "#0f5686" },
         install: { bar: "#159260", pill: "#d8f3e7", pillText: "#0d6841" },
         maintenance: { bar: "#d78313", pill: "#fae6c4", pillText: "#8a5207" },
         design: { bar: "#6b4fbd", pill: "#e7defa", pillText: "#5135a1" },
         complete: { bar: "#8a8a8a", pill: "#e8e8e8", pillText: "#555555" },
-      } satisfies typeof COLORS;
+      };
 
       const monthHeaders = Array.from({ length: exportMonths }, (_, i) => {
         const absM = esm - 1 + i;
