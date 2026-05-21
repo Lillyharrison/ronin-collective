@@ -541,6 +541,10 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
             );
           })}
         </div>
+        <button onClick={handlePrint}
+          style={{ marginLeft: "auto", padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+          Export PDF
+        </button>
       </div>
 
       <div style={{ padding: "20px 24px", background: "transparent" }}>
