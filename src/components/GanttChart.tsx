@@ -462,7 +462,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           .pdf-table th.year{text-align:center;height:28px;border-left:2px solid #333;}
           .pdf-table thead tr.months th{height:18px;color:#777;font-size:8px;font-weight:400;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
           .section-row td{height:24px;background:#202020;color:#c9a84c;font-size:9px;font-weight:800;letter-spacing:4px;text-transform:uppercase;padding:0 12px;border-bottom:1px solid #222;}
-          .project-row td{height:48px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
+          .project-row td{height:54px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
           .project-row .property{padding:0 14px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fbfbfb;}
           .project-row .status{text-align:center;padding:0 6px;}
           .project-row .status span{display:inline-block;border-radius:4px;padding:3px 8px;font-size:8px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
