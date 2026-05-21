@@ -411,17 +411,17 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           (row as HTMLTableRowElement).style.display = "none";
         }
         row.querySelectorAll<HTMLElement>("td, th").forEach((cell) => {
-          cell.style.paddingTop = "3px";
-          cell.style.paddingBottom = "3px";
+          cell.style.paddingTop = "6px";
+          cell.style.paddingBottom = "6px";
         });
       });
-      exportTable.querySelectorAll<HTMLTableCellElement>("tbody tr td:first-child").forEach((cell) => {
-        cell.style.height = "28px";
-      });
+      // Compact the gantt bar wrappers so rows shrink, but leave row height
+      // unset so the Due / Milestone subtext (e.g. "Est. completion") is not clipped.
       exportTable.querySelectorAll<HTMLDivElement>('td[colspan] > div[style*="height: 42px"]').forEach((barWrap) => {
-        barWrap.style.height = "28px";
-        barWrap.style.transform = "scaleY(0.66)";
-        barWrap.style.transformOrigin = "left top";
+        barWrap.style.height = "26px";
+      });
+      exportTable.querySelectorAll<HTMLDivElement>('td[colspan] > div[style*="height: 42px"] > div').forEach((bar) => {
+        (bar as HTMLDivElement).style.height = "22px";
       });
 
       exportHost.appendChild(exportTable);
