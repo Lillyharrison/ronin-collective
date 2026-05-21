@@ -481,9 +481,17 @@ function buildTileDoc(
       // When "Include notes" is on, expand the card vertically so the full
       // description fits inside the tile (rather than as a block beneath it).
       const descLineH = descSize * 0.42;
+      // Description wrap width — leave a safety gutter before the meta column
+      // so wrapped lines never bleed into Category/Property/etc.
+      const descWrapW = titleW - 2;
       let descLines: string[] = [];
       if (issue.description) {
-        descLines = doc.splitTextToSize(issue.description, titleW);
+        // IMPORTANT: set the exact font + size we'll render with BEFORE we
+        // measure, otherwise splitTextToSize uses stale state from the
+        // previous card (bold/metaSize) and lines overflow.
+        doc.setFont(PDF_FONT, "normal");
+        doc.setFontSize(descSize);
+        descLines = doc.splitTextToSize(issue.description, descWrapW);
         if (!ctx.includeNotes) {
           // Cap to whatever fits in the standard card so layout stays compact.
           const headerOffset = titleSize * 0.42 * 2 + 1.5 + 7; // title + pills
@@ -523,7 +531,7 @@ function buildTileDoc(
       doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(titleSize);
       doc.setTextColor(28, 29, 32);
-      const titleLines = doc.splitTextToSize(issue.title, titleW).slice(0, 2);
+      const titleLines = doc.splitTextToSize(issue.title, descWrapW).slice(0, 2);
       let ty = y + cardPad + titleSize * 0.35 + 1;
       const titleLineH = titleSize * 0.42;
       doc.text(titleLines, titleX, ty);
