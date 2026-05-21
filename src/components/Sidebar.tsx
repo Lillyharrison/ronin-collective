@@ -25,6 +25,7 @@ const ALL_ITEMS: SidebarItem[] = [
   { section: "maintenance",  labelKey: "maintenance",  icon: <Wrench size={20} /> },
   { section: "profile",      labelKey: "profile",      icon: <User size={20} /> },
   { section: "calendar",       labelKey: "calendar",      icon: <Calendar size={20} />, dividerBefore: true },
+  { section: "timeline",       labelKey: "propertyTimeline", icon: <BarChart3 size={20} /> },
   { section: "staff-schedule", labelKey: "staffSchedule", icon: <CalendarClock size={20} /> },
   { section: "car-wash",       labelKey: "carWash",       icon: <Car size={20} /> },
   { section: "travel",         labelKey: "travel",        icon: <Plane size={20} /> },
