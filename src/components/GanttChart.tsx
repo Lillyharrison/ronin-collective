@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { toast } from "sonner";
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
 interface Phase {
@@ -373,6 +376,94 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
     setPrintTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
   }
 
+  const [exporting, setExporting] = useState(false);
+
+  async function exportToPDF() {
+    const wrap = tableWrapRef.current;
+    const table = wrap?.querySelector("table") as HTMLTableElement | null;
+    if (!wrap || !table) {
+      toast.error("Timeline not ready");
+      return;
+    }
+
+    // Temporarily switch view to print range so the capture matches user's choice
+    const prevFrom = viewFrom;
+    const prevTo = viewTo;
+    setViewFrom(printFrom);
+    setViewTo(printTo);
+    setShowPrintModal(false);
+    setExporting(true);
+
+    try {
+      // Wait two animation frames for React to commit the new range
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+      // Extra tick to settle layout
+      await new Promise((r) => setTimeout(r, 60));
+
+      const fullW = table.scrollWidth;
+      const fullH = table.scrollHeight;
+
+      const canvas = await html2canvas(table, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: fullW,
+        height: fullH,
+        windowWidth: fullW,
+        windowHeight: fullH,
+      });
+
+      // Landscape A3
+      const pdf = new jsPDF({ orientation: "landscape", format: "a3", unit: "mm" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const availW = pageW - margin * 2;
+      const availH = pageH - margin * 2;
+
+      // Scale image to fit page width
+      const imgW = availW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+
+      if (imgH <= availH) {
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, imgW, imgH);
+      } else {
+        // Split into pages vertically
+        const pageSliceHpx = Math.floor((availH * canvas.width) / imgW);
+        let yPx = 0;
+        let first = true;
+        while (yPx < canvas.height) {
+          const sliceH = Math.min(pageSliceHpx, canvas.height - yPx);
+          const slice = document.createElement("canvas");
+          slice.width = canvas.width;
+          slice.height = sliceH;
+          const ctx = slice.getContext("2d")!;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, slice.width, slice.height);
+          ctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          const sliceImgH = (sliceH * imgW) / canvas.width;
+          if (!first) pdf.addPage("a3", "landscape");
+          pdf.addImage(slice.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceImgH);
+          first = false;
+          yPx += sliceH;
+        }
+      }
+
+      pdf.save(`property-timeline-${printFrom}-to-${printTo}.pdf`);
+      toast.success("PDF downloaded");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to export PDF");
+    } finally {
+      setExporting(false);
+      // Restore original view range
+      setViewFrom(prevFrom);
+      setViewTo(prevTo);
+    }
+  }
+
+
   // Build year header spans from visible view range
   function buildYearSpans() {
     const spans: { year: number; span: number }[] = [];
@@ -655,17 +746,15 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
                 </button>
               ))}
             </div>
-            <div style={{ background: "#f5f0e8", borderRadius: 6, padding: "12px 14px", fontSize: 11, color: "#555", marginBottom: 20, lineHeight: 1.8, border: "1px solid #e0dbd2" }}>
-              <strong>In the print dialog:</strong><br />
-              Paper → <strong>A3</strong> &bull; Orientation → <strong>Landscape</strong><br />
-              Margins → <strong>Minimum</strong> &bull; Enable <strong>Background graphics</strong>
+            <div style={{ background: "#f5f0e8", borderRadius: 6, padding: "12px 14px", fontSize: 11, color: "#555", marginBottom: 20, lineHeight: 1.7, border: "1px solid #e0dbd2" }}>
+              The PDF is rendered from the timeline itself on <strong>A3 landscape</strong>. Fewer months gives wider, more legible columns.
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setShowPrintModal(false)}
                 style={{ padding: "8px 18px", border: "1px solid #ccc", borderRadius: 6, background: "#fff", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
-              <button onClick={() => { window.print(); setShowPrintModal(false); }}
-                style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>
-                Open Print Preview →
+              <button onClick={exportToPDF} disabled={exporting}
+                style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: exporting ? "wait" : "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px", opacity: exporting ? 0.7 : 1 }}>
+                {exporting ? "Generating…" : "Download PDF →"}
               </button>
             </div>
           </div>
