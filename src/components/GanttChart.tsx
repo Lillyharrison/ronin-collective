@@ -268,7 +268,14 @@ export default function GanttChart() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printFrom, setPrintFrom] = useState(fmtYM(CSY, CSM));
   const [printTo, setPrintTo] = useState(fmtYM(CSY + 1, CSM));
+  const [viewFrom, setViewFrom] = useState(fmtYM(CSY, CSM));
+  const [viewTo, setViewTo] = useState(fmtYM(CSY + (CSM + 23 > 12 ? Math.floor((CSM - 1 + 23) / 12) : 0), ((CSM - 1 + 23) % 12) + 1));
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Derive visible grid origin & length from viewFrom/viewTo
+  const [vsy, vsm] = parseYM(viewFrom);
+  const [vey, vem] = parseYM(viewTo);
+  const TOTAL_MONTHS = Math.max(1, (vey - vsy) * 12 + (vem - vsm) + 1);
 
   const todayStr = `${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
   const locations = [...new Set(projects.map((p) => p.location))];
