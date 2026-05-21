@@ -543,7 +543,7 @@ export default function GanttChart() {
                           </>}
                         </td>
                         <td colSpan={TOTAL_MONTHS} style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}>
-                          <BarCanvas proj={proj} csy={CSY} csm={CSM} />
+                          <BarCanvas proj={proj} csy={vsy} csm={vsm} totalMonths={TOTAL_MONTHS} />
                         </td>
                       </tr>
                     );
