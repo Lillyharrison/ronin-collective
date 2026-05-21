@@ -475,7 +475,7 @@ export default function GanttChart() {
         )}
 
         {/* GANTT TABLE */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflow: "auto", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
           <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: 200 }} />
@@ -483,7 +483,7 @@ export default function GanttChart() {
               <col style={{ width: 108 }} />
               {Array.from({ length: TOTAL_MONTHS }, (_, i) => <col key={i} style={{ width: COL_W }} />)}
             </colgroup>
-            <thead>
+            <thead style={{ position: "sticky", top: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", zIndex: 5 }}>
               {/* Year row */}
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
@@ -499,9 +499,10 @@ export default function GanttChart() {
                   <th key={i} style={{ background: "#222", padding: "5px 8px", borderRight: "1px solid #2a2a2a" }} />
                 ))}
                 {Array.from({ length: TOTAL_MONTHS }, (_, i) => {
-                  const absM = CSM - 1 + i;
-                  const mIdx = absM % 12;
-                  const isToday = i === 0;
+                  const absM = vsm - 1 + i;
+                  const mIdx = ((absM % 12) + 12) % 12;
+                  const colYear = vsy + Math.floor(absM / 12);
+                  const isToday = colYear === CSY && mIdx === CSM - 1;
                   return (
                     <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>
                       {MONTHS[mIdx]}
