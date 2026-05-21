@@ -670,7 +670,7 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
               let token = "";
               try { token = localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { /* ignore */ }
               if (!token) {
-                token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 40);
+                token = currentShareToken || DEFAULT_SHARE_TOKEN;
                 try { localStorage.setItem(SHARE_TOKEN_KEY, token); } catch { /* ignore */ }
               }
               setCurrentShareToken(token);
