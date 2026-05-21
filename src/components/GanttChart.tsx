@@ -457,7 +457,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           .pdf-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
           .pdf-legend i{display:inline-block;width:13px;height:13px;border-radius:3px;}
           .pdf-table{border-collapse:collapse;table-layout:fixed;width:${exportW}px;font-size:12px;}
-          .pdf-table col.property-col{width:200px}.pdf-table col.status-col{width:96px}.pdf-table col.due-col{width:108px}.pdf-table col.month-col{width:${monthW}px}
+          .pdf-table col.property-col{width:200px}.pdf-table col.status-col{width:124px}.pdf-table col.due-col{width:136px}.pdf-table col.month-col{width:${monthW}px}
           .pdf-table th{background:#1a1a1a;color:#c9a84c;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;padding:0 10px;height:28px;text-align:left;vertical-align:middle;}
           .pdf-table th.year{text-align:center;height:28px;border-left:2px solid #333;}
           .pdf-table thead tr.months th{height:18px;color:#888;font-size:10px;font-weight:500;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
@@ -470,7 +470,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           .due-date{font-size:12px;line-height:15px;font-weight:800;color:#1a2e44;white-space:nowrap;}
           .due-desc{font-size:10px;line-height:13px;color:#666;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;}
           .chart{position:relative;padding:0;background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:${monthW}px 100%;overflow:hidden;}
-          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:11px;font-weight:700;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;display:flex;align-items:center;justify-content:center;}
+          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:11px;font-weight:700;padding:0 8px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;display:flex;align-items:center;justify-content:flex-start;}
         </style>
         <div class="pdf-root">
           <div class="pdf-legend"><div class="items">
