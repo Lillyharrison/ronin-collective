@@ -457,7 +457,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           .pdf-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
           .pdf-legend i{display:inline-block;width:13px;height:13px;border-radius:3px;}
           .pdf-table{border-collapse:collapse;table-layout:fixed;width:${exportW}px;font-size:12px;}
-          .pdf-table col.property-col{width:200px}.pdf-table col.status-col{width:96px}.pdf-table col.due-col{width:108px}.pdf-table col.month-col{width:${monthW}px}
+          .pdf-table col.property-col{width:200px}.pdf-table col.status-col{width:124px}.pdf-table col.due-col{width:136px}.pdf-table col.month-col{width:${monthW}px}
           .pdf-table th{background:#1a1a1a;color:#c9a84c;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;padding:0 10px;height:28px;text-align:left;vertical-align:middle;}
           .pdf-table th.year{text-align:center;height:28px;border-left:2px solid #333;}
           .pdf-table thead tr.months th{height:18px;color:#888;font-size:10px;font-weight:500;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
