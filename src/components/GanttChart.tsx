@@ -727,7 +727,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setShowPrintModal(false)}
                 style={{ padding: "8px 18px", border: "1px solid #ccc", borderRadius: 6, background: "#fff", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
-              <button onClick={() => { window.print(); setShowPrintModal(false); }}
+              <button onClick={() => { handlePrint(); setShowPrintModal(false); }}
                 style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>
                 Open Print Preview →
               </button>
