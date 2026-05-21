@@ -1,4 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 interface Phase {
   type: "construction" | "install" | "maintenance" | "design" | "complete";
@@ -38,9 +41,11 @@ const TYPE_LABEL = {
   design: "Design", complete: "Complete",
 };
 
+const SHARE_TOKEN = "ronin-public-timeline-share-v1";
+
 const INITIAL_PROJECTS: Project[] = [
   { id:1,  location:"London",      property:"Penthouse",          status:"install",
-    phases:[{type:"install",      start:[2026,5], end:[2026,8],  label:"Crane lift & furniture removal"}],
+    phases:[{type:"install",      start:[2026,5], end:[2026,8],  label:"Furniture removal (crane)"}],
     milestones:[{date:[2026,8],   label:"Aug occupancy target"}] },
   { id:2,  location:"London",      property:"Apartment 4.02",     status:"design",
     phases:[{type:"design",       start:[2026,8], end:[2027,1],  label:"Licence to Alter + design (extensive)"}],
