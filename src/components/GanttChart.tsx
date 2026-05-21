@@ -399,7 +399,8 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       const [eey, eem] = parseYM(printTo);
       const exportMonths = Math.max(1, (eey - esy) * 12 + (eem - esm) + 1);
       const fixedW = 404;
-      const targetW = 1620;
+      const estimatedH = 32 + 46 + locations.length * 24 + projects.length * 42;
+      const targetW = Math.max(1620, Math.ceil(estimatedH * 1.44));
       const monthW = Math.max(32, Math.floor((targetW - fixedW) / exportMonths));
       const exportW = fixedW + exportMonths * monthW;
       const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -498,19 +499,19 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         windowHeight: fullH,
       });
 
-      // Landscape A4, matching the reference: one page, width-filled, no slicing.
-      const pdf = new jsPDF({ orientation: "landscape", format: "a4", unit: "mm" });
+      // Landscape A3: one page, width-filled, no slicing, with enough room to preserve the on-screen bar proportions.
+      const pdf = new jsPDF({ orientation: "landscape", format: "a3", unit: "mm" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
 
-      const margin = 4;
+      const margin = 2;
       const availW = pageW - margin * 2;
       const availH = pageH - margin * 2;
 
       const scale = Math.min(availW / canvas.width, availH / canvas.height);
       const imgW = canvas.width * scale;
       const imgH = canvas.height * scale;
-      const xOff = margin + (availW - imgW) / 2;
+      const xOff = margin + Math.max(0, (availW - imgW) / 2);
       const yOff = margin;
 
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", xOff, yOff, imgW, imgH);
