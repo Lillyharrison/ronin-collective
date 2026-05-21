@@ -157,7 +157,29 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       }
     }
 
-    const { error } = await supabase.from("planned_maintenance").update(patch).eq("id", id);
+    const allowedPatch: Partial<PlannedMaintenanceEntry> = {
+      title: patch.title,
+      description: patch.description,
+      vendor_id: patch.vendor_id,
+      property_id: patch.property_id,
+      assigned_to: patch.assigned_to,
+      date_type: patch.date_type,
+      scheduled_date: patch.scheduled_date,
+      scheduled_time: patch.scheduled_time,
+      scheduled_month: patch.scheduled_month,
+      scheduled_year: patch.scheduled_year,
+      reminder_days: patch.reminder_days,
+      recurrence_months: patch.recurrence_months,
+      status: patch.status,
+      last_service_date: patch.last_service_date,
+      calendar_event_id: patch.calendar_event_id,
+      created_by: patch.created_by,
+    };
+    Object.keys(allowedPatch).forEach((key) => {
+      if (allowedPatch[key as keyof PlannedMaintenanceEntry] === undefined) delete allowedPatch[key as keyof PlannedMaintenanceEntry];
+    });
+
+    const { error } = await supabase.from("planned_maintenance").update(allowedPatch).eq("id", id);
     if (error) { toast.error("Failed to update entry"); return false; }
     toast.success("Entry updated");
     await fetch();
