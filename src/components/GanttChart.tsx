@@ -292,10 +292,29 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
   const [viewFrom, setViewFrom] = useState(fmtYM(CSY, CSM));
   const [viewTo, setViewTo] = useState(fmtYM(CSY + (CSM + 23 > 12 ? Math.floor((CSM - 1 + 23) / 12) : 0), ((CSM - 1 + 23) % 12) + 1));
   const editorRef = useRef<HTMLDivElement>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const [stickyHead, setStickyHead] = useState({ show: false, left: 0, width: 0, scrollLeft: 0 });
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
+
+  useEffect(() => {
+    const updateStickyHead = () => {
+      const el = tableWrapRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const show = r.top <= 58 && r.bottom > 128;
+      setStickyHead({ show, left: r.left, width: r.width, scrollLeft: el.scrollLeft });
+    };
+    updateStickyHead();
+    window.addEventListener("scroll", updateStickyHead, { passive: true });
+    window.addEventListener("resize", updateStickyHead);
+    return () => {
+      window.removeEventListener("scroll", updateStickyHead);
+      window.removeEventListener("resize", updateStickyHead);
+    };
+  }, [TOTAL_MONTHS]);
 
   // Derive visible grid origin & length from viewFrom/viewTo
   const [vsy, vsm] = parseYM(viewFrom);
