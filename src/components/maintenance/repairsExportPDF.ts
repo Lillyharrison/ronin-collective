@@ -16,6 +16,38 @@ import { toast } from "sonner";
 import type { MaintenanceIssue, IssueStatus } from "@/hooks/useMaintenanceIssues";
 import interRegularUrl from "@/assets/fonts/Inter-Regular.ttf?url";
 import interSemiBoldUrl from "@/assets/fonts/Inter-SemiBold.ttf?url";
+import { PROPERTY_COLOR_OVERRIDES } from "@/components/calendar/staff/constants";
+
+// Property colour palette — mirrors staff schedule export so colour coding is
+// consistent across the app. (bg, text) as RGB.
+const PROPERTY_PALETTE: Array<{ bg: [number, number, number]; text: [number, number, number] }> = [
+  { bg: [219, 234, 254], text: [29, 78, 216] },   // blue
+  { bg: [209, 250, 229], text: [6, 95, 70] },     // emerald
+  { bg: [237, 233, 254], text: [91, 33, 182] },   // purple
+  { bg: [255, 237, 213], text: [154, 52, 18] },   // orange
+  { bg: [252, 231, 243], text: [157, 23, 77] },   // pink
+  { bg: [207, 250, 254], text: [22, 78, 99] },    // cyan
+  { bg: [254, 243, 199], text: [146, 64, 14] },   // amber
+  { bg: [255, 228, 230], text: [159, 18, 57] },   // rose
+  { bg: [204, 251, 241], text: [19, 78, 74] },    // teal
+  { bg: [224, 231, 255], text: [55, 48, 163] },   // indigo
+  { bg: [229, 231, 235], text: [55, 65, 81] },    // slate
+];
+
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function getPropertyPalette(name?: string | null) {
+  if (!name) return PROPERTY_PALETTE[PROPERTY_PALETTE.length - 1];
+  const lower = name.toLowerCase();
+  for (const [key, idx] of Object.entries(PROPERTY_COLOR_OVERRIDES)) {
+    if (lower.includes(key)) return PROPERTY_PALETTE[idx % PROPERTY_PALETTE.length];
+  }
+  return PROPERTY_PALETTE[hashStr(lower) % PROPERTY_PALETTE.length];
+}
 
 const PDF_FONT = "InterPdf";
 const PDF_FONT_REGULAR_FILE = "Inter-Regular.ttf";
@@ -341,6 +373,14 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
           data.cell.styles.fontStyle = "bold";
         }
       }
+
+      // Property cell — colour-code by property to match on-screen / schedule
+      if (data.column.index === 4 && issue.property_name) {
+        const palette = getPropertyPalette(issue.property_name);
+        data.cell.styles.fillColor = palette.bg;
+        data.cell.styles.textColor = palette.text;
+        data.cell.styles.fontStyle = "bold";
+      }
     },
     margin: { left: marginL, right: marginR, bottom: 14 },
   });
@@ -578,8 +618,19 @@ function buildTileDoc(
         doc.setTextColor(135, 135, 135);
         doc.text(label, labelX, my);
         doc.setFont(PDF_FONT, "bold");
-        doc.setTextColor(40, 40, 40);
         const v = doc.splitTextToSize(value, valueW)[0] ?? value;
+        if (label === "Property" && issue.property_name) {
+          const palette = getPropertyPalette(issue.property_name);
+          const padX = 1.5;
+          const w = Math.min(valueW, doc.getTextWidth(v) + padX * 2);
+          const h = metaSize * 0.5;
+          doc.setFillColor(...palette.bg);
+          (doc as unknown as { roundedRect: (x: number, y: number, w: number, h: number, rx: number, ry: number, style: string) => void })
+            .roundedRect(valueX - padX, my - h + 0.8, w, h, 0.6, 0.6, "F");
+          doc.setTextColor(...palette.text);
+        } else {
+          doc.setTextColor(40, 40, 40);
+        }
         doc.text(v, valueX, my);
         my += metaLineH;
       });
