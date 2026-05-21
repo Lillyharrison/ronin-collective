@@ -260,12 +260,12 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
   const NEXTID_KEY = "ronin-gantt-nextid-v1";
   const SHARE_TOKEN_KEY = "ronin-gantt-share-token-v1";
   const isShared = !!shareToken;
-  const boardToken = shareToken || currentShareToken || DEFAULT_SHARE_TOKEN;
-  const usesCloudBoard = !!boardToken;
   const [currentShareToken, setCurrentShareToken] = useState<string>(() => {
     if (isShared) return "";
     try { return localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { return ""; }
   });
+  const boardToken = shareToken || currentShareToken || DEFAULT_SHARE_TOKEN;
+  const usesCloudBoard = !!boardToken;
 
   const [projects, setProjects] = useState<Project[]>(() => {
     if (isShared) return [];
