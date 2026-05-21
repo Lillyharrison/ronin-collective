@@ -430,12 +430,12 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
             const ce = Math.min(exportMonths, mo(ph.end[0], ph.end[1], esy, esm));
             if (ce <= cs) return "";
             const multi = proj.phases.length > 1;
-            const top = multi ? (idx % 2 === 0 ? 3 : 22) : 3;
-            const height = multi ? 17 : 36;
+            const top = multi ? (idx % 2 === 0 ? 4 : 25) : 4;
+            const height = multi ? 19 : 40;
             const left = cs * monthW + 2;
             const width = Math.max(12, (ce - cs) * monthW - 4);
             const barColor = COLORS[ph.type]?.bar ?? COLORS.complete.bar;
-            return `<div class="bar" style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;line-height:${height}px;background:${barColor};">${escapeHtml(ph.label)}</div>`;
+            return `<div class="bar" style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;background:${barColor};">${escapeHtml(ph.label)}</div>`;
           }).join("");
           return `<tr class="project-row">
             <td class="property">${escapeHtml(proj.property)}</td>
