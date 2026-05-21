@@ -618,8 +618,19 @@ function buildTileDoc(
         doc.setTextColor(135, 135, 135);
         doc.text(label, labelX, my);
         doc.setFont(PDF_FONT, "bold");
-        doc.setTextColor(40, 40, 40);
         const v = doc.splitTextToSize(value, valueW)[0] ?? value;
+        if (label === "Property" && issue.property_name) {
+          const palette = getPropertyPalette(issue.property_name);
+          const padX = 1.5;
+          const w = Math.min(valueW, doc.getTextWidth(v) + padX * 2);
+          const h = metaSize * 0.5;
+          doc.setFillColor(...palette.bg);
+          (doc as unknown as { roundedRect: (x: number, y: number, w: number, h: number, rx: number, ry: number, style: string) => void })
+            .roundedRect(valueX - padX, my - h + 0.8, w, h, 0.6, 0.6, "F");
+          doc.setTextColor(...palette.text);
+        } else {
+          doc.setTextColor(40, 40, 40);
+        }
         doc.text(v, valueX, my);
         my += metaLineH;
       });
