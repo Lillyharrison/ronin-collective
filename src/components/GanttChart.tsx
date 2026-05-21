@@ -268,6 +268,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
   const [printFrom, setPrintFrom] = useState(fmtYM(CSY, CSM));
   const [printTo, setPrintTo] = useState(fmtYM(CSY + 1, CSM));
   const editorRef = useRef<HTMLDivElement>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [viewFrom, setViewFrom] = useState<[number,number]>([CSY, CSM]);
   const [viewTo, setViewTo] = useState<[number,number]>([CSY+2, CSM]);
@@ -544,6 +545,15 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
         <button onClick={handlePrint}
           style={{ marginLeft: "auto", padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
           Export PDF
+        </button>
+        <button onClick={() => {
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+          });
+        }}
+          style={{ padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+          {linkCopied ? "Link Copied!" : "Share Link"}
         </button>
       </div>
 
