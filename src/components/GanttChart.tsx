@@ -452,25 +452,25 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       exportHost.innerHTML = `
         <style>
           .pdf-root{width:${exportW}px;background:#fff;color:#111;font-family:Inter,Arial,sans-serif;}
-          .pdf-legend{height:32px;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#111;}
+          .pdf-legend{height:32px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#111;}
           .pdf-legend .items{display:flex;gap:20px;align-items:center;}
           .pdf-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
-          .pdf-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;}
-          .pdf-table{border-collapse:collapse;table-layout:fixed;width:${exportW}px;font-size:10px;}
+          .pdf-legend i{display:inline-block;width:13px;height:13px;border-radius:3px;}
+          .pdf-table{border-collapse:collapse;table-layout:fixed;width:${exportW}px;font-size:12px;}
           .pdf-table col.property-col{width:200px}.pdf-table col.status-col{width:96px}.pdf-table col.due-col{width:108px}.pdf-table col.month-col{width:${monthW}px}
-          .pdf-table th{background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;padding:0 10px;height:28px;text-align:left;vertical-align:middle;}
+          .pdf-table th{background:#1a1a1a;color:#c9a84c;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;padding:0 10px;height:28px;text-align:left;vertical-align:middle;}
           .pdf-table th.year{text-align:center;height:28px;border-left:2px solid #333;}
-          .pdf-table thead tr.months th{height:18px;color:#777;font-size:8px;font-weight:400;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
-          .section-row td{height:24px;background:#202020;color:#c9a84c;font-size:9px;font-weight:800;letter-spacing:4px;text-transform:uppercase;padding:0 12px;border-bottom:1px solid #222;}
+          .pdf-table thead tr.months th{height:18px;color:#888;font-size:10px;font-weight:500;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
+          .section-row td{height:24px;background:#202020;color:#c9a84c;font-size:11px;font-weight:800;letter-spacing:4px;text-transform:uppercase;padding:0 12px;border-bottom:1px solid #222;}
           .project-row td{height:54px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
-          .project-row .property{padding:0 14px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fbfbfb;}
+          .project-row .property{padding:0 14px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fbfbfb;}
           .project-row .status{text-align:center;padding:0 6px;}
-          .project-row .status span{display:inline-block;border-radius:4px;padding:3px 8px;font-size:8px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
+          .project-row .status span{display:inline-block;border-radius:4px;padding:4px 9px;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
           .project-row .due{padding:5px 10px;overflow:visible;}
-          .due-date{font-size:10px;line-height:13px;font-weight:800;color:#1a2e44;white-space:nowrap;}
-          .due-desc{font-size:9px;line-height:12px;color:#666;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;}
+          .due-date{font-size:12px;line-height:15px;font-weight:800;color:#1a2e44;white-space:nowrap;}
+          .due-desc{font-size:10px;line-height:13px;color:#666;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;}
           .chart{position:relative;padding:0;background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:${monthW}px 100%;overflow:hidden;}
-          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:9px;font-weight:700;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;display:flex;align-items:center;justify-content:center;}
+          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:11px;font-weight:700;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;display:flex;align-items:center;justify-content:center;}
         </style>
         <div class="pdf-root">
           <div class="pdf-legend"><div class="items">
