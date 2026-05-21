@@ -30,6 +30,7 @@ const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, 
 type ViewMode = "board" | "list" | "table";
 type MaintenanceTab = "repairs" | "planned";
 type StaffProfileRow = { id: string; full_name: string | null; avatar_url: string | null; level?: string | null };
+const PLANNED_FULL_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
 
 export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
@@ -214,7 +215,7 @@ export function MaintenanceSection() {
     (async () => {
       const { data } = await supabase
         .from("planned_maintenance")
-        .select("*")
+        .select(PLANNED_FULL_COLS)
         .eq("id", pendingId)
         .maybeSingle();
       if (cancelled) return;
@@ -505,7 +506,7 @@ export function MaintenanceSection() {
     // Re-read the entry from DB to capture any auto-rolled dates from the hook
     const { data: updated } = await supabase
       .from("planned_maintenance")
-      .select("*")
+        .select(PLANNED_FULL_COLS)
       .eq("id", editPlanned.id)
       .single();
 
