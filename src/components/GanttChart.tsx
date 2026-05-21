@@ -266,14 +266,18 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
   });
   const boardToken = shareToken || currentShareToken || DEFAULT_SHARE_TOKEN;
   const usesCloudBoard = !!boardToken;
+  const hasLocalTimelineRef = useRef(false);
 
   const [projects, setProjects] = useState<Project[]>(() => {
     if (isShared) return [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) as Project[];
+      if (raw) {
+        hasLocalTimelineRef.current = true;
+        return JSON.parse(raw) as Project[];
+      }
     } catch { /* ignore invalid saved timeline data */ }
-    return INITIAL_PROJECTS;
+    return usesCloudBoard ? [] : INITIAL_PROJECTS;
   });
   const [nextId, setNextId] = useState<number>(() => {
     if (isShared) return 1;
@@ -285,9 +289,9 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
   });
 
   // Track remote-load state so we don't echo the initial empty state back to the server
-  const remoteLoadedRef = useRef<boolean>(!isShared);
+  const remoteLoadedRef = useRef<boolean>(!usesCloudBoard || (!isShared && hasLocalTimelineRef.current));
   const [remoteStatus, setRemoteStatus] = useState<"loading" | "ready" | "missing" | "error">(
-    isShared ? "loading" : "ready"
+    usesCloudBoard && !remoteLoadedRef.current ? "loading" : "ready"
   );
 
   // Initial load from remote when in shared mode
