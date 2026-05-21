@@ -294,18 +294,25 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     usesCloudBoard && !remoteLoadedRef.current ? "loading" : "ready"
   );
 
-  // Initial load from remote when in shared mode
+  // Initial load from cloud board so preview and real URLs share one source of truth
   useEffect(() => {
-    if (!isShared) return;
+    if (!usesCloudBoard || remoteLoadedRef.current) return;
     let cancelled = false;
     (async () => {
       try {
         const { data, error } = await supabase.functions.invoke("timeline-share-get", {
-          body: { token: shareToken },
+          body: { token: boardToken },
         });
         if (cancelled) return;
         if (error || !data || (data as any).error) {
-          setRemoteStatus((data as any)?.error === "Not found" ? "missing" : "error");
+          if (!isShared && (data as any)?.error === "Not found") {
+            setProjects(INITIAL_PROJECTS);
+            setNextId(23);
+            remoteLoadedRef.current = true;
+            setRemoteStatus("ready");
+          } else {
+            setRemoteStatus((data as any)?.error === "Not found" ? "missing" : "error");
+          }
           return;
         }
         const d = data as { projects: Project[]; next_id: number; total_months: number };
@@ -318,29 +325,21 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
       }
     })();
     return () => { cancelled = true; };
-  }, [isShared, shareToken]);
+  }, [usesCloudBoard, boardToken, isShared]);
 
   // Persist locally OR remotely depending on mode
   useEffect(() => {
-    if (isShared) {
+    if (usesCloudBoard) {
       if (!remoteLoadedRef.current) return;
       const handle = setTimeout(() => {
         supabase.functions.invoke("timeline-share-save", {
-          body: { token: shareToken, projects, next_id: nextId },
+          body: { token: boardToken, projects, next_id: nextId, create_if_missing: !isShared },
         }).catch(() => { /* silent — toast on error would spam during typing */ });
       }, 600);
       return () => clearTimeout(handle);
     }
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore */ }
-    if (currentShareToken) {
-      const handle = setTimeout(() => {
-        supabase.functions.invoke("timeline-share-save", {
-          body: { token: currentShareToken, projects, next_id: nextId, create_if_missing: true },
-        }).catch(() => { /* keep local edits even if remote sync is temporarily unavailable */ });
-      }, 600);
-      return () => clearTimeout(handle);
-    }
-  }, [projects, nextId, isShared, shareToken, currentShareToken]);
+  }, [projects, nextId, isShared, usesCloudBoard, boardToken]);
   useEffect(() => {
     if (isShared) return;
     try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore */ }
