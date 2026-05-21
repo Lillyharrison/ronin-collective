@@ -1016,7 +1016,7 @@ export function MaintenanceSection() {
               </tr>
             </thead>
             <tbody>
-              {viewIssues.map(issue => (
+              {sortForTable(viewIssues).map(issue => (
                 <tr
                   key={issue.id}
                   onClick={() => setDetailIssue(issue)}
