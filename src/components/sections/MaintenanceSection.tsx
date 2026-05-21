@@ -779,7 +779,7 @@ export function MaintenanceSection() {
 
               {/* Download PDF (current filters/view + current sort) */}
               <button
-                onClick={() => {
+                onClick={async () => {
                   const sortedForExport =
                     viewMode === "table"
                       ? sortForTable(displayIssues)
@@ -788,9 +788,24 @@ export function MaintenanceSection() {
                             (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9),
                           )
                         : displayIssues;
+
+                  // The list query strips `description` for perf — fetch it on demand when notes are requested.
+                  let issuesForExport = sortedForExport;
+                  if (includeNotes && sortedForExport.length > 0) {
+                    const ids = sortedForExport.map(i => i.id);
+                    const { data: descs } = await supabase
+                      .from("maintenance_issues")
+                      .select("id, description")
+                      .in("id", ids);
+                    const descMap = new Map((descs ?? []).map(d => [d.id, d.description]));
+                    issuesForExport = sortedForExport.map(i => ({
+                      ...i,
+                      description: descMap.get(i.id) ?? i.description ?? null,
+                    }));
+                  }
+
                   exportRepairsPDF({
-                    issues: sortedForExport,
-                    // table view → clean spreadsheet PDF; board/list → tile PDF with photos
+                    issues: issuesForExport,
                     viewMode: viewMode === "table" ? "list" : "tile",
                     includeNotes,
                     filters: {
@@ -808,6 +823,7 @@ export function MaintenanceSection() {
                 className="flex-shrink-0 p-1.5 rounded-full border border-border hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
                 <Download size={13} />
               </button>
+
 
               {/* View toggle */}
               <div className="flex-shrink-0 flex items-center border border-border rounded-full overflow-hidden">
