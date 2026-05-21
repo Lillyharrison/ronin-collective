@@ -10,7 +10,7 @@ import { IssueStatusBadge } from "./IssueStatusBadge";
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSave: (issue: Partial<MaintenanceIssue>) => Promise<void>;
+  onSave: (issue: Partial<MaintenanceIssue>) => Promise<boolean | void>;
   initial?: Partial<MaintenanceIssue>;
   categories: MaintenanceCategory[];
   onCategoryAdded?: () => void;
@@ -122,7 +122,7 @@ function ModalContent({
   const handleSave = async () => {
     if (!title.trim() || !userId) return;
     setSaving(true);
-    await onSave({
+    const saved = await onSave({
       title:               title.trim(),
       description:         description || null,
       category:            category || "General",
@@ -140,6 +140,7 @@ function ModalContent({
       is_draft:            false,
     });
     setSaving(false);
+    if (saved === false) return;
     onClose();
   };
 
