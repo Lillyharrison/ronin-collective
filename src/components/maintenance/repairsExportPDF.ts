@@ -364,16 +364,10 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
         data.cell.styles.halign = "center";
       }
 
-      // Age column urgency for unresolved
-      if (data.column.index === 8 && issue.status !== "resolved") {
-        const days = ageDays(issue.created_at);
-        if (days >= 30) {
-          data.cell.styles.textColor = [185, 28, 28];
-          data.cell.styles.fontStyle = "bold";
-        } else if (days >= 14) {
-          data.cell.styles.textColor = [194, 65, 12];
-          data.cell.styles.fontStyle = "bold";
-        }
+      // Scheduled column — highlight when set (column 7)
+      if (data.column.index === 7 && issue.scheduled_date && issue.status !== "resolved") {
+        data.cell.styles.textColor = [30, 64, 175];
+        data.cell.styles.fontStyle = "bold";
       }
 
       // Property cell — colour-code by property to match on-screen / schedule
