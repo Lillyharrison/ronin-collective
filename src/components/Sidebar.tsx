@@ -7,13 +7,13 @@ import {
   BookOpen, CheckSquare, Users, Package,
   Shirt, ShoppingCart, UsersRound, Plane,
   Building2, FileSpreadsheet, Calendar, Brain,
-  ClipboardList, Shield, Bell, Car, CalendarClock,
+  ClipboardList, Shield, Bell, Car, CalendarClock, BarChart3,
 } from "lucide-react";
 
 
 interface SidebarItem {
   section: ActiveSection;
-  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "vendors" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts" | "carWash" | "staffSchedule";
+  labelKey: "home" | "property" | "maintenance" | "messages" | "profile" | "manuals" | "checklists" | "tasks" | "contacts" | "vendors" | "inventory" | "laundry" | "orders" | "meetTeam" | "travel" | "achievements" | "masterImport" | "calendar" | "memory" | "rules" | "alerts" | "carWash" | "staffSchedule" | "propertyTimeline";
   icon: React.ReactNode;
   dividerBefore?: boolean;
 }
