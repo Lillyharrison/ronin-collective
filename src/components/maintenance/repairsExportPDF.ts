@@ -478,8 +478,25 @@ function buildTileDoc(
     drawSectionHeader(status, list.length);
 
     list.forEach((issue) => {
+      // When "Include notes" is on, expand the card vertically so the full
+      // description fits inside the tile (rather than as a block beneath it).
+      const descLineH = descSize * 0.42;
+      let descLines: string[] = [];
+      if (issue.description) {
+        descLines = doc.splitTextToSize(issue.description, titleW);
+        if (!ctx.includeNotes) {
+          // Cap to whatever fits in the standard card so layout stays compact.
+          const headerOffset = titleSize * 0.42 * 2 + 1.5 + 7; // title + pills
+          const room = cardH - cardPad * 2 - headerOffset;
+          descLines = descLines.slice(0, Math.max(0, Math.floor(room / descLineH)));
+        }
+      }
+      const headerStack = titleSize * 0.42 * 2 + 1.5 + 7;
+      const neededInner = headerStack + descLines.length * descLineH;
+      const dynamicCardH = Math.max(cardH, neededInner + cardPad * 2);
+
       // Page break
-      if (y + cardH > pageHeight - marginB) {
+      if (y + dynamicCardH > pageHeight - marginB) {
         doc.addPage();
         y = drawHeader(doc, ctx, pageWidth, marginL);
         drawSectionHeader(status, list.length);
@@ -488,16 +505,16 @@ function buildTileDoc(
       // Row background (alternating) + border
       if (cardIdx % 2 === 1) {
         doc.setFillColor(250, 249, 245);
-        doc.rect(marginL, y, usableW, cardH, "F");
+        doc.rect(marginL, y, usableW, dynamicCardH, "F");
       }
       doc.setDrawColor(225, 223, 217);
       doc.setLineWidth(0.2);
-      doc.rect(marginL, y, usableW, cardH);
+      doc.rect(marginL, y, usableW, dynamicCardH);
 
       // Status accent stripe (matches list-view colour coding)
       const accent = STATUS_PILL[issue.status] ?? STATUS_PILL.reported;
       doc.setFillColor(...accent.text);
-      doc.rect(marginL, y, 1.2, cardH, "F");
+      doc.rect(marginL, y, 1.2, dynamicCardH, "F");
 
       // Photo
       drawPhoto(issue, marginL + cardPad, y + cardPad);
@@ -519,17 +536,11 @@ function buildTileDoc(
       drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
       ty += 7;
 
-      if (issue.description) {
+      if (descLines.length > 0) {
         doc.setFont(PDF_FONT, "normal");
         doc.setFontSize(descSize);
         doc.setTextColor(95, 95, 95);
-        const descLineH = descSize * 0.42;
-        const remaining = (y + cardH - cardPad) - ty;
-        const maxLines = Math.max(0, Math.floor(remaining / descLineH));
-        if (maxLines > 0) {
-          const descLines = doc.splitTextToSize(issue.description, titleW).slice(0, maxLines);
-          doc.text(descLines, titleX, ty);
-        }
+        doc.text(descLines, titleX, ty);
       }
 
       // Meta column (label/value pairs) — status/priority removed since they're now pills
@@ -547,7 +558,7 @@ function buildTileDoc(
       }
 
       const metaLineH = metaSize * 0.45;
-      const maxMetaLines = Math.floor((cardH - cardPad * 2) / metaLineH);
+      const maxMetaLines = Math.floor((dynamicCardH - cardPad * 2) / metaLineH);
       const visiblePairs = metaPairs.slice(0, maxMetaLines);
       const labelX = metaColX;
       const valueX = metaColX + 16;
@@ -565,31 +576,8 @@ function buildTileDoc(
         my += metaLineH;
       });
 
-      y += cardH + 2;
+      y += dynamicCardH + 2;
       cardIdx += 1;
-
-      // Extended notes block (full width, beneath the card) when requested.
-      if (ctx.includeNotes && issue.description && issue.description.trim()) {
-        const noteSize = Math.max(7.2, 8.4 * scale);
-        const noteLineH = noteSize * 0.45;
-        const wrapW = usableW - 6;
-        const noteLines = doc.splitTextToSize(`Notes: ${issue.description.trim()}`, wrapW);
-        const blockH = noteLines.length * noteLineH + 4;
-
-        if (y + blockH > pageHeight - marginB) {
-          doc.addPage();
-          y = drawHeader(doc, ctx, pageWidth, marginL);
-        }
-        doc.setFillColor(252, 251, 247);
-        doc.setDrawColor(225, 223, 217);
-        doc.setLineWidth(0.2);
-        doc.rect(marginL, y, usableW, blockH, "FD");
-        doc.setFont(PDF_FONT, "normal");
-        doc.setFontSize(noteSize);
-        doc.setTextColor(75, 75, 75);
-        doc.text(noteLines, marginL + 3, y + noteLineH + 0.5);
-        y += blockH + 2;
-      }
     });
 
     y += 2; // breathing room between status groups
