@@ -252,7 +252,7 @@ function PhaseRow({
 }
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────
-export default function GanttChart() {
+export default function GanttChart({ onBack }: { onBack?: () => void }) {
   const now = new Date();
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
@@ -292,11 +292,35 @@ export default function GanttChart() {
   const [viewFrom, setViewFrom] = useState(fmtYM(CSY, CSM));
   const [viewTo, setViewTo] = useState(fmtYM(CSY + (CSM + 23 > 12 ? Math.floor((CSM - 1 + 23) / 12) : 0), ((CSM - 1 + 23) % 12) + 1));
   const editorRef = useRef<HTMLDivElement>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const [stickyHead, setStickyHead] = useState({ show: false, left: 0, width: 0, scrollLeft: 0 });
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  useEffect(() => {
+    const updateStickyHead = () => {
+      const el = tableWrapRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const show = r.top <= 58 && r.bottom > 128;
+      setStickyHead({ show, left: r.left, width: r.width, scrollLeft: el.scrollLeft });
+    };
+    updateStickyHead();
+    window.addEventListener("scroll", updateStickyHead, { passive: true });
+    window.addEventListener("resize", updateStickyHead);
+    return () => {
+      window.removeEventListener("scroll", updateStickyHead);
+      window.removeEventListener("resize", updateStickyHead);
+    };
+  }, [viewFrom, viewTo]);
 
   // Derive visible grid origin & length from viewFrom/viewTo
   const [vsy, vsm] = parseYM(viewFrom);
   const [vey, vem] = parseYM(viewTo);
   const TOTAL_MONTHS = Math.max(1, (vey - vsy) * 12 + (vem - vsm) + 1);
+  const TABLE_W = 200 + 96 + 108 + TOTAL_MONTHS * COL_W;
 
   const todayStr = `${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
   const locations = [...new Set(projects.map((p) => p.location))];
@@ -374,27 +398,33 @@ export default function GanttChart() {
     fontSize: 10, fontWeight: 600, color: "#666",
     textTransform: "uppercase", letterSpacing: ".6px", display: "block", marginBottom: 4,
   };
-
   return (
     <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "#f2f2f2", minHeight: "100vh", color: "#1a1a1a" }}>
 
-      {/* VIEW DATE RANGE — sits in the space above the Property Portfolio header */}
-      <div style={{ background: "#f2f2f2", padding: "8px 24px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: "#666", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
-        <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
-          style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
-        <span style={{ fontSize: 11, color: "#888" }}>→</span>
-        <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
-          style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
-        {[12, 24, 36].map((m) => (
-          <button key={m} onClick={() => {
-            setViewFrom(fmtYM(CSY, CSM));
-            const d = new Date(CSY, CSM - 1 + (m - 1), 1);
-            setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
-          }} style={{ padding: "4px 10px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#555", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
-            {m}m
+      {/* TOP CONTROL ROW — uses the beige space above the Property Portfolio header */}
+      <div style={{ background: "#f2f2f2", padding: "10px 24px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        {onBack ? (
+          <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "#555", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
+            ← Back
           </button>
-        ))}
+        ) : <span />}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#666", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
+          <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
+            style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
+          <span style={{ fontSize: 11, color: "#888" }}>→</span>
+          <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
+            style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
+          {[12, 24, 36].map((m) => (
+            <button key={m} onClick={() => {
+              setViewFrom(fmtYM(CSY, CSM));
+              const d = new Date(CSY, CSM - 1 + (m - 1), 1);
+              setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
+            }} style={{ padding: "4px 10px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#555", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+              {m}m
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* TOP BAR */}
@@ -498,19 +528,19 @@ export default function GanttChart() {
         )}
 
         {/* GANTT TABLE */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "clip", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
-          <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
+        <div ref={tableWrapRef} onScroll={(e) => setStickyHead((s) => ({ ...s, scrollLeft: e.currentTarget.scrollLeft }))} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+          <table style={{ borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", width: TABLE_W }}>
             <colgroup>
               <col style={{ width: 200 }} />
               <col style={{ width: 96 }} />
               <col style={{ width: 108 }} />
               {Array.from({ length: TOTAL_MONTHS }, (_, i) => <col key={i} style={{ width: COL_W }} />)}
             </colgroup>
-            <thead style={{ position: "sticky", top: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", zIndex: 5 }}>
+            <thead>
               {/* Year row */}
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
-                  <th key={h} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>{h}</th>
+                  <th key={h} rowSpan={2} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a", verticalAlign: "middle" }}>{h}</th>
                 ))}
                 {yearSpans.map(({ year, span }, i) => (
                   <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: 1 }}>{year}</th>
@@ -518,16 +548,13 @@ export default function GanttChart() {
               </tr>
               {/* Month row */}
               <tr>
-                {["", "", ""].map((_, i) => (
-                  <th key={i} style={{ background: "#222", padding: "5px 8px", borderRight: "1px solid #2a2a2a" }} />
-                ))}
                 {Array.from({ length: TOTAL_MONTHS }, (_, i) => {
                   const absM = vsm - 1 + i;
                   const mIdx = ((absM % 12) + 12) % 12;
                   const colYear = vsy + Math.floor(absM / 12);
                   const isToday = colYear === CSY && mIdx === CSM - 1;
                   return (
-                    <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>
+                    <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>
                       {MONTHS[mIdx]}
                     </th>
                   );
@@ -585,6 +612,23 @@ export default function GanttChart() {
             </tbody>
           </table>
         </div>
+        {stickyHead.show && (
+          <div style={{ position: "fixed", top: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", left: stickyHead.left, width: stickyHead.width, overflow: "hidden", zIndex: 45, pointerEvents: "none", boxShadow: "0 2px 6px rgba(0,0,0,0.12)" }}>
+            <table style={{ borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", width: TABLE_W, transform: `translateX(${-stickyHead.scrollLeft}px)` }}>
+              <colgroup>
+                <col style={{ width: 200 }} /><col style={{ width: 96 }} /><col style={{ width: 108 }} />
+                {Array.from({ length: TOTAL_MONTHS }, (_, i) => <col key={i} style={{ width: COL_W }} />)}
+              </colgroup>
+              <thead>
+                <tr>
+                  {["Property", "Status", "Due / Milestone"].map((h) => <th key={h} rowSpan={2} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a", verticalAlign: "middle" }}>{h}</th>)}
+                  {yearSpans.map(({ year, span }, i) => <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: 1 }}>{year}</th>)}
+                </tr>
+                <tr>{Array.from({ length: TOTAL_MONTHS }, (_, i) => { const absM = vsm - 1 + i; const mIdx = ((absM % 12) + 12) % 12; const colYear = vsy + Math.floor(absM / 12); const isToday = colYear === CSY && mIdx === CSM - 1; return <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>{MONTHS[mIdx]}</th>; })}</tr>
+              </thead>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* PRINT MODAL */}
