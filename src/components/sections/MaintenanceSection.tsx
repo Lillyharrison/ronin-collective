@@ -260,6 +260,7 @@ export function MaintenanceSection() {
       if (sortBy === "newest")   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === "oldest")   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       if (sortBy === "priority") return (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
+      if (sortBy === "status")   return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
       return 0;
     });
     return list;
