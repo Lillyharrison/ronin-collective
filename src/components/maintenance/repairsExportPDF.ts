@@ -531,7 +531,7 @@ function buildTileDoc(
       doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(titleSize);
       doc.setTextColor(28, 29, 32);
-      const titleLines = doc.splitTextToSize(issue.title, titleW).slice(0, 2);
+      const titleLines = doc.splitTextToSize(issue.title, descWrapW).slice(0, 2);
       let ty = y + cardPad + titleSize * 0.35 + 1;
       const titleLineH = titleSize * 0.42;
       doc.text(titleLines, titleX, ty);
