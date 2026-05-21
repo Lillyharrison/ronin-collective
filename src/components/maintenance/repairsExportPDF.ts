@@ -504,6 +504,30 @@ function buildTileDoc(
     });
 
     y += cardH + 2;
+
+    // Extended notes block (full width, beneath the card) when requested.
+    if (ctx.includeNotes && issue.description && issue.description.trim()) {
+      const noteSize = Math.max(7.2, 8.4 * scale);
+      const noteLineH = noteSize * 0.45;
+      const wrapW = usableW - 6;
+      const noteLines = doc.splitTextToSize(`Notes: ${issue.description.trim()}`, wrapW);
+      const blockH = noteLines.length * noteLineH + 4;
+
+      // Page break if the notes block won't fit
+      if (y + blockH > pageHeight - marginB) {
+        doc.addPage();
+        y = drawHeader(doc, ctx, pageWidth, marginL);
+      }
+      doc.setFillColor(252, 251, 247);
+      doc.setDrawColor(225, 223, 217);
+      doc.setLineWidth(0.2);
+      doc.rect(marginL, y, usableW, blockH, "FD");
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(noteSize);
+      doc.setTextColor(75, 75, 75);
+      doc.text(noteLines, marginL + 3, y + noteLineH + 0.5);
+      y += blockH + 2;
+    }
   });
 
   return doc;
