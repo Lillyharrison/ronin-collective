@@ -910,7 +910,7 @@ export function MaintenanceSection() {
               // Re-read the updated entry to get rolled-forward dates
               const { data: updated } = await supabase
                 .from("planned_maintenance")
-                .select("*")
+                .select(PLANNED_FULL_COLS)
                 .eq("id", id)
                 .single();
               if (updated) {
