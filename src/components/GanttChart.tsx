@@ -378,6 +378,8 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
     fontSize: 10, fontWeight: 600, color: "#666",
     textTransform: "uppercase", letterSpacing: ".6px", display: "block", marginBottom: 4,
   };
+  const stickyHeaderTop = "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))";
+  const stickyMonthTop = "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px) + 29px)";
 
   return (
     <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "#f2f2f2", minHeight: "100vh", color: "#1a1a1a" }}>
@@ -510,14 +512,14 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
 
         {/* GANTT TABLE */}
         <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
-          <table style={{ borderCollapse: "collapse", tableLayout: "fixed", width: 200 + 96 + 108 + TOTAL_MONTHS * COL_W }}>
+          <table style={{ borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", width: 200 + 96 + 108 + TOTAL_MONTHS * COL_W }}>
             <colgroup>
               <col style={{ width: 200 }} />
               <col style={{ width: 96 }} />
               <col style={{ width: 108 }} />
               {Array.from({ length: TOTAL_MONTHS }, (_, i) => <col key={i} style={{ width: COL_W }} />)}
             </colgroup>
-            <thead style={{ position: "sticky", top: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", zIndex: 5 }}>
+            <thead>
               {/* Year row */}
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
