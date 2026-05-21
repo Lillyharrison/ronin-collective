@@ -1,4 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 interface Phase {
   type: "construction" | "install" | "maintenance" | "design" | "complete";
@@ -38,9 +41,11 @@ const TYPE_LABEL = {
   design: "Design", complete: "Complete",
 };
 
+const SHARE_TOKEN = "ronin-public-timeline-share-v1";
+
 const INITIAL_PROJECTS: Project[] = [
   { id:1,  location:"London",      property:"Penthouse",          status:"install",
-    phases:[{type:"install",      start:[2026,5], end:[2026,8],  label:"Crane lift & furniture removal"}],
+    phases:[{type:"install",      start:[2026,5], end:[2026,8],  label:"Furniture removal (crane)"}],
     milestones:[{date:[2026,8],   label:"Aug occupancy target"}] },
   { id:2,  location:"London",      property:"Apartment 4.02",     status:"design",
     phases:[{type:"design",       start:[2026,8], end:[2027,1],  label:"Licence to Alter + design (extensive)"}],
@@ -255,9 +260,12 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
   const now = new Date();
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
+  const { toast } = useToast();
 
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [nextId, setNextId] = useState(23);
+  const [isLoadingBoard, setIsLoadingBoard] = useState(true);
+  const [isSavingBoard, setIsSavingBoard] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editorLoc, setEditorLoc] = useState("");
   const [editorProp, setEditorProp] = useState("");
@@ -276,6 +284,49 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
 
   const locations = [...new Set(projects.map((p) => p.location))];
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBoard() {
+      setIsLoadingBoard(true);
+      const { data, error } = await supabase
+        .from("gantt_shared_boards")
+        .select("projects, next_id")
+        .eq("share_token", SHARE_TOKEN)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        toast({ title: "Timeline not loaded", description: error.message, variant: "destructive" });
+      } else if (data) {
+        setProjects(data.projects as unknown as Project[]);
+        setNextId(data.next_id);
+      }
+      setIsLoadingBoard(false);
+    }
+    loadBoard();
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  async function saveBoard(nextProjects: Project[], nextNextId = nextId) {
+    setIsSavingBoard(true);
+    const { error } = await supabase
+      .from("gantt_shared_boards")
+      .upsert({
+        share_token: SHARE_TOKEN,
+        projects: nextProjects as unknown as Json,
+        next_id: nextNextId,
+        total_months: viewMonths,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "share_token" });
+
+    setIsSavingBoard(false);
+    if (error) {
+      toast({ title: "Timeline not saved", description: error.message, variant: "destructive" });
+      return false;
+    }
+    return true;
+  }
+
   function openEditor(id: number) {
     const proj = projects.find((p) => p.id === id);
     if (!proj) return;
@@ -288,34 +339,46 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
 
-  function saveProject() {
-    setProjects((prev) => prev.map((p) => p.id === editingId
+  async function saveProject() {
+    const nextProjects = projects.map((p) => p.id === editingId
       ? { ...p, location: editorLoc, property: editorProp, status: editorStatus, phases: editorPhases, milestones: editorMs }
       : p
-    ));
+    );
+    if (!(await saveBoard(nextProjects))) return;
+    setProjects(nextProjects);
     setEditingId(null);
   }
 
-  function deleteProject() {
+  async function deleteProject() {
     if (!confirm("Delete this project?")) return;
-    setProjects((prev) => prev.filter((p) => p.id !== editingId));
+    const nextProjects = projects.filter((p) => p.id !== editingId);
+    if (!(await saveBoard(nextProjects))) return;
+    setProjects(nextProjects);
     setEditingId(null);
   }
 
-  function addProject(loc?: string) {
+  async function addProject(loc?: string) {
     const location = loc ?? prompt("City / location?") ?? "";
     if (!location) return;
     const property = prompt(`Property name in ${location}?`) ?? "";
     if (!property) return;
     const id = nextId;
-    setNextId((n) => n + 1);
     const newProj: Project = {
       id, location, property, status: "construction",
       phases: [{ type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "Works" }],
       milestones: [],
     };
-    setProjects((prev) => [...prev, newProj]);
-    openEditor(id);
+    const nextProjects = [...projects, newProj];
+    if (!(await saveBoard(nextProjects, id + 1))) return;
+    setNextId(id + 1);
+    setProjects(nextProjects);
+    setEditingId(id);
+    setEditorLoc(newProj.location);
+    setEditorProp(newProj.property);
+    setEditorStatus(newProj.status);
+    setEditorPhases([...newProj.phases]);
+    setEditorMs([...newProj.milestones]);
+    setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
 
   function setRange(months: number) {
@@ -518,7 +581,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
             {label}
           </span>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#aaa", letterSpacing: ".3px" }}>Click any project name to edit</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#aaa", letterSpacing: ".3px" }}>{isLoadingBoard ? "Loading timeline..." : "Click any project name to edit"}</span>
       </div>
 
       {/* DATE RANGE CONTROLS */}
@@ -616,8 +679,8 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
               </button>
 
               <div style={{ display: "flex", gap: 10, paddingTop: 16, borderTop: "1px solid #eee", flexWrap: "wrap" }}>
-                <button onClick={saveProject} style={{ padding: "7px 20px", borderRadius: 6, border: "none", background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>✓ Save Changes</button>
-                <button onClick={deleteProject} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #3a2a2a", background: "transparent", color: "#e05555", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Delete</button>
+                <button onClick={saveProject} disabled={isSavingBoard} style={{ padding: "7px 20px", borderRadius: 6, border: "none", background: "#c9a84c", color: "#111", cursor: isSavingBoard ? "default" : "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px", opacity: isSavingBoard ? 0.7 : 1 }}>{isSavingBoard ? "Saving..." : "✓ Save Changes"}</button>
+                <button onClick={deleteProject} disabled={isSavingBoard} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #3a2a2a", background: "transparent", color: "#e05555", cursor: isSavingBoard ? "default" : "pointer", fontSize: 11, fontFamily: "inherit", opacity: isSavingBoard ? 0.7 : 1 }}>Delete</button>
                 <button onClick={() => setEditingId(null)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #ccc", background: "transparent", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
               </div>
             </div>
@@ -695,8 +758,8 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                       </tr>
                     );
                   })}
-                  <tr onClick={() => addProject(loc)}
-                    style={{ cursor: "pointer", background: "#fafaf8" }}
+                  <tr onClick={() => { if (!isSavingBoard) addProject(loc); }}
+                    style={{ cursor: isSavingBoard ? "default" : "pointer", background: "#fafaf8" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f0f7ff"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#fafaf8"; }}>
                     <td colSpan={3 + viewMonths} style={{ padding: "6px 14px", color: "#aaa", fontSize: 10, fontWeight: 500, letterSpacing: ".3px", borderBottom: "1px solid #ede8e0" }}>
