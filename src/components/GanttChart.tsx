@@ -746,17 +746,15 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
                 </button>
               ))}
             </div>
-            <div style={{ background: "#f5f0e8", borderRadius: 6, padding: "12px 14px", fontSize: 11, color: "#555", marginBottom: 20, lineHeight: 1.8, border: "1px solid #e0dbd2" }}>
-              <strong>In the print dialog:</strong><br />
-              Paper → <strong>A3</strong> &bull; Orientation → <strong>Landscape</strong><br />
-              Margins → <strong>Minimum</strong> &bull; Enable <strong>Background graphics</strong>
+            <div style={{ background: "#f5f0e8", borderRadius: 6, padding: "12px 14px", fontSize: 11, color: "#555", marginBottom: 20, lineHeight: 1.7, border: "1px solid #e0dbd2" }}>
+              The PDF is rendered from the timeline itself on <strong>A3 landscape</strong>. Fewer months gives wider, more legible columns.
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setShowPrintModal(false)}
                 style={{ padding: "8px 18px", border: "1px solid #ccc", borderRadius: 6, background: "#fff", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
-              <button onClick={() => { window.print(); setShowPrintModal(false); }}
-                style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>
-                Open Print Preview →
+              <button onClick={exportToPDF} disabled={exporting}
+                style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: exporting ? "wait" : "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px", opacity: exporting ? 0.7 : 1 }}>
+                {exporting ? "Generating…" : "Download PDF →"}
               </button>
             </div>
           </div>
