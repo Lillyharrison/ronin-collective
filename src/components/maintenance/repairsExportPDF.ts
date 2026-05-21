@@ -224,19 +224,40 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
   const startY = drawHeader(doc, ctx, pageWidth, marginL);
 
   const head = [["Title", "Status", "Priority", "Category", "Property", "Location", "Reported", "Assigned", "Age"]];
-  const body = ctx.issues.map((i) => [
-    i.title,
-    STATUS_LABELS[i.status] ?? i.status,
-    PRIORITY_LABELS[i.priority] ?? i.priority,
-    i.category ?? "—",
-    i.property_name ?? "—",
-    i.location_detail ?? "—",
-    format(parseISO(i.created_at), "dd MMM yyyy"),
-    firstName(i.assignee_name),
-    i.status === "resolved" && i.resolved_at
-      ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM")}`
-      : `${ageDays(i.created_at)}d`,
-  ]);
+  // Row builder — when includeNotes is set, follow each issue row with a
+  // full-width sub-row containing the issue's description (if any).
+  type Row = (string | { content: string; colSpan: number; styles: Record<string, unknown> })[];
+  const body: Row[] = [];
+  ctx.issues.forEach((i) => {
+    body.push([
+      i.title,
+      STATUS_LABELS[i.status] ?? i.status,
+      PRIORITY_LABELS[i.priority] ?? i.priority,
+      i.category ?? "—",
+      i.property_name ?? "—",
+      i.location_detail ?? "—",
+      format(parseISO(i.created_at), "dd MMM yyyy"),
+      firstName(i.assignee_name),
+      i.status === "resolved" && i.resolved_at
+        ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM")}`
+        : `${ageDays(i.created_at)}d`,
+    ]);
+    if (ctx.includeNotes && i.description && i.description.trim()) {
+      body.push([
+        {
+          content: `Notes: ${i.description.trim()}`,
+          colSpan: 9,
+          styles: {
+            fontStyle: "normal",
+            fontSize: 7.5 * scale,
+            textColor: [75, 75, 75],
+            fillColor: [252, 251, 247],
+            cellPadding: { top: 1.5 * scale, bottom: 2.5 * scale, left: 4 * scale, right: 4 * scale },
+          },
+        },
+      ]);
+    }
+  });
 
   // 9 cols on landscape A4 (usable 277mm). Tuned so Status/Priority fit one line.
   const colWidths = [60, 28, 22, 28, 32, 36, 26, 24, 21]; // sum = 277
