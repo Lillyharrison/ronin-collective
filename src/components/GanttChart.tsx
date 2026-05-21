@@ -378,9 +378,6 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
     fontSize: 10, fontWeight: 600, color: "#666",
     textTransform: "uppercase", letterSpacing: ".6px", display: "block", marginBottom: 4,
   };
-  const stickyHeaderTop = "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))";
-  const stickyMonthTop = "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px) + 29px)";
-
   return (
     <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "#f2f2f2", minHeight: "100vh", color: "#1a1a1a" }}>
 
@@ -523,10 +520,10 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
               {/* Year row */}
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
-                  <th key={h} rowSpan={2} style={{ position: "sticky", top: stickyHeaderTop, zIndex: 6, background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a", verticalAlign: "middle" }}>{h}</th>
+                  <th key={h} rowSpan={2} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 14px", textAlign: "left", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a", verticalAlign: "middle" }}>{h}</th>
                 ))}
                 {yearSpans.map(({ year, span }, i) => (
-                  <th key={i} colSpan={span} style={{ position: "sticky", top: stickyHeaderTop, zIndex: 6, background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: 1 }}>{year}</th>
+                  <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: 1 }}>{year}</th>
                 ))}
               </tr>
               {/* Month row */}
@@ -537,7 +534,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
                   const colYear = vsy + Math.floor(absM / 12);
                   const isToday = colYear === CSY && mIdx === CSM - 1;
                   return (
-                    <th key={i} style={{ position: "sticky", top: stickyMonthTop, zIndex: 6, background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>
+                    <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 9, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", borderBottom: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 400 }}>
                       {MONTHS[mIdx]}
                     </th>
                   );
