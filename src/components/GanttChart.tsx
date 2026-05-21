@@ -485,7 +485,7 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
             const left = cs * monthW + 2;
             const width = Math.max(12, (ce - cs) * monthW - 4);
             const barColor = COLORS[ph.type]?.bar ?? COLORS.complete.bar;
-            return `<div class="bar" style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;background:${barColor};">${escapeHtml(ph.label)}</div>`;
+            return `<div class="bar" style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;line-height:${height}px;background:${barColor};">${escapeHtml(ph.label)}</div>`;
           }).join("");
           return `<tr class="project-row">
             <td class="property">${escapeHtml(proj.property)}</td>
@@ -520,7 +520,7 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
           .due-date{font-size:12px;line-height:15px;font-weight:800;color:#1a2e44;white-space:nowrap;}
           .due-desc{font-size:10px;line-height:13px;color:#666;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;}
           .chart{position:relative;padding:0;background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:${monthW}px 100%;overflow:hidden;}
-          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:11px;font-weight:700;padding:0 8px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;display:flex;align-items:center;justify-content:flex-start;}
+          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:11px;font-weight:700;padding:0 8px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
         </style>
         <div class="pdf-root">
           <div class="pdf-legend"><div class="items">
