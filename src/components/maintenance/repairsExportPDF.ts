@@ -373,6 +373,14 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
           data.cell.styles.fontStyle = "bold";
         }
       }
+
+      // Property cell — colour-code by property to match on-screen / schedule
+      if (data.column.index === 4 && issue.property_name) {
+        const palette = getPropertyPalette(issue.property_name);
+        data.cell.styles.fillColor = palette.bg;
+        data.cell.styles.textColor = palette.text;
+        data.cell.styles.fontStyle = "bold";
+      }
     },
     margin: { left: marginL, right: marginR, bottom: 14 },
   });
