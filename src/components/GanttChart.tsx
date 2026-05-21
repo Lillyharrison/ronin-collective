@@ -328,14 +328,14 @@ export default function GanttChart() {
     setPrintTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
   }
 
-  // Build year header spans
+  // Build year header spans from visible view range
   function buildYearSpans() {
     const spans: { year: number; span: number }[] = [];
     let col = 0;
     while (col < TOTAL_MONTHS) {
-      const absM = CSM - 1 + col;
-      const year = CSY + Math.floor(absM / 12);
-      const monthIdx = absM % 12;
+      const absM = vsm - 1 + col;
+      const year = vsy + Math.floor(absM / 12);
+      const monthIdx = ((absM % 12) + 12) % 12;
       const span = Math.min(12 - monthIdx, TOTAL_MONTHS - col);
       spans.push({ year, span });
       col += span;
