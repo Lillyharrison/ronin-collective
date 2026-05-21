@@ -252,7 +252,7 @@ function getDue(proj: Project, csy: number, csm: number) {
   return null;
 }
 
-function BarCanvas({ proj, csy, csm }: { proj: Project; csy: number; csm: number }) {
+function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number; csm: number; totalMonths: number }) {
   const ROW = 44,
     PAD = 3;
   const FULL_H = ROW - PAD * 2;
@@ -263,12 +263,12 @@ function BarCanvas({ proj, csy, csm }: { proj: Project; csy: number; csm: number
     .map((ph) => ({
       ph,
       cs: Math.max(0, mo(ph.start[0], ph.start[1], csy, csm)),
-      ce: Math.min(TOTAL_MONTHS, mo(ph.end[0], ph.end[1], csy, csm)),
+      ce: Math.min(totalMonths, mo(ph.end[0], ph.end[1], csy, csm)),
     }))
     .filter((item) => item.ce > item.cs);
 
   return (
-    <div style={{ position: "relative", width: TOTAL_MONTHS * COL_W, height: ROW, overflow: "visible" }}>
+    <div style={{ position: "relative", width: "100%", height: ROW, overflow: "visible" }}>
       {visPhases.map((item, idx) => {
         const { ph, cs, ce } = item;
         const bc = COLORS[ph.type] || COLORS.complete;
@@ -343,91 +343,89 @@ function PhaseRow({
         alignItems: "end",
       }}
     >
-      {(
-        [
-          {
-            label: "Type",
-            content: (
-              <select
-                value={phase.type}
-                onChange={(e) => onChange(idx, { ...phase, type: e.target.value as Phase["type"] })}
-                style={{
-                  width: "100%",
-                  padding: "5px 8px",
-                  border: "1px solid #ccc",
-                  borderRadius: 4,
-                  fontSize: 11,
-                  fontFamily: "inherit",
-                  background: "#fff",
-                }}
-              >
-                {(["construction", "install", "maintenance", "design", "complete"] as const).map((t) => (
-                  <option key={t} value={t}>
-                    {TYPE_LABEL[t]}
-                  </option>
-                ))}
-              </select>
-            ),
-          },
-          {
-            label: "Start",
-            content: (
-              <input
-                type="month"
-                value={fmtYM(phase.start[0], phase.start[1])}
-                onChange={(e) => onChange(idx, { ...phase, start: parseYM(e.target.value) })}
-                style={{
-                  width: "100%",
-                  padding: "5px 8px",
-                  border: "1px solid #ccc",
-                  borderRadius: 4,
-                  fontSize: 11,
-                  fontFamily: "inherit",
-                  background: "#fff",
-                }}
-              />
-            ),
-          },
-          {
-            label: "End",
-            content: (
-              <input
-                type="month"
-                value={fmtYM(phase.end[0], phase.end[1])}
-                onChange={(e) => onChange(idx, { ...phase, end: parseYM(e.target.value) })}
-                style={{
-                  width: "100%",
-                  padding: "5px 8px",
-                  border: "1px solid #ccc",
-                  borderRadius: 4,
-                  fontSize: 11,
-                  fontFamily: "inherit",
-                  background: "#fff",
-                }}
-              />
-            ),
-          },
-          {
-            label: "Label",
-            content: (
-              <input
-                type="text"
-                value={phase.label}
-                onChange={(e) => onChange(idx, { ...phase, label: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: "5px 8px",
-                  border: "1px solid #ccc",
-                  borderRadius: 4,
-                  fontSize: 11,
-                  fontFamily: "inherit",
-                  background: "#fff",
-                }}
-              />
-            ),
-          },
-        ] as { label: string; content: React.ReactNode }[]
-      ).map(({ label, content }) => (
+      {[
+        {
+          label: "Type",
+          content: (
+            <select
+              value={phase.type}
+              onChange={(e) => onChange(idx, { ...phase, type: e.target.value as Phase["type"] })}
+              style={{
+                width: "100%",
+                padding: "5px 8px",
+                border: "1px solid #ccc",
+                borderRadius: 4,
+                fontSize: 11,
+                fontFamily: "inherit",
+                background: "#fff",
+              }}
+            >
+              {(["construction", "install", "maintenance", "design", "complete"] as const).map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABEL[t]}
+                </option>
+              ))}
+            </select>
+          ),
+        },
+        {
+          label: "Start",
+          content: (
+            <input
+              type="month"
+              value={fmtYM(phase.start[0], phase.start[1])}
+              onChange={(e) => onChange(idx, { ...phase, start: parseYM(e.target.value) })}
+              style={{
+                width: "100%",
+                padding: "5px 8px",
+                border: "1px solid #ccc",
+                borderRadius: 4,
+                fontSize: 11,
+                fontFamily: "inherit",
+                background: "#fff",
+              }}
+            />
+          ),
+        },
+        {
+          label: "End",
+          content: (
+            <input
+              type="month"
+              value={fmtYM(phase.end[0], phase.end[1])}
+              onChange={(e) => onChange(idx, { ...phase, end: parseYM(e.target.value) })}
+              style={{
+                width: "100%",
+                padding: "5px 8px",
+                border: "1px solid #ccc",
+                borderRadius: 4,
+                fontSize: 11,
+                fontFamily: "inherit",
+                background: "#fff",
+              }}
+            />
+          ),
+        },
+        {
+          label: "Label",
+          content: (
+            <input
+              type="text"
+              value={phase.label}
+              onChange={(e) => onChange(idx, { ...phase, label: e.target.value })}
+              style={{
+                width: "100%",
+                padding: "5px 8px",
+                border: "1px solid #ccc",
+                borderRadius: 4,
+                fontSize: 11,
+                fontFamily: "inherit",
+                background: "#fff",
+              }}
+            />
+          ),
+        },
+      ].map(({ label, content }: { label: string; content: React.ReactNode }) => (
         <div key={label}>
           <div
             style={{
@@ -482,6 +480,9 @@ export default function GanttChart() {
   const [printFrom, setPrintFrom] = useState(fmtYM(CSY, CSM));
   const [printTo, setPrintTo] = useState(fmtYM(CSY + 1, CSM));
   const editorRef = useRef<HTMLDivElement>(null);
+  const [viewFrom, setViewFrom] = useState<[number, number]>([CSY, CSM]);
+  const [viewTo, setViewTo] = useState<[number, number]>([CSY + 2, CSM]);
+  const viewMonths = Math.max(1, (viewTo[0] - viewFrom[0]) * 12 + (viewTo[1] - viewFrom[1]));
 
   const todayStr = `${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
   const locations = [...new Set(projects.map((p) => p.location))];
@@ -550,11 +551,11 @@ export default function GanttChart() {
   function buildYearSpans() {
     const spans: { year: number; span: number }[] = [];
     let col = 0;
-    while (col < TOTAL_MONTHS) {
-      const absM = CSM - 1 + col;
-      const year = CSY + Math.floor(absM / 12);
+    while (col < viewMonths) {
+      const absM = viewFrom[1] - 1 + col;
+      const year = viewFrom[0] + Math.floor(absM / 12);
       const monthIdx = absM % 12;
-      const span = Math.min(12 - monthIdx, TOTAL_MONTHS - col);
+      const span = Math.min(12 - monthIdx, viewMonths - col);
       spans.push({ year, span });
       col += span;
     }
@@ -583,75 +584,24 @@ export default function GanttChart() {
     marginBottom: 4,
   };
 
+  const legendItems: { color: string; label: string }[] = [
+    { color: "#a8c8e8", label: "Construction" },
+    { color: "#a8d8b8", label: "Install / Fit-out" },
+    { color: "#f0cc88", label: "Maintenance" },
+    { color: "#c8b8e8", label: "Design / Planning" },
+    { color: "#cccccc", label: "Complete" },
+  ];
+
   return (
     <div
       style={{
         fontFamily: "'Inter', Arial, sans-serif",
         fontSize: 12,
-        background: "#f2f2f2",
+        background: "transparent",
         minHeight: "100vh",
         color: "#1a1a1a",
       }}
     >
-      {/* TOP BAR */}
-      <div
-        style={{
-          background: "#1a1a1a",
-          color: "#f0ece4",
-          padding: "14px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          borderBottom: "1px solid #2a2a2a",
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase" }}>
-            Property Portfolio — Project Timeline
-          </div>
-          <div style={{ fontSize: 10, color: "#888", marginTop: 2, letterSpacing: ".3px" }}>
-            Click any project name to edit &nbsp;|&nbsp; {todayStr}
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button
-            onClick={() => addProject()}
-            style={{
-              padding: "7px 16px",
-              borderRadius: 6,
-              border: "1px solid #c9a84c",
-              background: "transparent",
-              color: "#c9a84c",
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: ".3px",
-              fontFamily: "inherit",
-            }}
-          >
-            + Add Project
-          </button>
-          <button
-            onClick={() => setShowPrintModal(true)}
-            style={{
-              padding: "7px 16px",
-              borderRadius: 6,
-              border: "1px solid #444",
-              background: "transparent",
-              color: "#f0ece4",
-              cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
-              fontFamily: "inherit",
-            }}
-          >
-            Print / Export PDF
-          </button>
-        </div>
-      </div>
-
       {/* LEGEND */}
       <div
         style={{
@@ -664,15 +614,7 @@ export default function GanttChart() {
           alignItems: "center",
         }}
       >
-        {(
-          [
-            { color: "#a8c8e8", label: "Construction" },
-            { color: "#a8d8b8", label: "Install / Fit-out" },
-            { color: "#f0cc88", label: "Maintenance" },
-            { color: "#c8b8e8", label: "Design / Planning" },
-            { color: "#cccccc", label: "Complete" },
-          ] as { color: string; label: string }[]
-        ).map(({ color, label }) => (
+        {legendItems.map(({ color, label }) => (
           <span
             key={label}
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#444", fontWeight: 500 }}
@@ -696,7 +638,89 @@ export default function GanttChart() {
         </span>
       </div>
 
-      <div style={{ padding: "20px 24px" }}>
+      {/* DATE RANGE CONTROLS */}
+      <div
+        style={{
+          background: "#fff",
+          padding: "10px 24px",
+          borderBottom: "1px solid #e8e3da",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          style={{ fontSize: 10, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}
+        >
+          View
+        </span>
+        <input
+          type="month"
+          value={fmtYM(viewFrom[0], viewFrom[1])}
+          onChange={(e) => {
+            const v = parseYM(e.target.value);
+            setViewFrom(v);
+          }}
+          style={{
+            padding: "4px 8px",
+            border: "1px solid #ddd",
+            borderRadius: 5,
+            fontSize: 11,
+            fontFamily: "inherit",
+            background: "#fff",
+            color: "#1a1a1a",
+          }}
+        />
+        <span style={{ color: "#aaa", fontSize: 12 }}>→</span>
+        <input
+          type="month"
+          value={fmtYM(viewTo[0], viewTo[1])}
+          onChange={(e) => {
+            const v = parseYM(e.target.value);
+            setViewTo(v);
+          }}
+          style={{
+            padding: "4px 8px",
+            border: "1px solid #ddd",
+            borderRadius: 5,
+            fontSize: 11,
+            fontFamily: "inherit",
+            background: "#fff",
+            color: "#1a1a1a",
+          }}
+        />
+        <div style={{ display: "flex", gap: 4, marginLeft: 4 }}>
+          {[12, 24, 36].map((m) => {
+            const active = viewMonths === m;
+            return (
+              <button
+                key={m}
+                onClick={() => {
+                  setViewFrom([CSY, CSM]);
+                  const d = new Date(CSY, CSM - 1 + m, 1);
+                  setViewTo([d.getFullYear(), d.getMonth() + 1]);
+                }}
+                style={{
+                  padding: "4px 10px",
+                  border: `1px solid ${active ? "#1a1a1a" : "#ddd"}`,
+                  borderRadius: 5,
+                  background: active ? "#1a1a1a" : "#fff",
+                  color: active ? "#fff" : "#555",
+                  cursor: "pointer",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                }}
+              >
+                {m}m
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ padding: "20px 24px", background: "transparent" }}>
         {/* EDITOR PANEL */}
         {editingId !== null && (
           <div
@@ -746,38 +770,36 @@ export default function GanttChart() {
             </div>
             <div style={{ padding: 18 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 18 }}>
-                {(
-                  [
-                    {
-                      label: "City / Location",
-                      content: (
-                        <input style={inputStyle} value={editorLoc} onChange={(e) => setEditorLoc(e.target.value)} />
-                      ),
-                    },
-                    {
-                      label: "Property Name",
-                      content: (
-                        <input style={inputStyle} value={editorProp} onChange={(e) => setEditorProp(e.target.value)} />
-                      ),
-                    },
-                    {
-                      label: "Status",
-                      content: (
-                        <select
-                          style={inputStyle}
-                          value={editorStatus}
-                          onChange={(e) => setEditorStatus(e.target.value as Project["status"])}
-                        >
-                          {(["construction", "install", "maintenance", "design", "complete"] as const).map((t) => (
-                            <option key={t} value={t}>
-                              {TYPE_LABEL[t]}
-                            </option>
-                          ))}
-                        </select>
-                      ),
-                    },
-                  ] as { label: string; content: React.ReactNode }[]
-                ).map(({ label, content }) => (
+                {[
+                  {
+                    label: "City / Location",
+                    content: (
+                      <input style={inputStyle} value={editorLoc} onChange={(e) => setEditorLoc(e.target.value)} />
+                    ),
+                  },
+                  {
+                    label: "Property Name",
+                    content: (
+                      <input style={inputStyle} value={editorProp} onChange={(e) => setEditorProp(e.target.value)} />
+                    ),
+                  },
+                  {
+                    label: "Status",
+                    content: (
+                      <select
+                        style={inputStyle}
+                        value={editorStatus}
+                        onChange={(e) => setEditorStatus(e.target.value as Project["status"])}
+                      >
+                        {(["construction", "install", "maintenance", "design", "complete"] as const).map((t) => (
+                          <option key={t} value={t}>
+                            {TYPE_LABEL[t]}
+                          </option>
+                        ))}
+                      </select>
+                    ),
+                  },
+                ].map(({ label, content }: { label: string; content: React.ReactNode }) => (
                   <div key={label}>
                     <label style={labelStyle}>{label}</label>
                     {content}
@@ -963,17 +985,17 @@ export default function GanttChart() {
             background: "#fff",
             borderRadius: 10,
             border: "1px solid #e0dbd2",
-            overflow: "auto",
+            overflow: "hidden",
             boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
           }}
         >
-          <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
+          <table style={{ borderCollapse: "collapse", tableLayout: "fixed", width: "100%" }}>
             <colgroup>
               <col style={{ width: 200 }} />
               <col style={{ width: 96 }} />
               <col style={{ width: 108 }} />
-              {Array.from({ length: TOTAL_MONTHS }, (_, i) => (
-                <col key={i} style={{ width: COL_W }} />
+              {Array.from({ length: viewMonths }, (_, i) => (
+                <col key={i} style={{ minWidth: 38 }} />
               ))}
             </colgroup>
             <thead>
@@ -1019,10 +1041,10 @@ export default function GanttChart() {
                 {["", "", ""].map((_, i) => (
                   <th key={i} style={{ background: "#222", padding: "5px 8px", borderRight: "1px solid #2a2a2a" }} />
                 ))}
-                {Array.from({ length: TOTAL_MONTHS }, (_, i) => {
-                  const absM = CSM - 1 + i;
+                {Array.from({ length: viewMonths }, (_, i) => {
+                  const absM = viewFrom[1] - 1 + i;
                   const mIdx = absM % 12;
-                  const isToday = i === 0;
+                  const isToday = viewFrom[0] === CSY && viewFrom[1] === CSM && i === 0;
                   return (
                     <th
                       key={i}
@@ -1047,7 +1069,7 @@ export default function GanttChart() {
                 <>
                   <tr key={`sec-${loc}`}>
                     <td
-                      colSpan={3 + TOTAL_MONTHS}
+                      colSpan={3 + viewMonths}
                       style={{
                         background: "#222",
                         color: "#c9a84c",
@@ -1066,7 +1088,7 @@ export default function GanttChart() {
                   {projects
                     .filter((p) => p.location === loc)
                     .map((proj) => {
-                      const due = getDue(proj, CSY, CSM);
+                      const due = getDue(proj, viewFrom[0], viewFrom[1]);
                       const c = COLORS[proj.status] || COLORS.complete;
                       return (
                         <tr
@@ -1164,7 +1186,7 @@ export default function GanttChart() {
                             colSpan={TOTAL_MONTHS}
                             style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}
                           >
-                            <BarCanvas proj={proj} csy={CSY} csm={CSM} />
+                            <BarCanvas proj={proj} csy={viewFrom[0]} csm={viewFrom[1]} totalMonths={viewMonths} />
                           </td>
                         </tr>
                       );
@@ -1181,7 +1203,7 @@ export default function GanttChart() {
                     }}
                   >
                     <td
-                      colSpan={3 + TOTAL_MONTHS}
+                      colSpan={3 + viewMonths}
                       style={{
                         padding: "6px 14px",
                         color: "#aaa",
@@ -1247,12 +1269,10 @@ export default function GanttChart() {
               Choose a date range — fewer months gives wider columns and cleaner text.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
-              {(
-                [
-                  { label: "From", val: printFrom, set: setPrintFrom },
-                  { label: "To", val: printTo, set: setPrintTo },
-                ] as { label: string; val: string; set: (v: string) => void }[]
-              ).map(({ label, val, set }) => (
+              {[
+                { label: "From", val: printFrom, set: setPrintFrom },
+                { label: "To", val: printTo, set: setPrintTo },
+              ].map(({ label, val, set }: { label: string; val: string; set: (v: string) => void }) => (
                 <div key={label}>
                   <label style={labelStyle}>{label}</label>
                   <input type="month" value={val} onChange={(e) => set(e.target.value)} style={inputStyle} />
