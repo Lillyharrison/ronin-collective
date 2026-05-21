@@ -597,8 +597,8 @@ function buildTileDoc(
       if (issue.assignee_name) metaPairs.push(["Assigned", firstName(issue.assignee_name)]);
       if (issue.status === "resolved" && issue.resolved_at) {
         metaPairs.push(["Resolved", format(parseISO(issue.resolved_at), "dd MMM yyyy")]);
-      } else {
-        metaPairs.push(["Age", `${ageDays(issue.created_at)}d`]);
+      } else if (issue.scheduled_date) {
+        metaPairs.push(["Scheduled", format(parseISO(issue.scheduled_date), "dd MMM yyyy")]);
       }
 
       const metaLineH = metaSize * 0.45;
