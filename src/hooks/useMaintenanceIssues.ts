@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { enqueue } from "@/lib/offlineDB";
 import { OfflineSyncContext } from "@/hooks/useOfflineSync";
+import { toast } from "sonner";
 
 export type IssuePriority = "urgent" | "high" | "medium" | "low";
 export type IssueStatus = "reported" | "under_investigation" | "approved" | "scheduled" | "in_progress" | "resolved";
@@ -80,8 +81,8 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
       return;
     }
 
-    // Narrow columns — list view never needs description until detail drawer opens
-    const ISSUE_COLS = "id, title, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at";
+    // Named columns only; include description so edit dialogs never overwrite existing notes with blank local state.
+    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at";
 
     // Build query with server-side property + filter params
     let query = supabase
@@ -178,8 +179,42 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
   };
 
   const updateIssue = async (id: string, patch: Partial<MaintenanceIssue>) => {
-    const { error } = await supabase.from("maintenance_issues").update(patch).eq("id", id);
-    if (!error) await fetchIssues(0);
+    const allowedPatch: Partial<MaintenanceIssue> = {
+      title: patch.title,
+      description: patch.description,
+      category: patch.category,
+      priority: patch.priority,
+      status: patch.status,
+      property_id: patch.property_id,
+      location_detail: patch.location_detail,
+      assigned_to: patch.assigned_to,
+      photo_url: patch.photo_url,
+      close_out_photo_url: patch.close_out_photo_url,
+      scheduled_date: patch.scheduled_date,
+      resolved_at: patch.resolved_at,
+      source: patch.source,
+      related_issue_id: patch.related_issue_id,
+      is_draft: patch.is_draft,
+    };
+    Object.keys(allowedPatch).forEach((key) => {
+      if (allowedPatch[key as keyof MaintenanceIssue] === undefined) delete allowedPatch[key as keyof MaintenanceIssue];
+    });
+
+    if (!navigator.onLine) {
+      setIssues(prev => prev.map(issue => issue.id === id ? { ...issue, ...allowedPatch, updated_at: new Date().toISOString() } : issue));
+      await enqueue("maintenance_issues", "update", allowedPatch as unknown as Record<string, unknown>, { id });
+      syncCtx?.notifyQueued();
+      toast.success("Repair changes queued to sync");
+      return { error: null };
+    }
+
+    const { error } = await supabase.from("maintenance_issues").update(allowedPatch).eq("id", id);
+    if (error) {
+      toast.error("Repair changes were not saved");
+    } else {
+      toast.success("Repair changes saved");
+      await fetchIssues(0);
+    }
     return { error };
   };
 

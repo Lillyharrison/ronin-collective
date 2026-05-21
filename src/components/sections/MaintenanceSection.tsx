@@ -30,6 +30,7 @@ const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, 
 type ViewMode = "board" | "list" | "table";
 type MaintenanceTab = "repairs" | "planned";
 type StaffProfileRow = { id: string; full_name: string | null; avatar_url: string | null; level?: string | null };
+const PLANNED_FULL_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
 
 export function MaintenanceSection() {
   const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
@@ -92,6 +93,16 @@ export function MaintenanceSection() {
   const properties = (isMasterAdmin || isAdmin || isManager)
     ? allProperties
     : allProperties.filter(p => assignedPropertyIds.includes(p.id));
+  const issueById = useMemo(() => new Map(issues.map(issue => [issue.id, issue])), [issues]);
+  const getCanonicalIssue = useCallback((issue: MaintenanceIssue) => issueById.get(issue.id) ?? issue, [issueById]);
+  const openIssueDetail = useCallback((issue: MaintenanceIssue) => {
+    setDetailIssue(getCanonicalIssue(issue));
+  }, [getCanonicalIssue]);
+  const openIssueEditor = useCallback((issue: MaintenanceIssue) => {
+    setEditIssue(getCanonicalIssue(issue));
+    setModalOpen(true);
+    setDetailIssue(null);
+  }, [getCanonicalIssue]);
 
   useEffect(() => {
     // Properties + vendors are tiny lookups (≤ a few dozen rows) — no limit needed.
@@ -147,7 +158,7 @@ export function MaintenanceSection() {
     if (loading) return;
     const issue = issues.find(i => i.id === pendingId);
     if (issue) {
-      setDetailIssue(issue);
+      openIssueDetail(issue);
       setActiveTab("repairs");
       setPendingMaintenanceIssueId(null);
       return;
@@ -184,7 +195,7 @@ export function MaintenanceSection() {
     })();
 
     return () => { cancelled = true; };
-  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, setActiveTab]);
+  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, setActiveTab, openIssueDetail]);
 
   // Deep-link: open a planned maintenance entry when arriving from the calendar.
   useEffect(() => {
@@ -204,7 +215,7 @@ export function MaintenanceSection() {
     (async () => {
       const { data } = await supabase
         .from("planned_maintenance")
-        .select("*")
+        .select(PLANNED_FULL_COLS)
         .eq("id", pendingId)
         .maybeSingle();
       if (cancelled) return;
@@ -280,7 +291,7 @@ export function MaintenanceSection() {
   const reportedCount = displayIssues.filter(i => i.status === "reported").length;
 
   const handleCreate = async (payload: Partial<MaintenanceIssue>) => {
-    if (!userId) return;
+    if (!userId) return false;
     const { data: newIssue } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
     if (newIssue) {
       const key = `create-${newIssue.id}`;
@@ -297,12 +308,14 @@ export function MaintenanceSection() {
       }, userId);
       setTimeout(() => notifyingRef.current.delete(key), 5000);
     }
+    return Boolean(newIssue);
   };
 
   const handleEdit = async (patch: Partial<MaintenanceIssue>) => {
-    if (!editIssue) return;
-    await updateIssue(editIssue.id, patch);
-    setEditIssue(null);
+    if (!editIssue) return false;
+    const { error } = await updateIssue(editIssue.id, patch);
+    if (!error) setEditIssue(null);
+    return !error;
   };
 
   const handleStatusChange = async (issue: MaintenanceIssue, newStatus: IssueStatus, scheduledDate?: string) => {
@@ -495,7 +508,7 @@ export function MaintenanceSection() {
     // Re-read the entry from DB to capture any auto-rolled dates from the hook
     const { data: updated } = await supabase
       .from("planned_maintenance")
-      .select("*")
+        .select(PLANNED_FULL_COLS)
       .eq("id", editPlanned.id)
       .single();
 
@@ -549,7 +562,7 @@ export function MaintenanceSection() {
         ) : (
           <div className="space-y-3">
             {openIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
             ))}
           </div>
         )}
@@ -562,7 +575,7 @@ export function MaintenanceSection() {
           mode={editIssue ? "edit" : "create"} />
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
-            onEdit={(issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }}
+            onEdit={openIssueEditor}
             categories={categories} />
         )}
       </div>
@@ -622,7 +635,7 @@ export function MaintenanceSection() {
         {activeTab === "repairs" ? (
           <div className="space-y-3">
             {displayIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
             ))}
           </div>
         ) : (
@@ -651,7 +664,7 @@ export function MaintenanceSection() {
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
             onEdit={detailIssue.reported_by === userId && detailIssue.status === "reported"
-              ? (issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }
+              ? openIssueEditor
               : undefined}
             categories={categories} />
         )}
@@ -789,7 +802,7 @@ export function MaintenanceSection() {
                           )
                         : displayIssues;
 
-                  // The list query strips `description` for perf — fetch it on demand when notes are requested.
+                  // Ensure the export uses the latest notes from the database.
                   let issuesForExport = sortedForExport;
                   if (includeNotes && sortedForExport.length > 0) {
                     const ids = sortedForExport.map(i => i.id);
@@ -899,7 +912,7 @@ export function MaintenanceSection() {
               // Re-read the updated entry to get rolled-forward dates
               const { data: updated } = await supabase
                 .from("planned_maintenance")
-                .select("*")
+                .select(PLANNED_FULL_COLS)
                 .eq("id", id)
                 .single();
               if (updated) {
@@ -930,7 +943,7 @@ export function MaintenanceSection() {
       ) : showResolved ? (
         <div className="px-4 pb-4 space-y-3">
           {viewIssues.map(issue => (
-            <IssueCard key={issue.id} issue={issue} onClick={() => setDetailIssue(issue)} compact />
+            <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
           ))}
         </div>
       ) : viewMode === "board" ? (
@@ -980,7 +993,7 @@ export function MaintenanceSection() {
                       >
                         <IssueCard
                           issue={issue}
-                          onClick={() => setDetailIssue(issue)}
+                          onClick={() => openIssueDetail(issue)}
                           compact
                         />
                         {/* Quick approve button — only on Reported column for admins */}
@@ -1012,7 +1025,7 @@ export function MaintenanceSection() {
             <IssueCard
               key={issue.id}
               issue={issue}
-              onClick={() => setDetailIssue(issue)}
+              onClick={() => openIssueDetail(issue)}
               compact
             />
           ))}
@@ -1062,7 +1075,7 @@ export function MaintenanceSection() {
               {sortForTable(viewIssues).map(issue => (
                 <tr
                   key={issue.id}
-                  onClick={() => setDetailIssue(issue)}
+                  onClick={() => openIssueDetail(issue)}
                   className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors"
                 >
                   <td className="px-3 py-2.5">
@@ -1121,7 +1134,7 @@ export function MaintenanceSection() {
         <IssueDetailDrawer
           issue={detailIssue}
           onClose={() => setDetailIssue(null)}
-          onEdit={(issue) => { setEditIssue(issue); setModalOpen(true); setDetailIssue(null); }}
+          onEdit={openIssueEditor}
           onStatusChange={canManage ? handleStatusChange : undefined}
           onDelete={(isMasterAdmin || isAdmin) ? async (id) => { await deleteIssue(id); setDetailIssue(null); } : undefined}
           categories={categories}

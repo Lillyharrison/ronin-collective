@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { enqueue } from "@/lib/offlineDB";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 export interface PlannedMaintenanceEntry {
   id: string;
@@ -32,6 +34,7 @@ export interface PlannedMaintenanceEntry {
 
 export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
   const { user, loading: authLoading } = useAuth();
+  const syncCtx = useOfflineSync();
   const [entries, setEntries] = useState<PlannedMaintenanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,8 +57,8 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
     }
 
     setLoading(true);
-    // Narrow columns — list rendering never needs `description` until edit modal opens
-    const PM_COLS = "id, title, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
+    // Named columns only; include description so edit dialogs never reopen with blank notes and overwrite them.
+    const PM_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
     let query = supabase
       .from("planned_maintenance")
       .select(PM_COLS)
@@ -92,11 +95,8 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
     (propsRes.data ?? []).forEach((p: any) => { propMap[p.id] = p.name; });
     (profilesRes.data ?? []).forEach((p: any) => { profileMap[p.id] = { name: p.full_name ?? "Unknown", avatar: p.avatar_url }; });
 
-    // Re-fetch description separately would defeat the point — fetch lazily in modal instead.
-    // For now, mark description as null on list rows; detail modal can re-load if needed.
     const enriched: PlannedMaintenanceEntry[] = (data as any[]).map((e) => ({
       ...e,
-      description: null,
       vendor_name:    e.vendor_id    ? vendorMap[e.vendor_id]              : undefined,
       property_name:  e.property_id  ? propMap[e.property_id]              : undefined,
       assignee_name:  e.assigned_to  ? profileMap[e.assigned_to]?.name    : undefined,
@@ -160,7 +160,37 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       }
     }
 
-    const { error } = await supabase.from("planned_maintenance").update(patch).eq("id", id);
+    const allowedPatch: Partial<PlannedMaintenanceEntry> = {
+      title: patch.title,
+      description: patch.description,
+      vendor_id: patch.vendor_id,
+      property_id: patch.property_id,
+      assigned_to: patch.assigned_to,
+      date_type: patch.date_type,
+      scheduled_date: patch.scheduled_date,
+      scheduled_time: patch.scheduled_time,
+      scheduled_month: patch.scheduled_month,
+      scheduled_year: patch.scheduled_year,
+      reminder_days: patch.reminder_days,
+      recurrence_months: patch.recurrence_months,
+      status: patch.status,
+      last_service_date: patch.last_service_date,
+      calendar_event_id: patch.calendar_event_id,
+      created_by: patch.created_by,
+    };
+    Object.keys(allowedPatch).forEach((key) => {
+      if (allowedPatch[key as keyof PlannedMaintenanceEntry] === undefined) delete allowedPatch[key as keyof PlannedMaintenanceEntry];
+    });
+
+    if (!navigator.onLine) {
+      setEntries(prev => prev.map(entry => entry.id === id ? { ...entry, ...allowedPatch, updated_at: new Date().toISOString() } : entry));
+      await enqueue("planned_maintenance", "update", allowedPatch as unknown as Record<string, unknown>, { id });
+      syncCtx.notifyQueued();
+      toast.success("Entry changes queued to sync");
+      return true;
+    }
+
+    const { error } = await supabase.from("planned_maintenance").update(allowedPatch).eq("id", id);
     if (error) { toast.error("Failed to update entry"); return false; }
     toast.success("Entry updated");
     await fetch();
