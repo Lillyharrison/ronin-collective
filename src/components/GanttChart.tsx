@@ -400,7 +400,6 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     const property = prompt(`Property name in ${location}?`) ?? "";
     if (!property) return;
     const id = nextId;
-    setNextId((n) => n + 1);
     const newProj: Project = {
       id, location, property, status: "construction",
       phases: [{ type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "Works" }],
