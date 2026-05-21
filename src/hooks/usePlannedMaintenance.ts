@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { enqueue } from "@/lib/offlineDB";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 export interface PlannedMaintenanceEntry {
   id: string;
@@ -32,6 +34,7 @@ export interface PlannedMaintenanceEntry {
 
 export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
   const { user, loading: authLoading } = useAuth();
+  const syncCtx = useOfflineSync();
   const [entries, setEntries] = useState<PlannedMaintenanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
