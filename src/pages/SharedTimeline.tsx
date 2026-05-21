@@ -15,5 +15,5 @@ export default function SharedTimeline() {
     );
   }
 
-  return <GanttChart shareToken={token} />;
+  return <GanttChart />;
 }
