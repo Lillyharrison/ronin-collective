@@ -172,28 +172,22 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
         const barH = multiPhase ? HALF_H : FULL_H;
         const barTop = multiPhase ? (lane === 0 ? PAD : PAD + HALF_H + 2) : PAD;
         const barW = (ce - cs) * COL_W - 4;
-        const lblTop = barTop + Math.floor(barH / 2) - 7;
         return (
-          <div key={idx}>
-            <div
-              title={ph.label}
-              style={{
-                position: "absolute", top: barTop, height: barH,
-                borderRadius: 3, cursor: "default", zIndex: 2,
-                background: bc.bar,
-                left: cs * COL_W + 2, width: barW,
-              }}
-            />
-            <div
-              style={{
-                position: "absolute", top: lblTop, left: cs * COL_W + 8,
-                height: 14, lineHeight: "14px", fontSize: 9, fontWeight: 700,
-                color: "#1a1a1a", whiteSpace: "nowrap", zIndex: 4 + lane,
-                pointerEvents: "none",
-              }}
-            >
-              {ph.label}
-            </div>
+          <div
+            key={idx}
+            title={ph.label}
+            style={{
+              position: "absolute", top: barTop, height: barH,
+              borderRadius: 3, cursor: "default", zIndex: 2,
+              background: bc.bar,
+              left: cs * COL_W + 2, width: barW,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "0 6px", boxSizing: "border-box", overflow: "hidden",
+              color: "#1a1a1a", whiteSpace: "nowrap", textOverflow: "ellipsis",
+              fontSize: 9, fontWeight: 700, lineHeight: "14px",
+            }}
+          >
+            {ph.label}
           </div>
         );
       })}
@@ -404,8 +398,9 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       const [esy, esm] = parseYM(printFrom);
       const [eey, eem] = parseYM(printTo);
       const exportMonths = Math.max(1, (eey - esy) * 12 + (eem - esm) + 1);
-      const fixedW = 420;
-      const targetW = 1620;
+      const fixedW = 404;
+      const estimatedH = 32 + 46 + locations.length * 24 + projects.length * 42;
+      const targetW = Math.max(1620, Math.ceil(estimatedH * 1.44));
       const monthW = Math.max(32, Math.floor((targetW - fixedW) / exportMonths));
       const exportW = fixedW + exportMonths * monthW;
       const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -421,14 +416,6 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         col += span;
       }
 
-      const exportColors: Record<Phase["type"], { bar: string; pill: string; pillText: string }> = {
-        construction: { bar: "#1f78b4", pill: "#d8ecfa", pillText: "#0f5686" },
-        install: { bar: "#159260", pill: "#d8f3e7", pillText: "#0d6841" },
-        maintenance: { bar: "#d78313", pill: "#fae6c4", pillText: "#8a5207" },
-        design: { bar: "#6b4fbd", pill: "#e7defa", pillText: "#5135a1" },
-        complete: { bar: "#8a8a8a", pill: "#e8e8e8", pillText: "#555555" },
-      };
-
       const monthHeaders = Array.from({ length: exportMonths }, (_, i) => {
         const absM = esm - 1 + i;
         return `<th>${MONTHS[((absM % 12) + 12) % 12]}</th>`;
@@ -437,17 +424,17 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       const bodyRows = locations.map((loc) => {
         const rows = projects.filter((p) => p.location === loc).map((proj) => {
           const due = getDue(proj, CSY, CSM);
-          const color = exportColors[proj.status] || exportColors.complete;
+          const color = COLORS[proj.status] || COLORS.complete;
           const bars = proj.phases.map((ph, idx) => {
             const cs = Math.max(0, mo(ph.start[0], ph.start[1], esy, esm));
             const ce = Math.min(exportMonths, mo(ph.end[0], ph.end[1], esy, esm));
             if (ce <= cs) return "";
             const multi = proj.phases.length > 1;
-            const top = multi ? (idx % 2 === 0 ? 3 : 15) : 5;
-            const height = multi ? 10 : 18;
-            const left = cs * monthW + 3;
-            const width = Math.max(10, (ce - cs) * monthW - 6);
-            const barColor = exportColors[ph.type]?.bar ?? exportColors.complete.bar;
+            const top = multi ? (idx % 2 === 0 ? 3 : 22) : 3;
+            const height = multi ? 17 : 36;
+            const left = cs * monthW + 2;
+            const width = Math.max(12, (ce - cs) * monthW - 4);
+            const barColor = COLORS[ph.type]?.bar ?? COLORS.complete.bar;
             return `<div class="bar" style="left:${left}px;top:${top}px;width:${width}px;height:${height}px;line-height:${height}px;background:${barColor};">${escapeHtml(ph.label)}</div>`;
           }).join("");
           return `<tr class="project-row">
@@ -470,24 +457,24 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           .pdf-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
           .pdf-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;}
           .pdf-table{border-collapse:collapse;table-layout:fixed;width:${exportW}px;font-size:10px;}
-          .pdf-table col.property-col{width:210px}.pdf-table col.status-col{width:100px}.pdf-table col.due-col{width:110px}.pdf-table col.month-col{width:${monthW}px}
+          .pdf-table col.property-col{width:200px}.pdf-table col.status-col{width:96px}.pdf-table col.due-col{width:108px}.pdf-table col.month-col{width:${monthW}px}
           .pdf-table th{background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;padding:0 10px;height:28px;text-align:left;vertical-align:middle;}
           .pdf-table th.year{text-align:center;height:28px;border-left:2px solid #333;}
           .pdf-table thead tr.months th{height:18px;color:#777;font-size:8px;font-weight:400;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
           .section-row td{height:24px;background:#202020;color:#c9a84c;font-size:9px;font-weight:800;letter-spacing:4px;text-transform:uppercase;padding:0 12px;border-bottom:1px solid #222;}
-          .project-row td{height:36px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
-          .project-row .property{padding:0 12px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+          .project-row td{height:42px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
+          .project-row .property{padding:0 14px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fbfbfb;}
           .project-row .status{text-align:center;padding:0 6px;}
-          .project-row .status span{display:inline-block;border-radius:8px;padding:3px 9px;font-size:7px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;white-space:nowrap;}
-          .project-row .due{padding:4px 10px;overflow:visible;}
-          .due-date{font-size:9px;line-height:12px;font-weight:800;color:#15304a;white-space:nowrap;}
-          .due-desc{font-size:7.5px;line-height:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+          .project-row .status span{display:inline-block;border-radius:4px;padding:3px 8px;font-size:7px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
+          .project-row .due{padding:4px 12px;overflow:visible;}
+          .due-date{font-size:10px;line-height:14px;font-weight:800;color:#1a2e44;white-space:nowrap;}
+          .due-desc{font-size:8px;line-height:12px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
           .chart{position:relative;padding:0;background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:${monthW}px 100%;overflow:hidden;}
-          .bar{position:absolute;border-radius:3px;color:#fff;font-size:7px;font-weight:800;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:7px;font-weight:800;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
         </style>
         <div class="pdf-root">
           <div class="pdf-legend"><div class="items">
-            <span><i style="background:#1f78b4"></i>Construction</span><span><i style="background:#159260"></i>Install / Fit-out</span><span><i style="background:#d78313"></i>Maintenance</span><span><i style="background:#6b4fbd"></i>Design / Planning</span><span><i style="background:#8a8a8a"></i>Complete</span>
+            <span><i style="background:${COLORS.construction.bar}"></i>Construction</span><span><i style="background:${COLORS.install.bar}"></i>Install / Fit-out</span><span><i style="background:${COLORS.maintenance.bar}"></i>Maintenance</span><span><i style="background:${COLORS.design.bar}"></i>Design / Planning</span><span><i style="background:${COLORS.complete.bar}"></i>Complete</span>
           </div><div>As of ${escapeHtml(todayStr)}</div></div>
           <table class="pdf-table">
             <colgroup><col class="property-col"/><col class="status-col"/><col class="due-col"/>${Array.from({ length: exportMonths }, () => `<col class="month-col"/>`).join("")}</colgroup>
@@ -512,19 +499,19 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         windowHeight: fullH,
       });
 
-      // Landscape A4, matching the reference: one page, width-filled, no slicing.
-      const pdf = new jsPDF({ orientation: "landscape", format: "a4", unit: "mm" });
+      // Landscape A3: one page, width-filled, no slicing, with enough room to preserve the on-screen bar proportions.
+      const pdf = new jsPDF({ orientation: "landscape", format: "a3", unit: "mm" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
 
-      const margin = 4;
+      const margin = 2;
       const availW = pageW - margin * 2;
       const availH = pageH - margin * 2;
 
       const scale = Math.min(availW / canvas.width, availH / canvas.height);
       const imgW = canvas.width * scale;
       const imgH = canvas.height * scale;
-      const xOff = margin + (availW - imgW) / 2;
+      const xOff = margin + Math.max(0, (availW - imgW) / 2);
       const yOff = margin;
 
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", xOff, yOff, imgW, imgH);
