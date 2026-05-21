@@ -6,10 +6,12 @@ interface Phase {
   end: [number, number];
   label: string;
 }
+
 interface Milestone {
   date: [number, number];
   label: string;
 }
+
 interface Project {
   id: number;
   location: string;
@@ -20,225 +22,119 @@ interface Project {
 }
 
 const COL_W = 46;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const COLORS = {
   construction: { bar: "#a8c8e8", pill: "#d0e8f8", pillText: "#0d4270" },
-  install: { bar: "#a8d8b8", pill: "#cdf0e0", pillText: "#0d5236" },
-  maintenance: { bar: "#f0cc88", pill: "#fde9c8", pillText: "#7a4a08" },
-  design: { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
-  complete: { bar: "#cccccc", pill: "#e8e8e8", pillText: "#444444" },
+  install:      { bar: "#a8d8b8", pill: "#cdf0e0", pillText: "#0d5236" },
+  maintenance:  { bar: "#f0cc88", pill: "#fde9c8", pillText: "#7a4a08" },
+  design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
+  complete:     { bar: "#cccccc", pill: "#e8e8e8", pillText: "#444444" },
 };
+
 const TYPE_LABEL = {
-  construction: "Construction",
-  install: "Install",
-  maintenance: "Maintenance",
-  design: "Design",
-  complete: "Complete",
+  construction: "Construction", install: "Install", maintenance: "Maintenance",
+  design: "Design", complete: "Complete",
 };
 
 const INITIAL_PROJECTS: Project[] = [
-  {
-    id: 1,
-    location: "London",
-    property: "Penthouse",
-    status: "install",
-    phases: [{ type: "install", start: [2026, 5], end: [2026, 8], label: "Crane lift & furniture removal" }],
-    milestones: [{ date: [2026, 8], label: "Aug occupancy target" }],
-  },
-  {
-    id: 2,
-    location: "London",
-    property: "Apartment 4.02",
-    status: "design",
-    phases: [{ type: "design", start: [2026, 8], end: [2027, 1], label: "Licence to Alter + design (extensive)" }],
-    milestones: [],
-  },
-  {
-    id: 3,
-    location: "New York",
-    property: "502 Park Avenue",
-    status: "install",
-    phases: [{ type: "install", start: [2026, 3], end: [2026, 7], label: "Accessories / AV / lighting" }],
-    milestones: [
-      { date: [2026, 5], label: "May 18th target" },
-      { date: [2026, 7], label: "8 Jul occupancy" },
+  { id:1,  location:"London",      property:"Penthouse",          status:"install",
+    phases:[{type:"install",      start:[2026,5], end:[2026,8],  label:"Crane lift & furniture removal"}],
+    milestones:[{date:[2026,8],   label:"Aug occupancy target"}] },
+  { id:2,  location:"London",      property:"Apartment 4.02",     status:"design",
+    phases:[{type:"design",       start:[2026,8], end:[2027,1],  label:"Licence to Alter + design (extensive)"}],
+    milestones:[] },
+  { id:3,  location:"New York",    property:"502 Park Avenue",    status:"install",
+    phases:[{type:"install",      start:[2026,3], end:[2026,7],  label:"Accessories / AV / lighting"}],
+    milestones:[{date:[2026,5],label:"May 18th target"},{date:[2026,7],label:"8 Jul occupancy"}] },
+  { id:4,  location:"New York",    property:"AMAN New York",      status:"construction",
+    phases:[{type:"construction", start:[2026,3], end:[2028,3],  label:"~2 year programme"}],
+    milestones:[] },
+  { id:5,  location:"Aspen",       property:"135 E. Cooper",      status:"construction",
+    phases:[{type:"construction", start:[2026,3], end:[2027,12], label:"On site — drywall, electrics, millwork"}],
+    milestones:[{date:[2027,12],  label:"Target completion"}] },
+  { id:6,  location:"Aspen",       property:"Snow Queen Lodge",   status:"design",
+    phases:[{type:"design",       start:[2026,3], end:[2026,9],  label:"Preliminary designs"}],
+    milestones:[] },
+  { id:7,  location:"Aspen",       property:"AMAN Aspen",         status:"design",
+    phases:[{type:"design",       start:[2026,8], end:[2027,6],  label:"Early investor — land TBC"}],
+    milestones:[] },
+  { id:8,  location:"Aspen",       property:"1 Aspen",            status:"complete",
+    phases:[], milestones:[] },
+  { id:9,  location:"Montana",     property:"Eglise 202",         status:"install",
+    phases:[{type:"install",      start:[2026,3], end:[2026,7],  label:"Interior finishing → install"}],
+    milestones:[{date:[2026,7],   label:"Jun/Jul install target"}] },
+  { id:10, location:"Montana",     property:"Eglise 9A",          status:"construction",
+    phases:[
+      {type:"design",       start:[2026,3], end:[2026,6], label:"Design input"},
+      {type:"construction", start:[2026,6], end:[2027,6], label:"Structural & mechanical"}
     ],
-  },
-  {
-    id: 4,
-    location: "New York",
-    property: "AMAN New York",
-    status: "construction",
-    phases: [{ type: "construction", start: [2026, 3], end: [2028, 3], label: "~2 year programme" }],
-    milestones: [],
-  },
-  {
-    id: 5,
-    location: "Aspen",
-    property: "135 E. Cooper",
-    status: "construction",
-    phases: [
-      { type: "construction", start: [2026, 3], end: [2027, 12], label: "On site — drywall, electrics, millwork" },
+    milestones:[{date:[2027,6],label:"Target 2027"}] },
+  { id:11, location:"Los Angeles", property:"Franklin",           status:"construction",
+    phases:[
+      {type:"construction", start:[2026,3], end:[2026,9], label:"Construction"},
+      {type:"install",      start:[2026,9], end:[2026,10],label:"Clean & install"}
     ],
-    milestones: [{ date: [2027, 12], label: "Target completion" }],
-  },
-  {
-    id: 6,
-    location: "Aspen",
-    property: "Snow Queen Lodge",
-    status: "design",
-    phases: [{ type: "design", start: [2026, 3], end: [2026, 9], label: "Preliminary designs" }],
-    milestones: [],
-  },
-  {
-    id: 7,
-    location: "Aspen",
-    property: "AMAN Aspen",
-    status: "design",
-    phases: [{ type: "design", start: [2026, 8], end: [2027, 6], label: "Early investor — land TBC" }],
-    milestones: [],
-  },
-  { id: 8, location: "Aspen", property: "1 Aspen", status: "complete", phases: [], milestones: [] },
-  {
-    id: 9,
-    location: "Montana",
-    property: "Eglise 202",
-    status: "install",
-    phases: [{ type: "install", start: [2026, 3], end: [2026, 7], label: "Interior finishing → install" }],
-    milestones: [{ date: [2026, 7], label: "Jun/Jul install target" }],
-  },
-  {
-    id: 10,
-    location: "Montana",
-    property: "Eglise 9A",
-    status: "construction",
-    phases: [
-      { type: "design", start: [2026, 3], end: [2026, 6], label: "Design input" },
-      { type: "construction", start: [2026, 6], end: [2027, 6], label: "Structural & mechanical" },
+    milestones:[{date:[2026,6],label:"Jun 15 completion"}] },
+  { id:12, location:"Los Angeles", property:"31042 Broad Beach",  status:"install",
+    phases:[
+      {type:"construction", start:[2026,3], end:[2026,9], label:"Exterior works"},
+      {type:"install",      start:[2026,9], end:[2026,10],label:"Furniture install"}
     ],
-    milestones: [{ date: [2027, 6], label: "Target 2027" }],
-  },
-  {
-    id: 11,
-    location: "Los Angeles",
-    property: "Franklin",
-    status: "construction",
-    phases: [
-      { type: "construction", start: [2026, 3], end: [2026, 9], label: "Construction" },
-      { type: "install", start: [2026, 9], end: [2026, 10], label: "Clean & install" },
-    ],
-    milestones: [{ date: [2026, 6], label: "Jun 15 completion" }],
-  },
-  {
-    id: 12,
-    location: "Los Angeles",
-    property: "31042 Broad Beach",
-    status: "install",
-    phases: [
-      { type: "construction", start: [2026, 3], end: [2026, 9], label: "Exterior works" },
-      { type: "install", start: [2026, 9], end: [2026, 10], label: "Furniture install" },
-    ],
-    milestones: [{ date: [2026, 5], label: "May 15 furniture ready" }],
-  },
-  {
-    id: 13,
-    location: "Los Angeles",
-    property: "31038 Broad Beach",
-    status: "maintenance",
-    phases: [{ type: "maintenance", start: [2026, 3], end: [2026, 5], label: "Maintenance / feedback pending" }],
-    milestones: [],
-  },
-  {
-    id: 14,
-    location: "Los Angeles",
-    property: "Rockingham",
-    status: "maintenance",
-    phases: [{ type: "maintenance", start: [2026, 3], end: [2026, 5], label: "HVAC + kitchen door/window" }],
-    milestones: [{ date: [2026, 3], label: "26 Mar HVAC" }],
-  },
-  { id: 15, location: "Los Angeles", property: "Moreno", status: "complete", phases: [], milestones: [] },
-  {
-    id: 16,
-    location: "Los Angeles",
-    property: "Toyopa Drive",
-    status: "design",
-    phases: [{ type: "design", start: [2026, 3], end: [2027, 1], label: "Long-range planning" }],
-    milestones: [],
-  },
-  {
-    id: 17,
-    location: "Los Angeles",
-    property: "La Cumbre",
-    status: "maintenance",
-    phases: [{ type: "maintenance", start: [2026, 4], end: [2026, 7], label: "Erosion repair & perimeter works" }],
-    milestones: [],
-  },
-  { id: 18, location: "Los Angeles", property: "Bristol", status: "complete", phases: [], milestones: [] },
-  {
-    id: 19,
-    location: "Miami",
-    property: "AMAN Miami",
-    status: "construction",
-    phases: [{ type: "construction", start: [2026, 3], end: [2027, 12], label: "~2 year programme" }],
-    milestones: [],
-  },
-  {
-    id: 20,
-    location: "Miami",
-    property: "29 Indian Creek",
-    status: "design",
-    phases: [{ type: "design", start: [2026, 3], end: [2026, 12], label: "Long range planning" }],
-    milestones: [],
-  },
-  {
-    id: 21,
-    location: "Nashville",
-    property: "Cousin's House",
-    status: "maintenance",
-    phases: [{ type: "maintenance", start: [2026, 4], end: [2026, 6], label: "Generator works TBC" }],
-    milestones: [],
-  },
-  {
-    id: 22,
-    location: "Los Angeles",
-    property: "Monument",
-    status: "maintenance",
-    phases: [{ type: "maintenance", start: [2026, 4], end: [2026, 7], label: "Erosion repair & perimeter works" }],
-    milestones: [],
-  },
+    milestones:[{date:[2026,5],label:"May 15 furniture ready"}] },
+  { id:13, location:"Los Angeles", property:"31038 Broad Beach",  status:"maintenance",
+    phases:[{type:"maintenance",  start:[2026,3], end:[2026,5],  label:"Maintenance / feedback pending"}],
+    milestones:[] },
+  { id:14, location:"Los Angeles", property:"Rockingham",         status:"maintenance",
+    phases:[{type:"maintenance",  start:[2026,3], end:[2026,5],  label:"HVAC + kitchen door/window"}],
+    milestones:[{date:[2026,3],label:"26 Mar HVAC"}] },
+  { id:15, location:"Los Angeles", property:"Moreno",             status:"complete",
+    phases:[], milestones:[] },
+  { id:16, location:"Los Angeles", property:"Toyopa Drive",       status:"design",
+    phases:[{type:"design",       start:[2026,3], end:[2027,1],  label:"Long-range planning"}],
+    milestones:[] },
+  { id:17, location:"Los Angeles", property:"La Cumbre",          status:"maintenance",
+    phases:[{type:"maintenance",  start:[2026,4], end:[2026,7],  label:"Erosion repair & perimeter works"}],
+    milestones:[] },
+  { id:18, location:"Los Angeles", property:"Bristol",            status:"complete",
+    phases:[], milestones:[] },
+  { id:19, location:"Miami",       property:"AMAN Miami",         status:"construction",
+    phases:[{type:"construction", start:[2026,3], end:[2027,12], label:"~2 year programme"}],
+    milestones:[] },
+  { id:20, location:"Miami",       property:"29 Indian Creek",    status:"design",
+    phases:[{type:"design",       start:[2026,3], end:[2026,12], label:"Long range planning"}],
+    milestones:[] },
+  { id:21, location:"Nashville",   property:"Cousin's House",     status:"maintenance",
+    phases:[{type:"maintenance",  start:[2026,4], end:[2026,6],  label:"Generator works TBC"}],
+    milestones:[] },
+  { id:22, location:"Los Angeles", property:"Monument",           status:"maintenance",
+    phases:[{type:"maintenance",  start:[2026,4], end:[2026,7],  label:"Erosion repair & perimeter works"}],
+    milestones:[] },
 ];
 
 function mo(y: number, m: number, csy: number, csm: number) {
   return (y - csy) * 12 + (m - csm);
 }
+
 function fmtYM(y: number, m: number) {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
+
 function parseYM(s: string): [number, number] {
   const p = s.split("-");
   return [parseInt(p[0]), parseInt(p[1])];
 }
+
 function fmtDate(ym: [number, number]) {
   return `${MONTHS[ym[1] - 1]} ${ym[0]}`;
 }
+
 function getDue(proj: Project, csy: number, csm: number) {
   if (proj.status === "complete") return null;
-  const future = proj.milestones.filter((ms) => ms.date[0] > csy || (ms.date[0] === csy && ms.date[1] >= csm));
+  const future = proj.milestones.filter(
+    (ms) => ms.date[0] > csy || (ms.date[0] === csy && ms.date[1] >= csm)
+  );
   if (future.length > 0) {
     future.sort((a, b) => mo(a.date[0], a.date[1], csy, csm) - mo(b.date[0], b.date[1], csy, csm));
     return { label: fmtDate(future[0].date), desc: future[0].label };
@@ -252,8 +148,7 @@ function getDue(proj: Project, csy: number, csm: number) {
 }
 
 function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number; csm: number; totalMonths: number }) {
-  const ROW = 44,
-    PAD = 3;
+  const ROW = 44, PAD = 3;
   const FULL_H = ROW - PAD * 2;
   const HALF_H = Math.floor(FULL_H / 2) - 1;
   const multiPhase = proj.phases.length > 1;
@@ -281,31 +176,18 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
             <div
               title={ph.label}
               style={{
-                position: "absolute",
-                top: barTop,
-                height: barH,
-                borderRadius: 3,
-                cursor: "default",
-                zIndex: 2,
+                position: "absolute", top: barTop, height: barH,
+                borderRadius: 3, cursor: "default", zIndex: 2,
                 background: bc.bar,
-                left: cs * COL_W + 2,
-                width: barW,
+                left: cs * COL_W + 2, width: barW,
               }}
             />
             <div
               style={{
-                position: "absolute",
-                top: lblTop,
-                left: cs * COL_W + 7,
-                height: 14,
-                lineHeight: "14px",
-                fontSize: 10,
-                fontWeight: 700,
-                color: "#1a1a1a",
-                whiteSpace: "nowrap",
-                zIndex: 4 + lane,
-                pointerEvents: "none",
-                letterSpacing: "0.1px",
+                position: "absolute", top: lblTop, left: cs * COL_W + 7,
+                height: 14, lineHeight: "14px", fontSize: 10, fontWeight: 700,
+                color: "#1a1a1a", whiteSpace: "nowrap", zIndex: 4 + lane,
+                pointerEvents: "none", letterSpacing: "0.1px",
               }}
             >
               {ph.label}
@@ -318,151 +200,58 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
 }
 
 function PhaseRow({
-  phase,
-  idx,
-  onChange,
-  onRemove,
+  phase, idx, onChange, onRemove,
 }: {
-  phase: Phase;
-  idx: number;
+  phase: Phase; idx: number;
   onChange: (i: number, p: Phase) => void;
   onRemove: (i: number) => void;
 }) {
   return (
-    <div
-      style={{
-        background: "#f9f6f1",
-        border: "1px solid #e8e3da",
-        borderRadius: 6,
-        padding: "10px 12px",
-        marginBottom: 8,
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr 1fr auto",
-        gap: 8,
-        alignItems: "end",
-      }}
-    >
-      {[
-        {
-          label: "Type",
-          content: (
-            <select
-              value={phase.type}
-              onChange={(e) => onChange(idx, { ...phase, type: e.target.value as Phase["type"] })}
-              style={{
-                width: "100%",
-                padding: "5px 8px",
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                fontSize: 11,
-                fontFamily: "inherit",
-                background: "#fff",
-              }}
-            >
-              {(["construction", "install", "maintenance", "design", "complete"] as const).map((t) => (
-                <option key={t} value={t}>
-                  {TYPE_LABEL[t]}
-                </option>
-              ))}
-            </select>
-          ),
-        },
-        {
-          label: "Start",
-          content: (
-            <input
-              type="month"
-              value={fmtYM(phase.start[0], phase.start[1])}
-              onChange={(e) => onChange(idx, { ...phase, start: parseYM(e.target.value) })}
-              style={{
-                width: "100%",
-                padding: "5px 8px",
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                fontSize: 11,
-                fontFamily: "inherit",
-                background: "#fff",
-              }}
-            />
-          ),
-        },
-        {
-          label: "End",
-          content: (
-            <input
-              type="month"
-              value={fmtYM(phase.end[0], phase.end[1])}
-              onChange={(e) => onChange(idx, { ...phase, end: parseYM(e.target.value) })}
-              style={{
-                width: "100%",
-                padding: "5px 8px",
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                fontSize: 11,
-                fontFamily: "inherit",
-                background: "#fff",
-              }}
-            />
-          ),
-        },
-        {
-          label: "Label",
-          content: (
-            <input
-              type="text"
-              value={phase.label}
-              onChange={(e) => onChange(idx, { ...phase, label: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "5px 8px",
-                border: "1px solid #ccc",
-                borderRadius: 4,
-                fontSize: 11,
-                fontFamily: "inherit",
-                background: "#fff",
-              }}
-            />
-          ),
-        },
-      ].map(({ label, content }: { label: string; content: React.ReactNode }) => (
+    <div style={{
+      background: "#f9f6f1", border: "1px solid #e8e3da", borderRadius: 6,
+      padding: "10px 12px", marginBottom: 8,
+      display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 8, alignItems: "end",
+    }}>
+      {([
+        { label: "Type", content: (
+          <select value={phase.type}
+            onChange={(e) => onChange(idx, { ...phase, type: e.target.value as Phase["type"] })}
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }}>
+            {(["construction","install","maintenance","design","complete"] as const).map(t => (
+              <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+            ))}
+          </select>
+        )},
+        { label: "Start", content: (
+          <input type="month" value={fmtYM(phase.start[0], phase.start[1])}
+            onChange={(e) => onChange(idx, { ...phase, start: parseYM(e.target.value) })}
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }} />
+        )},
+        { label: "End", content: (
+          <input type="month" value={fmtYM(phase.end[0], phase.end[1])}
+            onChange={(e) => onChange(idx, { ...phase, end: parseYM(e.target.value) })}
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }} />
+        )},
+        { label: "Label", content: (
+          <input type="text" value={phase.label}
+            onChange={(e) => onChange(idx, { ...phase, label: e.target.value })}
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }} />
+        )},
+      ]).map(({ label, content }: { label: string; content: React.ReactNode }) => (
         <div key={label}>
-          <div
-            style={{
-              fontSize: 9,
-              fontWeight: 600,
-              color: "#888",
-              textTransform: "uppercase",
-              letterSpacing: ".5px",
-              marginBottom: 3,
-            }}
-          >
-            {label}
-          </div>
+          <div style={{ fontSize: 9, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>{label}</div>
           {content}
         </div>
       ))}
-      <button
-        onClick={() => onRemove(idx)}
-        style={{
-          background: "#fde8e6",
-          color: "#c0392b",
-          border: "1px solid #f5c6c2",
-          borderRadius: 4,
-          padding: "5px 10px",
-          cursor: "pointer",
-          fontSize: 11,
-          fontWeight: 700,
-          alignSelf: "flex-end",
-          fontFamily: "inherit",
-        }}
-      >
+      <button onClick={() => onRemove(idx)}
+        style={{ background: "#fde8e6", color: "#c0392b", border: "1px solid #f5c6c2", borderRadius: 4, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700, alignSelf: "flex-end", fontFamily: "inherit" }}>
         Remove
       </button>
     </div>
   );
 }
 
-export default function GanttChart() {
+export default function GanttChart(_props?: { onBack?: () => void }) {
   const now = new Date();
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
@@ -479,9 +268,10 @@ export default function GanttChart() {
   const [printFrom, setPrintFrom] = useState(fmtYM(CSY, CSM));
   const [printTo, setPrintTo] = useState(fmtYM(CSY + 1, CSM));
   const editorRef = useRef<HTMLDivElement>(null);
-  const [viewFrom, setViewFrom] = useState<[number, number]>([CSY, CSM]);
-  const [viewTo, setViewTo] = useState<[number, number]>([CSY + 2, CSM]);
-  const viewMonths = Math.max(1, (viewTo[0] - viewFrom[0]) * 12 + (viewTo[1] - viewFrom[1]));
+
+  const [viewFrom, setViewFrom] = useState<[number,number]>([CSY, CSM]);
+  const [viewTo, setViewTo] = useState<[number,number]>([CSY+2, CSM]);
+  const viewMonths = Math.max(1, (viewTo[0]-viewFrom[0])*12+(viewTo[1]-viewFrom[1]));
 
   const locations = [...new Set(projects.map((p) => p.location))];
 
@@ -498,20 +288,10 @@ export default function GanttChart() {
   }
 
   function saveProject() {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === editingId
-          ? {
-              ...p,
-              location: editorLoc,
-              property: editorProp,
-              status: editorStatus,
-              phases: editorPhases,
-              milestones: editorMs,
-            }
-          : p,
-      ),
-    );
+    setProjects((prev) => prev.map((p) => p.id === editingId
+      ? { ...p, location: editorLoc, property: editorProp, status: editorStatus, phases: editorPhases, milestones: editorMs }
+      : p
+    ));
     setEditingId(null);
   }
 
@@ -529,10 +309,7 @@ export default function GanttChart() {
     const id = nextId;
     setNextId((n) => n + 1);
     const newProj: Project = {
-      id,
-      location,
-      property,
-      status: "construction",
+      id, location, property, status: "construction",
       phases: [{ type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "Works" }],
       milestones: [],
     };
@@ -563,23 +340,13 @@ export default function GanttChart() {
   const yearSpans = buildYearSpans();
 
   const inputStyle: React.CSSProperties = {
-    padding: "7px 10px",
-    border: "1px solid #ccc",
-    borderRadius: 6,
-    fontSize: 12,
-    fontFamily: "inherit",
-    background: "#fff",
-    color: "#1a1a1a",
-    width: "100%",
+    padding: "7px 10px", border: "1px solid #ccc", borderRadius: 6,
+    fontSize: 12, fontFamily: "inherit", background: "#fff", color: "#1a1a1a", width: "100%",
   };
+
   const labelStyle: React.CSSProperties = {
-    fontSize: 10,
-    fontWeight: 600,
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: ".6px",
-    display: "block",
-    marginBottom: 4,
+    fontSize: 10, fontWeight: 600, color: "#666",
+    textTransform: "uppercase", letterSpacing: ".6px", display: "block", marginBottom: 4,
   };
 
   const legendItems: { color: string; label: string }[] = [
@@ -591,126 +358,34 @@ export default function GanttChart() {
   ];
 
   return (
-    <div
-      style={{
-        fontFamily: "'Inter', Arial, sans-serif",
-        fontSize: 12,
-        background: "transparent",
-        minHeight: "100vh",
-        color: "#1a1a1a",
-      }}
-    >
+    <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "transparent", minHeight: "100vh", color: "#1a1a1a" }}>
       {/* LEGEND */}
-      <div
-        style={{
-          background: "#fff",
-          padding: "10px 24px",
-          borderBottom: "1px solid #e8e3da",
-          display: "flex",
-          gap: 18,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        {legendItems.map(({ color, label }) => (
-          <span
-            key={label}
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#444", fontWeight: 500 }}
-          >
-            <span
-              style={{
-                width: 13,
-                height: 13,
-                borderRadius: 3,
-                background: color,
-                border: "1px solid rgba(0,0,0,0.12)",
-                flexShrink: 0,
-                display: "inline-block",
-              }}
-            />
+      <div style={{ background: "#fff", padding: "10px 24px", borderBottom: "1px solid #e8e3da", display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+        {(legendItems).map(({ color, label }) => (
+          <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#444", fontWeight: 500 }}>
+            <span style={{ width: 13, height: 13, borderRadius: 3, background: color, border: "1px solid rgba(0,0,0,0.12)", flexShrink: 0, display: "inline-block" }} />
             {label}
           </span>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#aaa", letterSpacing: ".3px" }}>
-          Click any project name to edit
-        </span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#aaa", letterSpacing: ".3px" }}>Click any project name to edit</span>
       </div>
 
       {/* DATE RANGE CONTROLS */}
-      <div
-        style={{
-          background: "#fff",
-          padding: "10px 24px",
-          borderBottom: "1px solid #e8e3da",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{ fontSize: 10, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}
-        >
-          View
-        </span>
-        <input
-          type="month"
-          value={fmtYM(viewFrom[0], viewFrom[1])}
-          onChange={(e) => {
-            const v = parseYM(e.target.value);
-            setViewFrom(v);
-          }}
-          style={{
-            padding: "4px 8px",
-            border: "1px solid #ddd",
-            borderRadius: 5,
-            fontSize: 11,
-            fontFamily: "inherit",
-            background: "#fff",
-            color: "#1a1a1a",
-          }}
-        />
+      <div style={{ background: "#fff", padding: "10px 24px", borderBottom: "1px solid #e8e3da", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
+        <input type="month" value={fmtYM(viewFrom[0], viewFrom[1])}
+          onChange={(e) => { const v = parseYM(e.target.value); setViewFrom(v); }}
+          style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 5, fontSize: 11, fontFamily: "inherit", background: "#fff", color: "#1a1a1a" }} />
         <span style={{ color: "#aaa", fontSize: 12 }}>→</span>
-        <input
-          type="month"
-          value={fmtYM(viewTo[0], viewTo[1])}
-          onChange={(e) => {
-            const v = parseYM(e.target.value);
-            setViewTo(v);
-          }}
-          style={{
-            padding: "4px 8px",
-            border: "1px solid #ddd",
-            borderRadius: 5,
-            fontSize: 11,
-            fontFamily: "inherit",
-            background: "#fff",
-            color: "#1a1a1a",
-          }}
-        />
+        <input type="month" value={fmtYM(viewTo[0], viewTo[1])}
+          onChange={(e) => { const v = parseYM(e.target.value); setViewTo(v); }}
+          style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 5, fontSize: 11, fontFamily: "inherit", background: "#fff", color: "#1a1a1a" }} />
         <div style={{ display: "flex", gap: 4, marginLeft: 4 }}>
           {[12, 24, 36].map((m) => {
             const active = viewMonths === m;
             return (
-              <button
-                key={m}
-                onClick={() => {
-                  setViewFrom([CSY, CSM]);
-                  const d = new Date(CSY, CSM - 1 + m, 1);
-                  setViewTo([d.getFullYear(), d.getMonth() + 1]);
-                }}
-                style={{
-                  padding: "4px 10px",
-                  border: `1px solid ${active ? "#1a1a1a" : "#ddd"}`,
-                  borderRadius: 5,
-                  background: active ? "#1a1a1a" : "#fff",
-                  color: active ? "#fff" : "#555",
-                  cursor: "pointer",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                }}
-              >
+              <button key={m} onClick={() => { setViewFrom([CSY, CSM]); const d = new Date(CSY, CSM-1+m, 1); setViewTo([d.getFullYear(), d.getMonth()+1]); }}
+                style={{ padding: "4px 10px", border: `1px solid ${active ? "#1a1a1a" : "#ddd"}`, borderRadius: 5, background: active ? "#1a1a1a" : "#fff", color: active ? "#fff" : "#555", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
                 {m}m
               </button>
             );
@@ -721,83 +396,24 @@ export default function GanttChart() {
       <div style={{ padding: "20px 24px", background: "transparent" }}>
         {/* EDITOR PANEL */}
         {editingId !== null && (
-          <div
-            ref={editorRef}
-            style={{
-              background: "#fff",
-              borderRadius: 10,
-              border: "1px solid #e0dbd2",
-              marginBottom: 20,
-              overflow: "hidden",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
-            }}
-          >
-            <div
-              style={{
-                background: "#222",
-                color: "#c9a84c",
-                padding: "12px 16px",
-                fontSize: 11,
-                fontWeight: 700,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                letterSpacing: 1,
-                textTransform: "uppercase",
-                borderBottom: "1px solid #2a2a2a",
-              }}
-            >
-              <span>
-                Editing: {editorProp} — {editorLoc}
-              </span>
-              <button
-                onClick={() => setEditingId(null)}
-                style={{
-                  background: "transparent",
-                  border: "1px solid #444",
-                  color: "#aaa",
-                  borderRadius: 4,
-                  padding: "3px 10px",
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontFamily: "inherit",
-                }}
-              >
-                ✕ Close
-              </button>
+          <div ref={editorRef} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", marginBottom: 20, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+            <div style={{ background: "#222", color: "#c9a84c", padding: "12px 16px", fontSize: 11, fontWeight: 700, display: "flex", justifyContent: "space-between", alignItems: "center", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>
+              <span>Editing: {editorProp} — {editorLoc}</span>
+              <button onClick={() => setEditingId(null)} style={{ background: "transparent", border: "1px solid #444", color: "#aaa", borderRadius: 4, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>✕ Close</button>
             </div>
             <div style={{ padding: 18 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 18 }}>
-                {[
-                  {
-                    label: "City / Location",
-                    content: (
-                      <input style={inputStyle} value={editorLoc} onChange={(e) => setEditorLoc(e.target.value)} />
-                    ),
-                  },
-                  {
-                    label: "Property Name",
-                    content: (
-                      <input style={inputStyle} value={editorProp} onChange={(e) => setEditorProp(e.target.value)} />
-                    ),
-                  },
-                  {
-                    label: "Status",
-                    content: (
-                      <select
-                        style={inputStyle}
-                        value={editorStatus}
-                        onChange={(e) => setEditorStatus(e.target.value as Project["status"])}
-                      >
-                        {(["construction", "install", "maintenance", "design", "complete"] as const).map((t) => (
-                          <option key={t} value={t}>
-                            {TYPE_LABEL[t]}
-                          </option>
-                        ))}
-                      </select>
-                    ),
-                  },
-                ].map(({ label, content }: { label: string; content: React.ReactNode }) => (
+                {([
+                  { label: "City / Location", content: <input style={inputStyle} value={editorLoc} onChange={(e) => setEditorLoc(e.target.value)} /> },
+                  { label: "Property Name",   content: <input style={inputStyle} value={editorProp} onChange={(e) => setEditorProp(e.target.value)} /> },
+                  { label: "Status", content: (
+                    <select style={inputStyle} value={editorStatus} onChange={(e) => setEditorStatus(e.target.value as Project["status"])}>
+                      {(["construction","install","maintenance","design","complete"] as const).map(t => (
+                        <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+                      ))}
+                    </select>
+                  )},
+                ]).map(({ label, content }: { label: string; content: React.ReactNode }) => (
                   <div key={label}>
                     <label style={labelStyle}>{label}</label>
                     {content}
@@ -805,234 +421,60 @@ export default function GanttChart() {
                 ))}
               </div>
 
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "#c9a84c",
-                  textTransform: "uppercase",
-                  letterSpacing: ".8px",
-                  marginBottom: 8,
-                }}
-              >
-                Timeline Phases
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Timeline Phases</div>
               {editorPhases.map((ph, i) => (
-                <PhaseRow
-                  key={i}
-                  phase={ph}
-                  idx={i}
-                  onChange={(i, p) => {
-                    const a = [...editorPhases];
-                    a[i] = p;
-                    setEditorPhases(a);
-                  }}
-                  onRemove={(i) => setEditorPhases(editorPhases.filter((_, j) => j !== i))}
-                />
+                <PhaseRow key={i} phase={ph} idx={i}
+                  onChange={(i, p) => { const a = [...editorPhases]; a[i] = p; setEditorPhases(a); }}
+                  onRemove={(i) => setEditorPhases(editorPhases.filter((_, j) => j !== i))} />
               ))}
-              <button
-                onClick={() =>
-                  setEditorPhases([
-                    ...editorPhases,
-                    { type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "New phase" },
-                  ])
-                }
-                style={{
-                  background: "transparent",
-                  color: "#c9a84c",
-                  border: "1px solid #c9a84c",
-                  borderRadius: 5,
-                  padding: "6px 14px",
-                  cursor: "pointer",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: ".3px",
-                  fontFamily: "inherit",
-                  marginBottom: 18,
-                }}
-              >
+              <button onClick={() => setEditorPhases([...editorPhases, { type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "New phase" }])}
+                style={{ background: "transparent", color: "#c9a84c", border: "1px solid #c9a84c", borderRadius: 5, padding: "6px 14px", cursor: "pointer", fontSize: 10, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit", marginBottom: 18 }}>
                 + Add Phase
               </button>
 
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "#c9a84c",
-                  textTransform: "uppercase",
-                  letterSpacing: ".8px",
-                  marginBottom: 8,
-                }}
-              >
-                Milestones
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Milestones</div>
               {editorMs.map((ms, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                  <input
-                    type="month"
-                    value={fmtYM(ms.date[0], ms.date[1])}
-                    onChange={(e) => {
-                      const a = [...editorMs];
-                      a[i] = { ...ms, date: parseYM(e.target.value) };
-                      setEditorMs(a);
-                    }}
-                    style={{ ...inputStyle, width: 140 }}
-                  />
-                  <input
-                    type="text"
-                    value={ms.label}
-                    onChange={(e) => {
-                      const a = [...editorMs];
-                      a[i] = { ...ms, label: e.target.value };
-                      setEditorMs(a);
-                    }}
-                    style={inputStyle}
-                    placeholder="Milestone description"
-                  />
-                  <button
-                    onClick={() => setEditorMs(editorMs.filter((_, j) => j !== i))}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#c0392b",
-                      cursor: "pointer",
-                      fontSize: 18,
-                      fontWeight: 700,
-                      lineHeight: 1,
-                    }}
-                  >
-                    ×
-                  </button>
+                  <input type="month" value={fmtYM(ms.date[0], ms.date[1])}
+                    onChange={(e) => { const a = [...editorMs]; a[i] = { ...ms, date: parseYM(e.target.value) }; setEditorMs(a); }}
+                    style={{ ...inputStyle, width: 140 }} />
+                  <input type="text" value={ms.label}
+                    onChange={(e) => { const a = [...editorMs]; a[i] = { ...ms, label: e.target.value }; setEditorMs(a); }}
+                    style={inputStyle} placeholder="Milestone description" />
+                  <button onClick={() => setEditorMs(editorMs.filter((_, j) => j !== i))}
+                    style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 18, fontWeight: 700, lineHeight: 1 }}>×</button>
                 </div>
               ))}
-              <button
-                onClick={() => setEditorMs([...editorMs, { date: [CSY, CSM], label: "Milestone" }])}
-                style={{
-                  background: "transparent",
-                  color: "#c9a84c",
-                  border: "1px solid #c9a84c",
-                  borderRadius: 5,
-                  padding: "6px 14px",
-                  cursor: "pointer",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: ".3px",
-                  fontFamily: "inherit",
-                  marginBottom: 18,
-                }}
-              >
+              <button onClick={() => setEditorMs([...editorMs, { date: [CSY, CSM], label: "Milestone" }])}
+                style={{ background: "transparent", color: "#c9a84c", border: "1px solid #c9a84c", borderRadius: 5, padding: "6px 14px", cursor: "pointer", fontSize: 10, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit", marginBottom: 18 }}>
                 + Add Milestone
               </button>
 
               <div style={{ display: "flex", gap: 10, paddingTop: 16, borderTop: "1px solid #eee", flexWrap: "wrap" }}>
-                <button
-                  onClick={saveProject}
-                  style={{
-                    padding: "7px 20px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#c9a84c",
-                    color: "#111",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    fontFamily: "inherit",
-                    letterSpacing: ".3px",
-                  }}
-                >
-                  ✓ Save Changes
-                </button>
-                <button
-                  onClick={deleteProject}
-                  style={{
-                    padding: "7px 16px",
-                    borderRadius: 6,
-                    border: "1px solid #3a2a2a",
-                    background: "transparent",
-                    color: "#e05555",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Delete
-                </button>
-                <button
-                  onClick={() => setEditingId(null)}
-                  style={{
-                    padding: "7px 16px",
-                    borderRadius: 6,
-                    border: "1px solid #ccc",
-                    background: "transparent",
-                    color: "#666",
-                    cursor: "pointer",
-                    fontSize: 11,
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Cancel
-                </button>
+                <button onClick={saveProject} style={{ padding: "7px 20px", borderRadius: 6, border: "none", background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>✓ Save Changes</button>
+                <button onClick={deleteProject} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #3a2a2a", background: "transparent", color: "#e05555", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Delete</button>
+                <button onClick={() => setEditingId(null)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #ccc", background: "transparent", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
               </div>
             </div>
           </div>
         )}
 
         {/* GANTT TABLE */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 10,
-            border: "1px solid #e0dbd2",
-            overflow: "hidden",
-            boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
-          }}
-        >
+        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
           <table style={{ borderCollapse: "collapse", tableLayout: "fixed", width: "100%" }}>
             <colgroup>
               <col style={{ width: 200 }} />
               <col style={{ width: 96 }} />
               <col style={{ width: 108 }} />
-              {Array.from({ length: viewMonths }, (_, i) => (
-                <col key={i} style={{ minWidth: 38 }} />
-              ))}
+              {Array.from({ length: viewMonths }, (_, i) => <col key={i} style={{ minWidth: 38 }} />)}
             </colgroup>
             <thead>
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      background: "#1a1a1a",
-                      color: "#c9a84c",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "9px 14px",
-                      textAlign: "left",
-                      letterSpacing: "1px",
-                      textTransform: "uppercase",
-                      borderBottom: "1px solid #2a2a2a",
-                    }}
-                  >
-                    {h}
-                  </th>
+                  <th key={h} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "9px 14px", textAlign: "left", letterSpacing: "1px", textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>{h}</th>
                 ))}
                 {yearSpans.map(({ year, span }, i) => (
-                  <th
-                    key={i}
-                    colSpan={span}
-                    style={{
-                      background: "#1a1a1a",
-                      color: "#c9a84c",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "9px 4px",
-                      textAlign: "center",
-                      borderLeft: "2px solid rgba(255,255,255,0.1)",
-                      letterSpacing: "1px",
-                    }}
-                  >
-                    {year}
-                  </th>
+                  <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "9px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: "1px" }}>{year}</th>
                 ))}
               </tr>
               <tr>
@@ -1044,18 +486,7 @@ export default function GanttChart() {
                   const mIdx = absM % 12;
                   const isToday = viewFrom[0] === CSY && viewFrom[1] === CSM && i === 0;
                   return (
-                    <th
-                      key={i}
-                      style={{
-                        background: isToday ? "#c9a84c" : "#222",
-                        color: isToday ? "#111" : "#666",
-                        fontSize: 10,
-                        padding: "5px 2px",
-                        textAlign: "center",
-                        borderRight: "1px solid #2a2a2a",
-                        fontWeight: isToday ? 700 : 500,
-                      }}
-                    >
+                    <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 10, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 500 }}>
                       {MONTHS[mIdx]}
                     </th>
                   );
@@ -1064,154 +495,50 @@ export default function GanttChart() {
             </thead>
             <tbody>
               {locations.map((loc) => (
-                <>
-                  <tr key={`sec-${loc}`}>
-                    <td
-                      colSpan={3 + viewMonths}
-                      style={{
-                        background: "#222",
-                        color: "#c9a84c",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "2px",
-                        padding: "7px 14px",
-                        borderBottom: "1px solid #2a2a2a",
-                        borderTop: "1px solid #2a2a2a",
-                      }}
-                    >
+                <React.Fragment key={loc}>
+                  <tr>
+                    <td colSpan={3 + viewMonths} style={{ background: "#222", color: "#c9a84c", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "2px", padding: "7px 14px", borderBottom: "1px solid #2a2a2a", borderTop: "1px solid #2a2a2a" }}>
                       {loc}
                     </td>
                   </tr>
-                  {projects
-                    .filter((p) => p.location === loc)
-                    .map((proj) => {
-                      const due = getDue(proj, viewFrom[0], viewFrom[1]);
-                      const c = COLORS[proj.status] || COLORS.complete;
-                      return (
-                        <tr
-                          key={proj.id}
-                          style={{ borderBottom: "1px solid #ede8e0" }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "#faf6f0";
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLElement).style.background = "";
-                          }}
-                        >
-                          <td
-                            onClick={() => openEditor(proj.id)}
-                            style={{
-                              padding: "5px 14px",
-                              fontSize: 12,
-                              fontWeight: 500,
-                              color: "#222",
-                              background: "#fbfbfb",
-                              borderRight: "1px solid #ddd",
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              verticalAlign: "middle",
-                              height: 44,
-                            }}
-                          >
-                            {proj.property} <span style={{ fontSize: 9, color: "#bbb" }}>✏</span>
-                          </td>
-                          <td
-                            style={{
-                              padding: "4px 10px",
-                              textAlign: "center",
-                              background: "#fafaf8",
-                              borderRight: "1px solid #ede8e0",
-                              verticalAlign: "middle",
-                            }}
-                          >
-                            <span
-                              style={{
-                                display: "inline-block",
-                                fontSize: 9,
-                                fontWeight: 700,
-                                padding: "3px 9px",
-                                borderRadius: 4,
-                                background: c.pill,
-                                color: c.pillText,
-                                textTransform: "uppercase",
-                                letterSpacing: ".5px",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {TYPE_LABEL[proj.status]}
-                            </span>
-                          </td>
-                          <td
-                            style={{
-                              padding: "4px 14px 4px 12px",
-                              background: "#fff",
-                              borderRight: "1px solid #ede8e0",
-                              verticalAlign: "middle",
-                            }}
-                          >
-                            {due && (
-                              <>
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    fontWeight: 700,
-                                    color: "#1a2e44",
-                                    lineHeight: 1.4,
-                                    marginBottom: 2,
-                                  }}
-                                >
-                                  {due.label}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: 10,
-                                    color: "#999",
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    maxWidth: 100,
-                                  }}
-                                >
-                                  {due.desc}
-                                </div>
-                              </>
-                            )}
-                          </td>
-                          <td colSpan={viewMonths} style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}>
-                            <BarCanvas proj={proj} csy={viewFrom[0]} csm={viewFrom[1]} totalMonths={viewMonths} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  <tr
-                    key={`add-${loc}`}
-                    onClick={() => addProject(loc)}
+                  {projects.filter((p) => p.location === loc).map((proj) => {
+                    const due = getDue(proj, viewFrom[0], viewFrom[1]);
+                    const c = COLORS[proj.status] || COLORS.complete;
+                    return (
+                      <tr key={proj.id} style={{ borderBottom: "1px solid #ede8e0" }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#faf6f0"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ""; }}>
+                        <td onClick={() => openEditor(proj.id)} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 500, color: "#222", background: "#fbfbfb", borderRight: "1px solid #ddd", cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle", height: 44 }}>
+                          {proj.property} <span style={{ fontSize: 9, color: "#bbb" }}>✏</span>
+                        </td>
+                        <td style={{ padding: "4px 10px", textAlign: "center", background: "#fafaf8", borderRight: "1px solid #ede8e0", verticalAlign: "middle" }}>
+                          <span style={{ display: "inline-block", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 4, background: c.pill, color: c.pillText, textTransform: "uppercase", letterSpacing: ".5px", whiteSpace: "nowrap" }}>
+                            {TYPE_LABEL[proj.status]}
+                          </span>
+                        </td>
+                        <td style={{ padding: "4px 14px 4px 12px", background: "#fff", borderRight: "1px solid #ede8e0", verticalAlign: "middle" }}>
+                          {due && (
+                            <>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2e44", lineHeight: 1.4, marginBottom: 2 }}>{due.label}</div>
+                              <div style={{ fontSize: 10, color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>{due.desc}</div>
+                            </>
+                          )}
+                        </td>
+                        <td colSpan={viewMonths} style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}>
+                          <BarCanvas proj={proj} csy={viewFrom[0]} csm={viewFrom[1]} totalMonths={viewMonths} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr onClick={() => addProject(loc)}
                     style={{ cursor: "pointer", background: "#fafaf8" }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "#f0f7ff";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "#fafaf8";
-                    }}
-                  >
-                    <td
-                      colSpan={3 + viewMonths}
-                      style={{
-                        padding: "6px 14px",
-                        color: "#aaa",
-                        fontSize: 10,
-                        fontWeight: 500,
-                        letterSpacing: ".3px",
-                        borderBottom: "1px solid #ede8e0",
-                      }}
-                    >
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f0f7ff"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#fafaf8"; }}>
+                    <td colSpan={3 + viewMonths} style={{ padding: "6px 14px", color: "#aaa", fontSize: 10, fontWeight: 500, letterSpacing: ".3px", borderBottom: "1px solid #ede8e0" }}>
                       + Add project in {loc}
                     </td>
                   </tr>
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -1220,145 +547,38 @@ export default function GanttChart() {
 
       {/* PRINT MODAL */}
       {showPrintModal && (
-        <div
-          style={{
-            display: "flex",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 1000,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowPrintModal(false);
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 10,
-              padding: "28px 32px",
-              width: 460,
-              maxWidth: "95vw",
-              border: "1px solid #e0dbd2",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.15)",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#1a2e44",
-                marginBottom: 6,
-                letterSpacing: ".5px",
-                textTransform: "uppercase",
-              }}
-            >
-              Print / Export to PDF
-            </h2>
-            <p style={{ fontSize: 11, color: "#666", marginBottom: 18, lineHeight: 1.5 }}>
-              Choose a date range — fewer months gives wider columns and cleaner text.
-            </p>
+        <div style={{ display: "flex", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, alignItems: "center", justifyContent: "center" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPrintModal(false); }}>
+          <div style={{ background: "#fff", borderRadius: 10, padding: "28px 32px", width: 460, maxWidth: "95vw", border: "1px solid #e0dbd2", boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1a2e44", marginBottom: 6, letterSpacing: ".5px", textTransform: "uppercase" }}>Print / Export to PDF</h2>
+            <p style={{ fontSize: 11, color: "#666", marginBottom: 18, lineHeight: 1.5 }}>Choose a date range — fewer months gives wider columns and cleaner text.</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
-              {[
-                { label: "From", val: printFrom, set: setPrintFrom },
-                { label: "To", val: printTo, set: setPrintTo },
-              ].map(({ label, val, set }: { label: string; val: string; set: (v: string) => void }) => (
+              {([{ label: "From", val: printFrom, set: setPrintFrom }, { label: "To", val: printTo, set: setPrintTo }]).map(({ label, val, set }: { label: string; val: string; set: (v: string) => void }) => (
                 <div key={label}>
                   <label style={labelStyle}>{label}</label>
                   <input type="month" value={val} onChange={(e) => set(e.target.value)} style={inputStyle} />
                 </div>
               ))}
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "#555",
-                textTransform: "uppercase",
-                letterSpacing: ".4px",
-                marginBottom: 8,
-              }}
-            >
-              Quick ranges
-            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#555", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 8 }}>Quick ranges</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
               {[6, 9, 12, 18, 24].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setRange(m)}
-                  style={{
-                    padding: "5px 14px",
-                    border: "1px solid #ddd",
-                    borderRadius: 5,
-                    background: "#f5f0e8",
-                    cursor: "pointer",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: "#555",
-                    fontFamily: "inherit",
-                  }}
-                >
+                <button key={m} onClick={() => setRange(m)}
+                  style={{ padding: "5px 14px", border: "1px solid #ddd", borderRadius: 5, background: "#f5f0e8", cursor: "pointer", fontSize: 10, fontWeight: 600, color: "#555", fontFamily: "inherit" }}>
                   {m} months
                 </button>
               ))}
             </div>
-            <div
-              style={{
-                background: "#f5f0e8",
-                borderRadius: 6,
-                padding: "12px 14px",
-                fontSize: 11,
-                color: "#555",
-                marginBottom: 20,
-                lineHeight: 1.8,
-                border: "1px solid #e0dbd2",
-              }}
-            >
-              <strong>In the print dialog:</strong>
-              <br />
-              Paper → <strong>A3</strong> &bull; Orientation → <strong>Landscape</strong>
-              <br />
+            <div style={{ background: "#f5f0e8", borderRadius: 6, padding: "12px 14px", fontSize: 11, color: "#555", marginBottom: 20, lineHeight: 1.8, border: "1px solid #e0dbd2" }}>
+              <strong>In the print dialog:</strong><br />
+              Paper → <strong>A3</strong> &bull; Orientation → <strong>Landscape</strong><br />
               Margins → <strong>Minimum</strong> &bull; Enable <strong>Background graphics</strong>
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                onClick={() => setShowPrintModal(false)}
-                style={{
-                  padding: "8px 18px",
-                  border: "1px solid #ccc",
-                  borderRadius: 6,
-                  background: "#fff",
-                  color: "#666",
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontFamily: "inherit",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  window.print();
-                  setShowPrintModal(false);
-                }}
-                style={{
-                  padding: "8px 22px",
-                  border: "none",
-                  borderRadius: 6,
-                  background: "#c9a84c",
-                  color: "#111",
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontFamily: "inherit",
-                  letterSpacing: ".3px",
-                }}
-              >
+              <button onClick={() => setShowPrintModal(false)}
+                style={{ padding: "8px 18px", border: "1px solid #ccc", borderRadius: 6, background: "#fff", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
+              <button onClick={() => { window.print(); setShowPrintModal(false); }}
+                style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>
                 Open Print Preview →
               </button>
             </div>
