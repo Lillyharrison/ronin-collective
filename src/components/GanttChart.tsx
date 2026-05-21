@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
@@ -256,43 +256,25 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
 
-  const STORAGE_KEY = "ronin-gantt-projects-v1";
-  const NEXTID_KEY = "ronin-gantt-nextid-v1";
-  const SHARE_TOKEN_KEY = "ronin-gantt-share-token-v1";
   const isShared = !!shareToken;
-  const [currentShareToken, setCurrentShareToken] = useState<string>(() => {
-    if (isShared) return "";
-    try { return localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { return ""; }
-  });
   const boardToken = shareToken || DEFAULT_SHARE_TOKEN;
   const usesCloudBoard = !!boardToken;
-  const hasLocalTimelineRef = useRef(false);
 
-  const [projects, setProjects] = useState<Project[]>(() => {
-    if (isShared) return [];
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        hasLocalTimelineRef.current = true;
-        return JSON.parse(raw) as Project[];
-      }
-    } catch { /* ignore invalid saved timeline data */ }
-    return usesCloudBoard ? [] : INITIAL_PROJECTS;
-  });
-  const [nextId, setNextId] = useState<number>(() => {
-    if (isShared) return 1;
-    try {
-      const raw = localStorage.getItem(NEXTID_KEY);
-      if (raw) return parseInt(raw, 10) || 23;
-    } catch { /* ignore invalid saved timeline id */ }
-    return 23;
-  });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [nextId, setNextId] = useState<number>(1);
 
   // Track remote-load state so we don't echo the initial empty state back to the server
-  const remoteLoadedRef = useRef<boolean>(!usesCloudBoard || (!isShared && hasLocalTimelineRef.current));
+  const remoteLoadedRef = useRef<boolean>(!usesCloudBoard);
   const [remoteStatus, setRemoteStatus] = useState<"loading" | "ready" | "missing" | "error">(
     usesCloudBoard && !remoteLoadedRef.current ? "loading" : "ready"
   );
+
+  const saveBoardToCloud = useCallback(async (nextProjects: Project[], nextNextId: number) => {
+    const { data, error } = await supabase.functions.invoke("timeline-share-save", {
+      body: { token: boardToken, projects: nextProjects, next_id: nextNextId, create_if_missing: !isShared },
+    });
+    if (error || (data as any)?.error) throw new Error(error?.message ?? (data as any)?.error ?? "Save failed");
+  }, [boardToken, isShared]);
 
   // Initial load from cloud board so preview and real URLs share one source of truth
   useEffect(() => {
