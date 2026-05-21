@@ -498,7 +498,7 @@ export default function GanttChart() {
         )}
 
         {/* GANTT TABLE */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "visible", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", overflowX: "auto", overflowY: "clip", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
           <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: 200 }} />
