@@ -462,15 +462,15 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
           .pdf-table th.year{text-align:center;height:28px;border-left:2px solid #333;}
           .pdf-table thead tr.months th{height:18px;color:#777;font-size:8px;font-weight:400;text-align:center;padding:0;letter-spacing:0;text-transform:none;}
           .section-row td{height:24px;background:#202020;color:#c9a84c;font-size:9px;font-weight:800;letter-spacing:4px;text-transform:uppercase;padding:0 12px;border-bottom:1px solid #222;}
-          .project-row td{height:42px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
-          .project-row .property{padding:0 14px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fbfbfb;}
+          .project-row td{height:48px;border-bottom:1px solid #e8e0d3;border-right:1px solid #e8e0d3;vertical-align:middle;background:#fff;box-sizing:border-box;}
+          .project-row .property{padding:0 14px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fbfbfb;}
           .project-row .status{text-align:center;padding:0 6px;}
-          .project-row .status span{display:inline-block;border-radius:4px;padding:3px 8px;font-size:7px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
-          .project-row .due{padding:4px 12px;overflow:visible;}
-          .due-date{font-size:10px;line-height:14px;font-weight:800;color:#1a2e44;white-space:nowrap;}
-          .due-desc{font-size:8px;line-height:12px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+          .project-row .status span{display:inline-block;border-radius:4px;padding:3px 8px;font-size:8px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;}
+          .project-row .due{padding:5px 10px;overflow:visible;}
+          .due-date{font-size:10px;line-height:13px;font-weight:800;color:#1a2e44;white-space:nowrap;}
+          .due-desc{font-size:9px;line-height:12px;color:#666;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;}
           .chart{position:relative;padding:0;background-image:linear-gradient(to right,#eee 1px,transparent 1px);background-size:${monthW}px 100%;overflow:hidden;}
-          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:7px;font-weight:800;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
+          .bar{position:absolute;border-radius:3px;color:#1a1a1a;font-size:9px;font-weight:700;padding:0 6px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;display:flex;align-items:center;justify-content:center;}
         </style>
         <div class="pdf-root">
           <div class="pdf-legend"><div class="items">
