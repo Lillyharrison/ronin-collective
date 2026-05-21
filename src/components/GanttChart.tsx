@@ -252,7 +252,7 @@ function PhaseRow({
 }
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────
-export default function GanttChart() {
+export default function GanttChart({ onBack }: { onBack?: () => void }) {
   const now = new Date();
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
@@ -292,6 +292,10 @@ export default function GanttChart() {
   const [viewFrom, setViewFrom] = useState(fmtYM(CSY, CSM));
   const [viewTo, setViewTo] = useState(fmtYM(CSY + (CSM + 23 > 12 ? Math.floor((CSM - 1 + 23) / 12) : 0), ((CSM - 1 + 23) % 12) + 1));
   const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
 
   // Derive visible grid origin & length from viewFrom/viewTo
   const [vsy, vsm] = parseYM(viewFrom);
@@ -378,23 +382,30 @@ export default function GanttChart() {
   return (
     <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "#f2f2f2", minHeight: "100vh", color: "#1a1a1a" }}>
 
-      {/* VIEW DATE RANGE — sits in the space above the Property Portfolio header */}
-      <div style={{ background: "#f2f2f2", padding: "8px 24px", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: "#666", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
-        <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
-          style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
-        <span style={{ fontSize: 11, color: "#888" }}>→</span>
-        <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
-          style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
-        {[12, 24, 36].map((m) => (
-          <button key={m} onClick={() => {
-            setViewFrom(fmtYM(CSY, CSM));
-            const d = new Date(CSY, CSM - 1 + (m - 1), 1);
-            setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
-          }} style={{ padding: "4px 10px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#555", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
-            {m}m
+      {/* TOP CONTROL ROW — uses the beige space above the Property Portfolio header */}
+      <div style={{ background: "#f2f2f2", padding: "10px 24px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        {onBack ? (
+          <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: "0 12px", borderRadius: 8, border: "1px solid transparent", background: "transparent", color: "#555", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
+            ← Back
           </button>
-        ))}
+        ) : <span />}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#666", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
+          <input type="month" value={viewFrom} onChange={(e) => setViewFrom(e.target.value)}
+            style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
+          <span style={{ fontSize: 11, color: "#888" }}>→</span>
+          <input type="month" value={viewTo} min={viewFrom} onChange={(e) => setViewTo(e.target.value)}
+            style={{ padding: "5px 8px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#1a1a1a", fontSize: 11, fontFamily: "inherit" }} />
+          {[12, 24, 36].map((m) => (
+            <button key={m} onClick={() => {
+              setViewFrom(fmtYM(CSY, CSM));
+              const d = new Date(CSY, CSM - 1 + (m - 1), 1);
+              setViewTo(fmtYM(d.getFullYear(), d.getMonth() + 1));
+            }} style={{ padding: "4px 10px", borderRadius: 5, border: "1px solid #ccc", background: "#fff", color: "#555", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+              {m}m
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* TOP BAR */}
