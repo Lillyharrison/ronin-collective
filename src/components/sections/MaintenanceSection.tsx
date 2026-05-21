@@ -157,7 +157,7 @@ export function MaintenanceSection() {
     if (loading) return;
     const issue = issues.find(i => i.id === pendingId);
     if (issue) {
-      setDetailIssue(issue);
+      openIssueDetail(issue);
       setActiveTab("repairs");
       setPendingMaintenanceIssueId(null);
       return;
@@ -194,7 +194,7 @@ export function MaintenanceSection() {
     })();
 
     return () => { cancelled = true; };
-  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, setActiveTab]);
+  }, [pendingMaintenanceIssueIdRef, pendingMaintenanceIssueId, issues, loading, setPendingMaintenanceIssueId, setActiveTab, openIssueDetail]);
 
   // Deep-link: open a planned maintenance entry when arriving from the calendar.
   useEffect(() => {
