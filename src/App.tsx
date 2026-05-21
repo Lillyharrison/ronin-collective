@@ -10,7 +10,7 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import SharedTimeline from "./pages/SharedTimeline";
-import GanttChart from "./components/GanttChart";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
