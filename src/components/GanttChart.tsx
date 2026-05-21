@@ -264,7 +264,7 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     if (isShared) return "";
     try { return localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { return ""; }
   });
-  const boardToken = shareToken || currentShareToken || DEFAULT_SHARE_TOKEN;
+  const boardToken = shareToken || DEFAULT_SHARE_TOKEN;
   const usesCloudBoard = !!boardToken;
   const hasLocalTimelineRef = useRef(false);
 
@@ -318,6 +318,12 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
         const d = data as { projects: Project[]; next_id: number; total_months: number };
         setProjects(Array.isArray(d.projects) ? d.projects : []);
         setNextId(typeof d.next_id === "number" ? d.next_id : 1);
+        if (!isShared) {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.isArray(d.projects) ? d.projects : [])); } catch { /* ignore */ }
+          try { localStorage.setItem(NEXTID_KEY, String(typeof d.next_id === "number" ? d.next_id : 1)); } catch { /* ignore */ }
+          try { localStorage.setItem(SHARE_TOKEN_KEY, boardToken); } catch { /* ignore */ }
+          setCurrentShareToken(boardToken);
+        }
         remoteLoadedRef.current = true;
         setRemoteStatus("ready");
       } catch {
