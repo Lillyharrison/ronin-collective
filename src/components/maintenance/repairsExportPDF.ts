@@ -519,9 +519,7 @@ function buildTileDoc(
       drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
       ty += 7;
 
-      // Skip the inline description when notes are rendered in their own
-      // full-width block below — otherwise the same text shows twice.
-      if (issue.description && !ctx.includeNotes) {
+      if (issue.description) {
         doc.setFont(PDF_FONT, "normal");
         doc.setFontSize(descSize);
         doc.setTextColor(95, 95, 95);
