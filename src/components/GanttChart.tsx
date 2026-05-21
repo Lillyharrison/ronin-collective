@@ -414,7 +414,7 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
         windowHeight: fullH,
       });
 
-      // Landscape A3
+      // Landscape A3 — fit everything on ONE page
       const pdf = new jsPDF({ orientation: "landscape", format: "a3", unit: "mm" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
@@ -422,33 +422,15 @@ export default function GanttChart({ onBack }: { onBack?: () => void }) {
       const availW = pageW - margin * 2;
       const availH = pageH - margin * 2;
 
-      // Scale image to fit page width
-      const imgW = availW;
-      const imgH = (canvas.height * imgW) / canvas.width;
+      // Scale to fit within both width and height, preserving aspect ratio
+      const scale = Math.min(availW / canvas.width, availH / canvas.height);
+      const imgW = canvas.width * scale;
+      const imgH = canvas.height * scale;
+      const xOff = margin + (availW - imgW) / 2;
+      const yOff = margin + (availH - imgH) / 2;
 
-      if (imgH <= availH) {
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, imgW, imgH);
-      } else {
-        // Split into pages vertically
-        const pageSliceHpx = Math.floor((availH * canvas.width) / imgW);
-        let yPx = 0;
-        let first = true;
-        while (yPx < canvas.height) {
-          const sliceH = Math.min(pageSliceHpx, canvas.height - yPx);
-          const slice = document.createElement("canvas");
-          slice.width = canvas.width;
-          slice.height = sliceH;
-          const ctx = slice.getContext("2d")!;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, slice.width, slice.height);
-          ctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-          const sliceImgH = (sliceH * imgW) / canvas.width;
-          if (!first) pdf.addPage("a3", "landscape");
-          pdf.addImage(slice.toDataURL("image/png"), "PNG", margin, margin, imgW, sliceImgH);
-          first = false;
-          yPx += sliceH;
-        }
-      }
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", xOff, yOff, imgW, imgH);
+
 
       pdf.save(`property-timeline-${printFrom}-to-${printTo}.pdf`);
       toast.success("PDF downloaded");
