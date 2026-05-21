@@ -659,7 +659,7 @@ export async function exportRepairsPDF(ctx: RepairsExportContext): Promise<void>
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     drawFooter(doc, pageWidth, pageHeight);
-    doc.save(`repairs-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    doc.save(`Repairs Report (${format(new Date(), "dd MMM yyyy")}).pdf`);
     toast.success("PDF downloaded", { id: toastId });
   } catch (err) {
     console.error("Repairs PDF export failed", err);
