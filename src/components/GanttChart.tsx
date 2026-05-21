@@ -22,7 +22,7 @@ interface Project {
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const COL_W = 46;
-const TOTAL_MONTHS = 24;
+const DEFAULT_TOTAL_MONTHS = 24;
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
