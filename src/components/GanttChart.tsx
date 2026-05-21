@@ -628,7 +628,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
           <table style={{ borderCollapse: "collapse", tableLayout: "fixed", width: "100%" }}>
             <colgroup>
               <col style={{ width: 200 }} />
-              <col style={{ width: 96 }} />
+              <col style={{ width: 124 }} />
               <col style={{ width: 108 }} />
               {Array.from({ length: viewMonths }, (_, i) => <col key={i} style={{ minWidth: 38 }} />)}
             </colgroup>
