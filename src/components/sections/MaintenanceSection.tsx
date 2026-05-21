@@ -92,6 +92,16 @@ export function MaintenanceSection() {
   const properties = (isMasterAdmin || isAdmin || isManager)
     ? allProperties
     : allProperties.filter(p => assignedPropertyIds.includes(p.id));
+  const issueById = useMemo(() => new Map(issues.map(issue => [issue.id, issue])), [issues]);
+  const getCanonicalIssue = useCallback((issue: MaintenanceIssue) => issueById.get(issue.id) ?? issue, [issueById]);
+  const openIssueDetail = useCallback((issue: MaintenanceIssue) => {
+    setDetailIssue(getCanonicalIssue(issue));
+  }, [getCanonicalIssue]);
+  const openIssueEditor = useCallback((issue: MaintenanceIssue) => {
+    setEditIssue(getCanonicalIssue(issue));
+    setModalOpen(true);
+    setDetailIssue(null);
+  }, [getCanonicalIssue]);
 
   useEffect(() => {
     // Properties + vendors are tiny lookups (≤ a few dozen rows) — no limit needed.
@@ -301,8 +311,8 @@ export function MaintenanceSection() {
 
   const handleEdit = async (patch: Partial<MaintenanceIssue>) => {
     if (!editIssue) return;
-    await updateIssue(editIssue.id, patch);
-    setEditIssue(null);
+    const { error } = await updateIssue(editIssue.id, patch);
+    if (!error) setEditIssue(null);
   };
 
   const handleStatusChange = async (issue: MaintenanceIssue, newStatus: IssueStatus, scheduledDate?: string) => {
