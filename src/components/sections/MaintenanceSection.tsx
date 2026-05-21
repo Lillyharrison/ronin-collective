@@ -118,19 +118,20 @@ export function MaintenanceSection() {
       .then(({ data }) => setVendors(data ?? []));
   }, []);
 
-  // Default managers/admins to the primary property. View-only users must start on
-  // All assigned properties so one property is never silently hidden.
+  // Default managers/admins to the primary property — but only on the Planned
+  // tab. Repairs should default to "All properties" so nothing is hidden.
+  // View-only users always start on All assigned properties.
   useEffect(() => {
     if (defaultPropApplied || properties.length === 0) return;
     if (!canManage) { setDefaultPropApplied(true); return; }
     // Don't override if a deep-link already set the filter
     if (filterProp) { setDefaultPropApplied(true); return; }
-    const primary = properties.find(p => p.is_primary);
-    if (primary) {
-      setFilterProp(primary.id);
+    if (activeTab === "planned") {
+      const primary = properties.find(p => p.is_primary);
+      if (primary) setFilterProp(primary.id);
     }
     setDefaultPropApplied(true);
-  }, [properties, defaultPropApplied, filterProp, canManage]);
+  }, [properties, defaultPropApplied, filterProp, canManage, activeTab]);
 
   // If permissions change (including preview mode), discard any stale property
   // filter that the effective user is not allowed to see.
