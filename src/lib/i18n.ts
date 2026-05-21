@@ -64,6 +64,7 @@ export const translations = {
     alerts: "Alerts",
     carWash: "Car Wash",
     staffSchedule: "Staff Schedule",
+    propertyTimeline: "Property Timeline",
 
     // Maintenance
     reportIssueTitle: "Report Issue",
@@ -297,6 +298,7 @@ export const translations = {
     alerts: "Alertas",
     carWash: "Lavado de Autos",
     staffSchedule: "Horario del Personal",
+    propertyTimeline: "Cronograma de Propiedades",
 
     // Maintenance
     reportIssueTitle: "Reportar Problema",
