@@ -547,7 +547,8 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
           Export PDF
         </button>
         <button onClick={() => {
-          navigator.clipboard.writeText(window.location.href).then(() => {
+          const shareUrl = `${window.location.origin}/share/timeline/ronin-public-timeline-share-v1`;
+          navigator.clipboard.writeText(shareUrl).then(() => {
             setLinkCopied(true);
             setTimeout(() => setLinkCopied(false), 2000);
           });

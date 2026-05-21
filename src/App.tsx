@@ -10,7 +10,7 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import SharedTimeline from "./pages/SharedTimeline";
-import GanttChart from "./components/GanttChart";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -57,7 +57,7 @@ const SECTION_PATHS = [
   "/manuals", "/checklists", "/tasks", "/contacts", "/vendors", "/inventory",
   "/laundry", "/orders", "/meet-team", "/travel", "/calendar",
   "/achievements", "/master-import", "/memory", "/alerts", "/rules", "/car-wash",
-  "/staff-schedule",
+  "/staff-schedule", "/timeline",
 ];
 
 const App = () => (
@@ -75,7 +75,6 @@ const App = () => (
               <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/share/timeline/:token" element={<SharedTimeline />} />
-              <Route path="/timeline" element={<GanttChart />} />
               {/* All app sections share a single AppShell; the active section is
                   derived from the URL path inside NavigationContext. */}
               {SECTION_PATHS.map(path => (
