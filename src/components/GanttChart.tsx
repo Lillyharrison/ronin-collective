@@ -259,6 +259,10 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
   const NEXTID_KEY = "ronin-gantt-nextid-v1";
   const SHARE_TOKEN_KEY = "ronin-gantt-share-token-v1";
   const isShared = !!shareToken;
+  const [currentShareToken, setCurrentShareToken] = useState<string>(() => {
+    if (isShared) return "";
+    try { return localStorage.getItem(SHARE_TOKEN_KEY) || ""; } catch { return ""; }
+  });
 
   const [projects, setProjects] = useState<Project[]>(() => {
     if (isShared) return [];
@@ -321,7 +325,15 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
       return () => clearTimeout(handle);
     }
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch { /* ignore */ }
-  }, [projects, nextId, isShared, shareToken]);
+    if (currentShareToken) {
+      const handle = setTimeout(() => {
+        supabase.functions.invoke("timeline-share-save", {
+          body: { token: currentShareToken, projects, next_id: nextId, create_if_missing: true },
+        }).catch(() => { /* keep local edits even if remote sync is temporarily unavailable */ });
+      }, 600);
+      return () => clearTimeout(handle);
+    }
+  }, [projects, nextId, isShared, shareToken, currentShareToken]);
   useEffect(() => {
     if (isShared) return;
     try { localStorage.setItem(NEXTID_KEY, String(nextId)); } catch { /* ignore */ }
@@ -655,6 +667,7 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
                 token = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "").slice(0, 40);
                 try { localStorage.setItem(SHARE_TOKEN_KEY, token); } catch { /* ignore */ }
               }
+              setCurrentShareToken(token);
               try {
                 const { error } = await supabase.functions.invoke("timeline-share-save", {
                   body: { token, projects, next_id: nextId, create_if_missing: true },
