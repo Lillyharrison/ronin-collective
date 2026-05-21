@@ -366,21 +366,35 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
     setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
 
-  function saveProject() {
-    setProjects((prev) => prev.map((p) => p.id === editingId
+  async function saveProject() {
+    const nextProjects = projects.map((p) => p.id === editingId
       ? { ...p, location: editorLoc, property: editorProp, status: editorStatus, phases: editorPhases, milestones: editorMs }
       : p
-    ));
-    setEditingId(null);
+    );
+    try {
+      await saveBoardToCloud(nextProjects, nextId);
+      setProjects(nextProjects);
+      setEditingId(null);
+      toast.success("Changes saved");
+    } catch (e: any) {
+      toast.error("Could not save changes", { description: e?.message ?? "Please try again." });
+    }
   }
 
-  function deleteProject() {
+  async function deleteProject() {
     if (!confirm("Delete this project?")) return;
-    setProjects((prev) => prev.filter((p) => p.id !== editingId));
-    setEditingId(null);
+    const nextProjects = projects.filter((p) => p.id !== editingId);
+    try {
+      await saveBoardToCloud(nextProjects, nextId);
+      setProjects(nextProjects);
+      setEditingId(null);
+      toast.success("Project deleted");
+    } catch (e: any) {
+      toast.error("Could not delete project", { description: e?.message ?? "Please try again." });
+    }
   }
 
-  function addProject(loc?: string) {
+  async function addProject(loc?: string) {
     const location = loc ?? prompt("City / location?") ?? "";
     if (!location) return;
     const property = prompt(`Property name in ${location}?`) ?? "";
@@ -392,8 +406,23 @@ export default function GanttChart({ onBack, shareToken }: { onBack?: () => void
       phases: [{ type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "Works" }],
       milestones: [],
     };
-    setProjects((prev) => [...prev, newProj]);
-    openEditor(id);
+    const nextProjects = [...projects, newProj];
+    const nextNextId = nextId + 1;
+    try {
+      await saveBoardToCloud(nextProjects, nextNextId);
+      setNextId(nextNextId);
+      setProjects(nextProjects);
+      setEditingId(id);
+      setEditorLoc(newProj.location);
+      setEditorProp(newProj.property);
+      setEditorStatus(newProj.status);
+      setEditorPhases([...newProj.phases]);
+      setEditorMs([...newProj.milestones]);
+      setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+      toast.success("Project added");
+    } catch (e: any) {
+      toast.error("Could not add project", { description: e?.message ?? "Please try again." });
+    }
   }
 
   function setRange(months: number) {
