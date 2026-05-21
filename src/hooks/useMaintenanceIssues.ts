@@ -200,6 +200,14 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
       if (allowedPatch[key as keyof MaintenanceIssue] === undefined) delete allowedPatch[key as keyof MaintenanceIssue];
     });
 
+    if (!navigator.onLine) {
+      setIssues(prev => prev.map(issue => issue.id === id ? { ...issue, ...allowedPatch, updated_at: new Date().toISOString() } : issue));
+      await enqueue("maintenance_issues", "update", allowedPatch as unknown as Record<string, unknown>, { id });
+      syncCtx?.notifyQueued();
+      toast.success("Repair changes queued to sync");
+      return { error: null };
+    }
+
     const { error } = await supabase.from("maintenance_issues").update(allowedPatch).eq("id", id);
     if (error) {
       toast.error("Repair changes were not saved");
