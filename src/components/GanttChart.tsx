@@ -339,21 +339,25 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
 
-  function saveProject() {
-    setProjects((prev) => prev.map((p) => p.id === editingId
+  async function saveProject() {
+    const nextProjects = projects.map((p) => p.id === editingId
       ? { ...p, location: editorLoc, property: editorProp, status: editorStatus, phases: editorPhases, milestones: editorMs }
       : p
-    ));
+    );
+    if (!(await saveBoard(nextProjects))) return;
+    setProjects(nextProjects);
     setEditingId(null);
   }
 
-  function deleteProject() {
+  async function deleteProject() {
     if (!confirm("Delete this project?")) return;
-    setProjects((prev) => prev.filter((p) => p.id !== editingId));
+    const nextProjects = projects.filter((p) => p.id !== editingId);
+    if (!(await saveBoard(nextProjects))) return;
+    setProjects(nextProjects);
     setEditingId(null);
   }
 
-  function addProject(loc?: string) {
+  async function addProject(loc?: string) {
     const location = loc ?? prompt("City / location?") ?? "";
     if (!location) return;
     const property = prompt(`Property name in ${location}?`) ?? "";
@@ -365,7 +369,10 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
       phases: [{ type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "Works" }],
       milestones: [],
     };
-    setProjects((prev) => [...prev, newProj]);
+    const nextProjects = [...projects, newProj];
+    if (!(await saveBoard(nextProjects, id + 1))) return;
+    setNextId(id + 1);
+    setProjects(nextProjects);
     openEditor(id);
   }
 
