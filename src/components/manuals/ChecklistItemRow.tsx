@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChecklistItem } from "@/hooks/useChecklists";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntryTranslation } from "@/hooks/useEntryTranslation";
 import { Check, Camera, Pencil, Trash2, GripVertical, X } from "lucide-react";
 
 interface Props {
@@ -43,7 +44,10 @@ const ICON_BANK = ["🧹","🛏️","🚿","🍳","🗑️","💧","🧴","🧽"
 const TILE = "w-14 h-14";
 
 export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdate, onDelete, onPhotoUpload, dragHandleProps }: Props) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const { translated } = useEntryTranslation(language, [item.title, item.notes ?? ""]);
+  const displayTitle = translated[0] || item.title;
+  const displayNotes = translated[1] || item.notes;
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [editIcon, setEditIcon] = useState(item.icon);
@@ -229,11 +233,11 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
           ) : (
             <>
               <p className={cn("text-sm leading-snug pt-1", isCompleted && "line-through text-muted-foreground")}>
-                {item.title}
+                {displayTitle}
                 {item.is_required && <span className="ml-1 text-[hsl(var(--status-urgent))] text-xs">*</span>}
               </p>
-              {item.notes && (
-                <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{item.notes}</p>
+              {displayNotes && (
+                <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{displayNotes}</p>
               )}
             </>
           )}

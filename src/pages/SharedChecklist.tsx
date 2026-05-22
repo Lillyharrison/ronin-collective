@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Check, Send, CheckCircle2, X, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntryTranslation, useBatchTranslation } from "@/hooks/useEntryTranslation";
 
 interface Template {
   id: string;
@@ -180,6 +181,17 @@ export default function SharedChecklist() {
     return ordered;
   }, [items, template?.sections]);
 
+  // Translate display strings (hooks must run unconditionally, before any return)
+  const { translated: tplTitleArr } = useEntryTranslation(language, [template?.title ?? ""]);
+  const displayTplTitle = tplTitleArr[0] || template?.title || "";
+  const { items: translatedItems } = useBatchTranslation(language, items, ["title", "notes"]);
+  const translatedById = useMemo(() => {
+    const m = new Map<string, Item>();
+    translatedItems.forEach(it => m.set(it.id, it));
+    return m;
+  }, [translatedItems]);
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -225,7 +237,7 @@ export default function SharedChecklist() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">{template.icon}</span>
             <div className="flex-1 min-w-0">
-              <h1 className="text-cream text-base font-semibold leading-tight truncate">{template.title}</h1>
+              <h1 className="text-cream text-base font-semibold leading-tight truncate">{displayTplTitle}</h1>
               {propertyName && <p className="text-cream/50 text-xs truncate">{propertyName}</p>}
             </div>
             <button
@@ -314,11 +326,11 @@ export default function SharedChecklist() {
                         className="flex-1 min-w-0 text-left pt-1"
                       >
                         <p className={cn("text-base leading-snug", checked && "line-through")}>
-                          {item.title}
+                          {translatedById.get(item.id)?.title ?? item.title}
                           {item.is_required && <span className="ml-1 text-[hsl(var(--status-urgent))]">*</span>}
                         </p>
-                        {item.notes && (
-                          <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{item.notes}</p>
+                        {(translatedById.get(item.id)?.notes ?? item.notes) && (
+                          <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{translatedById.get(item.id)?.notes ?? item.notes}</p>
                         )}
                       </button>
                     </div>

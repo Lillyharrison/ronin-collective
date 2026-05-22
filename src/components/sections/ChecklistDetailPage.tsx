@@ -4,6 +4,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChecklistItems, useChecklistSessions, useChecklistComments, ChecklistTemplate, ChecklistProduct, ChecklistItem } from "@/hooks/useChecklists";
+import { useEntryTranslation } from "@/hooks/useEntryTranslation";
 import { SortableChecklistItem } from "@/components/manuals/SortableChecklistItem";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
@@ -76,6 +77,10 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(template.title);
   const [editingIcon, setEditingIcon] = useState(false);
+
+  // ── Display translation (non-editing only) ──────────────────────
+  const { translated: tTitle } = useEntryTranslation(language, [template.title]);
+  const displayTitle = tTitle[0] || template.title;
 
   const saveTitle = async () => {
     if (!titleDraft.trim() || titleDraft === template.title) { setEditingTitle(false); return; }
@@ -352,7 +357,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
               />
             ) : (
               <div className="flex items-center gap-1.5 group/title">
-                <h2 className="text-cream font-semibold text-sm leading-tight truncate">{template.title}</h2>
+                <h2 className="text-cream font-semibold text-sm leading-tight truncate">{displayTitle}</h2>
                 {isMasterAdmin && (
                   <button onClick={() => { setEditingTitle(true); setTitleDraft(template.title); }}
                     className="opacity-0 group-hover/title:opacity-100 transition-opacity text-cream/40 hover:text-gold">

@@ -2,6 +2,8 @@ import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import { useChecklistSessions, useChecklistItems, ChecklistTemplate } from "@/hooks/useChecklists";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntryTranslation } from "@/hooks/useEntryTranslation";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff, Trash2 } from "lucide-react";
 import { CopyChecklistButton } from "@/components/checklists/CopyChecklistButton";
@@ -33,6 +35,9 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
   const { completedIds } = useChecklistSessions(template.id, propertyId);
   const { items } = useChecklistItems(template.id);
   const { isMasterAdmin } = usePermissions();
+  const { language } = useLanguage();
+  const { translated } = useEntryTranslation(language, [template.title]);
+  const displayTitle = translated[0] || template.title;
   const colorCls = COLOR_BG[template.color] ?? COLOR_BG.green;
   const isDraft = !template.is_published;
 
@@ -98,7 +103,7 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
             "text-sm font-medium leading-tight truncate",
             isDraft ? "text-muted-foreground" : isAllComplete ? "text-[hsl(var(--status-done))]" : "text-foreground"
           )}>
-            {template.title}
+            {displayTitle}
           </p>
           {isDraft && isMasterAdmin && (
             <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
