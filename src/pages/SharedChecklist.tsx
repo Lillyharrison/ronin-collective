@@ -124,7 +124,7 @@ export default function SharedChecklist() {
   const submit = async () => {
     if (!session) return;
     if (!name.trim()) {
-      toast.error("Please add your name first");
+      toast.error(t("pleaseAddName"));
       return;
     }
     setSubmitting(true);
