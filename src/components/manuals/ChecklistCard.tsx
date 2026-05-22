@@ -103,7 +103,7 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
             "text-sm font-medium leading-tight truncate",
             isDraft ? "text-muted-foreground" : isAllComplete ? "text-[hsl(var(--status-done))]" : "text-foreground"
           )}>
-            {template.title}
+            {displayTitle}
           </p>
           {isDraft && isMasterAdmin && (
             <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
