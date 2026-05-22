@@ -57,7 +57,7 @@ interface Props {
 export function ChecklistDetailPage({ template: initialTemplate, propertyId, propertyName }: Props) {
   const { closeChecklistDetail } = useNavigation();
   const { isAdmin, isMasterAdmin, userId } = usePermissions();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   // Live template state (so edits reflect immediately without full reload)
   const [template, setTemplate] = useState(initialTemplate);
