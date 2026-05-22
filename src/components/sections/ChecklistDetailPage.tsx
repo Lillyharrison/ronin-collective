@@ -78,6 +78,10 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
   const [titleDraft, setTitleDraft] = useState(template.title);
   const [editingIcon, setEditingIcon] = useState(false);
 
+  // ── Display translation (non-editing only) ──────────────────────
+  const { translated: tTitle } = useEntryTranslation(language, [template.title]);
+  const displayTitle = tTitle[0] || template.title;
+
   const saveTitle = async () => {
     if (!titleDraft.trim() || titleDraft === template.title) { setEditingTitle(false); return; }
     await supabase.from("checklist_templates").update({ title: titleDraft.trim() }).eq("id", template.id);
