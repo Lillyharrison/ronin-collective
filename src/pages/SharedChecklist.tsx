@@ -60,7 +60,7 @@ export default function SharedChecklist() {
         .eq("share_token", token)
         .maybeSingle();
       if (sErr || !sess) {
-        setError("This share link is invalid or has expired.");
+        setError(t("invalidShareLink"));
         setLoading(false);
         return;
       }
