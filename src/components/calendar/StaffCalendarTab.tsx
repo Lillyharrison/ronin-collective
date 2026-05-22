@@ -444,12 +444,12 @@ export function StaffCalendarTab({
   const shiftRange = (delta: number) => {
     setRangeStartState((s) => {
       const ns = startOfMonth(addMonths(s, delta));
-      try { localStorage.setItem("ronin_staff_range_start", ns.toISOString()); } catch { /* noop */ }
+      savePref("ronin_staff_range_start", ns.toISOString());
       return ns;
     });
     setRangeEndState((e) => {
       const ne = endOfMonth(addMonths(e, delta));
-      try { localStorage.setItem("ronin_staff_range_end", ne.toISOString()); } catch { /* noop */ }
+      savePref("ronin_staff_range_end", ne.toISOString());
       return ne;
     });
   };
@@ -461,10 +461,8 @@ export function StaffCalendarTab({
       const ne = endOfMonth(addMonths(new Date(), Math.max(0, monthsSpan - 1)));
       setRangeStartState(ns);
       setRangeEndState(ne);
-      try {
-        localStorage.setItem("ronin_staff_range_start", ns.toISOString());
-        localStorage.setItem("ronin_staff_range_end", ne.toISOString());
-      } catch { /* noop */ }
+      savePref("ronin_staff_range_start", ns.toISOString());
+      savePref("ronin_staff_range_end", ne.toISOString());
     } else {
       setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
     }
