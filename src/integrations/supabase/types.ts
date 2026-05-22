@@ -1862,6 +1862,30 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          user_id: string
+          value: Json | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          user_id: string
+          value?: Json | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          user_id?: string
+          value?: Json | null
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           is_online: boolean
