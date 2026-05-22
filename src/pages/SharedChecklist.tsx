@@ -55,39 +55,38 @@ export default function SharedChecklist() {
     if (!token) return;
     (async () => {
       setLoading(true);
-      const { data: sess, error: sErr } = await supabase
-        .from("checklist_public_sessions")
-        .select("*")
-        .eq("share_token", token)
-        .maybeSingle();
-      if (sErr || !sess) {
+      // Use a service-role edge function — anon users can't read
+      // checklist_templates / checklist_items directly due to RLS.
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/checklist-public-get`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ share_token: token }),
+          },
+        );
+        if (!res.ok) {
+          setError(t("invalidShareLink"));
+          setLoading(false);
+          return;
+        }
+        const { session: sess, template: tpl, items: its, property_name } = await res.json();
+        if (!sess || !tpl) {
+          setError(t("invalidShareLink"));
+          setLoading(false);
+          return;
+        }
+        setSession(sess as Session);
+        setTemplate(tpl as Template);
+        setItems((its as Item[]) ?? []);
+        setPropertyName(property_name ?? null);
+        setName(sess.assignee_name ?? "");
+        setNotes(sess.notes ?? "");
+      } catch {
         setError(t("invalidShareLink"));
-        setLoading(false);
-        return;
       }
-      const { data: tpl } = await supabase
-        .from("checklist_templates")
-        .select("id, title, icon, color, sections")
-        .eq("id", sess.template_id)
-        .maybeSingle();
-      const { data: its } = await supabase
-        .from("checklist_items")
-        .select("id, title, icon, color, section, is_required, sort_order, photo_url, notes")
-        .eq("template_id", sess.template_id)
-        .order("sort_order");
-      if (sess.property_id) {
-        const { data: prop } = await supabase
-          .from("properties")
-          .select("name")
-          .eq("id", sess.property_id)
-          .maybeSingle();
-        setPropertyName(prop?.name ?? null);
-      }
-      setSession(sess as Session);
-      setTemplate((tpl as Template) ?? null);
-      setItems((its as Item[]) ?? []);
-      setName(sess.assignee_name ?? "");
-      setNotes(sess.notes ?? "");
       setLoading(false);
     })();
   }, [token]);
