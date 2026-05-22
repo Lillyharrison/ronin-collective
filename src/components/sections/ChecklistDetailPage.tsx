@@ -356,14 +356,34 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
             {isAdmin && (
               <button
                 onClick={async () => {
-                  const token = `cl-${template.id.slice(0, 8)}-${crypto.randomUUID().slice(0, 8)}`;
-                  const { error } = await supabase.from("checklist_public_sessions").insert({
+                  const slugify = (s: string) =>
+                    (s || "checklist")
+                      .toLowerCase()
+                      .normalize("NFKD")
+                      .replace(/[\u0300-\u036f]/g, "")
+                      .replace(/[^a-z0-9]+/g, "-")
+                      .replace(/^-+|-+$/g, "")
+                      .slice(0, 60) || "checklist";
+                  const baseSlug = slugify(template.title_en || template.title_es || "checklist");
+                  const suffix = Math.random().toString(36).slice(2, 6);
+                  let token = `${baseSlug}-${suffix}`;
+                  let { error } = await supabase.from("checklist_public_sessions").insert({
                     share_token: token,
                     template_id: template.id,
                     property_id: propertyId,
                     created_by: userId,
                   });
-                  if (error) { toast.error("Could not create share link"); return; }
+                  if (error) {
+                    // Likely unique-collision — retry with a longer suffix
+                    token = `${baseSlug}-${crypto.randomUUID().slice(0, 8)}`;
+                    const retry = await supabase.from("checklist_public_sessions").insert({
+                      share_token: token,
+                      template_id: template.id,
+                      property_id: propertyId,
+                      created_by: userId,
+                    });
+                    if (retry.error) { toast.error("Could not create share link"); return; }
+                  }
                   const url = `${window.location.origin}/checklist-share/${token}`;
                   await navigator.clipboard.writeText(url).catch(() => {});
                   toast.success("Public link copied to clipboard");
