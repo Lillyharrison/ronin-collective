@@ -118,7 +118,7 @@ function ActiveSection() {
     case "rules":         return gated("rules",         <RulesSection />);
     case "car-wash":      return gated("car-wash",      <CarWashSection />);
     case "staff-schedule":return gated("staff-schedule",<StaffSchedulingSection />);
-    case "timeline":      return <TimelineSection />;
+    case "timeline":      return gated("timeline",      <TimelineSection />);
     default:              return <Dashboard />;
   }
 }
