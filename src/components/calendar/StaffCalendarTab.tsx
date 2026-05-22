@@ -314,7 +314,7 @@ export function StaffCalendarTab({
     newOrder.splice(fromIdx, 1);
     newOrder.splice(toIdx, 0, dragged);
     setStaffOrder(newOrder);
-    try { localStorage.setItem("ronin_staff_order", JSON.stringify(newOrder)); } catch { /* noop */ }
+    savePref("ronin_staff_order", newOrder);
     await supabase.from("system_settings").upsert(
       { key: "staff_calendar_order", value: newOrder as never, updated_by: userId },
       { onConflict: "key" }
