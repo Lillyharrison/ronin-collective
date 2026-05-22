@@ -190,7 +190,7 @@ export default function SharedChecklist() {
   if (error || !template || !session) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center">
-        <p className="text-sm text-muted-foreground">{error ?? "Checklist not found."}</p>
+        <p className="text-sm text-muted-foreground">{error ?? t("checklistNotFound")}</p>
       </div>
     );
   }
