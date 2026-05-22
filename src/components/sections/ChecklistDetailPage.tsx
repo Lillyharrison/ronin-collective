@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useChecklistItems, useChecklistSessions, useChecklistComments, ChecklistTemplate, ChecklistProduct } from "@/hooks/useChecklists";
+import { useChecklistItems, useChecklistSessions, useChecklistComments, ChecklistTemplate, ChecklistProduct, ChecklistItem } from "@/hooks/useChecklists";
 import { SortableChecklistItem } from "@/components/manuals/SortableChecklistItem";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
@@ -211,9 +211,21 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
   const colorCls = COLOR_BG[template.color] ?? COLOR_BG.green;
   const isAllComplete = items.length > 0 && completedIds.size === items.length;
 
-  const handleUpdate = async (id: string, changes: Partial<{ title: string; icon: string }>) => {
-    await supabase.from("checklist_items").update(changes).eq("id", id);
+  const handleUpdate = async (id: string, changes: Partial<ChecklistItem>) => {
+    // Optimistic local update so saved edits (title, icon, notes, photo, etc.) appear immediately
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...changes } : i));
+    const { error } = await supabase.from("checklist_items").update(changes).eq("id", id);
+    if (error) {
+      toast.error("Could not save change");
+      // Revert by reloading from DB
+      const { data } = await supabase
+        .from("checklist_items")
+        .select("id, template_id, title, icon, color, container, section, photo_url, notes, is_required, sort_order, created_at, updated_at")
+        .eq("template_id", template.id)
+        .order("sort_order")
+        .limit(500);
+      setItems((data as ChecklistItem[]) ?? []);
+    }
   };
 
   const handleDelete = async (id: string) => {
