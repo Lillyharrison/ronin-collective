@@ -2,6 +2,8 @@ import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import { useChecklistSessions, useChecklistItems, ChecklistTemplate } from "@/hooks/useChecklists";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntryTranslation } from "@/hooks/useEntryTranslation";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff, Trash2 } from "lucide-react";
 import { CopyChecklistButton } from "@/components/checklists/CopyChecklistButton";
