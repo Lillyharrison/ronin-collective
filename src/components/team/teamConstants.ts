@@ -79,6 +79,7 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "calendar-deliveries",  label: "   ↳ Deliveries",           labelEs: "   ↳ Entregas",               hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-construction",label: "   ↳ Construction / Design",labelEs: "   ↳ Construcción / Diseño",  hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "car-wash",             label: "   ↳ Car Wash",              labelEs: "   ↳ Lavado de Autos",        hasEdit: true,  isFeature: true, isCalendarSub: true },
+  { key: "timeline",           label: "Property Timeline",   labelEs: "Cronograma de Propiedad", hasEdit: true  },
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
 ];
