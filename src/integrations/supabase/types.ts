@@ -354,6 +354,7 @@ export type Database = {
           is_required: boolean
           notes: string | null
           photo_url: string | null
+          section: string | null
           sort_order: number
           template_id: string
           title: string
@@ -368,6 +369,7 @@ export type Database = {
           is_required?: boolean
           notes?: string | null
           photo_url?: string | null
+          section?: string | null
           sort_order?: number
           template_id: string
           title: string
@@ -382,6 +384,7 @@ export type Database = {
           is_required?: boolean
           notes?: string | null
           photo_url?: string | null
+          section?: string | null
           sort_order?: number
           template_id?: string
           title?: string
@@ -396,6 +399,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      checklist_public_sessions: {
+        Row: {
+          assignee_name: string | null
+          checked_item_ids: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          property_id: string | null
+          share_token: string
+          status: string
+          submitted_at: string | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_name?: string | null
+          checked_item_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          property_id?: string | null
+          share_token: string
+          status?: string
+          submitted_at?: string | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_name?: string | null
+          checked_item_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          property_id?: string | null
+          share_token?: string
+          status?: string
+          submitted_at?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       checklist_sessions: {
         Row: {
@@ -471,6 +519,7 @@ export type Database = {
           property_id: string | null
           recurrence: string | null
           recurrence_day: number | null
+          sections: Json
           sort_order: number
           subcategory: string | null
           title: string
@@ -497,6 +546,7 @@ export type Database = {
           property_id?: string | null
           recurrence?: string | null
           recurrence_day?: number | null
+          sections?: Json
           sort_order?: number
           subcategory?: string | null
           title: string
@@ -523,6 +573,7 @@ export type Database = {
           property_id?: string | null
           recurrence?: string | null
           recurrence_day?: number | null
+          sections?: Json
           sort_order?: number
           subcategory?: string | null
           title?: string
