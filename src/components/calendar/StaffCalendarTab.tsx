@@ -53,41 +53,62 @@ export function StaffCalendarTab({
   const [calView, setCalView] = useState<"week" | "month">("week");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
 
-  // Month-view date range (From / To). Persisted to localStorage.
-  // Defaults: today's month → end of (today + 3 months), matching reference HTML behaviour.
-  const [rangeStart, setRangeStartState] = useState<Date>(() => {
+  // Per-user UI preferences are persisted to the `user_preferences` table so they
+  // sync across devices. We keep localStorage as a fallback for the initial
+  // synchronous render and as a safety net if the DB read fails.
+  const savePref = useCallback((key: string, value: unknown) => {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* noop */ }
+    if (!userId) return;
+    supabase
+      .from("user_preferences")
+      .upsert({ user_id: userId, key, value: value as never, updated_at: new Date().toISOString() } as never,
+              { onConflict: "user_id,key" })
+      .then(() => { /* noop */ });
+  }, [userId]);
+
+  // Read a localStorage value that may be either a raw string (legacy) or JSON-encoded.
+  const readLocal = (key: string): string | null => {
     try {
-      const saved = localStorage.getItem("ronin_staff_range_start");
-      if (saved) return startOfMonth(new Date(saved));
-    } catch { /* noop */ }
+      const raw = localStorage.getItem(key);
+      if (raw == null) return null;
+      // Try JSON parse first; fall back to raw string for legacy values
+      try {
+        const parsed = JSON.parse(raw);
+        return typeof parsed === "string" ? parsed : raw;
+      } catch { return raw; }
+    } catch { return null; }
+  };
+
+  // Month-view date range (From / To). Initial values come from localStorage
+  // synchronously; DB values (if any) overwrite them once loaded below.
+  const [rangeStart, setRangeStartState] = useState<Date>(() => {
+    const saved = readLocal("ronin_staff_range_start");
+    if (saved) return startOfMonth(new Date(saved));
     return startOfMonth(new Date());
   });
   const [rangeEnd, setRangeEndState] = useState<Date>(() => {
-    try {
-      const saved = localStorage.getItem("ronin_staff_range_end");
-      if (saved) return endOfMonth(new Date(saved));
-    } catch { /* noop */ }
+    const saved = readLocal("ronin_staff_range_end");
+    if (saved) return endOfMonth(new Date(saved));
     return endOfMonth(addMonths(new Date(), 3));
   });
   const setRangeStart = (d: Date) => {
     const s = startOfMonth(d);
     setRangeStartState(s);
-    try { localStorage.setItem("ronin_staff_range_start", s.toISOString()); } catch { /* noop */ }
-    // Auto-correct end if user picked start after current end
+    savePref("ronin_staff_range_start", s.toISOString());
     if (s > rangeEnd) {
       const newEnd = endOfMonth(s);
       setRangeEndState(newEnd);
-      try { localStorage.setItem("ronin_staff_range_end", newEnd.toISOString()); } catch { /* noop */ }
+      savePref("ronin_staff_range_end", newEnd.toISOString());
     }
   };
   const setRangeEnd = (d: Date) => {
     const e = endOfMonth(d);
     setRangeEndState(e);
-    try { localStorage.setItem("ronin_staff_range_end", e.toISOString()); } catch { /* noop */ }
+    savePref("ronin_staff_range_end", e.toISOString());
     if (e < rangeStart) {
       const newStart = startOfMonth(e);
       setRangeStartState(newStart);
-      try { localStorage.setItem("ronin_staff_range_start", newStart.toISOString()); } catch { /* noop */ }
+      savePref("ronin_staff_range_start", newStart.toISOString());
     }
   };
   // Backwards-compat alias for code that still references monthStart (week-view nav, etc.)
@@ -124,20 +145,34 @@ export function StaffCalendarTab({
     catch { return []; }
   });
 
+  // Load all per-user preferences from the database on mount. Falls back to
+  // existing localStorage / default state if the DB has no row or the read fails.
   useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
     supabase
-      .from("system_settings")
-      .select("value")
-      .eq("key", "staff_calendar_order")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.value && Array.isArray(data.value)) {
-          const order = data.value as string[];
-          setStaffOrder(order);
-          try { localStorage.setItem("ronin_staff_order", JSON.stringify(order)); } catch { /* noop */ }
+      .from("user_preferences")
+      .select("key, value")
+      .eq("user_id", userId)
+      .in("key", ["ronin_staff_order", "ronin_staff_range_start", "ronin_staff_range_end"])
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        for (const row of data) {
+          const v = row.value as unknown;
+          if (row.key === "ronin_staff_order" && Array.isArray(v)) {
+            setStaffOrder(v as string[]);
+            try { localStorage.setItem("ronin_staff_order", JSON.stringify(v)); } catch { /* noop */ }
+          } else if (row.key === "ronin_staff_range_start" && typeof v === "string") {
+            setRangeStartState(startOfMonth(new Date(v)));
+            try { localStorage.setItem("ronin_staff_range_start", JSON.stringify(v)); } catch { /* noop */ }
+          } else if (row.key === "ronin_staff_range_end" && typeof v === "string") {
+            setRangeEndState(endOfMonth(new Date(v)));
+            try { localStorage.setItem("ronin_staff_range_end", JSON.stringify(v)); } catch { /* noop */ }
+          }
         }
       });
-  }, []);
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const monthRangeEnd = rangeEnd;
 
