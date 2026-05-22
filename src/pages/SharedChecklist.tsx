@@ -68,7 +68,7 @@ export default function SharedChecklist() {
         .maybeSingle();
       const { data: its } = await supabase
         .from("checklist_items")
-        .select("id, title, icon, color, section, is_required, sort_order")
+        .select("id, title, icon, color, section, is_required, sort_order, photo_url, notes")
         .eq("template_id", sess.template_id)
         .order("sort_order");
       if (sess.property_id) {
