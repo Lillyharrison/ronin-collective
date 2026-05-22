@@ -181,6 +181,17 @@ export default function SharedChecklist() {
     return ordered;
   }, [items, template?.sections]);
 
+  // Translate display strings (hooks must run unconditionally, before any return)
+  const { translated: tplTitleArr } = useEntryTranslation(language, [template?.title ?? ""]);
+  const displayTplTitle = tplTitleArr[0] || template?.title || "";
+  const { items: translatedItems } = useBatchTranslation(language, items, ["title", "notes"]);
+  const translatedById = useMemo(() => {
+    const m = new Map<string, Item>();
+    translatedItems.forEach(it => m.set(it.id, it));
+    return m;
+  }, [translatedItems]);
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
