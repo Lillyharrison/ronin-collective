@@ -621,37 +621,69 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
         )}
       </div>
 
-      {/* ── Checklist items ───────────────────────────────────── */}
+      {/* ── Sections manager ──────────────────────────────────── */}
+      <SectionsManager
+        template={template}
+        items={items}
+        isAdmin={!!isAdmin}
+        onTemplateChange={(sections) => setTemplate(t => ({ ...t, sections }))}
+        onItemsChange={(next) => setItems(next)}
+      />
+
+      {/* ── Checklist items (grouped by section) ──────────────── */}
       <div className="mt-4">
         {loading ? (
           <div className="px-4 space-y-2">{[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-card border border-border rounded-xl animate-pulse" />)}</div>
         ) : items.length === 0 ? (
           <p className="px-4 py-8 text-xs text-muted-foreground italic text-center">No items yet — add some below.</p>
         ) : (
-          <DndContext
-            sensors={dndSensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+          <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-              <div className="bg-card border border-border rounded-xl mx-4 overflow-hidden">
-                {items.map((item, idx) => {
-                  const session = sessionMap.get(item.id);
-                  const completedAt = session?.completed_at
-                    ? new Date(session.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-                    : null;
+              {(() => {
+                const sectionList = template.sections ?? [];
+                const groupKeys = [...sectionList, ...Array.from(new Set(items.map(i => i.section).filter((s): s is string => !!s && !sectionList.includes(s)))), null as unknown as string];
+                return groupKeys.map((group, gIdx) => {
+                  const groupItems = items.filter(i => (group === null ? !i.section : i.section === group));
+                  if (groupItems.length === 0) return null;
                   return (
-                    <div key={item.id} className={idx > 0 ? "border-t border-border" : ""}>
-                      <SortableChecklistItem
-                        item={item} isCompleted={completedIds.has(item.id)}
-                        isAdmin={!!isAdmin} onToggle={() => toggle(item.id, completedIds.has(item.id))}
-                        onUpdate={handleUpdate} onDelete={handleDelete} onPhotoUpload={handlePhotoUpload}
-                      />
-                      {completedAt && <p className="px-12 pb-1.5 text-[10px] text-[hsl(var(--status-done))] opacity-70">✓ {completedAt}</p>}
+                    <div key={group ?? "__ungrouped__"} className="mb-4">
+                      {group && (
+                        <p className="px-5 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--gold))]">{group}</p>
+                      )}
+                      <div className="bg-card border border-border rounded-xl mx-4 overflow-hidden">
+                        {groupItems.map((item, idx) => {
+                          const session = sessionMap.get(item.id);
+                          const completedAt = session?.completed_at
+                            ? new Date(session.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                            : null;
+                          return (
+                            <div key={item.id} className={idx > 0 ? "border-t border-border" : ""}>
+                              <SortableChecklistItem
+                                item={item} isCompleted={completedIds.has(item.id)}
+                                isAdmin={!!isAdmin} onToggle={() => toggle(item.id, completedIds.has(item.id))}
+                                onUpdate={handleUpdate} onDelete={handleDelete} onPhotoUpload={handlePhotoUpload}
+                              />
+                              {isAdmin && (template.sections ?? []).length > 0 && (
+                                <div className="px-12 pb-2">
+                                  <ItemSectionPicker
+                                    item={item}
+                                    sections={template.sections ?? []}
+                                    onChange={async (next) => {
+                                      await supabase.from("checklist_items").update({ section: next }).eq("id", item.id);
+                                      setItems(prev => prev.map(i => i.id === item.id ? { ...i, section: next } : i));
+                                    }}
+                                  />
+                                </div>
+                              )}
+                              {completedAt && <p className="px-12 pb-1.5 text-[10px] text-[hsl(var(--status-done))] opacity-70">✓ {completedAt}</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
-                })}
-              </div>
+                });
+              })()}
             </SortableContext>
           </DndContext>
         )}
