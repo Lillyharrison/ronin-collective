@@ -57,7 +57,8 @@ interface Props {
 
 export function ChecklistDetailPage({ template: initialTemplate, propertyId, propertyName }: Props) {
   const { closeChecklistDetail } = useNavigation();
-  const { isAdmin, isMasterAdmin, userId } = usePermissions();
+  const { isAdmin: isAdminRaw, isMasterAdmin, isManager, userId, canEdit } = usePermissions();
+  const isAdmin = !!(isAdminRaw || isMasterAdmin || isManager || canEdit("checklists"));
   const { language, t } = useLanguage();
 
   // Live template state (so edits reflect immediately without full reload)
@@ -68,7 +69,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
   const { comments, addComment } = useChecklistComments(template.id, propertyId);
 
   const [commentText, setCommentText] = useState("");
-  const [showAdminPanel, setShowAdminPanel] = useState(!!isAdmin);
+  const [showAdminPanel, setShowAdminPanel] = useState(isAdmin);
   const [addingItem, setAddingItem] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
