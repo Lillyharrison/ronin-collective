@@ -215,14 +215,14 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
                   onClick={saveEdit}
                   className="px-3 py-1.5 text-xs font-medium rounded bg-gold text-charcoal hover:opacity-90"
                 >
-                  Save
+                  {t("save")}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setEditing(false); setEditTitle(item.title); setEditNotes(item.notes ?? ""); setEditIcon(item.icon); }}
                   className="px-3 py-1.5 text-xs font-medium rounded border border-border hover:bg-muted"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
               </div>
             </div>
