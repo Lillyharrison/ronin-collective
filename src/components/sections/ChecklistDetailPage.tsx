@@ -734,7 +734,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
               </div>
             ) : (
               <button onClick={() => setAddingItem(true)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
-                <Plus size={12} /> Add item
+                <Plus size={12} /> {t("addItem")}
               </button>
             )}
           </div>
