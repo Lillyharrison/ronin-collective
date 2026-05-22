@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fireConfetti } from "@/lib/confetti";
 import { cn } from "@/lib/utils";
-import { Check, Send, CheckCircle2 } from "lucide-react";
+import { Check, Send, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Template {
@@ -21,6 +21,8 @@ interface Item {
   section: string | null;
   is_required: boolean;
   sort_order: number;
+  photo_url: string | null;
+  notes: string | null;
 }
 interface Session {
   id: string;
@@ -44,6 +46,7 @@ export default function SharedChecklist() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -66,7 +69,7 @@ export default function SharedChecklist() {
         .maybeSingle();
       const { data: its } = await supabase
         .from("checklist_items")
-        .select("id, title, icon, color, section, is_required, sort_order")
+        .select("id, title, icon, color, section, is_required, sort_order, photo_url, notes")
         .eq("template_id", sess.template_id)
         .order("sort_order");
       if (sess.property_id) {
@@ -255,30 +258,59 @@ export default function SharedChecklist() {
                 {group.items.map((item, idx) => {
                   const checked = checkedSet.has(item.id);
                   return (
-                    <button
+                    <div
                       key={item.id}
-                      onClick={() => toggleItem(item.id)}
                       className={cn(
-                        "w-full flex items-start gap-3 px-4 py-3.5 text-left transition-all min-h-[56px]",
+                        "w-full flex items-start gap-3 px-4 py-3 transition-all",
                         idx > 0 && "border-t border-border",
                         checked && "opacity-60"
                       )}
                     >
-                      <span
+                      {/* Checkbox */}
+                      <button
+                        onClick={() => toggleItem(item.id)}
                         className={cn(
-                          "w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all",
+                          "w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-5 transition-all",
                           checked
                             ? "bg-[hsl(var(--status-done))] border-[hsl(var(--status-done))]"
                             : "border-border"
                         )}
+                        aria-label={checked ? "Mark incomplete" : "Mark complete"}
                       >
                         {checked && <Check size={14} className="text-white" strokeWidth={3} />}
-                      </span>
-                      <span className="text-base flex-shrink-0 leading-none mt-1">{item.icon}</span>
-                      <span className={cn("flex-1 text-base leading-snug", checked && "line-through")}>{item.title}
-                        {item.is_required && <span className="ml-1 text-[hsl(var(--status-urgent))]">*</span>}
-                      </span>
-                    </button>
+                      </button>
+
+                      {/* Tile (image or icon, always 56px) */}
+                      {item.photo_url ? (
+                        <button
+                          type="button"
+                          onClick={() => setLightboxUrl(item.photo_url)}
+                          className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border border-border"
+                          aria-label="View reference photo"
+                        >
+                          <img src={item.photo_url} alt="reference" className="w-full h-full object-cover" />
+                        </button>
+                      ) : (
+                        <div className="w-14 h-14 flex-shrink-0 rounded-lg border border-border bg-muted/20 flex items-center justify-center text-2xl">
+                          {item.icon}
+                        </div>
+                      )}
+
+                      {/* Label + notes — tappable to toggle */}
+                      <button
+                        type="button"
+                        onClick={() => toggleItem(item.id)}
+                        className="flex-1 min-w-0 text-left pt-1"
+                      >
+                        <p className={cn("text-base leading-snug", checked && "line-through")}>
+                          {item.title}
+                          {item.is_required && <span className="ml-1 text-[hsl(var(--status-urgent))]">*</span>}
+                        </p>
+                        {item.notes && (
+                          <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{item.notes}</p>
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -320,6 +352,29 @@ export default function SharedChecklist() {
           </button>
         </div>
       </div>
+
+      {/* Image lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="reference"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
