@@ -227,8 +227,6 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
       setItems((data as ChecklistItem[]) ?? []);
     }
   };
-    setItems(prev => prev.map(i => i.id === id ? { ...i, ...changes } : i));
-  };
 
   const handleDelete = async (id: string) => {
     await supabase.from("checklist_items").delete().eq("id", id);
