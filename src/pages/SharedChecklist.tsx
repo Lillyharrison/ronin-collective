@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Check, Send, CheckCircle2, X, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntryTranslation, useBatchTranslation } from "@/hooks/useEntryTranslation";
 
 interface Template {
   id: string;
