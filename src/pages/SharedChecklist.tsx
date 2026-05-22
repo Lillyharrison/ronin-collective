@@ -237,7 +237,7 @@ export default function SharedChecklist() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">{template.icon}</span>
             <div className="flex-1 min-w-0">
-              <h1 className="text-cream text-base font-semibold leading-tight truncate">{template.title}</h1>
+              <h1 className="text-cream text-base font-semibold leading-tight truncate">{displayTplTitle}</h1>
               {propertyName && <p className="text-cream/50 text-xs truncate">{propertyName}</p>}
             </div>
             <button
