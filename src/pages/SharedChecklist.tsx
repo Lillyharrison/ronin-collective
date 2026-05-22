@@ -346,7 +346,7 @@ export default function SharedChecklist() {
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-4">
-          Your progress is saved automatically. You can close this tab and come back later.
+          {t("progressAutoSaved")}
         </p>
       </main>
 
