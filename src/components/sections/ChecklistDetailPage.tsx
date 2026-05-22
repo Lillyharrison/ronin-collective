@@ -727,7 +727,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
               <div className="flex items-center gap-2">
                 <input autoFocus value={newTitle} onChange={e => setNewTitle(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") addItem(); if (e.key === "Escape") setAddingItem(false); }}
-                  placeholder="New item…"
+                  placeholder={t("newItem")}
                   className="flex-1 text-sm bg-card border border-border rounded-xl px-3 py-2 outline-none focus:border-gold" />
                 <button onClick={addItem} className="text-xs px-3 py-2 bg-primary text-primary-foreground rounded-xl">Add</button>
                 <button onClick={() => setAddingItem(false)} className="text-xs text-muted-foreground">Cancel</button>
