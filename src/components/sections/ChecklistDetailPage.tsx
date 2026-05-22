@@ -364,7 +364,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
                       .replace(/[^a-z0-9]+/g, "-")
                       .replace(/^-+|-+$/g, "")
                       .slice(0, 60) || "checklist";
-                  const baseSlug = slugify(template.title_en || template.title_es || "checklist");
+                  const baseSlug = slugify(template.title || "checklist");
                   const suffix = Math.random().toString(36).slice(2, 6);
                   let token = `${baseSlug}-${suffix}`;
                   let { error } = await supabase.from("checklist_public_sessions").insert({
