@@ -14,6 +14,7 @@ interface Template {
   icon: string;
   color: string;
   sections: string[] | null;
+  cover_image_url: string | null;
 }
 interface Item {
   id: string;
