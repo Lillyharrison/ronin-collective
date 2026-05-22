@@ -199,7 +199,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
                 value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); } if (e.key === "Escape") setEditing(false); }}
-                placeholder="Item title"
+                placeholder={t("itemTitle")}
                 className="w-full text-base bg-muted/50 border border-border rounded px-2 py-1.5 outline-none focus:border-gold"
               />
               <textarea
