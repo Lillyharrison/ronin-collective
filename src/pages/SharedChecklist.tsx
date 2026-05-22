@@ -38,6 +38,7 @@ interface Session {
 
 export default function SharedChecklist() {
   const { token } = useParams<{ token: string }>();
+  const { language, setLanguage, t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [template, setTemplate] = useState<Template | null>(null);
   const [items, setItems] = useState<Item[]>([]);
