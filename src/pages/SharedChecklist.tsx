@@ -206,12 +206,12 @@ export default function SharedChecklist() {
           <div className="w-16 h-16 mx-auto rounded-full bg-[hsl(var(--status-done)/0.15)] flex items-center justify-center mb-4">
             <CheckCircle2 size={32} className="text-[hsl(var(--status-done))]" />
           </div>
-          <h1 className="text-xl font-display text-foreground mb-2">Submitted — thank you!</h1>
+          <h1 className="text-xl font-display text-foreground mb-2">{t("submittedThankYou")}</h1>
           <p className="text-sm text-muted-foreground">
-            Your completed checklist has been sent to the team.
+            {t("submittedThankYouBody")}
           </p>
           {session.assignee_name && (
-            <p className="text-xs text-muted-foreground mt-3">Submitted by {session.assignee_name}</p>
+            <p className="text-xs text-muted-foreground mt-3">{t("submittedBy")} {session.assignee_name}</p>
           )}
         </div>
       </div>
