@@ -834,7 +834,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
             className={cn("w-full py-3.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2",
               isAllComplete ? "bg-[hsl(var(--status-done))] text-white shadow-lg active:scale-95" : "bg-muted text-muted-foreground cursor-not-allowed opacity-60")}>
             <CheckCircle2 size={16} />
-            {isAllComplete ? (isMarkingComplete ? "Completing…" : "Mark List Complete 🎉") : `${items.length - completedIds.size} item${items.length - completedIds.size !== 1 ? "s" : ""} remaining`}
+            {isAllComplete ? (isMarkingComplete ? t("completing") : t("markListComplete")) : `${items.length - completedIds.size} ${items.length - completedIds.size !== 1 ? t("itemsRemaining") : t("itemRemaining")}`}
           </button>
         </div>
       )}
