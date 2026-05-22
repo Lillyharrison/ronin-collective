@@ -334,12 +334,12 @@ export default function SharedChecklist() {
 
         {/* Notes */}
         <div className="bg-card border border-border rounded-xl p-4 mt-5">
-          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Notes (optional)</label>
+          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("notesOptional")}</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             onBlur={() => persist({ notes: notes.trim() })}
-            placeholder="Anything to flag for the team…"
+            placeholder={t("notesPlaceholder")}
             rows={3}
             className="w-full mt-2 text-base bg-background border border-border rounded-lg px-3 py-2.5 outline-none focus:border-[hsl(var(--gold))] resize-none"
           />
