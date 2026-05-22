@@ -228,6 +228,15 @@ export default function SharedChecklist() {
               <h1 className="text-cream text-base font-semibold leading-tight truncate">{template.title}</h1>
               {propertyName && <p className="text-cream/50 text-xs truncate">{propertyName}</p>}
             </div>
+            <button
+              type="button"
+              onClick={() => setLanguage(language === "es" ? "en" : "es")}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors border border-charcoal-light"
+              aria-label="Toggle language"
+            >
+              <Globe size={12} />
+              {language === "es" ? "EN" : "ES"}
+            </button>
             <span className="text-xs text-cream/60 font-mono whitespace-nowrap">{done}/{total}</span>
           </div>
           <div className="mt-3 h-1.5 bg-charcoal-light rounded-full overflow-hidden">
