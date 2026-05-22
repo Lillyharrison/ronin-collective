@@ -258,6 +258,16 @@ export default function SharedChecklist() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 pt-4 pb-32">
+        {/* Cover banner */}
+        {template.cover_image_url && (
+          <div className="mb-4 rounded-xl overflow-hidden border border-border aspect-[16/7] bg-muted">
+            <img
+              src={template.cover_image_url}
+              alt={displayTplTitle}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
         {/* Name input */}
         <div className="bg-card border border-border rounded-xl p-4 mb-4">
           <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("yourName")}</label>
