@@ -359,7 +359,7 @@ export default function SharedChecklist() {
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-[hsl(var(--gold))] text-charcoal text-base font-semibold rounded-xl active:scale-[0.98] transition-transform disabled:opacity-50"
           >
             <Send size={16} />
-            {submitting ? "Sending…" : "Complete & Send"}
+            {submitting ? t("sending") : t("completeAndSend")}
           </button>
         </div>
       </div>
