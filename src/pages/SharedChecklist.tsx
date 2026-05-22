@@ -21,6 +21,8 @@ interface Item {
   section: string | null;
   is_required: boolean;
   sort_order: number;
+  photo_url: string | null;
+  notes: string | null;
 }
 interface Session {
   id: string;
