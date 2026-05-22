@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fireConfetti } from "@/lib/confetti";
 import { cn } from "@/lib/utils";
-import { Check, Send, CheckCircle2 } from "lucide-react";
+import { Check, Send, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Template {
