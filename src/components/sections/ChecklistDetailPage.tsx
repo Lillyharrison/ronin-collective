@@ -4,6 +4,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChecklistItems, useChecklistSessions, useChecklistComments, ChecklistTemplate, ChecklistProduct, ChecklistItem } from "@/hooks/useChecklists";
+import { useEntryTranslation } from "@/hooks/useEntryTranslation";
 import { SortableChecklistItem } from "@/components/manuals/SortableChecklistItem";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
