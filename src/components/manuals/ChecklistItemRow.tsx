@@ -205,7 +205,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
               <textarea
                 value={editNotes}
                 onChange={e => setEditNotes(e.target.value)}
-                placeholder="Sub-note (e.g. do not use vac on polished plaster)"
+                placeholder={t("subNotePlaceholder")}
                 rows={2}
                 className="w-full text-sm bg-muted/50 border border-border rounded px-2 py-1.5 outline-none focus:border-gold resize-none"
               />
