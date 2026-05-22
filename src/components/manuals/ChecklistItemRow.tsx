@@ -248,21 +248,21 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
             <button
               onClick={() => fileRef.current?.click()}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-              title={item.photo_url ? "Replace photo" : "Add photo"}
+              title={item.photo_url ? t("replacePhotoTitle") : t("addPhotoTitle")}
             >
               {uploading ? <span className="text-xs">…</span> : <Camera size={13} />}
             </button>
             <button
               onClick={() => setEditing(true)}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Edit"
+              title={t("editTitle")}
             >
               <Pencil size={13} />
             </button>
             <button
               onClick={() => onDelete(item.id)}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive"
-              title="Delete"
+              title={t("deleteTitle")}
             >
               <Trash2 size={16} />
             </button>
