@@ -32,6 +32,7 @@ export interface ChecklistTemplate {
   manual_link_url: string | null;
   manual_link_label: string | null;
   products: ChecklistProduct[] | null;
+  sections?: string[] | null;
 }
 
 export interface ChecklistItem {
@@ -45,6 +46,7 @@ export interface ChecklistItem {
   sort_order: number;
   is_required: boolean;
   container: string | null;
+  section?: string | null;
 }
 
 export interface ChecklistSession {
@@ -82,7 +84,7 @@ export function useChecklistTemplates(
     // Narrow columns — list view doesn't need `products` JSONB blob (loaded in detail).
     let q = supabase
       .from("checklist_templates")
-      .select("id, title, category, subcategory, color, icon, cover_image_url, location, recurrence, recurrence_day, notify_on_day, only_when_occupied, is_published, is_universal, property_id, assigned_department, assigned_role, manual_link_label, manual_link_url, sort_order, created_at, updated_at, created_by")
+      .select("id, title, category, subcategory, color, icon, cover_image_url, location, recurrence, recurrence_day, notify_on_day, only_when_occupied, is_published, is_universal, property_id, assigned_department, assigned_role, manual_link_label, manual_link_url, sort_order, sections, created_at, updated_at, created_by")
       .order("sort_order")
       .limit(500);
     if (category) q = q.eq("category", category);
@@ -125,7 +127,7 @@ export function useChecklistItems(templateId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("checklist_items")
-      .select("id, template_id, title, icon, color, container, photo_url, notes, is_required, sort_order, created_at, updated_at")
+      .select("id, template_id, title, icon, color, container, section, photo_url, notes, is_required, sort_order, created_at, updated_at")
       .eq("template_id", templateId)
       .order("sort_order")
       .limit(500);

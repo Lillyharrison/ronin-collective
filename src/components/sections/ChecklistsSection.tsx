@@ -8,9 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useChecklistTemplates } from "@/hooks/useChecklists";
 import { ChecklistCard } from "@/components/manuals/ChecklistCard";
 import { ChecklistImportModal } from "@/components/manuals/ChecklistImportModal";
+import { ChecklistSubmissionsArchive } from "@/components/checklists/ChecklistSubmissionsArchive";
 import { cn } from "@/lib/utils";
 import {
-  ClipboardList, Backpack, ChevronDown, Plus, MapPin, Upload,
+  ClipboardList, Backpack, ChevronDown, Plus, MapPin, Upload, Inbox,
 } from "lucide-react";
 
 interface Property {
@@ -18,7 +19,7 @@ interface Property {
   name: string;
 }
 
-type Tab = "cleaning" | "activity";
+type Tab = "cleaning" | "activity" | "submissions";
 
 const ACTIVITY_GROUPS = [
   { label: "Packing Lists",    labelEs: "Listas de Equipaje",      keys: ["skiing", "yacht", "business_trip"] },
@@ -39,9 +40,10 @@ export function ChecklistsSection() {
   const [importOpen, setImportOpen] = useState(false);
 
   const TABS = [
-    { id: "cleaning" as Tab,  icon: <ClipboardList size={14} />, label: "Checklists",   labelEs: t("checklists") },
-    { id: "activity" as Tab,  icon: <Backpack size={14} />,      label: "Activities",   labelEs: t("activitiesTitle") },
-  ];
+    { id: "cleaning" as Tab,  icon: <ClipboardList size={14} />, label: "Checklists",   labelEs: t("checklists"), show: true },
+    { id: "activity" as Tab,  icon: <Backpack size={14} />,      label: "Activities",   labelEs: t("activitiesTitle"), show: true },
+    { id: "submissions" as Tab, icon: <Inbox size={14} />,       label: "Submissions",  labelEs: "Entregas",          show: isMasterAdmin },
+  ].filter(t => t.show);
 
   useEffect(() => {
     if (!canSeeAllProperties && assignedPropertyIds.length === 0) {
@@ -266,6 +268,9 @@ export function ChecklistsSection() {
             )}
           </>
         )}
+
+        {/* SUBMISSIONS (master admin only) */}
+        {tab === "submissions" && isMasterAdmin && <ChecklistSubmissionsArchive />}
       </div>
 
       <ChecklistImportModal
