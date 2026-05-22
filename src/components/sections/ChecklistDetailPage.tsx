@@ -216,7 +216,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...changes } : i));
     const { error } = await supabase.from("checklist_items").update(changes).eq("id", id);
     if (error) {
-      toast.error("Could not save change");
+      toast.error(t("couldNotSaveChange"));
       // Revert by reloading from DB
       const { data } = await supabase
         .from("checklist_items")
