@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     const [{ data: template }, { data: items }] = await Promise.all([
       admin
         .from("checklist_templates")
-        .select("id, title, icon, color, sections")
+        .select("id, title, icon, color, sections, cover_image_url")
         .eq("id", session.template_id)
         .maybeSingle(),
       admin
