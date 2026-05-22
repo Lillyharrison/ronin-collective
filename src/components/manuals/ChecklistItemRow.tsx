@@ -44,7 +44,10 @@ const ICON_BANK = ["🧹","🛏️","🚿","🍳","🗑️","💧","🧴","🧽"
 const TILE = "w-14 h-14";
 
 export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdate, onDelete, onPhotoUpload, dragHandleProps }: Props) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const { translated } = useEntryTranslation(language, [item.title, item.notes ?? ""]);
+  const displayTitle = translated[0] || item.title;
+  const displayNotes = translated[1] || item.notes;
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [editIcon, setEditIcon] = useState(item.icon);
