@@ -145,7 +145,7 @@ export default function SharedChecklist() {
     setSubmitting(false);
     if (!res.ok) {
       const txt = await res.text();
-      toast.error("Submission failed: " + txt);
+      toast.error(t("submissionFailed") + ": " + txt);
       return;
     }
     setSession({ ...session, status: "submitted", submitted_at: new Date().toISOString(), assignee_name: name.trim(), notes });
