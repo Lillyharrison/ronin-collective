@@ -174,6 +174,21 @@ export function StaffCalendarTab({
     return () => { cancelled = true; };
   }, [userId]);
 
+  // Legacy: also load the shared (global) staff order from system_settings.
+  // Per-user preferences (loaded above) take precedence when present.
+  useEffect(() => {
+    supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "staff_calendar_order")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value && Array.isArray(data.value)) {
+          setStaffOrder((curr) => (curr.length > 0 ? curr : (data.value as string[])));
+        }
+      });
+  }, []);
+
   const monthRangeEnd = rangeEnd;
 
   const {
