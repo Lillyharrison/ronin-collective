@@ -233,11 +233,11 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
           ) : (
             <>
               <p className={cn("text-sm leading-snug pt-1", isCompleted && "line-through text-muted-foreground")}>
-                {item.title}
+                {displayTitle}
                 {item.is_required && <span className="ml-1 text-[hsl(var(--status-urgent))] text-xs">*</span>}
               </p>
-              {item.notes && (
-                <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{item.notes}</p>
+              {displayNotes && (
+                <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{displayNotes}</p>
               )}
             </>
           )}
