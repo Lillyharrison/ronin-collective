@@ -4,6 +4,7 @@ import { useChecklistSessions, useChecklistItems, ChecklistTemplate } from "@/ho
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronRight, RefreshCw, CheckCircle2, Eye, EyeOff, Trash2 } from "lucide-react";
+import { CopyChecklistButton } from "@/components/checklists/CopyChecklistButton";
 import { toast } from "sonner";
 
 interface Props {
@@ -149,6 +150,7 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
       <div className="flex items-center gap-1 flex-shrink-0">
         {isMasterAdmin && (
           <>
+            <CopyChecklistButton template={template} onCopied={onChanged} />
             <button
               onClick={togglePublish}
               title={isDraft ? "Publish" : "Unpublish"}
