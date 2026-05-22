@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistItem } from "@/hooks/useChecklists";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Check, Camera, Pencil, Trash2, GripVertical, X } from "lucide-react";
 
 interface Props {
@@ -42,6 +43,7 @@ const ICON_BANK = ["🧹","🛏️","🚿","🍳","🗑️","💧","🧴","🧽"
 const TILE = "w-14 h-14";
 
 export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdate, onDelete, onPhotoUpload, dragHandleProps }: Props) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [editIcon, setEditIcon] = useState(item.icon);
@@ -197,13 +199,13 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
                 value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); } if (e.key === "Escape") setEditing(false); }}
-                placeholder="Item title"
+                placeholder={t("itemTitle")}
                 className="w-full text-base bg-muted/50 border border-border rounded px-2 py-1.5 outline-none focus:border-gold"
               />
               <textarea
                 value={editNotes}
                 onChange={e => setEditNotes(e.target.value)}
-                placeholder="Sub-note (e.g. do not use vac on polished plaster)"
+                placeholder={t("subNotePlaceholder")}
                 rows={2}
                 className="w-full text-sm bg-muted/50 border border-border rounded px-2 py-1.5 outline-none focus:border-gold resize-none"
               />
@@ -213,14 +215,14 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
                   onClick={saveEdit}
                   className="px-3 py-1.5 text-xs font-medium rounded bg-gold text-charcoal hover:opacity-90"
                 >
-                  Save
+                  {t("save")}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setEditing(false); setEditTitle(item.title); setEditNotes(item.notes ?? ""); setEditIcon(item.icon); }}
                   className="px-3 py-1.5 text-xs font-medium rounded border border-border hover:bg-muted"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
               </div>
             </div>
@@ -246,21 +248,21 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
             <button
               onClick={() => fileRef.current?.click()}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-              title={item.photo_url ? "Replace photo" : "Add photo"}
+              title={item.photo_url ? t("replacePhotoTitle") : t("addPhotoTitle")}
             >
               {uploading ? <span className="text-xs">…</span> : <Camera size={13} />}
             </button>
             <button
               onClick={() => setEditing(true)}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="Edit"
+              title={t("editTitle")}
             >
               <Pencil size={13} />
             </button>
             <button
               onClick={() => onDelete(item.id)}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive"
-              title="Delete"
+              title={t("deleteTitle")}
             >
               <Trash2 size={16} />
             </button>

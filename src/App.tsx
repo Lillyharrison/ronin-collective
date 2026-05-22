@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { OfflineSyncProvider } from "@/hooks/useOfflineSync";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -72,6 +73,7 @@ const App = () => (
               and shares results via context to all 30+ consuming components. */}
           <OfflineSyncProvider>
           <PermissionsProvider>
+            <LanguageProvider>
             <Routes>
               <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -88,6 +90,7 @@ const App = () => (
               ))}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </LanguageProvider>
           </PermissionsProvider>
           </OfflineSyncProvider>
         </AuthProvider>

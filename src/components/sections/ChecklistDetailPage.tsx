@@ -57,7 +57,7 @@ interface Props {
 export function ChecklistDetailPage({ template: initialTemplate, propertyId, propertyName }: Props) {
   const { closeChecklistDetail } = useNavigation();
   const { isAdmin, isMasterAdmin, userId } = usePermissions();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   // Live template state (so edits reflect immediately without full reload)
   const [template, setTemplate] = useState(initialTemplate);
@@ -216,7 +216,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...changes } : i));
     const { error } = await supabase.from("checklist_items").update(changes).eq("id", id);
     if (error) {
-      toast.error("Could not save change");
+      toast.error(t("couldNotSaveChange"));
       // Revert by reloading from DB
       const { data } = await supabase
         .from("checklist_items")
@@ -394,11 +394,12 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
                       property_id: propertyId,
                       created_by: userId,
                     });
-                    if (retry.error) { toast.error("Could not create share link"); return; }
+                    if (retry.error) { toast.error(t("couldNotCreateShareLink")); return; }
                   }
-                  const url = `${window.location.origin}/checklist-share/${token}`;
+                  const langSuffix = language === "es" ? "?lang=es" : "";
+                  const url = `${window.location.origin}/checklist-share/${token}${langSuffix}`;
                   await navigator.clipboard.writeText(url).catch(() => {});
-                  toast.success("Public link copied to clipboard");
+                  toast.success(t("publicLinkCopied"));
                 }}
                 title="Create public share link"
                 className="p-2 rounded-xl text-cream/50 hover:text-cream hover:bg-charcoal-light transition-colors"
@@ -726,14 +727,14 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
               <div className="flex items-center gap-2">
                 <input autoFocus value={newTitle} onChange={e => setNewTitle(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") addItem(); if (e.key === "Escape") setAddingItem(false); }}
-                  placeholder="New item…"
+                  placeholder={t("newItem")}
                   className="flex-1 text-sm bg-card border border-border rounded-xl px-3 py-2 outline-none focus:border-gold" />
                 <button onClick={addItem} className="text-xs px-3 py-2 bg-primary text-primary-foreground rounded-xl">Add</button>
                 <button onClick={() => setAddingItem(false)} className="text-xs text-muted-foreground">Cancel</button>
               </div>
             ) : (
               <button onClick={() => setAddingItem(true)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
-                <Plus size={12} /> Add item
+                <Plus size={12} /> {t("addItem")}
               </button>
             )}
           </div>
@@ -833,7 +834,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
             className={cn("w-full py-3.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2",
               isAllComplete ? "bg-[hsl(var(--status-done))] text-white shadow-lg active:scale-95" : "bg-muted text-muted-foreground cursor-not-allowed opacity-60")}>
             <CheckCircle2 size={16} />
-            {isAllComplete ? (isMarkingComplete ? "Completing…" : "Mark List Complete 🎉") : `${items.length - completedIds.size} item${items.length - completedIds.size !== 1 ? "s" : ""} remaining`}
+            {isAllComplete ? (isMarkingComplete ? t("completing") : t("markListComplete")) : `${items.length - completedIds.size} ${items.length - completedIds.size !== 1 ? t("itemsRemaining") : t("itemRemaining")}`}
           </button>
         </div>
       )}

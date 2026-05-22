@@ -3,8 +3,9 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fireConfetti } from "@/lib/confetti";
 import { cn } from "@/lib/utils";
-import { Check, Send, CheckCircle2, X } from "lucide-react";
+import { Check, Send, CheckCircle2, X, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Template {
   id: string;
@@ -37,6 +38,7 @@ interface Session {
 
 export default function SharedChecklist() {
   const { token } = useParams<{ token: string }>();
+  const { language, setLanguage, t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [template, setTemplate] = useState<Template | null>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -58,7 +60,7 @@ export default function SharedChecklist() {
         .eq("share_token", token)
         .maybeSingle();
       if (sErr || !sess) {
-        setError("This share link is invalid or has expired.");
+        setError(t("invalidShareLink"));
         setLoading(false);
         return;
       }
@@ -122,7 +124,7 @@ export default function SharedChecklist() {
   const submit = async () => {
     if (!session) return;
     if (!name.trim()) {
-      toast.error("Please add your name first");
+      toast.error(t("pleaseAddName"));
       return;
     }
     setSubmitting(true);
@@ -143,7 +145,7 @@ export default function SharedChecklist() {
     setSubmitting(false);
     if (!res.ok) {
       const txt = await res.text();
-      toast.error("Submission failed: " + txt);
+      toast.error(t("submissionFailed") + ": " + txt);
       return;
     }
     setSession({ ...session, status: "submitted", submitted_at: new Date().toISOString(), assignee_name: name.trim(), notes });
@@ -188,7 +190,7 @@ export default function SharedChecklist() {
   if (error || !template || !session) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center">
-        <p className="text-sm text-muted-foreground">{error ?? "Checklist not found."}</p>
+        <p className="text-sm text-muted-foreground">{error ?? t("checklistNotFound")}</p>
       </div>
     );
   }
@@ -204,12 +206,12 @@ export default function SharedChecklist() {
           <div className="w-16 h-16 mx-auto rounded-full bg-[hsl(var(--status-done)/0.15)] flex items-center justify-center mb-4">
             <CheckCircle2 size={32} className="text-[hsl(var(--status-done))]" />
           </div>
-          <h1 className="text-xl font-display text-foreground mb-2">Submitted — thank you!</h1>
+          <h1 className="text-xl font-display text-foreground mb-2">{t("submittedThankYou")}</h1>
           <p className="text-sm text-muted-foreground">
-            Your completed checklist has been sent to the team.
+            {t("submittedThankYouBody")}
           </p>
           {session.assignee_name && (
-            <p className="text-xs text-muted-foreground mt-3">Submitted by {session.assignee_name}</p>
+            <p className="text-xs text-muted-foreground mt-3">{t("submittedBy")} {session.assignee_name}</p>
           )}
         </div>
       </div>
@@ -226,6 +228,15 @@ export default function SharedChecklist() {
               <h1 className="text-cream text-base font-semibold leading-tight truncate">{template.title}</h1>
               {propertyName && <p className="text-cream/50 text-xs truncate">{propertyName}</p>}
             </div>
+            <button
+              type="button"
+              onClick={() => setLanguage(language === "es" ? "en" : "es")}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors border border-charcoal-light"
+              aria-label="Toggle language"
+            >
+              <Globe size={12} />
+              {language === "es" ? "EN" : "ES"}
+            </button>
             <span className="text-xs text-cream/60 font-mono whitespace-nowrap">{done}/{total}</span>
           </div>
           <div className="mt-3 h-1.5 bg-charcoal-light rounded-full overflow-hidden">
@@ -237,12 +248,12 @@ export default function SharedChecklist() {
       <main className="max-w-2xl mx-auto px-4 pt-4 pb-32">
         {/* Name input */}
         <div className="bg-card border border-border rounded-xl p-4 mb-4">
-          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your name</label>
+          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("yourName")}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={() => persist({ assignee_name: name.trim() })}
-            placeholder="e.g. Jamie Cleaner"
+            placeholder={t("yourNamePlaceholder")}
             className="w-full mt-2 text-base bg-background border border-border rounded-lg px-3 py-2.5 outline-none focus:border-[hsl(var(--gold))]"
           />
         </div>
@@ -317,25 +328,25 @@ export default function SharedChecklist() {
             </div>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">This checklist has no items yet.</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("emptyChecklist")}</p>
           )}
         </div>
 
         {/* Notes */}
         <div className="bg-card border border-border rounded-xl p-4 mt-5">
-          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Notes (optional)</label>
+          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("notesOptional")}</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             onBlur={() => persist({ notes: notes.trim() })}
-            placeholder="Anything to flag for the team…"
+            placeholder={t("notesPlaceholder")}
             rows={3}
             className="w-full mt-2 text-base bg-background border border-border rounded-lg px-3 py-2.5 outline-none focus:border-[hsl(var(--gold))] resize-none"
           />
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-4">
-          Your progress is saved automatically. You can close this tab and come back later.
+          {t("progressAutoSaved")}
         </p>
       </main>
 
@@ -348,7 +359,7 @@ export default function SharedChecklist() {
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-[hsl(var(--gold))] text-charcoal text-base font-semibold rounded-xl active:scale-[0.98] transition-transform disabled:opacity-50"
           >
             <Send size={16} />
-            {submitting ? "Sending…" : "Complete & Send"}
+            {submitting ? t("sending") : t("completeAndSend")}
           </button>
         </div>
       </div>
