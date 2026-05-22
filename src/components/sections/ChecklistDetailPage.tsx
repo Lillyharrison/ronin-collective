@@ -25,8 +25,10 @@ import {
   ArrowLeft, Printer, CheckCircle2, Plus, Send,
   MessageSquare, Settings, Calendar, User,
   RefreshCw, Bell, Trash2, Pencil, ExternalLink,
-  Image as ImageIcon, Link, Package, X, Camera,
+  Image as ImageIcon, Link, Package, X, Camera, Share2,
 } from "lucide-react";
+import { SectionsManager, ItemSectionPicker } from "@/components/checklists/SectionsManager";
+import { toast } from "sonner";
 
 const COLOR_BG: Record<string, string> = {
   green:  "bg-[hsl(var(--status-done)/0.15)] border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))]",
@@ -351,6 +353,27 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {isAdmin && (
+              <button
+                onClick={async () => {
+                  const token = `cl-${template.id.slice(0, 8)}-${crypto.randomUUID().slice(0, 8)}`;
+                  const { error } = await supabase.from("checklist_public_sessions").insert({
+                    share_token: token,
+                    template_id: template.id,
+                    property_id: propertyId,
+                    created_by: userId,
+                  });
+                  if (error) { toast.error("Could not create share link"); return; }
+                  const url = `${window.location.origin}/checklist-share/${token}`;
+                  await navigator.clipboard.writeText(url).catch(() => {});
+                  toast.success("Public link copied to clipboard");
+                }}
+                title="Create public share link"
+                className="p-2 rounded-xl text-cream/50 hover:text-cream hover:bg-charcoal-light transition-colors"
+              >
+                <Share2 size={16} />
+              </button>
+            )}
             {isAdmin && (
               <button onClick={() => setShowAdminPanel(v => !v)}
                 className={cn("p-2 rounded-xl transition-colors", showAdminPanel ? "bg-gold/20 text-gold border border-gold/30" : "text-cream/50 hover:text-cream hover:bg-charcoal-light border border-transparent")}>
