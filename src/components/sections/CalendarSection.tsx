@@ -1572,13 +1572,20 @@ export function CalendarSection() {
             return (
               <button
                 key={key}
-                onClick={() => setRoninTab(key)}
+                onClick={() => {
+                  if (key === "construction") {
+                    setActiveSection("timeline");
+                    return;
+                  }
+                  setRoninTab(key);
+                }}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap border",
                   roninTab === key
                     ? `${cfg.bg} ${cfg.color} border-current/30`
                     : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
+
               >
                 {cfg.icon} {cfg.label}
                 {count > 0 && (
