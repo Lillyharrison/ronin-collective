@@ -35,6 +35,9 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
   const { completedIds } = useChecklistSessions(template.id, propertyId);
   const { items } = useChecklistItems(template.id);
   const { isMasterAdmin } = usePermissions();
+  const { language } = useLanguage();
+  const { translated } = useEntryTranslation(language, [template.title]);
+  const displayTitle = translated[0] || template.title;
   const colorCls = COLOR_BG[template.color] ?? COLOR_BG.green;
   const isDraft = !template.is_published;
 
