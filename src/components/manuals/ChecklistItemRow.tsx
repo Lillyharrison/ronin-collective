@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChecklistItem } from "@/hooks/useChecklists";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEntryTranslation } from "@/hooks/useEntryTranslation";
 import { Check, Camera, Pencil, Trash2, GripVertical, X } from "lucide-react";
 
 interface Props {
