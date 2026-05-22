@@ -328,7 +328,7 @@ export default function SharedChecklist() {
             </div>
           ))}
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">This checklist has no items yet.</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("emptyChecklist")}</p>
           )}
         </div>
 
