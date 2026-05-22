@@ -394,11 +394,12 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
                       property_id: propertyId,
                       created_by: userId,
                     });
-                    if (retry.error) { toast.error("Could not create share link"); return; }
+                    if (retry.error) { toast.error(t("couldNotCreateShareLink")); return; }
                   }
-                  const url = `${window.location.origin}/checklist-share/${token}`;
+                  const langSuffix = language === "es" ? "?lang=es" : "";
+                  const url = `${window.location.origin}/checklist-share/${token}${langSuffix}`;
                   await navigator.clipboard.writeText(url).catch(() => {});
-                  toast.success("Public link copied to clipboard");
+                  toast.success(t("publicLinkCopied"));
                 }}
                 title="Create public share link"
                 className="p-2 rounded-xl text-cream/50 hover:text-cream hover:bg-charcoal-light transition-colors"
