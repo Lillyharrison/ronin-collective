@@ -326,11 +326,11 @@ export default function SharedChecklist() {
                         className="flex-1 min-w-0 text-left pt-1"
                       >
                         <p className={cn("text-base leading-snug", checked && "line-through")}>
-                          {item.title}
+                          {translatedById.get(item.id)?.title ?? item.title}
                           {item.is_required && <span className="ml-1 text-[hsl(var(--status-urgent))]">*</span>}
                         </p>
-                        {item.notes && (
-                          <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{item.notes}</p>
+                        {(translatedById.get(item.id)?.notes ?? item.notes) && (
+                          <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{translatedById.get(item.id)?.notes ?? item.notes}</p>
                         )}
                       </button>
                     </div>
