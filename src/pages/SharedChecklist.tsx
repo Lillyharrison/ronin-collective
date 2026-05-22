@@ -248,12 +248,12 @@ export default function SharedChecklist() {
       <main className="max-w-2xl mx-auto px-4 pt-4 pb-32">
         {/* Name input */}
         <div className="bg-card border border-border rounded-xl p-4 mb-4">
-          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your name</label>
+          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("yourName")}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onBlur={() => persist({ assignee_name: name.trim() })}
-            placeholder="e.g. Jamie Cleaner"
+            placeholder={t("yourNamePlaceholder")}
             className="w-full mt-2 text-base bg-background border border-border rounded-lg px-3 py-2.5 outline-none focus:border-[hsl(var(--gold))]"
           />
         </div>
