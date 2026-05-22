@@ -165,9 +165,29 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const activeTab: ActiveTab = TAB_MAP[activeSection] ?? "home";
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [checklistDetailId, setChecklistDetailId] = useState<string | null>(null);
-  const [checklistDetailPropId, setChecklistDetailPropId] = useState<string | null>(null);
-  const [careGuideDetailId, setCareGuideDetailId] = useState<string | null>(null);
+  const [checklistDetailId, setChecklistDetailId] = useState<string | null>(
+    () => sessionStorage.getItem("nav:checklistDetailId") || null
+  );
+  const [checklistDetailPropId, setChecklistDetailPropId] = useState<string | null>(
+    () => sessionStorage.getItem("nav:checklistDetailPropId") || null
+  );
+  const [careGuideDetailId, setCareGuideDetailId] = useState<string | null>(
+    () => sessionStorage.getItem("nav:careGuideDetailId") || null
+  );
+
+  // Persist detail panel state across refreshes
+  useEffect(() => {
+    if (checklistDetailId) sessionStorage.setItem("nav:checklistDetailId", checklistDetailId);
+    else sessionStorage.removeItem("nav:checklistDetailId");
+  }, [checklistDetailId]);
+  useEffect(() => {
+    if (checklistDetailPropId) sessionStorage.setItem("nav:checklistDetailPropId", checklistDetailPropId);
+    else sessionStorage.removeItem("nav:checklistDetailPropId");
+  }, [checklistDetailPropId]);
+  useEffect(() => {
+    if (careGuideDetailId) sessionStorage.setItem("nav:careGuideDetailId", careGuideDetailId);
+    else sessionStorage.removeItem("nav:careGuideDetailId");
+  }, [careGuideDetailId]);
   const [targetPropertyId, setTargetPropertyId] = useState<string | null>(null);
   const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
   const [checklistsForPropertyId, setChecklistsForPropertyId] = useState<string | null>(null);
