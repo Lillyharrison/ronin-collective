@@ -97,8 +97,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
   };
 
   const clearPhoto = async () => {
-    await supabase.from("checklist_items").update({ photo_url: null }).eq("id", item.id);
-    onPhotoUpload(item.id, "");
+    onUpdate(item.id, { photo_url: null } as Partial<ChecklistItem>);
   };
 
   // ── Tile (image OR icon) — always same size ───────────────────────
