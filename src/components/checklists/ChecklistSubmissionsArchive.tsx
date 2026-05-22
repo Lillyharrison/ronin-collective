@@ -49,8 +49,8 @@ export function ChecklistSubmissionsArchive() {
         ? supabase.from("checklist_items").select("template_id").in("template_id", tplIds)
         : Promise.resolve({ data: [] as any }),
     ]);
-    const tplMap = new Map((tpls ?? []).map((t: any) => [t.id, t]));
-    const propMap = new Map((props ?? []).map((p: any) => [p.id, p.name]));
+    const tplMap = new Map<string, { title: string; icon: string }>((tpls ?? []).map((t: any) => [t.id as string, { title: t.title, icon: t.icon }]));
+    const propMap = new Map<string, string>((props ?? []).map((p: any) => [p.id as string, p.name as string]));
     const countMap = new Map<string, number>();
     for (const r of (itemCounts ?? []) as any[]) {
       countMap.set(r.template_id, (countMap.get(r.template_id) ?? 0) + 1);
