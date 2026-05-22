@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useChecklistItems, useChecklistSessions, useChecklistComments, ChecklistTemplate, ChecklistProduct } from "@/hooks/useChecklists";
+import { useChecklistItems, useChecklistSessions, useChecklistComments, ChecklistTemplate, ChecklistProduct, ChecklistItem } from "@/hooks/useChecklists";
 import { SortableChecklistItem } from "@/components/manuals/SortableChecklistItem";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
