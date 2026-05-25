@@ -17,6 +17,7 @@ const MONTHS_SHORT = [
 ];
 
 const STATUS_LABELS: Record<string, string> = {
+  future:              "Future (Too Early)",
   to_be_booked:        "To Be Booked",
   booked:              "Booked",
   initiated_by_vendor: "Initiated by Vendor",
@@ -26,6 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 // Soft RGB pairs for status pills (background, text). Matches on-screen palette.
 const STATUS_PILL: Record<string, { bg: [number, number, number]; text: [number, number, number] }> = {
+  future:              { bg: [226, 232, 240], text: [71, 85, 105] },    // slate
   to_be_booked:        { bg: [254, 243, 199], text: [146, 64, 14] },   // amber
   booked:              { bg: [255, 237, 213], text: [154, 52, 18] },   // orange
   initiated_by_vendor: { bg: [237, 233, 254], text: [91, 33, 182] },   // purple

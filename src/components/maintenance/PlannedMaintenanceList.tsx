@@ -12,6 +12,7 @@ const MONTHS_SHORT = [
 ];
 
 const STATUS_LABELS: Record<string, string> = {
+  future:              "Future (Too Early)",
   to_be_booked:        "To Be Booked",
   booked:              "Booked",
   initiated_by_vendor: "Initiated by Vendor",
@@ -20,6 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_BASE_COLOR: Record<string, string> = {
+  future:              "bg-slate-500/15 text-slate-400 border-slate-500/30",
   to_be_booked:        "bg-amber-500/15 text-amber-400 border-amber-500/30",
   booked:              "bg-blue-500/15 text-blue-400 border-blue-500/30",
   initiated_by_vendor: "bg-purple-500/15 text-purple-400 border-purple-500/30",
@@ -249,7 +251,7 @@ export function PlannedMaintenanceList({
 
       {/* Status filter pills */}
       <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-        {["", "to_be_booked", "booked", "initiated_by_vendor", "completed", "cancelled"].map(s => (
+        {["", "future", "to_be_booked", "booked", "initiated_by_vendor", "completed", "cancelled"].map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
               filterStatus === s
@@ -345,6 +347,7 @@ export function PlannedMaintenanceList({
                     onClick={e => e.stopPropagation()}
                     className="flex-1 h-7 text-[11px] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
                   >
+                    <option value="future">Future (Too Early)</option>
                     <option value="to_be_booked">To Be Booked</option>
                     <option value="booked">Booked</option>
                     <option value="initiated_by_vendor">Initiated by Vendor</option>
@@ -415,6 +418,7 @@ export function PlannedMaintenanceList({
                           "h-7 text-[11px] rounded border px-1.5 font-medium focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer",
                           entry.status === "completed" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10" :
                           entry.status === "cancelled" ? "border-border text-muted-foreground bg-muted" :
+                          entry.status === "future" ? "border-slate-500/40 text-slate-400 bg-slate-500/10" :
                           entry.status === "booked" ? "border-orange-500/40 text-orange-400 bg-orange-500/10" :
                           entry.status === "initiated_by_vendor" ? "border-purple-500/40 text-purple-400 bg-purple-500/10" :
                           entry.status === "to_be_booked" ? (() => {
@@ -430,6 +434,7 @@ export function PlannedMaintenanceList({
                           })() : "border-border text-muted-foreground bg-muted"
                         )}
                       >
+                        <option value="future">Future (Too Early)</option>
                         <option value="to_be_booked">To Be Booked</option>
                         <option value="booked">Booked</option>
                         <option value="initiated_by_vendor">Initiated by Vendor</option>

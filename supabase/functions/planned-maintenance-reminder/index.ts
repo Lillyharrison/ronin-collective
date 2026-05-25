@@ -16,16 +16,15 @@ Deno.serve(async (req) => {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  // ── Phase 1: Auto-flip completed recurring entries back to "to_be_booked" ──
+  // ── Phase 1: Auto-flip future / completed-recurring entries to "to_be_booked" when within reminder window ──
   let autoFlipped = 0;
 
-  const { data: completedEntries } = await supabase
+  const { data: candidateEntries } = await supabase
     .from("planned_maintenance")
     .select("*")
-    .eq("status", "completed")
-    .not("recurrence_months", "is", null);
+    .or("status.eq.future,and(status.eq.completed,recurrence_months.not.is.null)");
 
-  for (const entry of completedEntries ?? []) {
+  for (const entry of candidateEntries ?? []) {
     let targetDate: Date | null = null;
     if (entry.date_type === "specific" && entry.scheduled_date) {
       targetDate = new Date(entry.scheduled_date);
@@ -34,7 +33,6 @@ Deno.serve(async (req) => {
     }
     if (!targetDate) continue;
 
-    // Check if we're within the reminder window for the NEXT service
     const daysUntilNext = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     const reminderDays = entry.reminder_days ?? 90;
 
