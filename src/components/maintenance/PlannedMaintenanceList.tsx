@@ -12,6 +12,7 @@ const MONTHS_SHORT = [
 ];
 
 const STATUS_LABELS: Record<string, string> = {
+  future:              "Future (Too Early)",
   to_be_booked:        "To Be Booked",
   booked:              "Booked",
   initiated_by_vendor: "Initiated by Vendor",
@@ -20,6 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_BASE_COLOR: Record<string, string> = {
+  future:              "bg-slate-500/15 text-slate-400 border-slate-500/30",
   to_be_booked:        "bg-amber-500/15 text-amber-400 border-amber-500/30",
   booked:              "bg-blue-500/15 text-blue-400 border-blue-500/30",
   initiated_by_vendor: "bg-purple-500/15 text-purple-400 border-purple-500/30",
