@@ -251,7 +251,7 @@ export function PlannedMaintenanceList({
 
       {/* Status filter pills */}
       <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-        {["", "to_be_booked", "booked", "initiated_by_vendor", "completed", "cancelled"].map(s => (
+        {["", "future", "to_be_booked", "booked", "initiated_by_vendor", "completed", "cancelled"].map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
               filterStatus === s
