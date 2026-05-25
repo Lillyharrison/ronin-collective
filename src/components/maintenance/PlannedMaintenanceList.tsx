@@ -347,6 +347,7 @@ export function PlannedMaintenanceList({
                     onClick={e => e.stopPropagation()}
                     className="flex-1 h-7 text-[11px] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
                   >
+                    <option value="future">Future (Too Early)</option>
                     <option value="to_be_booked">To Be Booked</option>
                     <option value="booked">Booked</option>
                     <option value="initiated_by_vendor">Initiated by Vendor</option>
