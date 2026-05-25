@@ -118,7 +118,16 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       scheduled_year: dateType === "month_only" ? year : null,
       reminder_days: reminderEnabled ? reminderDays : 0,
       recurrence_months: recurrenceMonths,
-      status: initial?.status ?? "to_be_booked",
+      status: initial?.status ?? (() => {
+        // For new entries, default to "future" if target date is beyond the reminder window
+        if (!reminderEnabled || !reminderDays) return "to_be_booked";
+        let target: Date | null = null;
+        if (dateType === "specific" && specificDate) target = specificDate;
+        else if (dateType === "month_only") target = new Date(year, month - 1, 1);
+        if (!target) return "to_be_booked";
+        const daysOut = Math.ceil((target.getTime() - Date.now()) / 86400000);
+        return daysOut > reminderDays ? "future" : "to_be_booked";
+      })(),
       last_service_date: lastServiceDate || null,
       calendar_event_id: initial?.calendar_event_id ?? null,
       created_by: initial?.created_by ?? userId,
