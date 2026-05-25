@@ -418,6 +418,7 @@ export function PlannedMaintenanceList({
                           "h-7 text-[11px] rounded border px-1.5 font-medium focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer",
                           entry.status === "completed" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10" :
                           entry.status === "cancelled" ? "border-border text-muted-foreground bg-muted" :
+                          entry.status === "future" ? "border-slate-500/40 text-slate-400 bg-slate-500/10" :
                           entry.status === "booked" ? "border-orange-500/40 text-orange-400 bg-orange-500/10" :
                           entry.status === "initiated_by_vendor" ? "border-purple-500/40 text-purple-400 bg-purple-500/10" :
                           entry.status === "to_be_booked" ? (() => {
@@ -433,6 +434,7 @@ export function PlannedMaintenanceList({
                           })() : "border-border text-muted-foreground bg-muted"
                         )}
                       >
+                        <option value="future">Future (Too Early)</option>
                         <option value="to_be_booked">To Be Booked</option>
                         <option value="booked">Booked</option>
                         <option value="initiated_by_vendor">Initiated by Vendor</option>
