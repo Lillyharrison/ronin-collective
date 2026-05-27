@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -8,9 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plus, Search, Download, Phone, Mail, Globe, MapPin,
-  ChevronRight, ChevronDown, Pencil, Trash2, UserPlus,
-  Building2, X, Check
+  Plus, Search, Download, ArrowUpDown, ArrowUp, ArrowDown,
+  Building2, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VendorFormModal } from "@/components/vendors/VendorFormModal";
