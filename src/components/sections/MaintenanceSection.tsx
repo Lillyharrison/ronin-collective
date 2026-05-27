@@ -74,7 +74,7 @@ export function MaintenanceSection() {
   const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
   const [plannedModalOpen, setPlannedModalOpen] = useState(false);
   const [editPlanned, setEditPlanned] = useState<PlannedMaintenanceEntry | null>(null);
-  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+  const [vendors, setVendors] = useState<{ id: string; name: string; company: string | null; property_ids: string[] }[]>([]);
 
   // Guard against double-firing notifications on rapid re-renders / StrictMode
   const notifyingRef = useRef<Set<string>>(new Set());
