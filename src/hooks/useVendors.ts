@@ -37,6 +37,7 @@ export const VENDOR_CATEGORIES = [
   { value: "general", label: "General" },
   { value: "cleaning", label: "Cleaning" },
   { value: "maintenance", label: "Maintenance" },
+  { value: "electrical", label: "Electrical" },
   { value: "landscaping", label: "Landscaping" },
   { value: "security", label: "Security" },
   { value: "catering", label: "Catering & Events" },

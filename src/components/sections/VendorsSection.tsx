@@ -235,37 +235,23 @@ function VendorCard({
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left bg-card border border-border rounded-xl p-4 flex items-center gap-3 hover:bg-accent/40 transition-colors group"
+      className="w-full text-left bg-card border border-border rounded-lg px-3 py-2.5 flex items-center gap-3 hover:bg-accent/40 transition-colors group"
     >
-      {/* Avatar */}
-      <div className="flex-shrink-0 w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-base">
-        {vendor.name.charAt(0).toUpperCase()}
-      </div>
-
-      {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground truncate">{vendor.name}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-foreground truncate">
+            {vendor.company || vendor.name}
+          </span>
+          <Badge variant="secondary" className="text-xs py-0 px-1.5 capitalize">{catLabel}</Badge>
           {!vendor.is_active && (
             <Badge variant="outline" className="text-xs py-0 px-1.5 text-muted-foreground">Inactive</Badge>
           )}
         </div>
-        {vendor.company && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">{vendor.company}</p>
+        {vendor.description && (
+          <p className="text-xs text-muted-foreground truncate mt-0.5">{vendor.description}</p>
         )}
-        <div className="flex items-center gap-2 mt-1">
-          <Badge variant="secondary" className="text-xs py-0 px-1.5 capitalize">{catLabel}</Badge>
-          {vendor.contacts && vendor.contacts.length > 0 && (
-            <span className="text-xs text-muted-foreground">{vendor.contacts.length} contact{vendor.contacts.length !== 1 ? "s" : ""}</span>
-          )}
-        </div>
       </div>
-
-      {/* Quick info */}
-      <div className="flex-shrink-0 flex flex-col items-end gap-1">
-        {vendor.phone && <span className="text-xs text-muted-foreground">{vendor.phone}</span>}
-        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
     </button>
   );
 }
