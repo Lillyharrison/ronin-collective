@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -8,9 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plus, Search, Download, Phone, Mail, Globe, MapPin,
-  ChevronRight, ChevronDown, Pencil, Trash2, UserPlus,
-  Building2, X, Check
+  Plus, Search, Download, ArrowUpDown, ArrowUp, ArrowDown,
+  Building2, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VendorFormModal } from "@/components/vendors/VendorFormModal";
@@ -150,12 +149,12 @@ export function VendorsSection() {
         )}
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-24 space-y-2">
+      {/* Sortable table list */}
+      <div className="flex-1 overflow-auto px-4 pb-24">
         {loading ? (
           <div className="space-y-2 pt-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
+              <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -170,16 +169,7 @@ export function VendorsSection() {
             )}
           </div>
         ) : (
-          filtered.map((vendor) => (
-            <VendorCard
-              key={vendor.id}
-              vendor={vendor}
-              canEdit={canEdit}
-              onSelect={() => setSelectedVendor(vendor)}
-              onEdit={() => setEditingVendor(vendor)}
-              onDelete={() => deleteVendor(vendor.id)}
-            />
-          ))
+          <VendorTable vendors={filtered} onSelect={setSelectedVendor} />
         )}
       </div>
 
@@ -217,41 +207,93 @@ export function VendorsSection() {
   );
 }
 
-function VendorCard({
-  vendor,
-  canEdit,
+type SortCol = "name" | "company" | "category" | "description" | "phone";
+
+function VendorTable({
+  vendors,
   onSelect,
-  onEdit,
-  onDelete,
 }: {
-  vendor: Vendor;
-  canEdit: boolean;
-  onSelect: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  vendors: Vendor[];
+  onSelect: (v: Vendor) => void;
 }) {
-  const catLabel = VENDOR_CATEGORIES.find((c) => c.value === vendor.category)?.label ?? vendor.category;
+  const [sortCol, setSortCol] = useState<SortCol>("company");
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const handleSort = (col: SortCol) => {
+    if (sortCol === col) setSortAsc(!sortAsc);
+    else { setSortCol(col); setSortAsc(true); }
+  };
+
+  const sorted = useMemo(() => {
+    const arr = [...vendors];
+    const dir = sortAsc ? 1 : -1;
+    arr.sort((a, b) => {
+      const av = (a[sortCol] ?? "").toString().toLowerCase();
+      const bv = (b[sortCol] ?? "").toString().toLowerCase();
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+    return arr;
+  }, [vendors, sortCol, sortAsc]);
+
+  const columns: { key: SortCol; label: string }[] = [
+    { key: "name", label: "Name" },
+    { key: "company", label: "Company" },
+    { key: "category", label: "Category" },
+    { key: "description", label: "What they do" },
+    { key: "phone", label: "Phone" },
+  ];
 
   return (
-    <button
-      onClick={onSelect}
-      className="w-full text-left bg-card border border-border rounded-lg px-3 py-2.5 flex items-center gap-3 hover:bg-accent/40 transition-colors group"
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-foreground truncate">
-            {vendor.company || vendor.name}
-          </span>
-          <Badge variant="secondary" className="text-xs py-0 px-1.5 capitalize">{catLabel}</Badge>
-          {!vendor.is_active && (
-            <Badge variant="outline" className="text-xs py-0 px-1.5 text-muted-foreground">Inactive</Badge>
-          )}
-        </div>
-        {vendor.description && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">{vendor.description}</p>
-        )}
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
-    </button>
+    <table className="w-full min-w-[720px] text-sm">
+      <thead>
+        <tr className="border-b border-border bg-muted/30 sticky top-0">
+          {columns.map((c) => (
+            <th
+              key={c.key}
+              onClick={() => handleSort(c.key)}
+              className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors"
+            >
+              <span className="inline-flex items-center gap-1">
+                {c.label}
+                {sortCol === c.key
+                  ? (sortAsc ? <ArrowUp size={10} /> : <ArrowDown size={10} />)
+                  : <ArrowUpDown size={10} className="opacity-30" />}
+              </span>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((v) => {
+          const catLabel = VENDOR_CATEGORIES.find((c) => c.value === v.category)?.label ?? v.category;
+          return (
+            <tr
+              key={v.id}
+              onClick={() => onSelect(v)}
+              className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+            >
+              <td className="px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground truncate max-w-[180px]">{v.name}</span>
+                  {!v.is_active && (
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground">Inactive</Badge>
+                  )}
+                </div>
+              </td>
+              <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px]">{v.company ?? "—"}</td>
+              <td className="px-3 py-2.5 whitespace-nowrap">
+                <Badge variant="secondary" className="text-[11px] py-0 px-1.5 capitalize">{catLabel}</Badge>
+              </td>
+              <td className="px-3 py-2.5 text-muted-foreground">
+                <span className="line-clamp-2 max-w-[320px]">{v.description ?? "—"}</span>
+              </td>
+              <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{v.phone ?? "—"}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }

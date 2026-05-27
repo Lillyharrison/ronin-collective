@@ -35,17 +35,20 @@ export interface Vendor {
 
 export const VENDOR_CATEGORIES = [
   { value: "general", label: "General" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "electrical", label: "Electrical" },
-  { value: "landscaping", label: "Landscaping" },
-  { value: "security", label: "Security" },
+  { value: "art", label: "Art" },
   { value: "catering", label: "Catering & Events" },
+  { value: "cleaning", label: "Cleaning" },
+  { value: "construction", label: "Construction" },
+  { value: "electrical", label: "Electrical" },
+  { value: "furniture", label: "Furniture" },
+  { value: "landscaping", label: "Landscaping" },
+  { value: "legal", label: "Legal & Finance" },
+  { value: "maintenance", label: "Maintenance" },
+  { value: "medical", label: "Medical" },
+  { value: "security", label: "Security" },
+  { value: "services", label: "Services" },
   { value: "tech", label: "Tech & AV" },
   { value: "transport", label: "Transport" },
-  { value: "medical", label: "Medical" },
-  { value: "legal", label: "Legal & Finance" },
-  { value: "construction", label: "Construction" },
   { value: "other", label: "Other" },
 ];
 
