@@ -68,7 +68,7 @@ export function useVendors() {
       // Narrow columns — vendor cards render name/company/category/contact info.
       const { data: vendorData, error: vendorErr } = await supabase
         .from("vendors")
-        .select("id, name, company, email, phone, website, category, description, notes, logo_url, address, is_active, created_by, created_at, updated_at")
+        .select("id, name, company, email, phone, website, category, description, notes, logo_url, address, is_active, created_by, created_at, updated_at, property_ids")
         .order("name")
         .limit(500);
       if (vendorErr) throw vendorErr;
