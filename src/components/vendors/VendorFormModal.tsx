@@ -49,13 +49,15 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return;
+    if (!form.company.trim()) return;
     setSaving(true);
     try {
+      const company = form.company.trim();
+      const name = form.name.trim() || company; // satisfy legacy NOT NULL on name
       await onSave({
         ...form,
-        name: form.name.trim(),
-        company: form.company.trim() || null,
+        name,
+        company,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         website: form.website.trim() || null,
@@ -85,12 +87,13 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Name <span className="text-destructive">*</span></Label>
-              <Input placeholder="e.g. John Smith" value={form.name} onChange={(e) => set("name", e.target.value)} />
+              <Label>Company <span className="text-destructive">*</span></Label>
+              <Input placeholder="e.g. Smith Landscaping" value={form.company} onChange={(e) => set("company", e.target.value)} />
+              <p className="text-xs text-muted-foreground">This is the main identifier — individual technicians can be added as contacts below.</p>
             </div>
             <div className="space-y-1.5">
-              <Label>Company</Label>
-              <Input placeholder="e.g. Smith Landscaping" value={form.company} onChange={(e) => set("company", e.target.value)} />
+              <Label>Primary Contact Name</Label>
+              <Input placeholder="Optional — e.g. John Smith" value={form.name} onChange={(e) => set("name", e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label>Category</Label>
@@ -182,7 +185,7 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
         {/* Footer */}
         <div className="flex-shrink-0 flex gap-3 px-5 py-4 border-t border-border bg-background">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button className="flex-1" onClick={handleSave} disabled={saving || !form.name.trim()}>
+          <Button className="flex-1" onClick={handleSave} disabled={saving || !form.company.trim()}>
             {saving ? "Saving…" : isEdit ? "Save Changes" : "Add Vendor"}
           </Button>
         </div>
