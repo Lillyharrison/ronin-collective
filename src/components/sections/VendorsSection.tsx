@@ -323,15 +323,19 @@ function VendorTable({
               <td className="px-3 py-2.5 whitespace-nowrap">
                 <Badge variant="secondary" className="text-[11px] py-0 px-1.5 capitalize">{catLabel}</Badge>
               </td>
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-2.5 whitespace-nowrap">
                 {linkedProps.length === 0 ? (
                   <span className="text-muted-foreground">—</span>
+                ) : linkedProps.length === 1 ? (
+                  <Badge variant="outline" className="text-[10px] py-0 px-1.5">{linkedProps[0]}</Badge>
                 ) : (
-                  <div className="flex flex-wrap gap-1 max-w-[220px]">
-                    {linkedProps.map((name) => (
-                      <Badge key={name} variant="outline" className="text-[10px] py-0 px-1.5">{name}</Badge>
-                    ))}
-                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 px-1.5"
+                    title={linkedProps.join(", ")}
+                  >
+                    {linkedProps.length} properties
+                  </Badge>
                 )}
               </td>
               <td className="px-3 py-2.5 text-muted-foreground">
