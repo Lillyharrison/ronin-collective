@@ -49,13 +49,15 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return;
+    if (!form.company.trim()) return;
     setSaving(true);
     try {
+      const company = form.company.trim();
+      const name = form.name.trim() || company; // satisfy legacy NOT NULL on name
       await onSave({
         ...form,
-        name: form.name.trim(),
-        company: form.company.trim() || null,
+        name,
+        company,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         website: form.website.trim() || null,
