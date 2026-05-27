@@ -4,9 +4,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useVendors, VENDOR_CATEGORIES, type Vendor, type VendorContact } from "@/hooks/useVendors";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Plus, Search, Download, ArrowUpDown, ArrowUp, ArrowDown,
   Building2, X,
