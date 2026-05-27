@@ -130,6 +130,34 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
               <Input placeholder="Street, City, State" value={form.address} onChange={(e) => set("address", e.target.value)} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
+              <Label>Linked Properties</Label>
+              <p className="text-xs text-muted-foreground">Select the properties this vendor services.</p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {properties.length === 0 && (
+                  <span className="text-xs text-muted-foreground italic">No properties available</span>
+                )}
+                {properties.map((p) => {
+                  const selected = form.property_ids.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePropertyId(p.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                        selected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                      )}
+                    >
+                      {selected && <Check className="h-3 w-3" />}
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
               <Label>Notes</Label>
               <Textarea
                 placeholder="Internal notes..."
