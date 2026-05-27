@@ -60,6 +60,19 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [customMonths, setCustomMonths] = useState("");
   const [saving, setSaving] = useState(false);
   const [lastServiceDate, setLastServiceDate] = useState("");
+  const [vendorOpen, setVendorOpen] = useState(false);
+
+  const propertyNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    properties.forEach(p => m.set(p.id, p.name));
+    return m;
+  }, [properties]);
+
+  const vendorLabel = (v: Vendor) => (v.company && v.company.trim()) || v.name;
+  const vendorPropertyNames = (v: Vendor) =>
+    (v.property_ids ?? []).map(id => propertyNameById.get(id)).filter(Boolean) as string[];
+
+  const selectedVendor = vendors.find(v => v.id === vendorId) || null;
 
   // Populate from initial
   useEffect(() => {
