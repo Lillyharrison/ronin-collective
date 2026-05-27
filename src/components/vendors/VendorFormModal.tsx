@@ -185,7 +185,7 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
         {/* Footer */}
         <div className="flex-shrink-0 flex gap-3 px-5 py-4 border-t border-border bg-background">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button className="flex-1" onClick={handleSave} disabled={saving || !form.name.trim()}>
+          <Button className="flex-1" onClick={handleSave} disabled={saving || !form.company.trim()}>
             {saving ? "Saving…" : isEdit ? "Save Changes" : "Add Vendor"}
           </Button>
         </div>
