@@ -19,6 +19,7 @@ interface VendorFormModalProps {
 
 export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProps) {
   const isEdit = !!vendor;
+  const { properties } = useScopedProperties();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: vendor?.name ?? "",
@@ -33,9 +34,19 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
     is_active: vendor?.is_active ?? true,
     logo_url: vendor?.logo_url ?? "",
     created_by: vendor?.created_by ?? null,
+    property_ids: vendor?.property_ids ?? [],
   });
 
   const set = (key: string, value: unknown) => setForm((f) => ({ ...f, [key]: value }));
+
+  const togglePropertyId = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      property_ids: f.property_ids.includes(id)
+        ? f.property_ids.filter((p) => p !== id)
+        : [...f.property_ids, id],
+    }));
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
