@@ -121,8 +121,19 @@ export function VendorsSection() {
               </button>
             )}
           </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-9 w-[150px] flex-shrink-0">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {VENDOR_CATEGORIES.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={propertyFilter} onValueChange={setPropertyFilter}>
-            <SelectTrigger className="h-9 w-[160px] flex-shrink-0">
+            <SelectTrigger className="h-9 w-[150px] flex-shrink-0">
               <SelectValue placeholder="Property" />
             </SelectTrigger>
             <SelectContent>
@@ -134,37 +145,6 @@ export function VendorsSection() {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Category filter pills */}
-        {VENDOR_CATEGORIES.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <button
-              onClick={() => setCategoryFilter("all")}
-              className={cn(
-                "flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                categoryFilter === "all"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              )}
-            >
-              All
-            </button>
-            {VENDOR_CATEGORIES.map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setCategoryFilter(value === categoryFilter ? "all" : value)}
-                className={cn(
-                  "flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                  categoryFilter === value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Sortable table list */}
