@@ -2155,6 +2155,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          property_ids: string[]
           updated_at: string
           website: string | null
         }
@@ -2172,6 +2173,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          property_ids?: string[]
           updated_at?: string
           website?: string | null
         }
@@ -2189,6 +2191,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          property_ids?: string[]
           updated_at?: string
           website?: string | null
         }

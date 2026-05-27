@@ -4,9 +4,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useVendors, VENDOR_CATEGORIES, type Vendor, type VendorContact } from "@/hooks/useVendors";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Plus, Search, Download, ArrowUpDown, ArrowUp, ArrowDown,
   Building2, X,
@@ -19,11 +21,13 @@ export function VendorsSection() {
   const { t } = useLanguage();
   const { isMasterAdmin, isAdmin, isManager, canEdit: permCanEdit } = usePermissions();
   const { registerBackHandler } = useNavigation();
+  const { properties } = useScopedProperties();
   const canEdit = isMasterAdmin || isAdmin || isManager || permCanEdit("vendors");
   const { vendors, loading, createVendor, updateVendor, deleteVendor, createContact, updateContact, deleteContact } = useVendors();
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useLocalStorage<string>("vendors.categoryFilter", "all");
+  const [propertyFilter, setPropertyFilter] = useLocalStorage<string>("vendors.propertyFilter", "all");
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
@@ -50,7 +54,10 @@ export function VendorsSection() {
       v.description?.toLowerCase().includes(q) ||
       v.category.toLowerCase().includes(q);
     const matchCat = categoryFilter === "all" || v.category === categoryFilter;
-    return matchSearch && matchCat;
+    const matchProp =
+      propertyFilter === "all" ||
+      (propertyFilter === "none" ? (v.property_ids ?? []).length === 0 : (v.property_ids ?? []).includes(propertyFilter));
+    return matchSearch && matchCat && matchProp;
   });
 
   const exportCSV = () => {
@@ -98,20 +105,34 @@ export function VendorsSection() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search vendors..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+        {/* Search + Property filter */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search vendors..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+            <SelectTrigger className="h-9 w-[160px] flex-shrink-0">
+              <SelectValue placeholder="Property" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All properties</SelectItem>
+              <SelectItem value="none">Unlinked</SelectItem>
+              {properties.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Category filter pills */}
@@ -169,7 +190,7 @@ export function VendorsSection() {
             )}
           </div>
         ) : (
-          <VendorTable vendors={filtered} onSelect={setSelectedVendor} />
+          <VendorTable vendors={filtered} onSelect={setSelectedVendor} properties={properties} />
         )}
       </div>
 
@@ -207,17 +228,25 @@ export function VendorsSection() {
   );
 }
 
-type SortCol = "name" | "company" | "category" | "description" | "phone";
+type SortCol = "name" | "company" | "category" | "description" | "phone" | "properties";
 
 function VendorTable({
   vendors,
   onSelect,
+  properties,
 }: {
   vendors: Vendor[];
   onSelect: (v: Vendor) => void;
+  properties: { id: string; name: string }[];
 }) {
   const [sortCol, setSortCol] = useState<SortCol>("company");
   const [sortAsc, setSortAsc] = useState(true);
+
+  const propNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    properties.forEach((p) => m.set(p.id, p.name));
+    return m;
+  }, [properties]);
 
   const handleSort = (col: SortCol) => {
     if (sortCol === col) setSortAsc(!sortAsc);
@@ -227,26 +256,34 @@ function VendorTable({
   const sorted = useMemo(() => {
     const arr = [...vendors];
     const dir = sortAsc ? 1 : -1;
+    const propText = (v: Vendor) =>
+      (v.property_ids ?? [])
+        .map((id) => propNameById.get(id) ?? "")
+        .filter(Boolean)
+        .sort()
+        .join(", ")
+        .toLowerCase();
     arr.sort((a, b) => {
-      const av = (a[sortCol] ?? "").toString().toLowerCase();
-      const bv = (b[sortCol] ?? "").toString().toLowerCase();
+      const av = sortCol === "properties" ? propText(a) : (a[sortCol] ?? "").toString().toLowerCase();
+      const bv = sortCol === "properties" ? propText(b) : (b[sortCol] ?? "").toString().toLowerCase();
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
       return 0;
     });
     return arr;
-  }, [vendors, sortCol, sortAsc]);
+  }, [vendors, sortCol, sortAsc, propNameById]);
 
   const columns: { key: SortCol; label: string }[] = [
     { key: "name", label: "Name" },
     { key: "company", label: "Company" },
     { key: "category", label: "Category" },
+    { key: "properties", label: "Properties" },
     { key: "description", label: "What they do" },
     { key: "phone", label: "Phone" },
   ];
 
   return (
-    <table className="w-full min-w-[720px] text-sm">
+    <table className="w-full min-w-[820px] text-sm">
       <thead>
         <tr className="border-b border-border bg-muted/30 sticky top-0">
           {columns.map((c) => (
@@ -268,6 +305,9 @@ function VendorTable({
       <tbody>
         {sorted.map((v) => {
           const catLabel = VENDOR_CATEGORIES.find((c) => c.value === v.category)?.label ?? v.category;
+          const linkedProps = (v.property_ids ?? [])
+            .map((id) => propNameById.get(id))
+            .filter(Boolean) as string[];
           return (
             <tr
               key={v.id}
@@ -286,8 +326,19 @@ function VendorTable({
               <td className="px-3 py-2.5 whitespace-nowrap">
                 <Badge variant="secondary" className="text-[11px] py-0 px-1.5 capitalize">{catLabel}</Badge>
               </td>
+              <td className="px-3 py-2.5">
+                {linkedProps.length === 0 ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1 max-w-[220px]">
+                    {linkedProps.map((name) => (
+                      <Badge key={name} variant="outline" className="text-[10px] py-0 px-1.5">{name}</Badge>
+                    ))}
+                  </div>
+                )}
+              </td>
               <td className="px-3 py-2.5 text-muted-foreground">
-                <span className="line-clamp-2 max-w-[320px]">{v.description ?? "—"}</span>
+                <span className="line-clamp-2 max-w-[280px]">{v.description ?? "—"}</span>
               </td>
               <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{v.phone ?? "—"}</td>
             </tr>

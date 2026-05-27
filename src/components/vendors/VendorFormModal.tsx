@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { VENDOR_CATEGORIES, type Vendor } from "@/hooks/useVendors";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 
 interface VendorFormModalProps {
@@ -16,6 +19,7 @@ interface VendorFormModalProps {
 
 export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProps) {
   const isEdit = !!vendor;
+  const { properties } = useScopedProperties();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: vendor?.name ?? "",
@@ -30,9 +34,19 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
     is_active: vendor?.is_active ?? true,
     logo_url: vendor?.logo_url ?? "",
     created_by: vendor?.created_by ?? null,
+    property_ids: vendor?.property_ids ?? [],
   });
 
   const set = (key: string, value: unknown) => setForm((f) => ({ ...f, [key]: value }));
+
+  const togglePropertyId = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      property_ids: f.property_ids.includes(id)
+        ? f.property_ids.filter((p) => p !== id)
+        : [...f.property_ids, id],
+    }));
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
@@ -114,6 +128,34 @@ export function VendorFormModal({ vendor, onClose, onSave }: VendorFormModalProp
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Address</Label>
               <Input placeholder="Street, City, State" value={form.address} onChange={(e) => set("address", e.target.value)} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Linked Properties</Label>
+              <p className="text-xs text-muted-foreground">Select the properties this vendor services.</p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {properties.length === 0 && (
+                  <span className="text-xs text-muted-foreground italic">No properties available</span>
+                )}
+                {properties.map((p) => {
+                  const selected = form.property_ids.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePropertyId(p.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                        selected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                      )}
+                    >
+                      {selected && <Check className="h-3 w-3" />}
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Notes</Label>
