@@ -41,6 +41,7 @@ export const VENDOR_CATEGORIES = [
   { value: "cleaning", label: "Cleaning" },
   { value: "construction", label: "Construction" },
   { value: "electrical", label: "Electrical" },
+  { value: "exterminator", label: "Exterminator" },
   { value: "furniture", label: "Furniture" },
   { value: "landscaping", label: "Landscaping" },
   { value: "legal", label: "Legal & Finance" },
