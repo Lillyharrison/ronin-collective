@@ -136,7 +136,7 @@ export function VendorsSection() {
         </div>
 
         {/* Category filter pills */}
-        {usedCategories.length > 1 && (
+        {VENDOR_CATEGORIES.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setCategoryFilter("all")}
