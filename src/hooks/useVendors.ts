@@ -30,6 +30,7 @@ export interface Vendor {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  property_ids: string[];
   contacts?: VendorContact[];
 }
 
