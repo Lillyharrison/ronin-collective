@@ -21,11 +21,13 @@ export function VendorsSection() {
   const { t } = useLanguage();
   const { isMasterAdmin, isAdmin, isManager, canEdit: permCanEdit } = usePermissions();
   const { registerBackHandler } = useNavigation();
+  const { properties } = useScopedProperties();
   const canEdit = isMasterAdmin || isAdmin || isManager || permCanEdit("vendors");
   const { vendors, loading, createVendor, updateVendor, deleteVendor, createContact, updateContact, deleteContact } = useVendors();
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useLocalStorage<string>("vendors.categoryFilter", "all");
+  const [propertyFilter, setPropertyFilter] = useLocalStorage<string>("vendors.propertyFilter", "all");
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
@@ -52,7 +54,10 @@ export function VendorsSection() {
       v.description?.toLowerCase().includes(q) ||
       v.category.toLowerCase().includes(q);
     const matchCat = categoryFilter === "all" || v.category === categoryFilter;
-    return matchSearch && matchCat;
+    const matchProp =
+      propertyFilter === "all" ||
+      (propertyFilter === "none" ? (v.property_ids ?? []).length === 0 : (v.property_ids ?? []).includes(propertyFilter));
+    return matchSearch && matchCat && matchProp;
   });
 
   const exportCSV = () => {
