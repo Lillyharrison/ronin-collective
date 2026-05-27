@@ -190,7 +190,7 @@ export function VendorsSection() {
             )}
           </div>
         ) : (
-          <VendorTable vendors={filtered} onSelect={setSelectedVendor} />
+          <VendorTable vendors={filtered} onSelect={setSelectedVendor} properties={properties} />
         )}
       </div>
 
