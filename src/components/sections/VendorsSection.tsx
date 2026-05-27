@@ -136,7 +136,7 @@ export function VendorsSection() {
         </div>
 
         {/* Category filter pills */}
-        {usedCategories.length > 1 && (
+        {VENDOR_CATEGORIES.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setCategoryFilter("all")}
@@ -149,23 +149,20 @@ export function VendorsSection() {
             >
               All
             </button>
-            {usedCategories.map((cat) => {
-              const label = VENDOR_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(cat === categoryFilter ? "all" : cat)}
-                  className={cn(
-                    "flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors capitalize",
-                    categoryFilter === cat
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {label}
-                </button>
-              );
-            })}
+            {VENDOR_CATEGORIES.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setCategoryFilter(value === categoryFilter ? "all" : value)}
+                className={cn(
+                  "flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                  categoryFilter === value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                )}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         )}
       </div>
