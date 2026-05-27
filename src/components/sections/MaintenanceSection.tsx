@@ -74,7 +74,7 @@ export function MaintenanceSection() {
   const { entries: plannedEntries, loading: plannedLoading, refetch: refetchPlanned, createEntry, updateEntry, deleteEntry } = usePlannedMaintenance(scopedPropertyIds);
   const [plannedModalOpen, setPlannedModalOpen] = useState(false);
   const [editPlanned, setEditPlanned] = useState<PlannedMaintenanceEntry | null>(null);
-  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+  const [vendors, setVendors] = useState<{ id: string; name: string; company: string | null; property_ids: string[] }[]>([]);
 
   // Guard against double-firing notifications on rapid re-renders / StrictMode
   const notifyingRef = useRef<Set<string>>(new Set());
@@ -114,7 +114,7 @@ export function MaintenanceSection() {
       .then(({ data }) => setProfiles(filterAssignableStaff((data ?? []) as StaffProfileRow[]).map((p) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));
-    supabase.from("vendors").select("id, name").eq("is_active", true).order("name").limit(200)
+    supabase.from("vendors").select("id, name, company, property_ids").eq("is_active", true).order("name").limit(200)
       .then(({ data }) => setVendors(data ?? []));
   }, []);
 

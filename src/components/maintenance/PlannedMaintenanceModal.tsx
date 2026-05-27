@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, X } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { CalendarIcon, X, Check, ChevronsUpDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 
-interface Vendor { id: string; name: string; }
+interface Vendor { id: string; name: string; company?: string | null; property_ids?: string[]; }
 interface Property { id: string; name: string; }
 interface Profile { id: string; name: string; avatar: string | null; }
 
@@ -59,6 +60,19 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [customMonths, setCustomMonths] = useState("");
   const [saving, setSaving] = useState(false);
   const [lastServiceDate, setLastServiceDate] = useState("");
+  const [vendorOpen, setVendorOpen] = useState(false);
+
+  const propertyNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    properties.forEach(p => m.set(p.id, p.name));
+    return m;
+  }, [properties]);
+
+  const vendorLabel = (v: Vendor) => (v.company && v.company.trim()) || v.name;
+  const vendorPropertyNames = (v: Vendor) =>
+    (v.property_ids ?? []).map(id => propertyNameById.get(id)).filter(Boolean) as string[];
+
+  const selectedVendor = vendors.find(v => v.id === vendorId) || null;
 
   // Populate from initial
   useEffect(() => {
@@ -171,12 +185,86 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
           {/* Contractor */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contractor (Vendor)</Label>
-            <select value={vendorId} onChange={e => setVendorId(e.target.value)}
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option value="">— Select vendor —</option>
-              {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
+            <Popover open={vendorOpen} onOpenChange={setVendorOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={vendorOpen}
+                  className={cn(
+                    "w-full h-auto min-h-10 justify-between font-normal text-left px-3 py-2",
+                    !selectedVendor && "text-muted-foreground"
+                  )}
+                >
+                  {selectedVendor ? (
+                    <span className="flex flex-col items-start gap-0.5 min-w-0 flex-1">
+                      <span className="text-sm truncate w-full">{vendorLabel(selectedVendor)}</span>
+                      {vendorPropertyNames(selectedVendor).length > 0 && (
+                        <span className="text-xs text-muted-foreground truncate w-full">
+                          {vendorPropertyNames(selectedVendor).join(" · ")}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span>— Select vendor —</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="p-0 z-50"
+                align="start"
+                style={{ width: "var(--radix-popover-trigger-width)" }}
+              >
+                <Command
+                  filter={(value, search) => {
+                    if (!search) return 1;
+                    return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+                  }}
+                >
+                  <CommandInput placeholder="Search company or property…" className="h-10" />
+                  <CommandList>
+                    <CommandEmpty>No vendors found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="__none__ clear no vendor"
+                        onSelect={() => { setVendorId(""); setVendorOpen(false); }}
+                      >
+                        <Check className={cn("mr-2 h-4 w-4", !vendorId ? "opacity-100" : "opacity-0")} />
+                        <span className="text-muted-foreground">— None —</span>
+                      </CommandItem>
+                      {vendors.map(v => {
+                        const label = vendorLabel(v);
+                        const propNames = vendorPropertyNames(v);
+                        const searchValue = [label, v.name, ...propNames].join(" ");
+                        return (
+                          <CommandItem
+                            key={v.id}
+                            value={searchValue}
+                            onSelect={() => { setVendorId(v.id); setVendorOpen(false); }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4 shrink-0", vendorId === v.id ? "opacity-100" : "opacity-0")} />
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-sm truncate">{label}</span>
+                              {propNames.length > 0 ? (
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {propNames.join(" · ")}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">No linked properties</span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
+
 
           {/* Assigned to */}
           <div className="space-y-1.5">
