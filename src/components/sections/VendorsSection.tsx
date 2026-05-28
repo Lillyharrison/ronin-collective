@@ -251,8 +251,8 @@ function VendorTable({
   }, [vendors, sortCol, sortAsc, propNameById]);
 
   const columns: { key: SortCol; label: string }[] = [
-    { key: "name", label: "Name" },
     { key: "company", label: "Company" },
+    { key: "name", label: "Name" },
     { key: "category", label: "Category" },
     { key: "properties", label: "Properties" },
     { key: "description", label: "What they do" },
@@ -293,13 +293,13 @@ function VendorTable({
             >
               <td className="px-3 py-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground truncate max-w-[180px]">{v.name}</span>
+                  <span className="font-medium text-foreground truncate max-w-[180px]">{v.company ?? "—"}</span>
                   {!v.is_active && (
                     <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground">Inactive</Badge>
                   )}
                 </div>
               </td>
-              <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px]">{v.company ?? "—"}</td>
+              <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px]">{v.name}</td>
               <td className="px-3 py-2.5 whitespace-nowrap">
                 <Badge variant="secondary" className="text-[11px] py-0 px-1.5 capitalize">{catLabel}</Badge>
               </td>
