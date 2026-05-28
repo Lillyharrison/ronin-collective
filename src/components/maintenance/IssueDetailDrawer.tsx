@@ -171,8 +171,12 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
           {issue.close_out_photo_url && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t("closeOutPhoto")}</p>
-              <div className="rounded-xl overflow-hidden">
-                <img src={imageUrl(issue.close_out_photo_url, 800, 320)} alt="Close-out" loading="lazy" className="w-full h-40 object-cover" />
+              <div className="rounded-xl overflow-hidden bg-black">
+                {isVideoUrl(issue.close_out_photo_url) ? (
+                  <video src={issue.close_out_photo_url} controls playsInline preload="metadata" className="w-full h-auto max-h-[60vh] bg-black" />
+                ) : (
+                  <img src={imageUrl(issue.close_out_photo_url, 800, 320)} alt="Close-out" loading="lazy" className="w-full h-40 object-cover" />
+                )}
               </div>
             </div>
           )}
