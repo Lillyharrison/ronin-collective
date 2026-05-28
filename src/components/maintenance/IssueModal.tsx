@@ -6,6 +6,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { MaintenanceIssue, MaintenanceCategory, IssuePriority, IssueStatus } from "@/hooks/useMaintenanceIssues";
 import { IssueStatusBadge } from "./IssueStatusBadge";
+import { isVideoUrl } from "@/lib/imageUrl";
 
 interface Props {
   open: boolean;
