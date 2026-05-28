@@ -6,6 +6,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { MaintenanceIssue, MaintenanceCategory, IssuePriority, IssueStatus } from "@/hooks/useMaintenanceIssues";
 import { IssueStatusBadge } from "./IssueStatusBadge";
+import { isVideoUrl } from "@/lib/imageUrl";
 
 interface Props {
   open: boolean;
@@ -187,8 +188,12 @@ function ModalContent({
               {t("addPhotoRecommended")}
             </label>
             {photoUrl ? (
-              <div className="relative rounded-xl overflow-hidden">
-                <img src={photoUrl} alt="Issue" className="w-full h-48 object-cover" />
+              <div className="relative rounded-xl overflow-hidden bg-black">
+                {isVideoUrl(photoUrl) ? (
+                  <video src={photoUrl} controls playsInline className="w-full h-48 object-contain bg-black" />
+                ) : (
+                  <img src={photoUrl} alt="Issue" className="w-full h-48 object-cover" />
+                )}
                 <button onClick={() => setPhotoUrl("")}
                   className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">
                   <X size={14} />
@@ -202,13 +207,13 @@ function ModalContent({
                 ) : (
                   <>
                     <Camera size={28} className="text-muted-foreground/50" />
-                    <span className="text-sm font-medium">{t("tapToAddPhoto")}</span>
-                    <span className="text-xs text-muted-foreground/60">JPEG, PNG up to 20MB</span>
+                    <span className="text-sm font-medium">{isL ? "Toca para añadir foto o vídeo" : "Tap to add photo or video"}</span>
+                    <span className="text-xs text-muted-foreground/60">{isL ? "JPEG, PNG, MP4, MOV hasta 50MB" : "JPEG, PNG, MP4, MOV up to 50MB"}</span>
                   </>
                 )}
               </button>
             )}
-            <input ref={photoRef} type="file" accept="image/*" className="hidden"
+            <input ref={photoRef} type="file" accept="image/*,video/*" className="hidden"
               onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "main"); }} />
           </div>
 
@@ -431,8 +436,12 @@ function ModalContent({
                 {t("closeOutPhoto")}
               </label>
               {closeOutUrl ? (
-                <div className="relative rounded-xl overflow-hidden">
-                  <img src={closeOutUrl} alt="Close-out" className="w-full h-32 object-cover" />
+                <div className="relative rounded-xl overflow-hidden bg-black">
+                  {isVideoUrl(closeOutUrl) ? (
+                    <video src={closeOutUrl} controls playsInline className="w-full h-32 object-contain bg-black" />
+                  ) : (
+                    <img src={closeOutUrl} alt="Close-out" className="w-full h-32 object-cover" />
+                  )}
                   <button onClick={() => setCloseOut("")}
                     className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">
                     <X size={14} />
@@ -446,12 +455,12 @@ function ModalContent({
                   ) : (
                     <>
                       <Upload size={20} className="text-muted-foreground/50" />
-                      <span className="text-xs">{isL ? "Foto de cierre" : "Upload close-out photo"}</span>
+                      <span className="text-xs">{isL ? "Foto o vídeo de cierre" : "Upload close-out photo or video"}</span>
                     </>
                   )}
                 </button>
               )}
-              <input ref={closeOutRef} type="file" accept="image/*" className="hidden"
+              <input ref={closeOutRef} type="file" accept="image/*,video/*" className="hidden"
                 onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "closeout"); }} />
             </div>
           )}

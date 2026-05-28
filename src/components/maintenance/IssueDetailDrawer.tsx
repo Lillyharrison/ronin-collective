@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { imageUrl } from "@/lib/imageUrl";
+import { imageUrl, isVideoUrl } from "@/lib/imageUrl";
 import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
 import type { MaintenanceIssue, IssueStatus, MaintenanceCategory } from "@/hooks/useMaintenanceIssues";
@@ -82,7 +82,11 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
         <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
           {issue.photo_url && (
           <div className="rounded-xl overflow-hidden bg-muted/20">
-              <img src={imageUrl(issue.photo_url, 800)} alt={issue.title} loading="lazy" className="w-full h-auto object-contain" />
+              {isVideoUrl(issue.photo_url) ? (
+                <video src={issue.photo_url} controls playsInline preload="metadata" className="w-full h-auto max-h-[60vh] bg-black" />
+              ) : (
+                <img src={imageUrl(issue.photo_url, 800)} alt={issue.title} loading="lazy" className="w-full h-auto object-contain" />
+              )}
             </div>
           )}
 
@@ -167,8 +171,12 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
           {issue.close_out_photo_url && (
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t("closeOutPhoto")}</p>
-              <div className="rounded-xl overflow-hidden">
-                <img src={imageUrl(issue.close_out_photo_url, 800, 320)} alt="Close-out" loading="lazy" className="w-full h-40 object-cover" />
+              <div className="rounded-xl overflow-hidden bg-black">
+                {isVideoUrl(issue.close_out_photo_url) ? (
+                  <video src={issue.close_out_photo_url} controls playsInline preload="metadata" className="w-full h-auto max-h-[60vh] bg-black" />
+                ) : (
+                  <img src={imageUrl(issue.close_out_photo_url, 800, 320)} alt="Close-out" loading="lazy" className="w-full h-40 object-cover" />
+                )}
               </div>
             </div>
           )}

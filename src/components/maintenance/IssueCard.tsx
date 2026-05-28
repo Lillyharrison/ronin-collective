@@ -1,8 +1,9 @@
-import { MapPin, Clock, User, Link as LinkIcon, CalendarClock } from "lucide-react";
+import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IssueStatusBadge, IssuePriorityBadge } from "./IssueStatusBadge";
 import type { MaintenanceIssue } from "@/hooks/useMaintenanceIssues";
 import { formatDistanceToNow, format } from "date-fns";
+import { isVideoUrl } from "@/lib/imageUrl";
 
 interface Props {
   issue: MaintenanceIssue;
@@ -42,12 +43,29 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
       {/* Photo strip — full height for non-compact, compact thumb via row layout */}
       {!compact && issue.photo_url && (
         <div className="relative h-32 bg-muted overflow-hidden">
-          <img
-            src={issue.photo_url}
-            alt={issue.title}
-            loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+          {isVideoUrl(issue.photo_url) ? (
+            <>
+              <video
+                src={issue.photo_url}
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-black/50 rounded-full p-2">
+                  <Play size={18} className="text-white fill-white" />
+                </div>
+              </div>
+            </>
+          ) : (
+            <img
+              src={issue.photo_url}
+              alt={issue.title}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
             <IssueStatusBadge status={issue.status} size="xs" />
@@ -64,13 +82,28 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
       {compact ? (
         <div className="flex gap-3 p-3">
           {issue.photo_url ? (
-            <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
-              <img
-                src={issue.photo_url}
-                alt={issue.title}
-                loading="lazy"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
+            <div className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-muted">
+              {isVideoUrl(issue.photo_url) ? (
+                <>
+                  <video
+                    src={issue.photo_url}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <Play size={14} className="text-white fill-white drop-shadow" />
+                  </div>
+                </>
+              ) : (
+                <img
+                  src={issue.photo_url}
+                  alt={issue.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              )}
             </div>
           ) : (
             <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-muted flex items-center justify-center text-2xl">
