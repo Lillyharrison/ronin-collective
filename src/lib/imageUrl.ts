@@ -29,3 +29,9 @@ export function imageUrl(
   // Return the original URL as-is to avoid 400 errors.
   return src;
 }
+
+/** True if a media URL points to a video file (by extension). */
+export function isVideoUrl(src: string | null | undefined): boolean {
+  if (!src) return false;
+  return /\.(mp4|mov|webm|m4v|ogg|ogv|avi|mkv|3gp|quicktime)(\?|#|$)/i.test(src);
+}
