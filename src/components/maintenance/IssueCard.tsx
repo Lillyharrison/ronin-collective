@@ -1,8 +1,9 @@
-import { MapPin, Clock, User, Link as LinkIcon, CalendarClock } from "lucide-react";
+import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IssueStatusBadge, IssuePriorityBadge } from "./IssueStatusBadge";
 import type { MaintenanceIssue } from "@/hooks/useMaintenanceIssues";
 import { formatDistanceToNow, format } from "date-fns";
+import { isVideoUrl } from "@/lib/imageUrl";
 
 interface Props {
   issue: MaintenanceIssue;
