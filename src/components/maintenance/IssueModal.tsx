@@ -436,8 +436,12 @@ function ModalContent({
                 {t("closeOutPhoto")}
               </label>
               {closeOutUrl ? (
-                <div className="relative rounded-xl overflow-hidden">
-                  <img src={closeOutUrl} alt="Close-out" className="w-full h-32 object-cover" />
+                <div className="relative rounded-xl overflow-hidden bg-black">
+                  {isVideoUrl(closeOutUrl) ? (
+                    <video src={closeOutUrl} controls playsInline className="w-full h-32 object-contain bg-black" />
+                  ) : (
+                    <img src={closeOutUrl} alt="Close-out" className="w-full h-32 object-cover" />
+                  )}
                   <button onClick={() => setCloseOut("")}
                     className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">
                     <X size={14} />
@@ -451,12 +455,12 @@ function ModalContent({
                   ) : (
                     <>
                       <Upload size={20} className="text-muted-foreground/50" />
-                      <span className="text-xs">{isL ? "Foto de cierre" : "Upload close-out photo"}</span>
+                      <span className="text-xs">{isL ? "Foto o vídeo de cierre" : "Upload close-out photo or video"}</span>
                     </>
                   )}
                 </button>
               )}
-              <input ref={closeOutRef} type="file" accept="image/*" className="hidden"
+              <input ref={closeOutRef} type="file" accept="image/*,video/*" className="hidden"
                 onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "closeout"); }} />
             </div>
           )}
