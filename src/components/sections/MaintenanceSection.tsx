@@ -233,7 +233,7 @@ export function MaintenanceSection() {
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",            label: "Reported",              labelEs: "Reportado" },
     { key: "under_investigation", label: "Under Investigation",   labelEs: "En Investigación" },
-    { key: "approved",            label: "Approved",              labelEs: "Aprobado" },
+    { key: "approved",            label: "Summer Maintenance",    labelEs: "Mantenimiento de Verano" },
     { key: "scheduled",           label: "Scheduled/In Progress", labelEs: "Programado/En Progreso" },
   ];
 
