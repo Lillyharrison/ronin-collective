@@ -6,7 +6,7 @@
  * Edit/delete handled by LibraryItemFormModal.
  */
 import { useMemo, useState } from "react";
-import { Search, Plus, BookOpen, LayoutGrid, List, Lock, RefreshCw } from "lucide-react";
+import { Search, Plus, BookOpen, LayoutGrid, List, Lock, RefreshCw, CheckSquare, X, Download, Check } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -25,6 +25,7 @@ import { LibraryItemRow } from "./LibraryItemRow";
 import { LibraryListHeader, type LibrarySortKey, type SortDir } from "./LibraryListHeader";
 import { LibraryItemDetailModal } from "./LibraryItemDetailModal";
 import { LibraryItemFormModal } from "./LibraryItemFormModal";
+import { exportLibraryItemsPDF } from "./libraryExportPDF";
 
 const CATEGORIES = [
   { key: "all",      label: "All categories",      labelEs: "Todas las categorías", emoji: "📚" },
