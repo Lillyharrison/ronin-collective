@@ -66,6 +66,30 @@ export function OrderLibraryTab() {
     "asc",
   );
 
+  // Multi-select for PDF export
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleItemClick = (item: OrderLibraryItem) => {
+    if (selectionMode) toggleSelected(item.id);
+    else setSelected(item);
+  };
+
   const handleSort = (key: LibrarySortKey) => {
     if (key === sortKey) {
       setSortDir(sortDir === "asc" ? "desc" : "asc");
