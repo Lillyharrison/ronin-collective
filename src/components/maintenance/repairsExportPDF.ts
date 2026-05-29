@@ -91,7 +91,7 @@ function installPdfFonts(doc: jsPDF, fonts: PdfFontData) {
 const STATUS_LABELS: Record<IssueStatus, string> = {
   reported:            "Reported",
   under_investigation: "Under Investigation",
-  approved:            "Approved",
+  approved:            "Summer Maintenance",
   scheduled:           "Scheduled/In Progress",
   in_progress:         "Scheduled/In Progress",
   resolved:            "Resolved",
