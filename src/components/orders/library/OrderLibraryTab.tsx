@@ -6,7 +6,7 @@
  * Edit/delete handled by LibraryItemFormModal.
  */
 import { useMemo, useState } from "react";
-import { Search, Plus, BookOpen, LayoutGrid, List, Lock, RefreshCw } from "lucide-react";
+import { Search, Plus, BookOpen, LayoutGrid, List, Lock, RefreshCw, CheckSquare, X, Download, Check } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -25,6 +25,7 @@ import { LibraryItemRow } from "./LibraryItemRow";
 import { LibraryListHeader, type LibrarySortKey, type SortDir } from "./LibraryListHeader";
 import { LibraryItemDetailModal } from "./LibraryItemDetailModal";
 import { LibraryItemFormModal } from "./LibraryItemFormModal";
+import { exportLibraryItemsPDF } from "./libraryExportPDF";
 
 const CATEGORIES = [
   { key: "all",      label: "All categories",      labelEs: "Todas las categorías", emoji: "📚" },
@@ -64,6 +65,30 @@ export function OrderLibraryTab() {
     "order-library-sort-dir",
     "asc",
   );
+
+  // Multi-select for PDF export
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleItemClick = (item: OrderLibraryItem) => {
+    if (selectionMode) toggleSelected(item.id);
+    else setSelected(item);
+  };
 
   const handleSort = (key: LibrarySortKey) => {
     if (key === sortKey) {
@@ -130,7 +155,28 @@ export function OrderLibraryTab() {
             className="w-full h-10 pl-9 pr-3 text-base sm:text-sm rounded-xl border border-border bg-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
-        {canEditLibrary && (
+        <button
+          type="button"
+          onClick={() => {
+            if (selectionMode) exitSelection();
+            else setSelectionMode(true);
+          }}
+          className={cn(
+            "h-10 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm border transition-colors",
+            selectionMode
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-foreground border-border hover:bg-accent",
+          )}
+          aria-pressed={selectionMode}
+        >
+          {selectionMode ? <X size={14} /> : <CheckSquare size={14} />}
+          <span className="hidden sm:inline">
+            {selectionMode
+              ? isL ? "Cancelar" : "Cancel"
+              : isL ? "Seleccionar" : "Select"}
+          </span>
+        </button>
+        {canEditLibrary && !selectionMode && (
           <button
             type="button"
             onClick={() => setCreating(true)}
@@ -258,29 +304,85 @@ export function OrderLibraryTab() {
           isL={isL}
         />
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2 pb-24">
           {filtered.map((item) => (
-            <LibraryItemCard key={item.id} item={item} onOpen={setSelected} />
+            <SelectableWrapper
+              key={item.id}
+              selectionMode={selectionMode}
+              selected={selectedIds.has(item.id)}
+              onToggle={() => toggleSelected(item.id)}
+            >
+              <LibraryItemCard item={item} onOpen={handleItemClick} />
+            </SelectableWrapper>
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden bg-card">
+        <div className="rounded-lg border border-border overflow-hidden bg-card mb-24">
           <LibraryListHeader sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
           <div className="flex flex-col">
             {filtered.map((item) => (
-              <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
+              <SelectableWrapper
+                key={item.id}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(item.id)}
+                onToggle={() => toggleSelected(item.id)}
+                variant="row"
+              >
+                <LibraryItemRow item={item} onOpen={handleItemClick} />
+              </SelectableWrapper>
             ))}
           </div>
         </div>
       )}
 
-      {/* Detail modal */}
-      <LibraryItemDetailModal
-        item={selected}
-        onClose={() => setSelected(null)}
-        onEdit={canEditLibrary ? handleEditFromDetail : undefined}
-        canEdit={canEditLibrary}
-      />
+      {/* Floating action bar — visible while selecting */}
+      {selectionMode && (
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border border-border bg-background/95 backdrop-blur px-3 py-2 shadow-lg">
+          <button
+            type="button"
+            onClick={() => {
+              if (selectedIds.size === filtered.length) setSelectedIds(new Set());
+              else setSelectedIds(new Set(filtered.map((i) => i.id)));
+            }}
+            className="text-[11px] font-semibold px-2 py-1 rounded-full hover:bg-accent text-muted-foreground"
+          >
+            {selectedIds.size === filtered.length && filtered.length > 0
+              ? isL ? "Ninguno" : "None"
+              : isL ? "Todos" : "All"}
+          </button>
+          <span className="text-xs font-semibold text-foreground tabular-nums px-1">
+            {selectedIds.size} {isL ? "seleccionado(s)" : "selected"}
+          </span>
+          <button
+            type="button"
+            disabled={selectedIds.size === 0 || exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                const chosen = filtered.filter((i) => selectedIds.has(i.id));
+                await exportLibraryItemsPDF(chosen);
+                exitSelection();
+              } finally {
+                setExporting(false);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={14} />
+            {exporting ? (isL ? "Generando…" : "Generating…") : "PDF"}
+          </button>
+        </div>
+      )}
+
+      {/* Detail modal — suppressed in selection mode */}
+      {!selectionMode && (
+        <LibraryItemDetailModal
+          item={selected}
+          onClose={() => setSelected(null)}
+          onEdit={canEditLibrary ? handleEditFromDetail : undefined}
+          canEdit={canEditLibrary}
+        />
+      )}
 
       {/* Create / edit modal */}
       {canEditLibrary && (
@@ -293,6 +395,64 @@ export function OrderLibraryTab() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * SelectableWrapper — wraps a card/row to overlay a selection checkbox and
+ * intercept clicks when the surrounding tab is in selection mode.
+ */
+function SelectableWrapper({
+  children,
+  selectionMode,
+  selected,
+  onToggle,
+  variant = "card",
+}: {
+  children: React.ReactNode;
+  selectionMode: boolean;
+  selected: boolean;
+  onToggle: () => void;
+  variant?: "card" | "row";
+}) {
+  if (!selectionMode) return <>{children}</>;
+  return (
+    <div
+      role="checkbox"
+      aria-checked={selected}
+      tabIndex={0}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
+      className={cn(
+        "relative cursor-pointer rounded-xl transition-all",
+        selected && "ring-2 ring-[hsl(var(--gold))] ring-offset-1 ring-offset-background",
+      )}
+    >
+      {/* Block all inner pointer events so the child's own click handlers don't fire */}
+      <div className="pointer-events-none">{children}</div>
+      <span
+        className={cn(
+          "absolute z-10 flex items-center justify-center rounded-full border shadow-sm",
+          variant === "card"
+            ? "top-1 left-1 h-5 w-5"
+            : "top-1/2 -translate-y-1/2 left-1 h-5 w-5",
+          selected
+            ? "bg-[hsl(var(--gold))] border-[hsl(var(--gold))] text-charcoal"
+            : "bg-background/90 border-border text-transparent",
+        )}
+      >
+        <Check size={12} strokeWidth={3} />
+      </span>
     </div>
   );
 }
