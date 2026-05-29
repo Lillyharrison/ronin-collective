@@ -304,29 +304,85 @@ export function OrderLibraryTab() {
           isL={isL}
         />
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2 pb-24">
           {filtered.map((item) => (
-            <LibraryItemCard key={item.id} item={item} onOpen={setSelected} />
+            <SelectableWrapper
+              key={item.id}
+              selectionMode={selectionMode}
+              selected={selectedIds.has(item.id)}
+              onToggle={() => toggleSelected(item.id)}
+            >
+              <LibraryItemCard item={item} onOpen={handleItemClick} />
+            </SelectableWrapper>
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden bg-card">
+        <div className="rounded-lg border border-border overflow-hidden bg-card mb-24">
           <LibraryListHeader sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
           <div className="flex flex-col">
             {filtered.map((item) => (
-              <LibraryItemRow key={item.id} item={item} onOpen={setSelected} />
+              <SelectableWrapper
+                key={item.id}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(item.id)}
+                onToggle={() => toggleSelected(item.id)}
+                variant="row"
+              >
+                <LibraryItemRow item={item} onOpen={handleItemClick} />
+              </SelectableWrapper>
             ))}
           </div>
         </div>
       )}
 
-      {/* Detail modal */}
-      <LibraryItemDetailModal
-        item={selected}
-        onClose={() => setSelected(null)}
-        onEdit={canEditLibrary ? handleEditFromDetail : undefined}
-        canEdit={canEditLibrary}
-      />
+      {/* Floating action bar — visible while selecting */}
+      {selectionMode && (
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border border-border bg-background/95 backdrop-blur px-3 py-2 shadow-lg">
+          <button
+            type="button"
+            onClick={() => {
+              if (selectedIds.size === filtered.length) setSelectedIds(new Set());
+              else setSelectedIds(new Set(filtered.map((i) => i.id)));
+            }}
+            className="text-[11px] font-semibold px-2 py-1 rounded-full hover:bg-accent text-muted-foreground"
+          >
+            {selectedIds.size === filtered.length && filtered.length > 0
+              ? isL ? "Ninguno" : "None"
+              : isL ? "Todos" : "All"}
+          </button>
+          <span className="text-xs font-semibold text-foreground tabular-nums px-1">
+            {selectedIds.size} {isL ? "seleccionado(s)" : "selected"}
+          </span>
+          <button
+            type="button"
+            disabled={selectedIds.size === 0 || exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                const chosen = filtered.filter((i) => selectedIds.has(i.id));
+                await exportLibraryItemsPDF(chosen);
+                exitSelection();
+              } finally {
+                setExporting(false);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={14} />
+            {exporting ? (isL ? "Generando…" : "Generating…") : "PDF"}
+          </button>
+        </div>
+      )}
+
+      {/* Detail modal — suppressed in selection mode */}
+      {!selectionMode && (
+        <LibraryItemDetailModal
+          item={selected}
+          onClose={() => setSelected(null)}
+          onEdit={canEditLibrary ? handleEditFromDetail : undefined}
+          canEdit={canEditLibrary}
+        />
+      )}
 
       {/* Create / edit modal */}
       {canEditLibrary && (
