@@ -399,6 +399,64 @@ export function OrderLibraryTab() {
   );
 }
 
+/**
+ * SelectableWrapper — wraps a card/row to overlay a selection checkbox and
+ * intercept clicks when the surrounding tab is in selection mode.
+ */
+function SelectableWrapper({
+  children,
+  selectionMode,
+  selected,
+  onToggle,
+  variant = "card",
+}: {
+  children: React.ReactNode;
+  selectionMode: boolean;
+  selected: boolean;
+  onToggle: () => void;
+  variant?: "card" | "row";
+}) {
+  if (!selectionMode) return <>{children}</>;
+  return (
+    <div
+      role="checkbox"
+      aria-checked={selected}
+      tabIndex={0}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
+      className={cn(
+        "relative cursor-pointer rounded-xl transition-all",
+        selected && "ring-2 ring-[hsl(var(--gold))] ring-offset-1 ring-offset-background",
+      )}
+    >
+      {/* Block all inner pointer events so the child's own click handlers don't fire */}
+      <div className="pointer-events-none">{children}</div>
+      <span
+        className={cn(
+          "absolute z-10 flex items-center justify-center rounded-full border shadow-sm",
+          variant === "card"
+            ? "top-1 left-1 h-5 w-5"
+            : "top-1/2 -translate-y-1/2 left-1 h-5 w-5",
+          selected
+            ? "bg-[hsl(var(--gold))] border-[hsl(var(--gold))] text-charcoal"
+            : "bg-background/90 border-border text-transparent",
+        )}
+      >
+        <Check size={12} strokeWidth={3} />
+      </span>
+    </div>
+  );
+}
+
 function EmptyState({ hasQuery, isL }: { hasQuery: boolean; isL: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
