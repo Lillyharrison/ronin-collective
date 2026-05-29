@@ -339,8 +339,8 @@ export function MaintenanceSection() {
       const approverProfile = profiles.find(p => p.id === userId);
       const approverName = approverProfile?.name ?? "Admin";
       await notifySection("maintenance", {
-        title: `Issue approved: ${issue.title}`,
-        body: `${approverName} approved a maintenance issue for ${issue.property_name ?? "a property"}.`,
+        title: `Issue marked for Summer Maintenance: ${issue.title}`,
+        body: `${approverName} marked a maintenance issue for Summer Maintenance on ${issue.property_name ?? "a property"}.`,
         type: "success",
         action_url: "maintenance",
         entity_id: issue.id,
