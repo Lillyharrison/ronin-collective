@@ -155,7 +155,28 @@ export function OrderLibraryTab() {
             className="w-full h-10 pl-9 pr-3 text-base sm:text-sm rounded-xl border border-border bg-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
-        {canEditLibrary && (
+        <button
+          type="button"
+          onClick={() => {
+            if (selectionMode) exitSelection();
+            else setSelectionMode(true);
+          }}
+          className={cn(
+            "h-10 px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm border transition-colors",
+            selectionMode
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-foreground border-border hover:bg-accent",
+          )}
+          aria-pressed={selectionMode}
+        >
+          {selectionMode ? <X size={14} /> : <CheckSquare size={14} />}
+          <span className="hidden sm:inline">
+            {selectionMode
+              ? isL ? "Cancelar" : "Cancel"
+              : isL ? "Seleccionar" : "Select"}
+          </span>
+        </button>
+        {canEditLibrary && !selectionMode && (
           <button
             type="button"
             onClick={() => setCreating(true)}
