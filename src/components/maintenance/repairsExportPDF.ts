@@ -387,9 +387,15 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
       const issue = ctx.issues[srcIdx];
       if (!issue) return;
 
-      // Title bold
+      // Title bold; gold-tinted when the issue has changed since last family report
       if (data.column.index === 0) {
         data.cell.styles.fontStyle = "bold";
+        const kind = changeKind(issue, ctx.sinceTimestamp);
+        if (kind) {
+          const palette = CHANGE_PILL[kind];
+          data.cell.styles.textColor = palette.text;
+          data.cell.styles.fillColor = palette.bg;
+        }
       }
 
       // Status pill
