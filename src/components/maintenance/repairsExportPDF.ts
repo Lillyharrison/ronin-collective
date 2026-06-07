@@ -309,8 +309,12 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
   // data.row.index against `body`, so we need this to recover the source issue.
   const issueIndexByRow: number[] = [];
   ctx.issues.forEach((i, srcIdx) => {
+    const kind = changeKind(i, ctx.sinceTimestamp);
+    const titleText = kind === "new"     ? `[NEW] ${i.title}`
+                    : kind === "updated" ? `[UPD] ${i.title}`
+                    : i.title;
     body.push([
-      i.title,
+      titleText,
       STATUS_LABELS[i.status] ?? i.status,
       PRIORITY_LABELS[i.priority] ?? i.priority,
       i.category ?? "—",
