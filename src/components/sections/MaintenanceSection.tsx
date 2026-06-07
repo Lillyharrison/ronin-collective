@@ -949,7 +949,7 @@ export function MaintenanceSection() {
       ) : showResolved ? (
         <div className="px-4 pb-4 space-y-3">
           {viewIssues.map(issue => (
-            <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
+            <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact onArchiveToggle={canManage ? handleArchiveToggle : undefined} />
           ))}
         </div>
       ) : viewMode === "board" ? (
