@@ -6,6 +6,8 @@ import {
   Flag, Tag, Clock, CheckCircle2, CalendarClock, Download,
 } from "lucide-react";
 import { exportRepairsPDF } from "@/components/maintenance/repairsExportPDF";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMaintenanceIssues, MaintenanceIssue, IssueStatus, MaintenanceFilters } from "@/hooks/useMaintenanceIssues";
 import { usePlannedMaintenance, PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
@@ -82,6 +84,11 @@ export function MaintenanceSection() {
   // filterProp stays client-side (property picker in the UI — no DB round-trip needed)
   const [viewMode,    setViewMode]    = useLocalStorage<ViewMode>("maintenance_view_mode", "board");
   const [includeNotes, setIncludeNotes] = useLocalStorage<boolean>("maintenance_pdf_include_notes", false);
+  // Last "family report" baseline — used to highlight NEW/UPDATED items in the PDF.
+  const [lastFamilyReportAt, setLastFamilyReportAt] =
+    useLocalStorage<string | null>("repairs.lastFamilyReportAt", null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMarkAsFamily, setExportMarkAsFamily] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
@@ -818,46 +825,17 @@ export function MaintenanceSection() {
                 {isL ? "Notas" : "Notes"}
               </label>
 
-              {/* Download PDF (current filters/view + current sort) */}
+              {/* Download PDF (opens dialog to confirm "family report" baseline) */}
               <button
-                onClick={async () => {
-                  const sortedForExport =
-                    viewMode === "table"
-                      ? sortForTable(displayIssues)
-                      : viewMode === "board"
-                        ? [...displayIssues].sort(
-                            (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9),
-                          )
-                        : displayIssues;
-
-                  // Ensure the export uses the latest notes from the database.
-                  let issuesForExport = sortedForExport;
-                  if (includeNotes && sortedForExport.length > 0) {
-                    const ids = sortedForExport.map(i => i.id);
-                    const { data: descs } = await supabase
-                      .from("maintenance_issues")
-                      .select("id, description")
-                      .in("id", ids);
-                    const descMap = new Map((descs ?? []).map(d => [d.id, d.description]));
-                    issuesForExport = sortedForExport.map(i => ({
-                      ...i,
-                      description: descMap.get(i.id) ?? i.description ?? null,
-                    }));
+                onClick={() => {
+                  // Default the checkbox: ON if no baseline yet OR >=5 days since the last one.
+                  let defaultChecked = true;
+                  if (lastFamilyReportAt) {
+                    const days = (Date.now() - new Date(lastFamilyReportAt).getTime()) / 86400000;
+                    defaultChecked = days >= 5;
                   }
-
-                  exportRepairsPDF({
-                    issues: issuesForExport,
-                    viewMode: viewMode === "table" ? "list" : "tile",
-                    includeNotes,
-                    filters: {
-                      propertyName: filterProp
-                        ? properties.find(p => p.id === filterProp)?.name ?? null
-                        : null,
-                      category: filterCat || null,
-                      priority: filterPri || null,
-                      search: search || null,
-                    },
-                  });
+                  setExportMarkAsFamily(defaultChecked);
+                  setExportDialogOpen(true);
                 }}
                 disabled={displayIssues.length === 0}
                 title="Download current view as PDF"
@@ -1180,6 +1158,97 @@ export function MaintenanceSection() {
         profiles={profiles}
         userId={userId}
       />
+
+      {/* Export PDF — confirm whether this download is the weekly family report */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Download repairs report</DialogTitle>
+            <DialogDescription>
+              {lastFamilyReportAt ? (
+                <>Last family report marked on{" "}
+                  <span className="font-medium text-foreground">
+                    {format(parseISO(lastFamilyReportAt), "dd MMM yyyy, HH:mm")}
+                  </span>.
+                </>
+              ) : (
+                <>No family report baseline set yet.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3 cursor-pointer">
+            <Checkbox
+              checked={exportMarkAsFamily}
+              onCheckedChange={(v) => setExportMarkAsFamily(v === true)}
+              className="mt-0.5"
+            />
+            <span className="text-sm leading-snug">
+              <span className="font-medium">This is the weekly family report</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                Updates the baseline so the next report highlights what's new since today.
+                Leave unchecked for personal/interim downloads.
+              </span>
+            </span>
+          </label>
+
+          <DialogFooter>
+            <button
+              onClick={() => setExportDialogOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-muted">
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                const sortedForExport =
+                  viewMode === "table"
+                    ? sortForTable(displayIssues)
+                    : viewMode === "board"
+                      ? [...displayIssues].sort(
+                          (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9),
+                        )
+                      : displayIssues;
+
+                let issuesForExport = sortedForExport;
+                if (includeNotes && sortedForExport.length > 0) {
+                  const ids = sortedForExport.map(i => i.id);
+                  const { data: descs } = await supabase
+                    .from("maintenance_issues")
+                    .select("id, description")
+                    .in("id", ids);
+                  const descMap = new Map((descs ?? []).map(d => [d.id, d.description]));
+                  issuesForExport = sortedForExport.map(i => ({
+                    ...i,
+                    description: descMap.get(i.id) ?? i.description ?? null,
+                  }));
+                }
+
+                await exportRepairsPDF({
+                  issues: issuesForExport,
+                  viewMode: viewMode === "table" ? "list" : "tile",
+                  includeNotes,
+                  sinceTimestamp: lastFamilyReportAt,
+                  filters: {
+                    propertyName: filterProp
+                      ? properties.find(p => p.id === filterProp)?.name ?? null
+                      : null,
+                    category: filterCat || null,
+                    priority: filterPri || null,
+                    search: search || null,
+                  },
+                });
+
+                if (exportMarkAsFamily) {
+                  setLastFamilyReportAt(new Date().toISOString());
+                }
+                setExportDialogOpen(false);
+              }}
+              className="px-4 py-2 rounded-lg bg-gold text-charcoal text-sm font-medium hover:bg-gold/90">
+              Download PDF
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

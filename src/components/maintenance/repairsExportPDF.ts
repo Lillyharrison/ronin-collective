@@ -135,12 +135,35 @@ export interface RepairsExportContext {
   issues: MaintenanceIssue[];          // already filtered + sorted (the list the user sees)
   viewMode: "tile" | "list";           // "tile" = cards w/ photos, "list" = compact table
   includeNotes?: boolean;              // when true, render notes/description in the PDF
+  /** ISO timestamp of the previous *family* report. When provided, items
+   *  whose created_at/updated_at are newer get a NEW/UPDATED pill. */
+  sinceTimestamp?: string | null;
   filters: {
     propertyName?: string | null;
     category?: string | null;
     priority?: string | null;
     search?: string | null;
   };
+}
+
+// Gold pill palette for "what's new since last family report" markers.
+const CHANGE_PILL = {
+  new:     { bg: [254, 243, 199] as [number, number, number], text: [146, 64, 14] as [number, number, number], label: "NEW" },
+  updated: { bg: [255, 247, 219] as [number, number, number], text: [161, 98, 7]  as [number, number, number], label: "UPDATED" },
+};
+
+function changeKind(issue: MaintenanceIssue, sinceIso: string | null | undefined): "new" | "updated" | null {
+  if (!sinceIso) return null;
+  try {
+    const since = parseISO(sinceIso).getTime();
+    const created = parseISO(issue.created_at).getTime();
+    if (created > since) return "new";
+    const updated = issue.updated_at ? parseISO(issue.updated_at).getTime() : 0;
+    if (updated > since) return "updated";
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -224,11 +247,30 @@ function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, ma
   const stampW = doc.getTextWidth(stamp);
   doc.text(stamp, pageWidth - marginL - stampW, 19.5);
 
+  // "What's new since" baseline note — only when sinceTimestamp is provided
+  // AND at least one issue actually qualifies as new/updated.
+  let baselineLineY = 22;
+  if (ctx.sinceTimestamp) {
+    const changedCount = ctx.issues.filter(i => changeKind(i, ctx.sinceTimestamp) !== null).length;
+    if (changedCount > 0) {
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(146, 64, 14);
+      const sinceDate = format(parseISO(ctx.sinceTimestamp), "dd MMM yyyy");
+      doc.text(
+        `Highlighting ${changedCount} change${changedCount === 1 ? "" : "s"} since last family report (${sinceDate})`,
+        marginL,
+        23.5,
+      );
+      baselineLineY = 26;
+    }
+  }
+
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.2);
-  doc.line(marginL, 22, pageWidth - marginL, 22);
+  doc.line(marginL, baselineLineY, pageWidth - marginL, baselineLineY);
 
-  return 26;
+  return baselineLineY + 4;
 }
 
 function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
@@ -267,8 +309,12 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
   // data.row.index against `body`, so we need this to recover the source issue.
   const issueIndexByRow: number[] = [];
   ctx.issues.forEach((i, srcIdx) => {
+    const kind = changeKind(i, ctx.sinceTimestamp);
+    const titleText = kind === "new"     ? `[NEW] ${i.title}`
+                    : kind === "updated" ? `[UPD] ${i.title}`
+                    : i.title;
     body.push([
-      i.title,
+      titleText,
       STATUS_LABELS[i.status] ?? i.status,
       PRIORITY_LABELS[i.priority] ?? i.priority,
       i.category ?? "—",
@@ -341,9 +387,15 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
       const issue = ctx.issues[srcIdx];
       if (!issue) return;
 
-      // Title bold
+      // Title bold; gold-tinted when the issue has changed since last family report
       if (data.column.index === 0) {
         data.cell.styles.fontStyle = "bold";
+        const kind = changeKind(issue, ctx.sinceTimestamp);
+        if (kind) {
+          const palette = CHANGE_PILL[kind];
+          data.cell.styles.textColor = palette.text;
+          data.cell.styles.fillColor = palette.bg;
+        }
       }
 
       // Status pill
@@ -573,11 +625,16 @@ function buildTileDoc(
       doc.text(titleLines, titleX, ty);
       ty += titleLines.length * titleLineH + 1.5;
 
-      // Pills row: status + priority
+      // Pills row: status + priority (+ NEW/UPDATED when applicable)
       const statusPill = STATUS_PILL[issue.status] ?? STATUS_PILL.reported;
       const priorityPill = PRIORITY_PILL[issue.priority] ?? PRIORITY_PILL.medium;
       const sw = drawPill(STATUS_LABELS[issue.status] ?? issue.status, titleX, ty + 2, statusPill);
-      drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
+      const pw = drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
+      const kind = changeKind(issue, ctx.sinceTimestamp);
+      if (kind) {
+        const cp = CHANGE_PILL[kind];
+        drawPill(cp.label, titleX + sw + 1.5 + pw + 1.5, ty + 2, { bg: cp.bg, text: cp.text });
+      }
       ty += 7;
 
       if (descLines.length > 0) {
