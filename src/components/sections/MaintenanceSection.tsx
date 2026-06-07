@@ -1034,6 +1034,7 @@ export function MaintenanceSection() {
               issue={issue}
               onClick={() => openIssueDetail(issue)}
               compact
+              onArchiveToggle={canManage ? handleArchiveToggle : undefined}
             />
           ))}
           {hasMore && (
