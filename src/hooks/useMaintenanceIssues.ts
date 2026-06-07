@@ -83,7 +83,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     }
 
     // Named columns only; include description so edit dialogs never overwrite existing notes with blank local state.
-    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at";
+    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at";
 
     // Build query with server-side property + filter params
     let query = supabase
