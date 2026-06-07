@@ -247,11 +247,30 @@ function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, ma
   const stampW = doc.getTextWidth(stamp);
   doc.text(stamp, pageWidth - marginL - stampW, 19.5);
 
+  // "What's new since" baseline note — only when sinceTimestamp is provided
+  // AND at least one issue actually qualifies as new/updated.
+  let baselineLineY = 22;
+  if (ctx.sinceTimestamp) {
+    const changedCount = ctx.issues.filter(i => changeKind(i, ctx.sinceTimestamp) !== null).length;
+    if (changedCount > 0) {
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(146, 64, 14);
+      const sinceDate = format(parseISO(ctx.sinceTimestamp), "dd MMM yyyy");
+      doc.text(
+        `Highlighting ${changedCount} change${changedCount === 1 ? "" : "s"} since last family report (${sinceDate})`,
+        marginL,
+        23.5,
+      );
+      baselineLineY = 26;
+    }
+  }
+
   doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.2);
-  doc.line(marginL, 22, pageWidth - marginL, 22);
+  doc.line(marginL, baselineLineY, pageWidth - marginL, baselineLineY);
 
-  return 26;
+  return baselineLineY + 4;
 }
 
 function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
