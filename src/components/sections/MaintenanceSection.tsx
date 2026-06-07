@@ -1197,10 +1197,20 @@ export function MaintenanceSection() {
 
           <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
             <div className="text-sm font-medium">Backdate baseline (optional)</div>
-            <p className="text-xs text-muted-foreground">
-              Set the baseline to the date of your previous family report so this download
-              highlights everything that's changed since then.
-            </p>
+            {lastFamilyReportAt ? (
+              <p className="text-xs text-foreground">
+                Current baseline:{" "}
+                <span className="font-medium">
+                  {format(parseISO(lastFamilyReportAt), "dd MMM yyyy, HH:mm")}
+                </span>
+                <span className="text-muted-foreground"> — everything after this date is highlighted.</span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Set the baseline to the date of your previous family report so this download
+                highlights everything that's changed since then.
+              </p>
+            )}
             <div className="flex items-center gap-2">
               <input
                 type="date"
