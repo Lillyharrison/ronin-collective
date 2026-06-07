@@ -89,6 +89,7 @@ export function MaintenanceSection() {
     useLocalStorage<string | null>("repairs.lastFamilyReportAt", null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportMarkAsFamily, setExportMarkAsFamily] = useState(true);
+  const [backdateValue, setBackdateValue] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
