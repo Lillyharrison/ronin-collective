@@ -360,6 +360,14 @@ export function MaintenanceSection() {
 
   const handleApprove = (issue: MaintenanceIssue) => handleStatusChange(issue, "approved");
 
+  // Archive / unarchive a resolved issue. Archived items are hidden from the
+  // default views and excluded from PDF downloads so the resolved list does
+  // not grow unbounded over time.
+  const handleArchiveToggle = async (issue: MaintenanceIssue, archived: boolean) => {
+    await updateIssue(issue.id, { is_archived: archived });
+    setDetailIssue(prev => prev?.id === issue.id ? { ...prev, is_archived: archived } : prev);
+  };
+
   // ─── Calendar sync helper for planned maintenance ──────────────────────────
   const syncCalendarForPlanned = async (
     entryId: string,
