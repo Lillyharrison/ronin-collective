@@ -566,6 +566,7 @@ function buildTileDoc(
     drawSectionHeader(status, list.length);
 
     list.forEach((issue) => {
+      const kind = changeKind(issue, ctx.sinceTimestamp);
       // When "Include notes" is on, expand the card vertically so the full
       // description fits inside the tile (rather than as a block beneath it).
       const descLineH = descSize * 0.42;
@@ -582,12 +583,13 @@ function buildTileDoc(
         descLines = doc.splitTextToSize(issue.description, descWrapW);
         if (!ctx.includeNotes) {
           // Cap to whatever fits in the standard card so layout stays compact.
-          const headerOffset = titleSize * 0.42 * 2 + 1.5 + 7; // title + pills
+          const headerOffset = titleSize * 0.42 * 2 + 1.5 + (kind ? 7 : 2);
           const room = cardH - cardPad * 2 - headerOffset;
           descLines = descLines.slice(0, Math.max(0, Math.floor(room / descLineH)));
         }
       }
-      const headerStack = titleSize * 0.42 * 2 + 1.5 + 7;
+      const pillsRowH = kind ? 7 : 2;
+      const headerStack = titleSize * 0.42 * 2 + 1.5 + pillsRowH;
       const neededInner = headerStack + descLines.length * descLineH;
       const dynamicCardH = Math.max(cardH, neededInner + cardPad * 2);
 
@@ -625,26 +627,37 @@ function buildTileDoc(
       doc.text(titleLines, titleX, ty);
       ty += titleLines.length * titleLineH + 1.5;
 
-      // Pills row: status + priority (+ NEW/UPDATED when applicable)
-      const statusPill = STATUS_PILL[issue.status] ?? STATUS_PILL.reported;
-      const priorityPill = PRIORITY_PILL[issue.priority] ?? PRIORITY_PILL.medium;
-      const sw = drawPill(STATUS_LABELS[issue.status] ?? issue.status, titleX, ty + 2, statusPill);
-      const pw = drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
-      const kind = changeKind(issue, ctx.sinceTimestamp);
+      // NEW/UPDATED pill — status & priority moved out to make this the
+      // single, unmissable change indicator. Status is already conveyed by
+      // the section grouping; priority lives in the meta column.
       if (kind) {
         const cp = CHANGE_PILL[kind];
-        drawPill(cp.label, titleX + sw + 1.5 + pw + 1.5, ty + 2, { bg: cp.bg, text: cp.text });
+        drawPill(cp.label, titleX, ty + 2, { bg: cp.bg, text: cp.text });
+        ty += 7;
+      } else {
+        ty += 2;
       }
-      ty += 7;
 
       if (descLines.length > 0) {
-        doc.setFont(PDF_FONT, "normal");
-        doc.setFontSize(descSize);
-        doc.setTextColor(95, 95, 95);
+        // If the issue changed since the baseline, highlight the actual
+        // notes/description so the reader sees *what* changed at a glance.
+        if (kind) {
+          const cp = CHANGE_PILL[kind];
+          const bgH = descLines.length * descLineH + 1.6;
+          doc.setFillColor(...cp.bg);
+          doc.rect(titleX - 1, ty - descSize * 0.32, descWrapW + 2, bgH, "F");
+          doc.setFont(PDF_FONT, "normal");
+          doc.setFontSize(descSize);
+          doc.setTextColor(...cp.text);
+        } else {
+          doc.setFont(PDF_FONT, "normal");
+          doc.setFontSize(descSize);
+          doc.setTextColor(95, 95, 95);
+        }
         doc.text(descLines, titleX, ty);
       }
 
-      // Meta column (label/value pairs) — status/priority removed since they're now pills
+      // Meta column (label/value pairs).
       const metaPairs: Array<[string, string]> = [
         ["Category", issue.category ?? "—"],
         ["Property", issue.property_name ?? "—"],
@@ -657,6 +670,9 @@ function buildTileDoc(
       } else if (issue.scheduled_date) {
         metaPairs.push(["Scheduled", format(parseISO(issue.scheduled_date), "dd MMM yyyy")]);
       }
+      // Priority sits beneath Scheduled so it reads as a property of the work,
+      // not as competing chrome next to the title.
+      metaPairs.push(["Priority", PRIORITY_LABELS[issue.priority] ?? issue.priority]);
 
       const metaLineH = metaSize * 0.45;
       const maxMetaLines = Math.floor((dynamicCardH - cardPad * 2) / metaLineH);
@@ -672,15 +688,20 @@ function buildTileDoc(
         doc.text(label, labelX, my);
         doc.setFont(PDF_FONT, "bold");
         const v = doc.splitTextToSize(value, valueW)[0] ?? value;
-        if (label === "Property" && issue.property_name) {
-          const palette = getPropertyPalette(issue.property_name);
+        const pillPalette =
+          label === "Property" && issue.property_name
+            ? getPropertyPalette(issue.property_name)
+            : label === "Priority"
+              ? (PRIORITY_PILL[issue.priority] ?? PRIORITY_PILL.medium)
+              : null;
+        if (pillPalette) {
           const padX = 1.5;
           const w = Math.min(valueW, doc.getTextWidth(v) + padX * 2);
           const h = metaSize * 0.5;
-          doc.setFillColor(...palette.bg);
+          doc.setFillColor(...pillPalette.bg);
           (doc as unknown as { roundedRect: (x: number, y: number, w: number, h: number, rx: number, ry: number, style: string) => void })
             .roundedRect(valueX - padX, my - h + 0.8, w, h, 0.6, 0.6, "F");
-          doc.setTextColor(...palette.text);
+          doc.setTextColor(...pillPalette.text);
         } else {
           doc.setTextColor(40, 40, 40);
         }
