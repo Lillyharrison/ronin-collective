@@ -25,7 +25,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   "General": "🔧",
 };
 
-export function IssueCard({ issue, onClick, compact = false }: Props) {
+export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: Props) {
   const daysOpen = Math.floor(
     (Date.now() - new Date(issue.created_at).getTime()) / 86400000
   );
