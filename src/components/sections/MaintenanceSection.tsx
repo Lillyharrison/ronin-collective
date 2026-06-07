@@ -6,6 +6,8 @@ import {
   Flag, Tag, Clock, CheckCircle2, CalendarClock, Download,
 } from "lucide-react";
 import { exportRepairsPDF } from "@/components/maintenance/repairsExportPDF";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMaintenanceIssues, MaintenanceIssue, IssueStatus, MaintenanceFilters } from "@/hooks/useMaintenanceIssues";
 import { usePlannedMaintenance, PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
