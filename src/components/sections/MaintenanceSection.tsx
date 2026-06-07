@@ -585,7 +585,7 @@ export function MaintenanceSection() {
         ) : (
           <div className="space-y-3">
             {openIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact onArchiveToggle={canManage ? handleArchiveToggle : undefined} />
             ))}
           </div>
         )}
