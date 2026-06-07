@@ -89,6 +89,7 @@ export function MaintenanceSection() {
     useLocalStorage<string | null>("repairs.lastFamilyReportAt", null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportMarkAsFamily, setExportMarkAsFamily] = useState(true);
+  const [backdateValue, setBackdateValue] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
@@ -1193,6 +1194,36 @@ export function MaintenanceSection() {
               </span>
             </span>
           </label>
+
+          <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+            <div className="text-sm font-medium">Backdate baseline (optional)</div>
+            <p className="text-xs text-muted-foreground">
+              Set the baseline to the date of your previous family report so this download
+              highlights everything that's changed since then.
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={backdateValue}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setBackdateValue(e.target.value)}
+                className="flex-1 h-9 px-2 rounded-md border border-border bg-background text-sm"
+              />
+              <button
+                type="button"
+                disabled={!backdateValue}
+                onClick={() => {
+                  if (!backdateValue) return;
+                  const iso = new Date(`${backdateValue}T00:00:00`).toISOString();
+                  setLastFamilyReportAt(iso);
+                  toast.success(`Baseline set to ${format(parseISO(iso), "dd MMM yyyy")}`);
+                }}
+                className="h-9 px-3 rounded-md border border-border text-sm hover:bg-muted disabled:opacity-50"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
 
           <DialogFooter>
             <button
