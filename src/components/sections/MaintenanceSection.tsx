@@ -1001,6 +1001,7 @@ export function MaintenanceSection() {
                           issue={issue}
                           onClick={() => openIssueDetail(issue)}
                           compact
+                          onArchiveToggle={canManage ? handleArchiveToggle : undefined}
                         />
                         {/* Quick approve button — only on Reported column for admins */}
                         {col.key === "reported" && (isMasterAdmin || isAdmin) && (
