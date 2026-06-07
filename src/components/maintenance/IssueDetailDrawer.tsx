@@ -27,7 +27,7 @@ const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
   { value: "resolved",            label: "Resolved",              labelEs: "Resuelto" },
 ];
 
-export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDelete, categories: _cats }: Props) {
+export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onArchiveToggle, onDelete, categories: _cats }: Props) {
   const { t, language } = useLanguage();
   const isL = language === "es";
   const [confirmDelete, setConfirmDelete] = useState(false);
