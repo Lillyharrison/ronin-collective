@@ -1,4 +1,4 @@
-import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play } from "lucide-react";
+import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play, Archive, ArchiveRestore } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IssueStatusBadge, IssuePriorityBadge } from "./IssueStatusBadge";
 import type { MaintenanceIssue } from "@/hooks/useMaintenanceIssues";
