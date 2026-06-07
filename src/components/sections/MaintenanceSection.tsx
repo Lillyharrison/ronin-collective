@@ -84,6 +84,11 @@ export function MaintenanceSection() {
   // filterProp stays client-side (property picker in the UI — no DB round-trip needed)
   const [viewMode,    setViewMode]    = useLocalStorage<ViewMode>("maintenance_view_mode", "board");
   const [includeNotes, setIncludeNotes] = useLocalStorage<boolean>("maintenance_pdf_include_notes", false);
+  // Last "family report" baseline — used to highlight NEW/UPDATED items in the PDF.
+  const [lastFamilyReportAt, setLastFamilyReportAt] =
+    useLocalStorage<string | null>("repairs.lastFamilyReportAt", null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMarkAsFamily, setExportMarkAsFamily] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editIssue,   setEditIssue]   = useState<MaintenanceIssue | null>(null);
