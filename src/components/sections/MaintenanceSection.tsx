@@ -825,46 +825,17 @@ export function MaintenanceSection() {
                 {isL ? "Notas" : "Notes"}
               </label>
 
-              {/* Download PDF (current filters/view + current sort) */}
+              {/* Download PDF (opens dialog to confirm "family report" baseline) */}
               <button
-                onClick={async () => {
-                  const sortedForExport =
-                    viewMode === "table"
-                      ? sortForTable(displayIssues)
-                      : viewMode === "board"
-                        ? [...displayIssues].sort(
-                            (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9),
-                          )
-                        : displayIssues;
-
-                  // Ensure the export uses the latest notes from the database.
-                  let issuesForExport = sortedForExport;
-                  if (includeNotes && sortedForExport.length > 0) {
-                    const ids = sortedForExport.map(i => i.id);
-                    const { data: descs } = await supabase
-                      .from("maintenance_issues")
-                      .select("id, description")
-                      .in("id", ids);
-                    const descMap = new Map((descs ?? []).map(d => [d.id, d.description]));
-                    issuesForExport = sortedForExport.map(i => ({
-                      ...i,
-                      description: descMap.get(i.id) ?? i.description ?? null,
-                    }));
+                onClick={() => {
+                  // Default the checkbox: ON if no baseline yet OR >=5 days since the last one.
+                  let defaultChecked = true;
+                  if (lastFamilyReportAt) {
+                    const days = (Date.now() - new Date(lastFamilyReportAt).getTime()) / 86400000;
+                    defaultChecked = days >= 5;
                   }
-
-                  exportRepairsPDF({
-                    issues: issuesForExport,
-                    viewMode: viewMode === "table" ? "list" : "tile",
-                    includeNotes,
-                    filters: {
-                      propertyName: filterProp
-                        ? properties.find(p => p.id === filterProp)?.name ?? null
-                        : null,
-                      category: filterCat || null,
-                      priority: filterPri || null,
-                      search: search || null,
-                    },
-                  });
+                  setExportMarkAsFamily(defaultChecked);
+                  setExportDialogOpen(true);
                 }}
                 disabled={displayIssues.length === 0}
                 title="Download current view as PDF"
