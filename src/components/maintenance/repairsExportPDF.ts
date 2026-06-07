@@ -135,12 +135,35 @@ export interface RepairsExportContext {
   issues: MaintenanceIssue[];          // already filtered + sorted (the list the user sees)
   viewMode: "tile" | "list";           // "tile" = cards w/ photos, "list" = compact table
   includeNotes?: boolean;              // when true, render notes/description in the PDF
+  /** ISO timestamp of the previous *family* report. When provided, items
+   *  whose created_at/updated_at are newer get a NEW/UPDATED pill. */
+  sinceTimestamp?: string | null;
   filters: {
     propertyName?: string | null;
     category?: string | null;
     priority?: string | null;
     search?: string | null;
   };
+}
+
+// Gold pill palette for "what's new since last family report" markers.
+const CHANGE_PILL = {
+  new:     { bg: [254, 243, 199] as [number, number, number], text: [146, 64, 14] as [number, number, number], label: "NEW" },
+  updated: { bg: [255, 247, 219] as [number, number, number], text: [161, 98, 7]  as [number, number, number], label: "UPDATED" },
+};
+
+function changeKind(issue: MaintenanceIssue, sinceIso: string | null | undefined): "new" | "updated" | null {
+  if (!sinceIso) return null;
+  try {
+    const since = parseISO(sinceIso).getTime();
+    const created = parseISO(issue.created_at).getTime();
+    if (created > since) return "new";
+    const updated = issue.updated_at ? parseISO(issue.updated_at).getTime() : 0;
+    if (updated > since) return "updated";
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
