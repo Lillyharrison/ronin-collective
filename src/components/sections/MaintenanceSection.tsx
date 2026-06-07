@@ -1152,6 +1152,7 @@ export function MaintenanceSection() {
           onClose={() => setDetailIssue(null)}
           onEdit={openIssueEditor}
           onStatusChange={canManage ? handleStatusChange : undefined}
+          onArchiveToggle={canManage ? handleArchiveToggle : undefined}
           onDelete={(isMasterAdmin || isAdmin) ? async (id) => { await deleteIssue(id); setDetailIssue(null); } : undefined}
           categories={categories}
         />
