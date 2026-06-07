@@ -658,7 +658,7 @@ export function MaintenanceSection() {
         {activeTab === "repairs" ? (
           <div className="space-y-3">
             {displayIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact onArchiveToggle={canManage ? handleArchiveToggle : undefined} />
             ))}
           </div>
         ) : (
