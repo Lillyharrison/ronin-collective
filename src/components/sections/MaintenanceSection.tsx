@@ -239,6 +239,8 @@ export function MaintenanceSection() {
 
   // Toggle between the active kanban and the resolved-only archive view
   const [showResolved, setShowResolved] = useState(false);
+  // When in the resolved view, optionally include archived items (default: hidden, excluded from PDF)
+  const [showArchived, setShowArchived] = useState(false);
   const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
 
   // Sortable column headers in the table view
