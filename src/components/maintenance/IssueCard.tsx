@@ -1,4 +1,4 @@
-import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play } from "lucide-react";
+import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play, Archive, ArchiveRestore } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IssueStatusBadge, IssuePriorityBadge } from "./IssueStatusBadge";
 import type { MaintenanceIssue } from "@/hooks/useMaintenanceIssues";
@@ -9,6 +9,7 @@ interface Props {
   issue: MaintenanceIssue;
   onClick: () => void;
   compact?: boolean;
+  onArchiveToggle?: (issue: MaintenanceIssue, archived: boolean) => void;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -24,7 +25,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   "General": "🔧",
 };
 
-export function IssueCard({ issue, onClick, compact = false }: Props) {
+export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: Props) {
   const daysOpen = Math.floor(
     (Date.now() - new Date(issue.created_at).getTime()) / 86400000
   );
@@ -113,7 +114,21 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
           <div className="flex-1 min-w-0 space-y-1.5">
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold text-foreground text-sm leading-snug line-clamp-2">{issue.title}</p>
-              <IssueStatusBadge status={issue.status} size="xs" />
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <IssueStatusBadge status={issue.status} size="xs" />
+                {onArchiveToggle && issue.status === "resolved" && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={e => { e.stopPropagation(); onArchiveToggle(issue, !issue.is_archived); }}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onArchiveToggle(issue, !issue.is_archived); } }}
+                    title={issue.is_archived ? "Unarchive" : "Archive"}
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground hover:bg-gold/10 hover:text-gold transition-colors cursor-pointer"
+                  >
+                    {issue.is_archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
               {issue.property_name && (
@@ -159,6 +174,18 @@ export function IssueCard({ issue, onClick, compact = false }: Props) {
             <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
               {issue.category}
             </span>
+            {onArchiveToggle && issue.status === "resolved" && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={e => { e.stopPropagation(); onArchiveToggle(issue, !issue.is_archived); }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onArchiveToggle(issue, !issue.is_archived); } }}
+                title={issue.is_archived ? "Unarchive" : "Archive"}
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground hover:bg-gold/10 hover:text-gold transition-colors cursor-pointer"
+              >
+                {issue.is_archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+              </span>
+            )}
           </div>
 
           {/* Scheduled date pill — prominently shown when set */}

@@ -585,7 +585,7 @@ export function MaintenanceSection() {
         ) : (
           <div className="space-y-3">
             {openIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact onArchiveToggle={canManage ? handleArchiveToggle : undefined} />
             ))}
           </div>
         )}
@@ -658,7 +658,7 @@ export function MaintenanceSection() {
         {activeTab === "repairs" ? (
           <div className="space-y-3">
             {displayIssues.map(issue => (
-              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
+              <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact onArchiveToggle={canManage ? handleArchiveToggle : undefined} />
             ))}
           </div>
         ) : (
@@ -949,7 +949,7 @@ export function MaintenanceSection() {
       ) : showResolved ? (
         <div className="px-4 pb-4 space-y-3">
           {viewIssues.map(issue => (
-            <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact />
+            <IssueCard key={issue.id} issue={issue} onClick={() => openIssueDetail(issue)} compact onArchiveToggle={canManage ? handleArchiveToggle : undefined} />
           ))}
         </div>
       ) : viewMode === "board" ? (
@@ -1001,6 +1001,7 @@ export function MaintenanceSection() {
                           issue={issue}
                           onClick={() => openIssueDetail(issue)}
                           compact
+                          onArchiveToggle={canManage ? handleArchiveToggle : undefined}
                         />
                         {/* Quick approve button — only on Reported column for admins */}
                         {col.key === "reported" && (isMasterAdmin || isAdmin) && (
@@ -1033,6 +1034,7 @@ export function MaintenanceSection() {
               issue={issue}
               onClick={() => openIssueDetail(issue)}
               compact
+              onArchiveToggle={canManage ? handleArchiveToggle : undefined}
             />
           ))}
           {hasMore && (
