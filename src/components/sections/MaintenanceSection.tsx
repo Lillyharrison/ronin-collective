@@ -271,6 +271,11 @@ export function MaintenanceSection() {
   const filtered = useCallback(() => {
     let list = [...issues];
     if (filterProp) list = list.filter(i => i.property_id === filterProp);
+    // Archived items are hidden by default. Only surface them when the user
+    // is in the resolved-only view AND has explicitly opted in.
+    if (!(showResolved && showArchived)) {
+      list = list.filter(i => !i.is_archived);
+    }
     list.sort((a, b) => {
       if (sortBy === "newest")   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === "oldest")   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -279,7 +284,7 @@ export function MaintenanceSection() {
       return 0;
     });
     return list;
-  }, [issues, filterProp, sortBy]);
+  }, [issues, filterProp, sortBy, showResolved, showArchived]);
 
   const rawIssues = filtered();
 
