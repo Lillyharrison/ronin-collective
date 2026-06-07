@@ -25,6 +25,7 @@ export interface MaintenanceIssue {
   source: string;
   related_issue_id: string | null;
   is_draft: boolean;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
   // Joined
@@ -82,7 +83,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     }
 
     // Named columns only; include description so edit dialogs never overwrite existing notes with blank local state.
-    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at";
+    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at";
 
     // Build query with server-side property + filter params
     let query = supabase
@@ -195,6 +196,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
       source: patch.source,
       related_issue_id: patch.related_issue_id,
       is_draft: patch.is_draft,
+      is_archived: patch.is_archived,
     };
     Object.keys(allowedPatch).forEach((key) => {
       if (allowedPatch[key as keyof MaintenanceIssue] === undefined) delete allowedPatch[key as keyof MaintenanceIssue];

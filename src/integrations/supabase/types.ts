@@ -675,6 +675,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_archived: boolean
           is_draft: boolean
           location_detail: string | null
           photo_url: string | null
@@ -696,6 +697,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           is_draft?: boolean
           location_detail?: string | null
           photo_url?: string | null
@@ -717,6 +719,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_archived?: boolean
           is_draft?: boolean
           location_detail?: string | null
           photo_url?: string | null

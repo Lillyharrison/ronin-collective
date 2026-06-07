@@ -239,6 +239,8 @@ export function MaintenanceSection() {
 
   // Toggle between the active kanban and the resolved-only archive view
   const [showResolved, setShowResolved] = useState(false);
+  // When in the resolved view, optionally include archived items (default: hidden, excluded from PDF)
+  const [showArchived, setShowArchived] = useState(false);
   const [dragOverCol, setDragOverCol] = useState<IssueStatus | null>(null);
 
   // Sortable column headers in the table view
@@ -269,6 +271,11 @@ export function MaintenanceSection() {
   const filtered = useCallback(() => {
     let list = [...issues];
     if (filterProp) list = list.filter(i => i.property_id === filterProp);
+    // Archived items are hidden by default. Only surface them when the user
+    // is in the resolved-only view AND has explicitly opted in.
+    if (!(showResolved && showArchived)) {
+      list = list.filter(i => !i.is_archived);
+    }
     list.sort((a, b) => {
       if (sortBy === "newest")   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === "oldest")   return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -277,7 +284,7 @@ export function MaintenanceSection() {
       return 0;
     });
     return list;
-  }, [issues, filterProp, sortBy]);
+  }, [issues, filterProp, sortBy, showResolved, showArchived]);
 
   const rawIssues = filtered();
 
@@ -352,6 +359,14 @@ export function MaintenanceSection() {
   };
 
   const handleApprove = (issue: MaintenanceIssue) => handleStatusChange(issue, "approved");
+
+  // Archive / unarchive a resolved issue. Archived items are hidden from the
+  // default views and excluded from PDF downloads so the resolved list does
+  // not grow unbounded over time.
+  const handleArchiveToggle = async (issue: MaintenanceIssue, archived: boolean) => {
+    await updateIssue(issue.id, { is_archived: archived });
+    setDetailIssue(prev => prev?.id === issue.id ? { ...prev, is_archived: archived } : prev);
+  };
 
   // ─── Calendar sync helper for planned maintenance ──────────────────────────
   const syncCalendarForPlanned = async (
@@ -688,6 +703,18 @@ export function MaintenanceSection() {
                     {displayIssues.filter(i => i.status === "resolved").length} {isL ? "resueltos" : "resolved"}
                     <button onClick={() => setShowResolved(false)} className="ml-2 text-gold hover:underline font-semibold">
                       ← {isL ? "Volver a activos" : "Back to active"}
+                    </button>
+                    <button
+                      onClick={() => setShowArchived(v => !v)}
+                      className={cn(
+                        "ml-2 hover:underline",
+                        showArchived ? "text-gold font-semibold" : "text-muted-foreground",
+                      )}
+                      title={isL ? "Los archivados se ocultan del PDF" : "Archived items are hidden from the PDF"}
+                    >
+                      {showArchived
+                        ? (isL ? "· Ocultar archivados" : "· Hide archived")
+                        : (isL ? "· Mostrar archivados" : "· Show archived")}
                     </button>
                   </>
                 ) : (
@@ -1137,6 +1164,7 @@ export function MaintenanceSection() {
           onClose={() => setDetailIssue(null)}
           onEdit={openIssueEditor}
           onStatusChange={canManage ? handleStatusChange : undefined}
+          onArchiveToggle={canManage ? handleArchiveToggle : undefined}
           onDelete={(isMasterAdmin || isAdmin) ? async (id) => { await deleteIssue(id); setDetailIssue(null); } : undefined}
           categories={categories}
         />

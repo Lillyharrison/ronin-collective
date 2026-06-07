@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { imageUrl, isVideoUrl } from "@/lib/imageUrl";
-import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon, Archive, ArchiveRestore } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
 import type { MaintenanceIssue, IssueStatus, MaintenanceCategory } from "@/hooks/useMaintenanceIssues";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,6 +14,7 @@ interface Props {
   onClose: () => void;
   onEdit?: (issue: MaintenanceIssue) => void;
   onStatusChange?: (issue: MaintenanceIssue, status: IssueStatus, scheduledDate?: string) => void;
+  onArchiveToggle?: (issue: MaintenanceIssue, archived: boolean) => void | Promise<void>;
   onDelete?: (id: string) => void;
   categories: MaintenanceCategory[];
 }
@@ -26,7 +27,7 @@ const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
   { value: "resolved",            label: "Resolved",              labelEs: "Resuelto" },
 ];
 
-export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDelete, categories: _cats }: Props) {
+export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onArchiveToggle, onDelete, categories: _cats }: Props) {
   const { t, language } = useLanguage();
   const isL = language === "es";
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -64,10 +65,24 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onDe
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <IssueStatusBadge status={issue.status} />
               <IssuePriorityBadge priority={issue.priority} />
+              {issue.is_archived && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5">
+                  <Archive size={9} /> {isL ? "Archivado" : "Archived"}
+                </span>
+              )}
             </div>
             <h2 className="font-semibold text-foreground text-base leading-snug">{issue.title}</h2>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {onArchiveToggle && issue.status === "resolved" && (
+              <button
+                onClick={() => onArchiveToggle(issue, !issue.is_archived)}
+                title={issue.is_archived ? (isL ? "Desarchivar" : "Unarchive") : (isL ? "Archivar" : "Archive")}
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+              >
+                {issue.is_archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              </button>
+            )}
             {onEdit && (
               <button onClick={() => onEdit(issue)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
                 <Pencil size={16} />
