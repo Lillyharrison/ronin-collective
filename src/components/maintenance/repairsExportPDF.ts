@@ -657,7 +657,7 @@ function buildTileDoc(
         doc.text(descLines, titleX, ty);
       }
 
-      // Meta column (label/value pairs) — status/priority removed since they're now pills
+      // Meta column (label/value pairs).
       const metaPairs: Array<[string, string]> = [
         ["Category", issue.category ?? "—"],
         ["Property", issue.property_name ?? "—"],
@@ -670,6 +670,9 @@ function buildTileDoc(
       } else if (issue.scheduled_date) {
         metaPairs.push(["Scheduled", format(parseISO(issue.scheduled_date), "dd MMM yyyy")]);
       }
+      // Priority sits beneath Scheduled so it reads as a property of the work,
+      // not as competing chrome next to the title.
+      metaPairs.push(["Priority", PRIORITY_LABELS[issue.priority] ?? issue.priority]);
 
       const metaLineH = metaSize * 0.45;
       const maxMetaLines = Math.floor((dynamicCardH - cardPad * 2) / metaLineH);
@@ -685,15 +688,20 @@ function buildTileDoc(
         doc.text(label, labelX, my);
         doc.setFont(PDF_FONT, "bold");
         const v = doc.splitTextToSize(value, valueW)[0] ?? value;
-        if (label === "Property" && issue.property_name) {
-          const palette = getPropertyPalette(issue.property_name);
+        const pillPalette =
+          label === "Property" && issue.property_name
+            ? getPropertyPalette(issue.property_name)
+            : label === "Priority"
+              ? (PRIORITY_PILL[issue.priority] ?? PRIORITY_PILL.medium)
+              : null;
+        if (pillPalette) {
           const padX = 1.5;
           const w = Math.min(valueW, doc.getTextWidth(v) + padX * 2);
           const h = metaSize * 0.5;
-          doc.setFillColor(...palette.bg);
+          doc.setFillColor(...pillPalette.bg);
           (doc as unknown as { roundedRect: (x: number, y: number, w: number, h: number, rx: number, ry: number, style: string) => void })
             .roundedRect(valueX - padX, my - h + 0.8, w, h, 0.6, 0.6, "F");
-          doc.setTextColor(...palette.text);
+          doc.setTextColor(...pillPalette.text);
         } else {
           doc.setTextColor(40, 40, 40);
         }
