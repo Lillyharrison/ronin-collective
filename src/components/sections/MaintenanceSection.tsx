@@ -704,6 +704,18 @@ export function MaintenanceSection() {
                     <button onClick={() => setShowResolved(false)} className="ml-2 text-gold hover:underline font-semibold">
                       ← {isL ? "Volver a activos" : "Back to active"}
                     </button>
+                    <button
+                      onClick={() => setShowArchived(v => !v)}
+                      className={cn(
+                        "ml-2 hover:underline",
+                        showArchived ? "text-gold font-semibold" : "text-muted-foreground",
+                      )}
+                      title={isL ? "Los archivados se ocultan del PDF" : "Archived items are hidden from the PDF"}
+                    >
+                      {showArchived
+                        ? (isL ? "· Ocultar archivados" : "· Hide archived")
+                        : (isL ? "· Mostrar archivados" : "· Show archived")}
+                    </button>
                   </>
                 ) : (
                   <>
