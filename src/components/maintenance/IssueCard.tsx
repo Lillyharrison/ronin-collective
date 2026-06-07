@@ -174,6 +174,18 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
             <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
               {issue.category}
             </span>
+            {onArchiveToggle && issue.status === "resolved" && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={e => { e.stopPropagation(); onArchiveToggle(issue, !issue.is_archived); }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onArchiveToggle(issue, !issue.is_archived); } }}
+                title={issue.is_archived ? "Unarchive" : "Archive"}
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-muted-foreground hover:bg-gold/10 hover:text-gold transition-colors cursor-pointer"
+              >
+                {issue.is_archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+              </span>
+            )}
           </div>
 
           {/* Scheduled date pill — prominently shown when set */}
