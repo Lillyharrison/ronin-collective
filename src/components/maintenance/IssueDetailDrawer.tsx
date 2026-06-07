@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { imageUrl, isVideoUrl } from "@/lib/imageUrl";
-import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon, Archive, ArchiveRestore } from "lucide-react";
 import { IssueStatusBadge, IssuePriorityBadge, STATUS_CONFIG } from "./IssueStatusBadge";
 import type { MaintenanceIssue, IssueStatus, MaintenanceCategory } from "@/hooks/useMaintenanceIssues";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,6 +14,7 @@ interface Props {
   onClose: () => void;
   onEdit?: (issue: MaintenanceIssue) => void;
   onStatusChange?: (issue: MaintenanceIssue, status: IssueStatus, scheduledDate?: string) => void;
+  onArchiveToggle?: (issue: MaintenanceIssue, archived: boolean) => void | Promise<void>;
   onDelete?: (id: string) => void;
   categories: MaintenanceCategory[];
 }
