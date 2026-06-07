@@ -1,0 +1,1 @@
+ALTER TABLE public.maintenance_issues ADD COLUMN IF NOT EXISTS is_archived boolean NOT NULL DEFAULT false; CREATE INDEX IF NOT EXISTS idx_maintenance_issues_is_archived ON public.maintenance_issues(is_archived);
