@@ -25,6 +25,7 @@ export interface MaintenanceIssue {
   source: string;
   related_issue_id: string | null;
   is_draft: boolean;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
   // Joined
