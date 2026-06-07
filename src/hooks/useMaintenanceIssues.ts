@@ -196,6 +196,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
       source: patch.source,
       related_issue_id: patch.related_issue_id,
       is_draft: patch.is_draft,
+      is_archived: patch.is_archived,
     };
     Object.keys(allowedPatch).forEach((key) => {
       if (allowedPatch[key as keyof MaintenanceIssue] === undefined) delete allowedPatch[key as keyof MaintenanceIssue];
