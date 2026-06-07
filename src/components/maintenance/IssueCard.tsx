@@ -9,6 +9,7 @@ interface Props {
   issue: MaintenanceIssue;
   onClick: () => void;
   compact?: boolean;
+  onArchiveToggle?: (issue: MaintenanceIssue, archived: boolean) => void;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
