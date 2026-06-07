@@ -625,11 +625,16 @@ function buildTileDoc(
       doc.text(titleLines, titleX, ty);
       ty += titleLines.length * titleLineH + 1.5;
 
-      // Pills row: status + priority
+      // Pills row: status + priority (+ NEW/UPDATED when applicable)
       const statusPill = STATUS_PILL[issue.status] ?? STATUS_PILL.reported;
       const priorityPill = PRIORITY_PILL[issue.priority] ?? PRIORITY_PILL.medium;
       const sw = drawPill(STATUS_LABELS[issue.status] ?? issue.status, titleX, ty + 2, statusPill);
-      drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
+      const pw = drawPill(PRIORITY_LABELS[issue.priority] ?? issue.priority, titleX + sw + 1.5, ty + 2, priorityPill);
+      const kind = changeKind(issue, ctx.sinceTimestamp);
+      if (kind) {
+        const cp = CHANGE_PILL[kind];
+        drawPill(cp.label, titleX + sw + 1.5 + pw + 1.5, ty + 2, { bg: cp.bg, text: cp.text });
+      }
       ty += 7;
 
       if (descLines.length > 0) {
