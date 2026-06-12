@@ -33,6 +33,7 @@ import { PropertyLegend } from "./staff/PropertyLegend";
 import { exportScheduleExcel } from "./staff/exportUtils";
 import { exportSchedulePDFv2 } from "./staff/schedulePdfExport";
 import { PdfExportModal, type PdfExportOptions } from "./staff/PdfExportModal";
+import { ShareWeekDialog } from "./staff/ShareWeekDialog";
 
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
@@ -126,6 +127,7 @@ export function StaffCalendarTab({
   const [pendingDelete, setPendingDelete] = useState<DisplayShift | null>(null);
   const [scheduleManagerStaff, setScheduleManagerStaff] = useState<string | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [filterStaff] = useState<string>("all");
   const [filterSearch, setFilterSearch] = useState<string>("");
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
@@ -553,7 +555,17 @@ export function StaffCalendarTab({
         onOpenScheduleManager={() => { setScheduleManagerStaff(null); setShowScheduleManager(true); }}
         onExportExcel={() => exportScheduleExcel({ staffToShow, weekDays, weekStart, displayShifts, properties })}
         onExportPDF={() => setShowPdfModal(true)}
+        onShareWeek={canEdit ? () => setShowShareDialog(true) : undefined}
       />
+
+      {showShareDialog && (
+        <ShareWeekDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          weekStart={weekStart}
+          userId={userId}
+        />
+      )}
 
       {canEdit && (
         <StaffFilterBar

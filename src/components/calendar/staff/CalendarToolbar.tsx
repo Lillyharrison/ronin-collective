@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, Settings2, PlaneTakeoff, Download, CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Settings2, PlaneTakeoff, Download, CalendarIcon, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,6 +24,7 @@ export function CalendarToolbar({
   onOpenScheduleManager,
   onExportExcel,
   onExportPDF,
+  onShareWeek,
 }: {
   calView: "week" | "month";
   setCalView: (v: "week" | "month") => void;
@@ -43,6 +44,7 @@ export function CalendarToolbar({
   onOpenScheduleManager: () => void;
   onExportExcel: () => void;
   onExportPDF: () => void;
+  onShareWeek?: () => void;
 }) {
   const showRangePickers = calView === "month" && rangeStart && rangeEnd && setRangeStart && setRangeEnd;
 
@@ -164,6 +166,11 @@ export function CalendarToolbar({
             {calView === "week" && (
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExportExcel} title="Download Excel">
                 <Download size={15} />
+              </Button>
+            )}
+            {calView === "week" && onShareWeek && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onShareWeek} title="Share this week with a non-user">
+                <Share2 size={15} />
               </Button>
             )}
             <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={onExportPDF} title="Download PDF">

@@ -1585,6 +1585,39 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_schedule_shares: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          revoked_at: string | null
+          share_token: string
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          revoked_at?: string | null
+          share_token: string
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          revoked_at?: string | null
+          share_token?: string
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
       staff_schedules: {
         Row: {
           created_at: string

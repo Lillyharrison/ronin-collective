@@ -12,6 +12,7 @@ import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
 import SharedTimeline from "./pages/SharedTimeline";
 import SharedChecklist from "./pages/SharedChecklist";
+import SharedStaffSchedule from "./pages/SharedStaffSchedule";
 
 import NotFound from "./pages/NotFound";
 
@@ -79,6 +80,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/share/timeline/:token" element={<SharedTimeline />} />
               <Route path="/checklist-share/:token" element={<SharedChecklist />} />
+              <Route path="/schedule-share/:token" element={<SharedStaffSchedule />} />
               {/* All app sections share a single AppShell; the active section is
                   derived from the URL path inside NavigationContext. */}
               {SECTION_PATHS.map(path => (
