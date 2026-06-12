@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { addDays, format, parseISO } from "date-fns";
+import { addDays, format, isToday, parseISO, isSameMonth, isSameYear } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,33 +9,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
-interface Staff { id: string; full_name: string | null; job_title: string | null; }
-interface Property { id: string; name: string; }
-interface Shift {
-  id: string;
-  staff_id: string;
-  property_id: string | null;
-  shift_date: string;
-  start_time: string | null;
-  end_time: string | null;
-  status: string;
-  notes: string | null;
-}
+import { cn } from "@/lib/utils";
+import { ShiftChip } from "@/components/calendar/staff/ShiftChip";
+import { buildDisplayShifts } from "@/components/calendar/staff/utils";
+import { getDisplayName } from "@/components/calendar/staff/utils";
+import type { DisplayShift, Profile, Property } from "@/components/calendar/staff/types";
+import type { StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useStaffSchedules";
 
 interface SharePayload {
   week_start: string;
   week_end: string;
   label: string | null;
-  staff: Staff[];
+  staff: Profile[];
   properties: Property[];
-  shifts: Shift[];
+  shifts: StaffShift[];
+  schedules: StaffSchedule[];
+  leave_requests: StaffLeaveRequest[];
 }
 
 interface EditingState {
   staff_id: string;
   shift_date: string;
-  existing?: Shift;
+  existing?: DisplayShift;
 }
 
 export default function SharedStaffSchedule() {
@@ -63,7 +58,7 @@ export default function SharedStaffSchedule() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [token]);
+  useEffect(() => { fetchData(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [token]);
 
   const weekDays = useMemo(() => {
     if (!data) return [];
@@ -71,15 +66,25 @@ export default function SharedStaffSchedule() {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   }, [data]);
 
-  const shiftsByCell = useMemo(() => {
-    const map = new Map<string, Shift[]>();
-    data?.shifts.forEach((s) => {
-      const key = `${s.staff_id}|${s.shift_date}`;
-      const arr = map.get(key) ?? [];
-      arr.push(s);
-      map.set(key, arr);
-    });
-    return map;
+  const displayShifts = useMemo(() => {
+    if (!data) return [] as DisplayShift[];
+    return buildDisplayShifts(weekDays, data.schedules, data.shifts, data.leave_requests, data.staff);
+  }, [data, weekDays]);
+
+  const staffToShow = useMemo(() => {
+    if (!data) return [] as Profile[];
+    const ids = new Set(displayShifts.map((s) => s.staff_id));
+    return data.staff.filter((p) => ids.has(p.id));
+  }, [data, displayShifts]);
+
+  const titleRange = useMemo(() => {
+    if (!data) return "";
+    const s = parseISO(data.week_start);
+    const e = parseISO(data.week_end);
+    const startFmt = isSameMonth(s, e)
+      ? format(s, "d")
+      : isSameYear(s, e) ? format(s, "d MMM") : format(s, "d MMM yyyy");
+    return `${startFmt} – ${format(e, "d MMM yyyy")}`;
   }, [data]);
 
   if (!token || token.length < 16) {
@@ -100,81 +105,104 @@ export default function SharedStaffSchedule() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6">
-      <div className="max-w-6xl mx-auto space-y-4">
+      <div className="max-w-7xl mx-auto space-y-4">
         <header className="space-y-1 border-b border-border pb-4">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Shared staff schedule</p>
-          <h1 className="text-xl sm:text-2xl font-semibold">
-            Week of {format(parseISO(data.week_start), "d MMM yyyy")}
-          </h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">{titleRange}</h1>
           {data.label && <p className="text-sm text-muted-foreground">{data.label}</p>}
-          <p className="text-xs text-muted-foreground">
-            Edits save live. You can only change shifts in this one week.
-          </p>
         </header>
 
-        {data.staff.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">No staff to schedule.</p>
+        {staffToShow.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">No shifts scheduled this week.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/40">
-                  <th className="text-left p-2 sticky left-0 bg-muted/40 z-10 min-w-[140px]">Staff</th>
-                  {weekDays.map((d) => (
-                    <th key={d.toISOString()} className="text-left p-2 min-w-[130px] font-medium">
-                      <div>{format(d, "EEE")}</div>
-                      <div className="text-[11px] text-muted-foreground font-normal">
-                        {format(d, "d MMM")}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.staff.map((s) => (
-                  <tr key={s.id} className="border-t border-border">
-                    <td className="p-2 sticky left-0 bg-background z-10 align-top">
-                      <div className="font-medium">{s.full_name ?? "Unnamed"}</div>
-                      {s.job_title && (
-                        <div className="text-[11px] text-muted-foreground">{s.job_title}</div>
-                      )}
-                    </td>
-                    {weekDays.map((d) => {
-                      const dateStr = format(d, "yyyy-MM-dd");
-                      const shifts = shiftsByCell.get(`${s.id}|${dateStr}`) ?? [];
-                      return (
-                        <td key={dateStr} className="p-1.5 align-top border-l border-border">
-                          <div className="space-y-1">
-                            {shifts.map((sh) => (
-                              <button
-                                key={sh.id}
-                                onClick={() => setEditing({ staff_id: s.id, shift_date: dateStr, existing: sh })}
-                                className="w-full text-left rounded bg-primary/10 hover:bg-primary/20 text-primary px-1.5 py-1 text-xs leading-tight"
-                              >
-                                <div className="font-medium">
-                                  {sh.start_time?.slice(0, 5) ?? "—"} – {sh.end_time?.slice(0, 5) ?? "—"}
-                                </div>
-                                {sh.property_id && (
-                                  <div className="text-[10px] opacity-70 truncate">
-                                    {data.properties.find((p) => p.id === sh.property_id)?.name}
-                                  </div>
-                                )}
-                              </button>
-                            ))}
-                            <button
-                              onClick={() => setEditing({ staff_id: s.id, shift_date: dateStr })}
-                              className="w-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded py-1 transition-colors"
-                            >
-                              <Plus size={12} />
-                            </button>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
+          <div className="rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto">
+            <div className="min-w-[820px]">
+              <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
+                <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
+                {weekDays.map((day) => (
+                  <div
+                    key={day.toISOString()}
+                    className={cn(
+                      "px-1 py-2 text-center border-r border-border last:border-r-0",
+                      isToday(day) && "bg-primary/5"
+                    )}
+                  >
+                    <p className={cn("text-[10px] font-medium text-muted-foreground uppercase tracking-wide", isToday(day) && "text-primary")}>
+                      {format(day, "EEE")}
+                    </p>
+                    <p className={cn(
+                      "text-sm font-semibold mt-0.5 w-6 h-6 rounded-full flex items-center justify-center mx-auto",
+                      isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
+                    )}>
+                      {format(day, "d")}
+                    </p>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+
+              {staffToShow.map((person) => {
+                const personShifts = displayShifts.filter((s) => s.staff_id === person.id);
+                return (
+                  <div key={person.id} className="border-b border-border last:border-b-0">
+                    <div className="grid" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
+                      <div className="px-1.5 py-2 border-r border-border flex items-center gap-1.5 min-w-0">
+                        <div className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
+                          person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
+                        )}>
+                          {getDisplayName(person, "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={cn("text-xs font-medium truncate", person.is_draft && "italic text-muted-foreground")}>
+                            {getDisplayName(person)}
+                          </p>
+                          {person.job_title && (
+                            <p className="text-[9px] text-muted-foreground truncate">{person.job_title}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {weekDays.map((day) => {
+                        const dateStr = format(day, "yyyy-MM-dd");
+                        const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
+                        return (
+                          <div
+                            key={dateStr}
+                            className={cn(
+                              "border-r border-border last:border-r-0 p-1 min-h-[52px]",
+                              isToday(day) && "bg-primary/5"
+                            )}
+                          >
+                            <div className="flex flex-col gap-0.5 w-full">
+                              {dayShifts.map((sh) => (
+                                <div key={sh.key} className="relative group">
+                                  <ShiftChip
+                                    shift={sh}
+                                    properties={data.properties}
+                                    onDragStart={() => {}}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (sh.is_leave) return;
+                                      setEditing({ staff_id: person.id, shift_date: dateStr, existing: sh });
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => setEditing({ staff_id: person.id, shift_date: dateStr })}
+                                className="rounded px-1 py-0.5 text-[10px] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-colors"
+                              >
+                                <Plus size={9} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -184,7 +212,7 @@ export default function SharedStaffSchedule() {
           token={token}
           editing={editing}
           properties={data.properties}
-          staffName={data.staff.find((s) => s.id === editing.staff_id)?.full_name ?? ""}
+          staffName={getDisplayName(data.staff.find((s) => s.id === editing.staff_id))}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); fetchData(); }}
         />
@@ -215,6 +243,9 @@ function ShiftEditDialog({
   onSaved: () => void;
 }) {
   const ex = editing.existing;
+  const isVirtual = !!ex?.is_virtual;
+  const concreteId = ex?.concrete_id ?? null;
+
   const [startTime, setStartTime] = useState(ex?.start_time?.slice(0, 5) ?? "09:00");
   const [endTime, setEndTime] = useState(ex?.end_time?.slice(0, 5) ?? "17:00");
   const [propertyId, setPropertyId] = useState<string>(ex?.property_id ?? "__none__");
@@ -247,8 +278,9 @@ function ShiftEditDialog({
       property_id: propertyId === "__none__" ? null : propertyId,
       notes: notes || null,
       status: "scheduled",
+      schedule_id: ex?.schedule_id ?? null,
     };
-    if (ex) callMutate("update", { ...payload, id: ex.id });
+    if (concreteId) callMutate("update", { ...payload, id: concreteId });
     else callMutate("create", payload);
   };
 
@@ -256,7 +288,7 @@ function ShiftEditDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col max-w-md">
         <DialogHeader>
-          <DialogTitle>{ex ? "Edit shift" : "Add shift"}</DialogTitle>
+          <DialogTitle>{concreteId ? "Edit shift" : isVirtual ? "Override recurring shift" : "Add shift"}</DialogTitle>
           <p className="text-xs text-muted-foreground">
             {staffName} · {format(parseISO(editing.shift_date), "EEE d MMM")}
           </p>
@@ -290,11 +322,11 @@ function ShiftEditDialog({
           </div>
         </div>
         <div className="border-t border-border pt-3 flex gap-2">
-          {ex && (
+          {concreteId && (
             <Button
               variant="outline"
               className="text-destructive hover:text-destructive"
-              onClick={() => callMutate("delete", { id: ex.id })}
+              onClick={() => callMutate("delete", { id: concreteId })}
               disabled={busy}
             >
               <Trash2 size={14} />
