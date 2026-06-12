@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase.from("staff_shifts").insert({
         staff_id: shift.staff_id,
         property_id: shift.property_id ?? null,
+        schedule_id: shift.schedule_id ?? null,
         shift_date: shift.shift_date,
         start_time: shift.start_time ?? null,
         end_time: shift.end_time ?? null,

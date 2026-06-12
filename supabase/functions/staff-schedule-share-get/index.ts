@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     const weekStart = share.week_start as string;
     const weekEnd = addDays(weekStart, 6);
 
-    const [staffRes, propertiesRes, shiftsRes, schedulesRes] = await Promise.all([
+    const [staffRes, propertiesRes, shiftsRes, schedulesRes, leaveRes] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days, start_date, level")
@@ -69,6 +69,13 @@ Deno.serve(async (req) => {
         .lte("effective_from", weekEnd)
         .or(`effective_to.is.null,effective_to.gte.${weekStart}`)
         .limit(500),
+      supabase
+        .from("staff_leave_requests")
+        .select("id, staff_id, status, start_date, end_date, leave_type")
+        .eq("status", "approved")
+        .lte("start_date", weekEnd)
+        .gte("end_date", weekStart)
+        .limit(500),
     ]);
 
     return new Response(JSON.stringify({
@@ -79,6 +86,7 @@ Deno.serve(async (req) => {
       properties: propertiesRes.data ?? [],
       shifts: shiftsRes.data ?? [],
       schedules: schedulesRes.data ?? [],
+      leave_requests: leaveRes.data ?? [],
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
