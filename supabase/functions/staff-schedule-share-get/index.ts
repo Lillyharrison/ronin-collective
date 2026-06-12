@@ -50,7 +50,11 @@ Deno.serve(async (req) => {
     const weekEnd = addDays(weekStart, 6);
 
     const [staffRes, propertiesRes, shiftsRes, schedulesRes] = await Promise.all([
-      supabase.rpc("get_staff_schedule_profiles"),
+      supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, job_title, department, assigned_property_ids, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days, start_date, level")
+        .not("level", "in", "(principal,extended_family)")
+        .order("full_name"),
       supabase.from("properties").select("id, name").order("name"),
       supabase
         .from("staff_shifts")
