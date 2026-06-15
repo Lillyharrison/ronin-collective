@@ -58,23 +58,44 @@ export function ShoppingList() {
   const [filterChecked, setFilterChecked] = useState(false);
   const [libQuery, setLibQuery]   = useState("");
   const [libPick, setLibPick]     = useState<OrderLibraryItem | null>(null);
+  const [profiles, setProfiles]   = useState<Record<string, ProfileLite>>({});
 
   const libMatches = useMemo(() => {
     if (!libQuery.trim()) return [];
     return findLibraryMatches(libQuery, libraryItems, { minScore: 0.4, limit: 6 });
   }, [libQuery, libraryItems]);
 
+  const libraryById = useMemo(() => {
+    const m: Record<string, OrderLibraryItem> = {};
+    for (const it of libraryItems) m[it.id] = it;
+    return m;
+  }, [libraryItems]);
+
   const fetchItems = async () => {
     setLoading(true);
     const { data } = await supabase
       .from("shopping_list_items")
-      .select("id, name, category, is_checked, notes, quantity, created_at")
+      .select("id, name, category, is_checked, notes, quantity, created_at, created_by, library_item_id, approved_by, approved_at")
       .order("category", { ascending: true })
       .order("is_checked", { ascending: true })
       .order("created_at", { ascending: true });
-    setItems((data as ShoppingItem[]) ?? []);
+    const list = (data as ShoppingItem[]) ?? [];
+    setItems(list);
     setLoading(false);
+
+    // Fetch profile names for created_by + approved_by
+    const ids = Array.from(new Set(list.flatMap(i => [i.created_by, i.approved_by]).filter(Boolean) as string[]));
+    if (ids.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", ids);
+      const map: Record<string, ProfileLite> = {};
+      for (const p of (profs ?? []) as ProfileLite[]) map[p.id] = p;
+      setProfiles(map);
+    }
   };
+
 
   useEffect(() => { fetchItems(); }, []);
 
