@@ -48,6 +48,13 @@ export function ShoppingList() {
   const [newNotes, setNewNotes] = useState("");
   const [adding, setAdding]     = useState(false);
   const [filterChecked, setFilterChecked] = useState(false);
+  const [libQuery, setLibQuery]   = useState("");
+  const [libPick, setLibPick]     = useState<OrderLibraryItem | null>(null);
+
+  const libMatches = useMemo(() => {
+    if (!libQuery.trim()) return [];
+    return findLibraryMatches(libQuery, libraryItems, { minScore: 0.4, limit: 6 });
+  }, [libQuery, libraryItems]);
 
   const fetchItems = async () => {
     setLoading(true);
