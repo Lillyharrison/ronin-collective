@@ -6,7 +6,7 @@ import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary"
 import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
 import { AddToShoppingListSheet } from "@/components/orders/library/AddToShoppingListSheet";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, ShoppingBag, Tag, X, BookOpen, Search, Package } from "lucide-react";
+import { Plus, Trash2, ShoppingBag, Tag, X, BookOpen, Search, Package, ExternalLink, Check, UserCircle2 } from "lucide-react";
 
 interface ShoppingItem {
   id: string;
@@ -16,7 +16,13 @@ interface ShoppingItem {
   notes: string | null;
   quantity: string | null;
   created_at: string;
+  created_by: string | null;
+  library_item_id: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
 }
+
+interface ProfileLite { id: string; full_name: string | null; avatar_url: string | null }
 
 const CATEGORIES: { key: string; label: string; labelEs: string; emoji: string; color: string }[] = [
   { key: "food",      label: "Food & Drink",      labelEs: "Comida y bebida",     emoji: "🍎", color: "bg-green-500/10 text-green-700 border-green-500/20" },
@@ -27,6 +33,7 @@ const CATEGORIES: { key: string; label: string; labelEs: string; emoji: string; 
   { key: "tech",      label: "Tech & Electronics", labelEs: "Tecnología",          emoji: "💡", color: "bg-purple-500/10 text-purple-700 border-purple-500/20" },
   { key: "other",     label: "Other",              labelEs: "Otro",                emoji: "🛒", color: "bg-muted text-muted-foreground border-border" },
 ];
+
 
 function getCategoryMeta(key: string) {
   return CATEGORIES.find(c => c.key === key) ?? CATEGORIES[CATEGORIES.length - 1];
