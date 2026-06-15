@@ -68,7 +68,7 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "calendar-travel",      label: "   ↳ Travel",               labelEs: "   ↳ Viajes",                 hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-construction",label: "   ↳ Construction / Design",labelEs: "   ↳ Construcción / Diseño",  hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "family-calendar",    label: "Family Calendar",     labelEs: "Calendario Familiar", hasEdit: false },
-  { key: "timeline",           label: "Property Timeline",   labelEs: "Cronograma de Propiedad", hasEdit: true  },
+  { key: "timeline",           label: "Construction Timeline", labelEs: "Cronograma de Construcción", hasEdit: true  },
   { key: "staff-schedule",     label: "Staff Schedule",      labelEs: "Horario del Personal", hasEdit: true, hasScope: true },
   { key: "family-movements",   label: "   ↳ Family Movements", labelEs: "   ↳ Movimientos Familiares", hasEdit: false, isFeature: true },
   { key: "car-wash",           label: "Car Wash",            labelEs: "Lavado de Autos",   hasEdit: true  },
