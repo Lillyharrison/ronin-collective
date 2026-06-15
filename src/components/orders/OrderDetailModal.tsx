@@ -136,6 +136,11 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                 <MapPin size={10} /> {order.property.name}
               </span>
             )}
+            {order.assignee?.full_name && (
+              <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">
+                <UserCircle2 size={10} /> {order.assignee.full_name}
+              </span>
+            )}
             {order.delivered_at && (
               <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-[hsl(var(--status-done)/0.1)] text-status-done border-[hsl(var(--status-done)/0.3)]">
                 <Check size={10} /> {isL ? "Entregado" : "Delivered"} {new Date(order.delivered_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
