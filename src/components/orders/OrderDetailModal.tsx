@@ -162,6 +162,21 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                     className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground"
                   />
                 </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                    <UserCircle2 size={9} /> {isL ? "Asignado a" : "Assigned to"}
+                  </label>
+                  <select
+                    value={assignedTo}
+                    onChange={e => setAssignedTo(e.target.value)}
+                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground"
+                  >
+                    <option value="">{isL ? "Sin asignar" : "Unassigned"}</option>
+                    {staff.map(s => (
+                      <option key={s.id} value={s.id}>{s.full_name ?? "—"}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
