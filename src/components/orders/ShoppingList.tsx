@@ -6,7 +6,7 @@ import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary"
 import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
 import { AddToShoppingListSheet } from "@/components/orders/library/AddToShoppingListSheet";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, ShoppingBag, Tag, X, BookOpen, Search, Package } from "lucide-react";
+import { Plus, Trash2, ShoppingBag, Tag, X, BookOpen, Search, Package, ExternalLink, Check, UserCircle2 } from "lucide-react";
 
 interface ShoppingItem {
   id: string;
@@ -16,7 +16,13 @@ interface ShoppingItem {
   notes: string | null;
   quantity: string | null;
   created_at: string;
+  created_by: string | null;
+  library_item_id: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
 }
+
+interface ProfileLite { id: string; full_name: string | null; avatar_url: string | null }
 
 const CATEGORIES: { key: string; label: string; labelEs: string; emoji: string; color: string }[] = [
   { key: "food",      label: "Food & Drink",      labelEs: "Comida y bebida",     emoji: "🍎", color: "bg-green-500/10 text-green-700 border-green-500/20" },
@@ -28,6 +34,7 @@ const CATEGORIES: { key: string; label: string; labelEs: string; emoji: string; 
   { key: "other",     label: "Other",              labelEs: "Otro",                emoji: "🛒", color: "bg-muted text-muted-foreground border-border" },
 ];
 
+
 function getCategoryMeta(key: string) {
   return CATEGORIES.find(c => c.key === key) ?? CATEGORIES[CATEGORIES.length - 1];
 }
@@ -38,6 +45,7 @@ export function ShoppingList() {
   const { items: libraryItems } = useOrderLibrary();
   const isL = language === "es";
   const canDelete = isAdmin || isMasterAdmin || isManager;
+  const canApprove = canDelete;
 
   const [items, setItems]       = useState<ShoppingItem[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -50,23 +58,44 @@ export function ShoppingList() {
   const [filterChecked, setFilterChecked] = useState(false);
   const [libQuery, setLibQuery]   = useState("");
   const [libPick, setLibPick]     = useState<OrderLibraryItem | null>(null);
+  const [profiles, setProfiles]   = useState<Record<string, ProfileLite>>({});
 
   const libMatches = useMemo(() => {
     if (!libQuery.trim()) return [];
     return findLibraryMatches(libQuery, libraryItems, { minScore: 0.4, limit: 6 });
   }, [libQuery, libraryItems]);
 
+  const libraryById = useMemo(() => {
+    const m: Record<string, OrderLibraryItem> = {};
+    for (const it of libraryItems) m[it.id] = it;
+    return m;
+  }, [libraryItems]);
+
   const fetchItems = async () => {
     setLoading(true);
     const { data } = await supabase
       .from("shopping_list_items")
-      .select("id, name, category, is_checked, notes, quantity, created_at")
+      .select("id, name, category, is_checked, notes, quantity, created_at, created_by, library_item_id, approved_by, approved_at")
       .order("category", { ascending: true })
       .order("is_checked", { ascending: true })
       .order("created_at", { ascending: true });
-    setItems((data as ShoppingItem[]) ?? []);
+    const list = (data as ShoppingItem[]) ?? [];
+    setItems(list);
     setLoading(false);
+
+    // Fetch profile names for created_by + approved_by
+    const ids = Array.from(new Set(list.flatMap(i => [i.created_by, i.approved_by]).filter(Boolean) as string[]));
+    if (ids.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", ids);
+      const map: Record<string, ProfileLite> = {};
+      for (const p of (profs ?? []) as ProfileLite[]) map[p.id] = p;
+      setProfiles(map);
+    }
   };
+
 
   useEffect(() => { fetchItems(); }, []);
 
@@ -97,6 +126,22 @@ export function ShoppingList() {
   const handleDelete = async (id: string) => {
     await supabase.from("shopping_list_items").delete().eq("id", id);
     setItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const toggleApprove = async (item: ShoppingItem) => {
+    if (!canApprove || !userId) return;
+    const willApprove = !item.approved_at;
+    const patch = willApprove
+      ? { approved_by: userId, approved_at: new Date().toISOString() }
+      : { approved_by: null, approved_at: null };
+    const { error } = await supabase.from("shopping_list_items").update(patch).eq("id", item.id);
+    if (error) return;
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, ...patch } as ShoppingItem : i));
+    // Ensure approver's name is in profile map
+    if (willApprove && !profiles[userId]) {
+      const { data } = await supabase.from("profiles").select("id, full_name, avatar_url").eq("id", userId).maybeSingle();
+      if (data) setProfiles(prev => ({ ...prev, [data.id]: data as ProfileLite }));
+    }
   };
 
   const clearChecked = async () => {
@@ -277,21 +322,29 @@ export function ShoppingList() {
               </div>
               {/* Items */}
               <div className="space-y-1.5">
-                {group.items.map(item => (
+                {group.items.map(item => {
+                  const lib = item.library_item_id ? libraryById[item.library_item_id] : null;
+                  const buyUrl = lib?.website_url || lib?.purchase || null;
+                  const addedBy = item.created_by ? profiles[item.created_by] : null;
+                  const approvedBy = item.approved_by ? profiles[item.approved_by] : null;
+                  const isApproved = !!item.approved_at;
+                  return (
                   <div
                     key={item.id}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all",
+                      "flex items-start gap-3 px-3 py-2.5 rounded-xl border transition-all",
                       item.is_checked
                         ? "bg-muted/30 border-border opacity-50"
-                        : "bg-card border-border hover:border-[hsl(var(--gold)/0.3)]"
+                        : isApproved
+                          ? "bg-card border-[hsl(var(--status-done)/0.4)] hover:border-[hsl(var(--status-done))]"
+                          : "bg-card border-border hover:border-[hsl(var(--gold)/0.3)]"
                     )}
                   >
                     {/* Checkbox */}
                     <button
                       onClick={() => toggleCheck(item)}
                       className={cn(
-                        "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                        "mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors",
                         item.is_checked
                           ? "bg-[hsl(var(--status-done))] border-[hsl(var(--status-done))]"
                           : "border-border hover:border-[hsl(var(--gold))]"
@@ -302,12 +355,20 @@ export function ShoppingList() {
 
                     {/* Name + details */}
                     <div className="flex-1 min-w-0">
-                      <span className={cn(
-                        "text-sm font-medium",
-                        item.is_checked ? "line-through text-muted-foreground" : "text-foreground"
-                      )}>
-                        {item.name}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={cn(
+                          "text-sm font-medium",
+                          item.is_checked ? "line-through text-muted-foreground" : "text-foreground"
+                        )}>
+                          {item.name}
+                        </span>
+                        {isApproved && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] border border-[hsl(var(--status-done)/0.3)]">
+                            <Check size={9} strokeWidth={3} />
+                            {isL ? "Aprobado" : "Approved"}
+                          </span>
+                        )}
+                      </div>
                       {(item.quantity || item.notes) && (
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           {item.quantity && <span className="font-medium">{item.quantity}</span>}
@@ -315,7 +376,50 @@ export function ShoppingList() {
                           {item.notes}
                         </p>
                       )}
+                      <div className="flex items-center gap-2 flex-wrap mt-1 text-[10px] text-muted-foreground">
+                        {addedBy && (
+                          <span className="inline-flex items-center gap-1">
+                            <UserCircle2 size={10} />
+                            {isL ? "Añadido por" : "Added by"} <span className="font-medium text-foreground/80">{addedBy.full_name || "—"}</span>
+                          </span>
+                        )}
+                        {isApproved && approvedBy && (
+                          <span className="inline-flex items-center gap-1">
+                            · <Check size={10} className="text-[hsl(var(--status-done))]" strokeWidth={3} />
+                            {isL ? "Aprobado por" : "Approved by"} <span className="font-medium text-foreground/80">{approvedBy.full_name || "—"}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Buy link */}
+                    {buyUrl && (
+                      <a
+                        href={buyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={isL ? "Comprar" : "Buy now"}
+                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[hsl(var(--gold))] hover:bg-[hsl(var(--gold)/0.1)] transition-colors flex-shrink-0"
+                      >
+                        <ExternalLink size={16} />
+                      </a>
+                    )}
+
+                    {/* Approval toggle (editors only) */}
+                    {canApprove && (
+                      <button
+                        onClick={() => toggleApprove(item)}
+                        title={isApproved ? (isL ? "Quitar aprobación" : "Unapprove") : (isL ? "Aprobar" : "Approve")}
+                        className={cn(
+                          "p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-colors flex-shrink-0",
+                          isApproved
+                            ? "bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.25)]"
+                            : "text-muted-foreground hover:text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.1)]"
+                        )}
+                      >
+                        <Check size={16} strokeWidth={isApproved ? 3 : 2} />
+                      </button>
+                    )}
 
                     {/* Delete */}
                     {canDelete && (
@@ -327,7 +431,8 @@ export function ShoppingList() {
                       </button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))

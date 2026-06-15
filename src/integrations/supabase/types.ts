@@ -1495,6 +1495,8 @@ export type Database = {
       }
       shopping_list_items: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           category: string
           created_at: string
           created_by: string | null
@@ -1508,6 +1510,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1521,6 +1525,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1534,6 +1540,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shopping_list_items_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shopping_list_items_property_id_fkey"
             columns: ["property_id"]
