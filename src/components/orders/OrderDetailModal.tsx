@@ -48,7 +48,17 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
   const [expectedDelivery, setExpectedDelivery] = useState(
     order.expected_delivery ? order.expected_delivery.slice(0, 10) : ""
   );
+  const [assignedTo, setAssignedTo] = useState<string>(order.assigned_to ?? "");
+  const [staff, setStaff] = useState<{ id: string; full_name: string | null }[]>([]);
   const [saving, setSaving]       = useState(false);
+  const [delivering, setDelivering] = useState(false);
+
+  useEffect(() => {
+    if (!canEdit) return;
+    supabase.from("profiles").select("id, full_name, level").order("full_name").then(({ data }) => {
+      setStaff(filterAssignableStaff((data as any[]) ?? []) as any);
+    });
+  }, [canEdit]);
   const [delivering, setDelivering] = useState(false);
 
   const handleSave = async () => {
