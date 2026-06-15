@@ -84,18 +84,32 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
 ];
 
-// Quick actions available on the dashboard
+// Quick actions available on the dashboard — mirrors every section in the hamburger sidebar.
+// All new options default to OFF; admins enable them per user as needed.
 export const ALL_QUICK_ACTIONS: { key: string; label: string; labelEs: string; icon: string }[] = [
-  { key: "checklists",  label: "Checklists",     labelEs: "Listas",            icon: "📋" },
-  { key: "orders",      label: "Orders",         labelEs: "Pedidos",           icon: "🛍️" },
-  { key: "reportIssue", label: "Report Issue",   labelEs: "Reportar Problema", icon: "⚠️" },
-  { key: "calendar",    label: "Calendar",       labelEs: "Calendario",        icon: "🕐" },
-  { key: "staffSchedule", label: "Staff Schedule", labelEs: "Horario del Personal", icon: "📅" },
-  { key: "tasks",       label: "Tasks",          labelEs: "Tareas",            icon: "✅" },
-  { key: "maintenance", label: "Maintenance",    labelEs: "Mantenimiento",     icon: "🔧" },
-  { key: "messages",    label: "Messages",       labelEs: "Mensajes",          icon: "💬" },
-  { key: "inventory",   label: "Inventory",      labelEs: "Inventario",        icon: "📦" },
-  { key: "carWash",     label: "Car Wash",       labelEs: "Lavado de Autos",   icon: "🚗" },
+  { key: "dashboard",     label: "Home",                labelEs: "Inicio",                  icon: "🏠" },
+  { key: "property",      label: "Properties",          labelEs: "Propiedades",             icon: "🏛️" },
+  { key: "messages",      label: "Messages",            labelEs: "Mensajes",                icon: "💬" },
+  { key: "maintenance",   label: "Maintenance",         labelEs: "Mantenimiento",           icon: "🔧" },
+  { key: "reportIssue",   label: "Report Issue",        labelEs: "Reportar Problema",       icon: "⚠️" },
+  { key: "profile",       label: "Profile",             labelEs: "Perfil",                  icon: "👤" },
+  { key: "calendar",      label: "Calendar",            labelEs: "Calendario",              icon: "🕐" },
+  { key: "timeline",      label: "Construction Timeline", labelEs: "Cronograma de Construcción", icon: "📊" },
+  { key: "staffSchedule", label: "Staff Schedule",      labelEs: "Horario del Personal",    icon: "📅" },
+  { key: "carWash",       label: "Car Wash",            labelEs: "Lavado de Autos",         icon: "🚗" },
+  { key: "travel",        label: "Travel",              labelEs: "Viajes",                  icon: "✈️" },
+  { key: "tasks",         label: "Tasks",               labelEs: "Tareas",                  icon: "✅" },
+  { key: "alerts",        label: "Alerts",              labelEs: "Alertas",                 icon: "🔔" },
+  { key: "checklists",    label: "Checklists",          labelEs: "Listas",                  icon: "📋" },
+  { key: "manuals",       label: "Manuals",             labelEs: "Manuales",                icon: "📖" },
+  { key: "orders",        label: "Orders",              labelEs: "Pedidos",                 icon: "🛍️" },
+  { key: "inventory",     label: "Inventory",           labelEs: "Inventario",              icon: "📦" },
+  { key: "laundry",       label: "Laundry",             labelEs: "Lavandería",              icon: "🧺" },
+  { key: "meetTeam",      label: "Meet the Team",       labelEs: "Conoce al Equipo",        icon: "👥" },
+  { key: "vendors",       label: "Vendors",             labelEs: "Proveedores",             icon: "📇" },
+  { key: "rules",         label: "Rules",               labelEs: "Reglas",                  icon: "🛡️" },
+  { key: "masterImport",  label: "Master Import",       labelEs: "Importación Maestra",     icon: "📥" },
+  { key: "memory",        label: "Ronin's Memory",      labelEs: "Memoria de Ronin",        icon: "🧠" },
 ];
 
 export const LEVEL_OPTIONS: { value: Level; label: string; labelEs: string }[] = [
