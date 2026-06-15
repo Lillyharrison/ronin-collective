@@ -452,7 +452,7 @@ export function OrdersSection() {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
-      .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, property:properties(name)")
+      .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, assigned_to, property:properties(name), assignee:profiles!orders_assigned_to_fkey(full_name)")
       .order("created_at", { ascending: false })
       .range(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE - 1);
     if (error) console.error(error);
