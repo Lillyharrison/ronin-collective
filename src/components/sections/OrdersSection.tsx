@@ -486,13 +486,14 @@ export function OrdersSection() {
   const notPlacedCount = pending.filter(o => o.status === "not_placed").length;
 
   const tableHeaders = [
-    isL ? "Artículo" : "Item",
-    activeTab === "pending" ? (isL ? "Fecha estimada" : "Est. Delivery") : (isL ? "Entregado" : "Delivered"),
-    isL ? "Destino" : "Destination",
-    isL ? "Transportista" : "Carrier",
-    isL ? "N° Seguimiento" : "Tracking #",
-    isL ? "Enlace" : "Link",
-    "",
+    { label: isL ? "Artículo" : "Item", w: "28%" },
+    { label: isL ? "Asignado" : "Assigned", w: "13%" },
+    { label: activeTab === "pending" ? (isL ? "Fecha estimada" : "Est. Delivery") : (isL ? "Entregado" : "Delivered"), w: "11%" },
+    { label: isL ? "Destino" : "Destination", w: "13%" },
+    { label: isL ? "Transportista" : "Carrier", w: "10%" },
+    { label: isL ? "N° Seguimiento" : "Tracking #", w: "12%" },
+    { label: isL ? "Enlace" : "Link", w: "7%" },
+    { label: "", w: "6%" },
   ];
 
   const displayed = activeTab === "pending" ? pending : delivered;
