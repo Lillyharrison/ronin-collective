@@ -45,6 +45,7 @@ export function ShoppingList() {
   const { items: libraryItems } = useOrderLibrary();
   const isL = language === "es";
   const canDelete = isAdmin || isMasterAdmin || isManager;
+  const canApprove = canDelete;
 
   const [items, setItems]       = useState<ShoppingItem[]>([]);
   const [loading, setLoading]   = useState(true);
