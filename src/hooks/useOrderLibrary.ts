@@ -27,6 +27,7 @@ export interface OrderLibraryItem {
   status: LibraryStatus;
   substitutions_allowed: boolean;
   search_aliases: string[];
+  property_ids: string[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -34,8 +35,8 @@ export interface OrderLibraryItem {
 
 export type NewOrderLibraryItem = Omit<
   OrderLibraryItem,
-  "id" | "created_at" | "updated_at" | "created_by"
-> & { created_by?: string | null };
+  "id" | "created_at" | "updated_at" | "created_by" | "property_ids"
+> & { created_by?: string | null; property_ids?: string[] };
 
 export function useOrderLibrary() {
   const [items, setItems] = useState<OrderLibraryItem[]>([]);

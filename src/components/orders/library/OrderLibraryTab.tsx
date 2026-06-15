@@ -10,6 +10,7 @@ import { Search, Plus, BookOpen, LayoutGrid, List, Lock, RefreshCw, CheckSquare,
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { cn } from "@/lib/utils";
 import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary";
 import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
@@ -47,9 +48,11 @@ export function OrderLibraryTab() {
   const canEditLibrary = isAdmin || isMasterAdmin || canEdit("orders");
 
   const { items, loading } = useOrderLibrary();
+  const { properties } = useScopedProperties();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("preferred");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [selected, setSelected] = useState<OrderLibraryItem | null>(null);
   const [editing, setEditing] = useState<OrderLibraryItem | null>(null);
   const [creating, setCreating] = useState(false);
@@ -103,6 +106,11 @@ export function OrderLibraryTab() {
     let list = items;
     if (statusFilter !== "all") list = list.filter((i) => i.status === statusFilter);
     if (categoryFilter !== "all") list = list.filter((i) => i.category === categoryFilter);
+    if (propertyFilter !== "all") {
+      list = list.filter((i) =>
+        !i.property_ids || i.property_ids.length === 0 || i.property_ids.includes(propertyFilter),
+      );
+    }
     if (query.trim()) {
       const matches = findLibraryMatches(query, list, { minScore: 0.4, limit: 50 });
       list = matches.map((m) => m.item);
@@ -131,7 +139,7 @@ export function OrderLibraryTab() {
       });
     }
     return list;
-  }, [items, statusFilter, categoryFilter, query, viewMode, sortKey, sortDir]);
+  }, [items, statusFilter, categoryFilter, propertyFilter, query, viewMode, sortKey, sortDir]);
 
   const handleEditFromDetail = (item: OrderLibraryItem) => {
     setSelected(null);
@@ -246,6 +254,22 @@ export function OrderLibraryTab() {
                     {isL ? c.labelEs : c.label}
                   </span>
                 </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder={isL ? "Todas las propiedades" : "All properties"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                🏠 {isL ? "Todas las propiedades" : "All properties"}
+              </SelectItem>
+              {properties.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -6,10 +6,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Package, Check, ExternalLink, Truck, Calendar,
-  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle,
+  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle, Plus,
 } from "lucide-react";
 import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
 import { ShoppingList } from "@/components/orders/ShoppingList";
+import { NewOrderModal } from "@/components/orders/NewOrderModal";
 import { OrderLibraryTab } from "@/components/orders/library/OrderLibraryTab";
 import { BookOpen } from "lucide-react";
 
@@ -81,16 +82,16 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
       )}
     >
       {/* Item */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 w-full">
         <div className="flex items-center gap-2 min-w-0">
           {isNotPlaced
             ? <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
             : <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />}
-          <span className="text-sm font-medium text-foreground truncate max-w-[140px]">{order.title}</span>
+          <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{order.title}</span>
           <StatusBadge status={order.status} />
         </div>
         {order.description && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[200px] pl-5">{order.description}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate pl-5">{order.description}</p>
         )}
       </td>
 
@@ -191,13 +192,13 @@ function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => v
       onClick={() => onOpen(order)}
       className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group opacity-70"
     >
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 w-full">
         <div className="flex items-center gap-2 min-w-0">
           <Check size={13} className="text-status-done flex-shrink-0" />
-          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title}</span>
+          <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{order.title}</span>
         </div>
         {order.description && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{order.description}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{order.description}</p>
         )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
@@ -435,6 +436,8 @@ function DeliveredTile({ order, onOpen }: { order: Order; onOpen: (o: Order) => 
 export function OrdersSection() {
   const { language } = useLanguage();
   const isL = language === "es";
+  const { isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
+  const canCreateOrder = isAdmin || isMasterAdmin || isManager || canEdit("orders");
 
   const PAGE_SIZE = 50;
   const [orders, setOrders]         = useState<Order[]>([]);
@@ -442,6 +445,7 @@ export function OrdersSection() {
   const [hasMore, setHasMore]       = useState(false);
   const [page, setPage]             = useState(0);
   const [modalOrder, setModalOrder] = useState<Order | null>(null);
+  const [creating, setCreating]     = useState(false);
   const [activeTab, setActiveTab]   = useLocalStorage<MainTab>("orders-active-tab", "pending");
 
   const fetchOrders = async (pageIndex = 0) => {
@@ -496,14 +500,25 @@ export function OrdersSection() {
   return (
     <div className="animate-fade-in pb-6">
       {/* Header */}
-      <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light">
-        <h1 className="font-display text-3xl text-cream leading-tight">
-          {isL ? "Pedidos" : "Orders"} <span className="text-gold">&</span>{" "}
-          {isL ? "Entregas" : "Deliveries"}
-        </h1>
-        <p className="text-cream/40 text-xs mt-1 tracking-wide">
-          {isL ? "Pedidos, entregas pendientes y lista de compras" : "Purchase orders, pending deliveries & shopping list"}
-        </p>
+      <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-3xl text-cream leading-tight">
+            {isL ? "Pedidos" : "Orders"} <span className="text-gold">&</span>{" "}
+            {isL ? "Entregas" : "Deliveries"}
+          </h1>
+          <p className="text-cream/40 text-xs mt-1 tracking-wide">
+            {isL ? "Pedidos, entregas pendientes y lista de compras" : "Purchase orders, pending deliveries & shopping list"}
+          </p>
+        </div>
+        {canCreateOrder && (activeTab === "pending" || activeTab === "delivered") && (
+          <button
+            onClick={() => setCreating(true)}
+            className="flex-shrink-0 inline-flex items-center gap-1.5 bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-transform shadow-sm"
+          >
+            <Plus size={14} />
+            {isL ? "Nuevo" : "New order"}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -662,6 +677,13 @@ export function OrdersSection() {
           onSaved={fetchOrders}
         />
       )}
+
+      {/* New order modal */}
+      <NewOrderModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        onSaved={() => fetchOrders(0)}
+      />
     </div>
   );
 }

@@ -34,8 +34,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Upload, Loader2, Package } from "lucide-react";
+import { Trash2, Upload, Loader2, Package, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import {
   useOrderLibrary,
   type OrderLibraryItem,
@@ -62,6 +64,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
   const { language } = useLanguage();
   const isL = language === "es";
   const { createItem, updateItem, deleteItem, uploadImage } = useOrderLibrary();
+  const { properties } = useScopedProperties();
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("supplies");
@@ -74,6 +77,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
   const [status, setStatus] = useState<LibraryStatus>("preferred");
   const [subAllowed, setSubAllowed] = useState(false);
   const [aliases, setAliases] = useState("");
+  const [propertyIds, setPropertyIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -92,6 +96,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setStatus(item.status);
       setSubAllowed(item.substitutions_allowed);
       setAliases((item.search_aliases ?? []).join(", "));
+      setPropertyIds(item.property_ids ?? []);
     } else {
       setName("");
       setCategory("supplies");
@@ -104,6 +109,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setStatus("preferred");
       setSubAllowed(false);
       setAliases("");
+      setPropertyIds([]);
     }
   }, [item, open]);
 
@@ -133,6 +139,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       status,
       substitutions_allowed: subAllowed,
       search_aliases: aliasArr,
+      property_ids: propertyIds,
     };
     const result = item
       ? await updateItem(item.id, payload)
@@ -315,6 +322,55 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
                 </p>
               </div>
               <Switch checked={subAllowed} onCheckedChange={setSubAllowed} />
+            </div>
+
+            <div className="space-y-1.5 rounded-lg border border-border p-3">
+              <Label className="text-xs">
+                {isL ? "Propiedades" : "Properties"}
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                {isL
+                  ? "Vacío = disponible en todas las propiedades."
+                  : "Leave empty to make this item available across all properties."}
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPropertyIds([])}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                    propertyIds.length === 0
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted text-muted-foreground border-border hover:bg-accent",
+                  )}
+                >
+                  {propertyIds.length === 0 && <Check className="h-3 w-3" />}
+                  {isL ? "Todas las propiedades" : "All properties"}
+                </button>
+                {properties.map((p) => {
+                  const selected = propertyIds.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() =>
+                        setPropertyIds((prev) =>
+                          prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id],
+                        )
+                      }
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                        selected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-border hover:bg-accent",
+                      )}
+                    >
+                      {selected && <Check className="h-3 w-3" />}
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

@@ -968,6 +968,7 @@ export type Database = {
           image_url: string | null
           name: string
           notes: string | null
+          property_ids: string[]
           purchase: string | null
           search_aliases: string[]
           size: string | null
@@ -985,6 +986,7 @@ export type Database = {
           image_url?: string | null
           name: string
           notes?: string | null
+          property_ids?: string[]
           purchase?: string | null
           search_aliases?: string[]
           size?: string | null
@@ -1002,6 +1004,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           notes?: string | null
+          property_ids?: string[]
           purchase?: string | null
           search_aliases?: string[]
           size?: string | null

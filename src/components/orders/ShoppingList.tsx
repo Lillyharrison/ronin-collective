@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary";
+import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
+import { AddToShoppingListSheet } from "@/components/orders/library/AddToShoppingListSheet";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, ShoppingBag, Tag, X } from "lucide-react";
+import { Plus, Trash2, ShoppingBag, Tag, X, BookOpen, Search, Package } from "lucide-react";
 
 interface ShoppingItem {
   id: string;
@@ -32,6 +35,7 @@ function getCategoryMeta(key: string) {
 export function ShoppingList() {
   const { language } = useLanguage();
   const { userId, isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const { items: libraryItems } = useOrderLibrary();
   const isL = language === "es";
   const canDelete = isAdmin || isMasterAdmin || isManager;
 
@@ -44,6 +48,13 @@ export function ShoppingList() {
   const [newNotes, setNewNotes] = useState("");
   const [adding, setAdding]     = useState(false);
   const [filterChecked, setFilterChecked] = useState(false);
+  const [libQuery, setLibQuery]   = useState("");
+  const [libPick, setLibPick]     = useState<OrderLibraryItem | null>(null);
+
+  const libMatches = useMemo(() => {
+    if (!libQuery.trim()) return [];
+    return findLibraryMatches(libQuery, libraryItems, { minScore: 0.4, limit: 6 });
+  }, [libQuery, libraryItems]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -106,6 +117,7 @@ export function ShoppingList() {
   const checkedCount = items.filter(i => i.is_checked).length;
 
   return (
+    <>
     <div>
       {/* Sub-header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -147,6 +159,46 @@ export function ShoppingList() {
           </button>
         </div>
       </div>
+
+      {/* Library search */}
+      <div className="px-4 py-3 border-b border-border bg-muted/20">
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+          <BookOpen size={11} className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--gold))]" />
+          <input
+            type="search"
+            value={libQuery}
+            onChange={(e) => setLibQuery(e.target.value)}
+            placeholder={isL ? "Buscar en la biblioteca…" : "Search the library to add…"}
+            className="w-full h-10 pl-9 pr-9 text-base sm:text-sm rounded-xl border border-border bg-background placeholder:text-muted-foreground/60 outline-none focus:border-primary"
+          />
+        </div>
+        {libMatches.length > 0 && (
+          <div className="mt-2 rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
+            {libMatches.map(({ item }) => (
+              <button
+                key={item.id}
+                onClick={() => { setLibPick(item); setLibQuery(""); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-accent/40 transition-colors"
+              >
+                <div className="h-8 w-8 shrink-0 rounded-md border border-border bg-muted/30 overflow-hidden p-0.5">
+                  {item.image_url
+                    ? <img src={item.image_url} alt="" className="h-full w-full object-contain" />
+                    : <div className="flex h-full w-full items-center justify-center"><Package size={12} className="text-muted-foreground/40" /></div>}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                  {item.default_quantity && (
+                    <p className="text-[10px] text-muted-foreground truncate">{item.default_quantity}{item.size ? ` · ${item.size}` : ""}</p>
+                  )}
+                </div>
+                <Plus size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
 
       {/* Add item form */}
       {showAdd && (
@@ -282,5 +334,15 @@ export function ShoppingList() {
         )}
       </div>
     </div>
+
+    {libPick && (
+      <AddToShoppingListSheet
+        item={libPick}
+        open={!!libPick}
+        onClose={() => setLibPick(null)}
+        onAdded={fetchItems}
+      />
+    )}
+    </>
   );
 }
