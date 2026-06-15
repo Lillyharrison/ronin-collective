@@ -22,7 +22,9 @@ export interface Order {
   packing_list: string | null;
   notes: string | null;
   created_at: string;
+  assigned_to: string | null;
   property?: { name: string } | null;
+  assignee?: { full_name: string | null } | null;
 }
 
 interface Props {
