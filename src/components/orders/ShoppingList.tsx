@@ -128,6 +128,22 @@ export function ShoppingList() {
     setItems(prev => prev.filter(i => i.id !== id));
   };
 
+  const toggleApprove = async (item: ShoppingItem) => {
+    if (!canApprove || !userId) return;
+    const willApprove = !item.approved_at;
+    const patch = willApprove
+      ? { approved_by: userId, approved_at: new Date().toISOString() }
+      : { approved_by: null, approved_at: null };
+    const { error } = await supabase.from("shopping_list_items").update(patch).eq("id", item.id);
+    if (error) return;
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, ...patch } as ShoppingItem : i));
+    // Ensure approver's name is in profile map
+    if (willApprove && !profiles[userId]) {
+      const { data } = await supabase.from("profiles").select("id, full_name, avatar_url").eq("id", userId).maybeSingle();
+      if (data) setProfiles(prev => ({ ...prev, [data.id]: data as ProfileLite }));
+    }
+  };
+
   const clearChecked = async () => {
     const checkedIds = items.filter(i => i.is_checked).map(i => i.id);
     if (!checkedIds.length) return;
