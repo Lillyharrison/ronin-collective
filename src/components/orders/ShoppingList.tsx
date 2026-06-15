@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useOrderLibrary, type OrderLibraryItem } from "@/hooks/useOrderLibrary";
+import { findLibraryMatches } from "@/lib/libraryFuzzyMatch";
+import { AddToShoppingListSheet } from "@/components/orders/library/AddToShoppingListSheet";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, ShoppingBag, Tag, X } from "lucide-react";
+import { Plus, Trash2, ShoppingBag, Tag, X, BookOpen, Search, Package } from "lucide-react";
 
 interface ShoppingItem {
   id: string;
@@ -32,6 +35,7 @@ function getCategoryMeta(key: string) {
 export function ShoppingList() {
   const { language } = useLanguage();
   const { userId, isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const { items: libraryItems } = useOrderLibrary();
   const isL = language === "es";
   const canDelete = isAdmin || isMasterAdmin || isManager;
 
