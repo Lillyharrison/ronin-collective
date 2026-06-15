@@ -542,7 +542,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
     const titleStr = "Property Portfolio — " + MN[fm - 1] + " " + fy + " to " + MN[tm - 1] + " " + ty;
 
-    let html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Property Timeline</title>";
+    let html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Construction Timeline</title>";
     html += "<style>";
     html += "*{box-sizing:border-box;margin:0;padding:0}";
     html += "body{font-family:Arial,sans-serif;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}";

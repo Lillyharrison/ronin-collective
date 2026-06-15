@@ -8,6 +8,8 @@ import {
   Clock, ShoppingBag, TriangleAlert, CheckSquare,
   Activity, Zap, Shield, ClipboardList, X, Bell,
   Pencil, Check, ExternalLink, MapPin, Car, CalendarClock,
+  Home, Building2, Wrench, User, Plane, BookOpen, Package,
+  Shirt, UsersRound, Users, FileSpreadsheet, Brain, BarChart3,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
@@ -53,18 +55,32 @@ const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
   checklist:         "checklists",
 };
 
-// Quick actions shown to all users, filtered by per-user canSee permissions
+// Quick actions shown to all users, filtered by per-user canSee permissions.
+// Keys must match `ALL_QUICK_ACTIONS` in teamConstants so admin toggles map 1:1.
 const ALL_QUICK_ACTIONS_DASHBOARD = [
-  { key: "checklists",  labelKey: "checklists" as const,   labelEs: "Listas",            icon: <ClipboardList size={26} />, section: "checklists" as const },
-  { key: "orders",      labelKey: "orders" as const,       labelEs: "Pedidos",           icon: <ShoppingBag size={26} />,  section: "orders" as const },
-  { key: "reportIssue", labelKey: "reportIssue" as const,  labelEs: "Reportar Problema", icon: <TriangleAlert size={26} />,section: "maintenance" as const },
-  { key: "calendar",    labelKey: "calendar" as const,     labelEs: "Calendario",        icon: <Clock size={26} />,        section: "calendar" as const },
-  { key: "staffSchedule", labelKey: "staffSchedule" as const, labelEs: "Horario del Personal", icon: <CalendarClock size={26} />, section: "staff-schedule" as const },
-  { key: "tasks",       labelKey: "tasks" as const,        labelEs: "Tareas",            icon: <CheckSquare size={26} />,  section: "tasks" as const },
-  { key: "maintenance", labelKey: "maintenance" as const,  labelEs: "Mantenimiento",     icon: <Zap size={26} />,          section: "maintenance" as const },
-  { key: "messages",    labelKey: "messages" as const,     labelEs: "Mensajes",          icon: <Activity size={26} />,     section: "messages" as const },
-  { key: "inventory",   labelKey: "inventory" as const,    labelEs: "Inventario",        icon: <ShoppingBag size={26} />,  section: "inventory" as const },
-  { key: "carWash",     labelKey: "carWash" as const,      labelEs: "Lavado de Autos",   icon: <Car size={26} />,          section: "car-wash" as const },
+  { key: "dashboard",     labelKey: "home" as const,             labelEs: "Inicio",                  icon: <Home size={26} />,          section: "dashboard" as const },
+  { key: "property",      labelKey: "property" as const,         labelEs: "Propiedades",             icon: <Building2 size={26} />,     section: "property" as const },
+  { key: "messages",      labelKey: "messages" as const,         labelEs: "Mensajes",                icon: <Activity size={26} />,      section: "messages" as const },
+  { key: "maintenance",   labelKey: "maintenance" as const,      labelEs: "Mantenimiento",           icon: <Wrench size={26} />,        section: "maintenance" as const },
+  { key: "reportIssue",   labelKey: "reportIssue" as const,      labelEs: "Reportar Problema",       icon: <TriangleAlert size={26} />, section: "maintenance" as const },
+  { key: "profile",       labelKey: "profile" as const,          labelEs: "Perfil",                  icon: <User size={26} />,          section: "profile" as const },
+  { key: "calendar",      labelKey: "calendar" as const,         labelEs: "Calendario",              icon: <Clock size={26} />,         section: "calendar" as const },
+  { key: "timeline",      labelKey: "propertyTimeline" as const, labelEs: "Cronograma de Construcción", icon: <BarChart3 size={26} />,  section: "timeline" as const },
+  { key: "staffSchedule", labelKey: "staffSchedule" as const,    labelEs: "Horario del Personal",    icon: <CalendarClock size={26} />, section: "staff-schedule" as const },
+  { key: "carWash",       labelKey: "carWash" as const,          labelEs: "Lavado de Autos",         icon: <Car size={26} />,           section: "car-wash" as const },
+  { key: "travel",        labelKey: "travel" as const,           labelEs: "Viajes",                  icon: <Plane size={26} />,         section: "travel" as const },
+  { key: "tasks",         labelKey: "tasks" as const,            labelEs: "Tareas",                  icon: <CheckSquare size={26} />,   section: "tasks" as const },
+  { key: "alerts",        labelKey: "alerts" as const,           labelEs: "Alertas",                 icon: <Bell size={26} />,          section: "alerts" as const },
+  { key: "checklists",    labelKey: "checklists" as const,       labelEs: "Listas",                  icon: <ClipboardList size={26} />, section: "checklists" as const },
+  { key: "manuals",       labelKey: "manuals" as const,          labelEs: "Manuales",                icon: <BookOpen size={26} />,      section: "manuals" as const },
+  { key: "orders",        labelKey: "orders" as const,           labelEs: "Pedidos",                 icon: <ShoppingBag size={26} />,   section: "orders" as const },
+  { key: "inventory",     labelKey: "inventory" as const,        labelEs: "Inventario",              icon: <Package size={26} />,       section: "inventory" as const },
+  { key: "laundry",       labelKey: "laundry" as const,          labelEs: "Lavandería",              icon: <Shirt size={26} />,         section: "laundry" as const },
+  { key: "meetTeam",      labelKey: "meetTeam" as const,         labelEs: "Conoce al Equipo",        icon: <UsersRound size={26} />,    section: "meet-team" as const },
+  { key: "vendors",       labelKey: "vendors" as const,          labelEs: "Proveedores",             icon: <Users size={26} />,         section: "vendors" as const },
+  { key: "rules",         labelKey: "rules" as const,            labelEs: "Reglas",                  icon: <Shield size={26} />,        section: "rules" as const },
+  { key: "masterImport",  labelKey: "masterImport" as const,     labelEs: "Importación Maestra",     icon: <FileSpreadsheet size={26} />, section: "master-import" as const },
+  { key: "memory",        labelKey: "memory" as const,           labelEs: "Memoria de Ronin",        icon: <Brain size={26} />,         section: "memory" as const },
 ];
 
 const TYPE_STYLES: Record<string, { dot: string; border: string }> = {
