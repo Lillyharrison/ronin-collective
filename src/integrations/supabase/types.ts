@@ -1017,6 +1017,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          assigned_to: string | null
           carrier: string | null
           created_at: string
           created_by: string | null
@@ -1035,6 +1036,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
           carrier?: string | null
           created_at?: string
           created_by?: string | null
@@ -1053,6 +1055,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
           carrier?: string | null
           created_at?: string
           created_by?: string | null
@@ -1071,6 +1074,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_property_id_fkey"
             columns: ["property_id"]
