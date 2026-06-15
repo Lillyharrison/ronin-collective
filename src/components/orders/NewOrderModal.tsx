@@ -40,12 +40,21 @@ export function NewOrderModal({ open, onClose, onSaved }: Props) {
   const [carrier, setCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
+  const [assignedTo, setAssignedTo] = useState<string>("none");
+  const [staff, setStaff] = useState<{ id: string; full_name: string | null }[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("profiles").select("id, full_name, level").order("full_name").then(({ data }) => {
+      setStaff(filterAssignableStaff((data as any[]) ?? []) as any);
+    });
+  }, [open]);
 
   const reset = () => {
     setTitle(""); setDescription(""); setPropertyId("none");
     setStatus("not_placed"); setExpectedDelivery("");
-    setCarrier(""); setTrackingNumber(""); setTrackingUrl("");
+    setCarrier(""); setTrackingNumber(""); setTrackingUrl(""); setAssignedTo("none");
   };
 
   const handleSave = async () => {
