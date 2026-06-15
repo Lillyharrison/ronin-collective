@@ -59,7 +59,6 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
       setStaff(filterAssignableStaff((data as any[]) ?? []) as any);
     });
   }, [canEdit]);
-  const [delivering, setDelivering] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -70,6 +69,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
       packing_list:     packingList || null,
       notes:            notes || null,
       expected_delivery: expectedDelivery || null,
+      assigned_to:      assignedTo || null,
     } as any).eq("id", order.id);
     setSaving(false);
     onSaved();
