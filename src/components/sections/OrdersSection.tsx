@@ -204,13 +204,23 @@ function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => v
       onClick={() => onOpen(order)}
       className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group opacity-70"
     >
-      <td className="px-4 py-3 w-full">
+      <td className="px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <Check size={13} className="text-status-done flex-shrink-0" />
           <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{order.title}</span>
         </div>
         {order.description && (
           <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{order.description}</p>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {order.assignee?.full_name ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+            <UserCircle2 size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.assignee.full_name}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
         )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
