@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { cn } from "@/lib/utils";
 import {
   X, Truck, Link as LinkIcon, FileText, Check, Calendar,
-  MapPin, ExternalLink, Trash2, Save,
+  MapPin, ExternalLink, Trash2, Save, UserCircle2,
 } from "lucide-react";
 
 export interface Order {
