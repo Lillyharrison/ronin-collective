@@ -34,8 +34,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Upload, Loader2, Package } from "lucide-react";
+import { Trash2, Upload, Loader2, Package, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import {
   useOrderLibrary,
   type OrderLibraryItem,
@@ -62,6 +64,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
   const { language } = useLanguage();
   const isL = language === "es";
   const { createItem, updateItem, deleteItem, uploadImage } = useOrderLibrary();
+  const { properties } = useScopedProperties();
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("supplies");
@@ -74,6 +77,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
   const [status, setStatus] = useState<LibraryStatus>("preferred");
   const [subAllowed, setSubAllowed] = useState(false);
   const [aliases, setAliases] = useState("");
+  const [propertyIds, setPropertyIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -92,6 +96,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setStatus(item.status);
       setSubAllowed(item.substitutions_allowed);
       setAliases((item.search_aliases ?? []).join(", "));
+      setPropertyIds(item.property_ids ?? []);
     } else {
       setName("");
       setCategory("supplies");
@@ -104,6 +109,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setStatus("preferred");
       setSubAllowed(false);
       setAliases("");
+      setPropertyIds([]);
     }
   }, [item, open]);
 
@@ -133,6 +139,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       status,
       substitutions_allowed: subAllowed,
       search_aliases: aliasArr,
+      property_ids: propertyIds,
     };
     const result = item
       ? await updateItem(item.id, payload)
