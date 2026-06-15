@@ -81,16 +81,16 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
       )}
     >
       {/* Item */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 w-full">
         <div className="flex items-center gap-2 min-w-0">
           {isNotPlaced
             ? <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
             : <ShoppingCart size={13} className="text-[hsl(var(--gold))] flex-shrink-0" />}
-          <span className="text-sm font-medium text-foreground truncate max-w-[140px]">{order.title}</span>
+          <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{order.title}</span>
           <StatusBadge status={order.status} />
         </div>
         {order.description && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[200px] pl-5">{order.description}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate pl-5">{order.description}</p>
         )}
       </td>
 
@@ -191,13 +191,13 @@ function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => v
       onClick={() => onOpen(order)}
       className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group opacity-70"
     >
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 w-full">
         <div className="flex items-center gap-2 min-w-0">
           <Check size={13} className="text-status-done flex-shrink-0" />
-          <span className="text-sm font-medium text-foreground truncate max-w-[160px]">{order.title}</span>
+          <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{order.title}</span>
         </div>
         {order.description && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{order.description}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{order.description}</p>
         )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">

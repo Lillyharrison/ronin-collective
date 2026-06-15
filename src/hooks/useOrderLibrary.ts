@@ -27,6 +27,7 @@ export interface OrderLibraryItem {
   status: LibraryStatus;
   substitutions_allowed: boolean;
   search_aliases: string[];
+  property_ids: string[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
