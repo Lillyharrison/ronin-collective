@@ -377,13 +377,32 @@ export function MaintenanceSection() {
   };
 
   // ─── Calendar sync helper for planned maintenance ──────────────────────────
+  // Only these statuses should ever appear on the calendar. Anything else
+  // (future, to_be_booked, cancelled) means no firm date is set yet.
+  const CALENDAR_VISIBLE_STATUSES = new Set(["booked", "initiated_by_vendor", "completed"]);
+
   const syncCalendarForPlanned = async (
     entryId: string,
     calendarEventId: string | null,
     entry: Partial<PlannedMaintenanceEntry>,
   ) => {
-    // Weekly and monthly tasks are excluded from the calendar
+    // Weekly and monthly recurring tasks are excluded from the calendar
     if (entry.recurrence_months === -1 || entry.recurrence_months === -2) return;
+
+    const shouldBeOnCalendar =
+      entry.status != null && CALENDAR_VISIBLE_STATUSES.has(entry.status);
+
+    // Not bookable yet → ensure no calendar event exists
+    if (!shouldBeOnCalendar) {
+      if (calendarEventId) {
+        await supabase.from("calendar_events").delete().eq("id", calendarEventId);
+        await supabase
+          .from("planned_maintenance")
+          .update({ calendar_event_id: null })
+          .eq("id", entryId);
+      }
+      return;
+    }
 
     // Build calendar start/end date from the entry's current date fields
     let calStartDate: string | null = null;
@@ -391,7 +410,6 @@ export function MaintenanceSection() {
     if (entry.date_type === "specific" && entry.scheduled_date) {
       const time = entry.scheduled_time ? entry.scheduled_time.slice(0, 5) : "09:00";
       calStartDate = `${entry.scheduled_date}T${time}:00`;
-      // End = start + 1 hour
       const [h, m] = time.split(":").map(Number);
       const endH = String(Math.min(h + 1, 23)).padStart(2, "0");
       calEndDate = `${entry.scheduled_date}T${endH}:${String(m).padStart(2, "0")}:00`;
@@ -407,7 +425,6 @@ export function MaintenanceSection() {
     const calStatus = entry.date_type === "month_only" ? "unconfirmed" : "upcoming";
 
     if (calendarEventId) {
-      // Update existing calendar event
       await supabase
         .from("calendar_events")
         .update({
@@ -421,7 +438,6 @@ export function MaintenanceSection() {
         })
         .eq("id", calendarEventId);
     } else {
-      // Create a new calendar event and link it
       const { data: calEvent } = await supabase
         .from("calendar_events")
         .insert({
@@ -446,6 +462,7 @@ export function MaintenanceSection() {
       }
     }
   };
+
 
   // ─── Planned maintenance ──────────────────────────────────────────────────────
   const handleCreatePlanned = async (payload: Parameters<typeof createEntry>[0]) => {
