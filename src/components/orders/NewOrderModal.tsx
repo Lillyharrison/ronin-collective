@@ -128,9 +128,23 @@ export function NewOrderModal({ open, onClose, onSaved }: Props) {
             </div>
           </div>
 
-          <div>
-            <Label className="text-xs">{isL ? "Fecha estimada de entrega" : "Expected delivery"}</Label>
-            <Input type="date" value={expectedDelivery} onChange={(e) => setExpectedDelivery(e.target.value)} />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">{isL ? "Fecha estimada de entrega" : "Expected delivery"}</Label>
+              <Input type="date" value={expectedDelivery} onChange={(e) => setExpectedDelivery(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">{isL ? "Asignado a" : "Assigned to"}</Label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{isL ? "Sin asignar" : "Unassigned"}</SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.full_name ?? "—"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
