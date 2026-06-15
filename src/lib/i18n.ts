@@ -331,7 +331,7 @@ export const translations = {
     alerts: "Alertas",
     carWash: "Lavado de Autos",
     staffSchedule: "Horario del Personal",
-    propertyTimeline: "Cronograma de Propiedades",
+    propertyTimeline: "Cronograma de Construcción",
 
     // Maintenance
     reportIssueTitle: "Reportar Problema",
