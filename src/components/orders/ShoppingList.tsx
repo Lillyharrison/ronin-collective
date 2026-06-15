@@ -117,6 +117,7 @@ export function ShoppingList() {
   const checkedCount = items.filter(i => i.is_checked).length;
 
   return (
+    <>
     <div>
       {/* Sub-header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -333,5 +334,15 @@ export function ShoppingList() {
         )}
       </div>
     </div>
+
+    {libPick && (
+      <AddToShoppingListSheet
+        item={libPick}
+        open={!!libPick}
+        onClose={() => setLibPick(null)}
+        onAdded={fetchItems}
+      />
+    )}
+    </>
   );
 }
