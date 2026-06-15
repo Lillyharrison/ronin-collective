@@ -5,7 +5,7 @@
  * and optional tracking fields. Defaults to status="not_placed" so it
  * shows up as an open order awaiting placement.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useScopedProperties } from "@/hooks/useScopedProperties";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { toast } from "sonner";
 
 interface Props {
