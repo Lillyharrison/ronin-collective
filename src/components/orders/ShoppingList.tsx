@@ -41,10 +41,11 @@ function getCategoryMeta(key: string) {
 
 export function ShoppingList() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const { userId, isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
   const { items: libraryItems } = useOrderLibrary();
   const isL = language === "es";
-  const canDelete = isAdmin || isMasterAdmin || isManager;
+  const canEditOrders = canEdit("orders");
+  const canDelete = isAdmin || isMasterAdmin || isManager || canEditOrders;
   const canApprove = canDelete;
 
   const [items, setItems]       = useState<ShoppingItem[]>([]);
