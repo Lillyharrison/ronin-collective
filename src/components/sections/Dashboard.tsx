@@ -8,6 +8,8 @@ import {
   Clock, ShoppingBag, TriangleAlert, CheckSquare,
   Activity, Zap, Shield, ClipboardList, X, Bell,
   Pencil, Check, ExternalLink, MapPin, Car, CalendarClock,
+  Home, Building2, Wrench, User, Plane, BookOpen, Package,
+  Shirt, UsersRound, Users, FileSpreadsheet, Brain, BarChart3,
 } from "lucide-react";
 import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
