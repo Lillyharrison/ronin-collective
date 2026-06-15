@@ -69,6 +69,7 @@ export function NewOrderModal({ open, onClose, onSaved }: Props) {
       carrier: carrier.trim() || null,
       tracking_number: trackingNumber.trim() || null,
       tracking_url: trackingUrl.trim() || null,
+      assigned_to: assignedTo === "none" ? null : assignedTo,
       created_by: userId,
     } as any);
     setSaving(false);
