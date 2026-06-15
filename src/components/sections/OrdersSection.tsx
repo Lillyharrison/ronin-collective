@@ -343,6 +343,12 @@ function PendingTile({ order, onOpen, onMarkDelivered }: {
             <span className="truncate">{order.property.name}</span>
           </div>
         )}
+        {order.assignee?.full_name && (
+          <div className="flex items-center gap-1 text-muted-foreground truncate">
+            <UserCircle2 size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.assignee.full_name}</span>
+          </div>
+        )}
         {order.carrier && (
           <div className="flex items-center gap-1 text-muted-foreground truncate">
             <Truck size={11} className="flex-shrink-0" />
