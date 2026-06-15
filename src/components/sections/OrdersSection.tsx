@@ -6,7 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Package, Check, ExternalLink, Truck, Calendar,
-  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle, Plus,
+  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle, Plus, UserCircle2,
 } from "lucide-react";
 import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
 import { ShoppingList } from "@/components/orders/ShoppingList";
@@ -82,7 +82,7 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
       )}
     >
       {/* Item */}
-      <td className="px-4 py-3 w-full">
+      <td className="px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           {isNotPlaced
             ? <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
@@ -92,6 +92,18 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
         </div>
         {order.description && (
           <p className="text-[10px] text-muted-foreground mt-0.5 truncate pl-5">{order.description}</p>
+        )}
+      </td>
+
+      {/* Assigned */}
+      <td className="px-4 py-3">
+        {order.assignee?.full_name ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+            <UserCircle2 size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.assignee.full_name}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40 italic">{isL ? "Sin asignar" : "Unassigned"}</span>
         )}
       </td>
 
@@ -192,13 +204,23 @@ function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => v
       onClick={() => onOpen(order)}
       className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors group opacity-70"
     >
-      <td className="px-4 py-3 w-full">
+      <td className="px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <Check size={13} className="text-status-done flex-shrink-0" />
           <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{order.title}</span>
         </div>
         {order.description && (
           <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{order.description}</p>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {order.assignee?.full_name ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+            <UserCircle2 size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.assignee.full_name}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground/40">—</span>
         )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
@@ -319,6 +341,12 @@ function PendingTile({ order, onOpen, onMarkDelivered }: {
           <div className="flex items-center gap-1 text-muted-foreground truncate">
             <MapPin size={11} className="flex-shrink-0" />
             <span className="truncate">{order.property.name}</span>
+          </div>
+        )}
+        {order.assignee?.full_name && (
+          <div className="flex items-center gap-1 text-muted-foreground truncate">
+            <UserCircle2 size={11} className="flex-shrink-0" />
+            <span className="truncate">{order.assignee.full_name}</span>
           </div>
         )}
         {order.carrier && (
@@ -452,7 +480,7 @@ export function OrdersSection() {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
-      .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, property:properties(name)")
+      .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, assigned_to, property:properties(name), assignee:profiles!orders_assigned_to_fkey(full_name)")
       .order("created_at", { ascending: false })
       .range(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE - 1);
     if (error) console.error(error);
@@ -486,13 +514,14 @@ export function OrdersSection() {
   const notPlacedCount = pending.filter(o => o.status === "not_placed").length;
 
   const tableHeaders = [
-    isL ? "Artículo" : "Item",
-    activeTab === "pending" ? (isL ? "Fecha estimada" : "Est. Delivery") : (isL ? "Entregado" : "Delivered"),
-    isL ? "Destino" : "Destination",
-    isL ? "Transportista" : "Carrier",
-    isL ? "N° Seguimiento" : "Tracking #",
-    isL ? "Enlace" : "Link",
-    "",
+    { label: isL ? "Artículo" : "Item", w: "28%" },
+    { label: isL ? "Asignado" : "Assigned", w: "13%" },
+    { label: activeTab === "pending" ? (isL ? "Fecha estimada" : "Est. Delivery") : (isL ? "Entregado" : "Delivered"), w: "11%" },
+    { label: isL ? "Destino" : "Destination", w: "13%" },
+    { label: isL ? "Transportista" : "Carrier", w: "10%" },
+    { label: isL ? "N° Seguimiento" : "Tracking #", w: "12%" },
+    { label: isL ? "Enlace" : "Link", w: "7%" },
+    { label: "", w: "6%" },
   ];
 
   const displayed = activeTab === "pending" ? pending : delivered;
@@ -627,12 +656,15 @@ export function OrdersSection() {
               </div>
 
               {/* Desktop: table */}
-              <table className="hidden sm:table w-full min-w-[640px]">
+              <table className="hidden sm:table w-full min-w-[820px] table-fixed">
+                <colgroup>
+                  {tableHeaders.map((h, i) => <col key={i} style={{ width: h.w }} />)}
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     {tableHeaders.map((h, i) => (
                       <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                        {h}
+                        {h.label}
                       </th>
                     ))}
                   </tr>

@@ -5,7 +5,7 @@
  * and optional tracking fields. Defaults to status="not_placed" so it
  * shows up as an open order awaiting placement.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useScopedProperties } from "@/hooks/useScopedProperties";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { toast } from "sonner";
 
 interface Props {
@@ -39,12 +40,21 @@ export function NewOrderModal({ open, onClose, onSaved }: Props) {
   const [carrier, setCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
+  const [assignedTo, setAssignedTo] = useState<string>("none");
+  const [staff, setStaff] = useState<{ id: string; full_name: string | null }[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("profiles").select("id, full_name, level").order("full_name").then(({ data }) => {
+      setStaff(filterAssignableStaff((data as any[]) ?? []) as any);
+    });
+  }, [open]);
 
   const reset = () => {
     setTitle(""); setDescription(""); setPropertyId("none");
     setStatus("not_placed"); setExpectedDelivery("");
-    setCarrier(""); setTrackingNumber(""); setTrackingUrl("");
+    setCarrier(""); setTrackingNumber(""); setTrackingUrl(""); setAssignedTo("none");
   };
 
   const handleSave = async () => {
@@ -59,6 +69,7 @@ export function NewOrderModal({ open, onClose, onSaved }: Props) {
       carrier: carrier.trim() || null,
       tracking_number: trackingNumber.trim() || null,
       tracking_url: trackingUrl.trim() || null,
+      assigned_to: assignedTo === "none" ? null : assignedTo,
       created_by: userId,
     } as any);
     setSaving(false);
@@ -117,9 +128,23 @@ export function NewOrderModal({ open, onClose, onSaved }: Props) {
             </div>
           </div>
 
-          <div>
-            <Label className="text-xs">{isL ? "Fecha estimada de entrega" : "Expected delivery"}</Label>
-            <Input type="date" value={expectedDelivery} onChange={(e) => setExpectedDelivery(e.target.value)} />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">{isL ? "Fecha estimada de entrega" : "Expected delivery"}</Label>
+              <Input type="date" value={expectedDelivery} onChange={(e) => setExpectedDelivery(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">{isL ? "Asignado a" : "Assigned to"}</Label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{isL ? "Sin asignar" : "Unassigned"}</SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.full_name ?? "—"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">

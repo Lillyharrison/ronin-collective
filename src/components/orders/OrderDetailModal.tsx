@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { cn } from "@/lib/utils";
 import {
   X, Truck, Link as LinkIcon, FileText, Check, Calendar,
-  MapPin, ExternalLink, Trash2, Save,
+  MapPin, ExternalLink, Trash2, Save, UserCircle2,
 } from "lucide-react";
 
 export interface Order {
@@ -22,7 +23,9 @@ export interface Order {
   packing_list: string | null;
   notes: string | null;
   created_at: string;
+  assigned_to: string | null;
   property?: { name: string } | null;
+  assignee?: { full_name: string | null } | null;
 }
 
 interface Props {
@@ -45,8 +48,17 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
   const [expectedDelivery, setExpectedDelivery] = useState(
     order.expected_delivery ? order.expected_delivery.slice(0, 10) : ""
   );
+  const [assignedTo, setAssignedTo] = useState<string>(order.assigned_to ?? "");
+  const [staff, setStaff] = useState<{ id: string; full_name: string | null }[]>([]);
   const [saving, setSaving]       = useState(false);
   const [delivering, setDelivering] = useState(false);
+
+  useEffect(() => {
+    if (!canEdit) return;
+    supabase.from("profiles").select("id, full_name, level").order("full_name").then(({ data }) => {
+      setStaff(filterAssignableStaff((data as any[]) ?? []) as any);
+    });
+  }, [canEdit]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -57,6 +69,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
       packing_list:     packingList || null,
       notes:            notes || null,
       expected_delivery: expectedDelivery || null,
+      assigned_to:      assignedTo || null,
     } as any).eq("id", order.id);
     setSaving(false);
     onSaved();
@@ -123,6 +136,11 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                 <MapPin size={10} /> {order.property.name}
               </span>
             )}
+            {order.assignee?.full_name && (
+              <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">
+                <UserCircle2 size={10} /> {order.assignee.full_name}
+              </span>
+            )}
             {order.delivered_at && (
               <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-[hsl(var(--status-done)/0.1)] text-status-done border-[hsl(var(--status-done)/0.3)]">
                 <Check size={10} /> {isL ? "Entregado" : "Delivered"} {new Date(order.delivered_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -148,6 +166,21 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                     onChange={e => setExpectedDelivery(e.target.value)}
                     className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground"
                   />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                    <UserCircle2 size={9} /> {isL ? "Asignado a" : "Assigned to"}
+                  </label>
+                  <select
+                    value={assignedTo}
+                    onChange={e => setAssignedTo(e.target.value)}
+                    className="w-full text-xs bg-muted border border-border rounded-lg px-2.5 py-2 outline-none focus:border-primary text-foreground"
+                  >
+                    <option value="">{isL ? "Sin asignar" : "Unassigned"}</option>
+                    {staff.map(s => (
+                      <option key={s.id} value={s.id}>{s.full_name ?? "—"}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
