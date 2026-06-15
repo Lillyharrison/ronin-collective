@@ -628,12 +628,15 @@ export function OrdersSection() {
               </div>
 
               {/* Desktop: table */}
-              <table className="hidden sm:table w-full min-w-[640px]">
+              <table className="hidden sm:table w-full min-w-[820px] table-fixed">
+                <colgroup>
+                  {tableHeaders.map((h, i) => <col key={i} style={{ width: h.w }} />)}
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     {tableHeaders.map((h, i) => (
                       <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                        {h}
+                        {h.label}
                       </th>
                     ))}
                   </tr>
