@@ -6,7 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Package, Check, ExternalLink, Truck, Calendar,
-  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle, Plus,
+  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle, Plus, UserCircle2,
 } from "lucide-react";
 import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
 import { ShoppingList } from "@/components/orders/ShoppingList";
