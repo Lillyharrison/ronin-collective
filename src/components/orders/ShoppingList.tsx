@@ -322,21 +322,29 @@ export function ShoppingList() {
               </div>
               {/* Items */}
               <div className="space-y-1.5">
-                {group.items.map(item => (
+                {group.items.map(item => {
+                  const lib = item.library_item_id ? libraryById[item.library_item_id] : null;
+                  const buyUrl = lib?.website_url || lib?.purchase || null;
+                  const addedBy = item.created_by ? profiles[item.created_by] : null;
+                  const approvedBy = item.approved_by ? profiles[item.approved_by] : null;
+                  const isApproved = !!item.approved_at;
+                  return (
                   <div
                     key={item.id}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all",
+                      "flex items-start gap-3 px-3 py-2.5 rounded-xl border transition-all",
                       item.is_checked
                         ? "bg-muted/30 border-border opacity-50"
-                        : "bg-card border-border hover:border-[hsl(var(--gold)/0.3)]"
+                        : isApproved
+                          ? "bg-card border-[hsl(var(--status-done)/0.4)] hover:border-[hsl(var(--status-done))]"
+                          : "bg-card border-border hover:border-[hsl(var(--gold)/0.3)]"
                     )}
                   >
                     {/* Checkbox */}
                     <button
                       onClick={() => toggleCheck(item)}
                       className={cn(
-                        "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                        "mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors",
                         item.is_checked
                           ? "bg-[hsl(var(--status-done))] border-[hsl(var(--status-done))]"
                           : "border-border hover:border-[hsl(var(--gold))]"
@@ -347,12 +355,20 @@ export function ShoppingList() {
 
                     {/* Name + details */}
                     <div className="flex-1 min-w-0">
-                      <span className={cn(
-                        "text-sm font-medium",
-                        item.is_checked ? "line-through text-muted-foreground" : "text-foreground"
-                      )}>
-                        {item.name}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={cn(
+                          "text-sm font-medium",
+                          item.is_checked ? "line-through text-muted-foreground" : "text-foreground"
+                        )}>
+                          {item.name}
+                        </span>
+                        {isApproved && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] border border-[hsl(var(--status-done)/0.3)]">
+                            <Check size={9} strokeWidth={3} />
+                            {isL ? "Aprobado" : "Approved"}
+                          </span>
+                        )}
+                      </div>
                       {(item.quantity || item.notes) && (
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           {item.quantity && <span className="font-medium">{item.quantity}</span>}
@@ -360,7 +376,50 @@ export function ShoppingList() {
                           {item.notes}
                         </p>
                       )}
+                      <div className="flex items-center gap-2 flex-wrap mt-1 text-[10px] text-muted-foreground">
+                        {addedBy && (
+                          <span className="inline-flex items-center gap-1">
+                            <UserCircle2 size={10} />
+                            {isL ? "Añadido por" : "Added by"} <span className="font-medium text-foreground/80">{addedBy.full_name || "—"}</span>
+                          </span>
+                        )}
+                        {isApproved && approvedBy && (
+                          <span className="inline-flex items-center gap-1">
+                            · <Check size={10} className="text-[hsl(var(--status-done))]" strokeWidth={3} />
+                            {isL ? "Aprobado por" : "Approved by"} <span className="font-medium text-foreground/80">{approvedBy.full_name || "—"}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Buy link */}
+                    {buyUrl && (
+                      <a
+                        href={buyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={isL ? "Comprar" : "Buy now"}
+                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[hsl(var(--gold))] hover:bg-[hsl(var(--gold)/0.1)] transition-colors flex-shrink-0"
+                      >
+                        <ExternalLink size={16} />
+                      </a>
+                    )}
+
+                    {/* Approval toggle (editors only) */}
+                    {canApprove && (
+                      <button
+                        onClick={() => toggleApprove(item)}
+                        title={isApproved ? (isL ? "Quitar aprobación" : "Unapprove") : (isL ? "Aprobar" : "Approve")}
+                        className={cn(
+                          "p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-colors flex-shrink-0",
+                          isApproved
+                            ? "bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.25)]"
+                            : "text-muted-foreground hover:text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.1)]"
+                        )}
+                      >
+                        <Check size={16} strokeWidth={isApproved ? 3 : 2} />
+                      </button>
+                    )}
 
                     {/* Delete */}
                     {canDelete && (
@@ -372,7 +431,8 @@ export function ShoppingList() {
                       </button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))
