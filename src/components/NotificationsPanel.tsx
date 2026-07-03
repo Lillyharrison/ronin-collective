@@ -32,13 +32,14 @@ const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
 
 /** Sections that can be deep-linked by entity_id stored in NavigationContext */
 const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
-  maintenance_issue: "maintenance",
-  task:              "tasks",
-  order:             "orders",
-  calendar_event:    "calendar",
-  message:           "messages",
-  property_rule:     "rules",
-  checklist:         "checklists",
+  maintenance_issue:   "maintenance",
+  planned_maintenance: "maintenance",
+  task:                "tasks",
+  order:               "orders",
+  calendar_event:      "calendar",
+  message:             "messages",
+  property_rule:       "rules",
+  checklist:           "checklists",
 };
 
 interface Props {
@@ -48,7 +49,7 @@ interface Props {
 
 export function NotificationsPanel({ open, onClose }: Props) {
   const { userId, isMasterAdmin } = usePermissions();
-  const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -121,6 +122,8 @@ export function NotificationsPanel({ open, onClose }: Props) {
     // is populated when the target section mounts
     if (n.entity_type === "maintenance_issue" && n.entity_id) {
       setPendingMaintenanceIssueId(n.entity_id);
+    } else if (n.entity_type === "planned_maintenance" && n.entity_id) {
+      setPendingPlannedMaintenanceEntryId(n.entity_id);
     }
 
     onClose();
