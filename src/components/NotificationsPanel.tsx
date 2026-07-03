@@ -17,6 +17,7 @@ interface Notification {
   action_url: string | null;
   entity_id: string | null;
   entity_type: string | null;
+  property: { name: string } | null;
 }
 
 const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
