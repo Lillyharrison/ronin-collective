@@ -58,6 +58,19 @@ Deno.serve(async (req) => {
 
   let remindersTriggered = 0;
 
+  // Pre-load property names for any entry linked to a property
+  const propertyIds = [...new Set((entries ?? []).map((e: any) => e.property_id).filter(Boolean))];
+  const propertyMap = new Map<string, string>();
+  if (propertyIds.length > 0) {
+    const { data: properties } = await supabase
+      .from("properties")
+      .select("id, name")
+      .in("id", propertyIds);
+    for (const p of properties ?? []) {
+      propertyMap.set(p.id, p.name);
+    }
+  }
+
   for (const entry of entries ?? []) {
     let targetDate: Date | null = null;
     if (entry.date_type === "specific" && entry.scheduled_date) {
