@@ -49,7 +49,7 @@ interface Props {
 
 export function NotificationsPanel({ open, onClose }: Props) {
   const { userId, isMasterAdmin } = usePermissions();
-  const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
