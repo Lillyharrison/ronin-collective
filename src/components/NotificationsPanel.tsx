@@ -225,6 +225,11 @@ export function NotificationsPanel({ open, onClose }: Props) {
                       <p className={cn("text-xs font-semibold leading-snug", n.is_read ? "text-muted-foreground" : "text-foreground")}>
                         {n.title}
                       </p>
+                      {n.property?.name && (
+                        <p className="text-[11px] font-bold text-foreground mt-0.5 leading-relaxed">
+                          {n.property.name}
+                        </p>
+                      )}
                       {n.body && (
                         <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
                           {n.body}
