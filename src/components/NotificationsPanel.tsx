@@ -17,6 +17,7 @@ interface Notification {
   action_url: string | null;
   entity_id: string | null;
   entity_type: string | null;
+  property: { name: string } | null;
 }
 
 const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
@@ -62,7 +63,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
     // sent to other admins (RLS allows master_admin to read all, but we only want their own)
     const query = supabase
       .from("notifications")
-      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type")
+      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type, property:properties(name)")
       .eq("user_id", userId)
       .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
@@ -224,6 +225,11 @@ export function NotificationsPanel({ open, onClose }: Props) {
                       <p className={cn("text-xs font-semibold leading-snug", n.is_read ? "text-muted-foreground" : "text-foreground")}>
                         {n.title}
                       </p>
+                      {n.property?.name && (
+                        <p className="text-[11px] font-bold text-foreground mt-0.5 leading-relaxed">
+                          {n.property.name}
+                        </p>
+                      )}
                       {n.body && (
                         <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
                           {n.body}

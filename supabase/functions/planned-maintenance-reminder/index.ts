@@ -58,6 +58,19 @@ Deno.serve(async (req) => {
 
   let remindersTriggered = 0;
 
+  // Pre-load property names for any entry linked to a property
+  const propertyIds = [...new Set((entries ?? []).map((e: any) => e.property_id).filter(Boolean))];
+  const propertyMap = new Map<string, string>();
+  if (propertyIds.length > 0) {
+    const { data: properties } = await supabase
+      .from("properties")
+      .select("id, name")
+      .in("id", propertyIds);
+    for (const p of properties ?? []) {
+      propertyMap.set(p.id, p.name);
+    }
+  }
+
   for (const entry of entries ?? []) {
     let targetDate: Date | null = null;
     if (entry.date_type === "specific" && entry.scheduled_date) {
@@ -79,8 +92,12 @@ Deno.serve(async (req) => {
       ? new Date(entry.scheduled_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
       : `${months[entry.scheduled_month - 1]} ${entry.scheduled_year}`;
 
+    const propertyName = entry.property_id ? propertyMap.get(entry.property_id) : null;
     const notifTitle = `🔧 Reminder: "${entry.title}" due in ${entry.reminder_days} days`;
     const notifBody = `Scheduled: ${dateLabel}. Time to confirm arrangements with your contractor.`;
+    const pushBody = propertyName
+      ? `Property: ${propertyName}. ${notifBody}`
+      : notifBody;
 
     // Fan-out in-app notifications to users with maintenance alerts
     const { data: usersWithAlerts } = await supabase
@@ -144,7 +161,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           recipientUserIds: filteredRecipients,
           title: notifTitle,
-          body: notifBody,
+          body: pushBody,
           url: "/maintenance",
         }),
       });
