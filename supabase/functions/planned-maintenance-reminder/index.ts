@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           recipientUserIds: filteredRecipients,
           title: notifTitle,
-          body: notifBody,
+          body: pushBody,
           url: "/maintenance",
         }),
       });
