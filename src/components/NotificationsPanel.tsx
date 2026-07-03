@@ -63,7 +63,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
     // sent to other admins (RLS allows master_admin to read all, but we only want their own)
     const query = supabase
       .from("notifications")
-      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type")
+      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type, property:properties(name)")
       .eq("user_id", userId)
       .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
