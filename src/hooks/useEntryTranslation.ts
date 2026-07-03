@@ -10,11 +10,13 @@
  *   // translated[0] = Spanish title, translated[1] = Spanish description
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Module-level cache: key = joined text hash → translated array
 const cache = new Map<string, string[]>();
+// In-flight requests, so N components mounting with the same texts share one fetch
+const inflight = new Map<string, Promise<string[]>>();
 
 const TRANSLATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-entries`;
 
@@ -33,7 +35,6 @@ async function translateTexts(texts: string[]): Promise<string[]> {
   if (!resp.ok) return texts; // silent fallback to originals
   const data = await resp.json();
   const result: string[] = data.translations ?? texts;
-  // Ensure length matches (safety net)
   return texts.map((t, i) => result[i] ?? t);
 }
 
@@ -49,9 +50,11 @@ export function useEntryTranslation(language: string, texts: string[]): {
   translated: string[];
   translating: boolean;
 } {
-  const [translated, setTranslated] = useState<string[]>(texts);
+  const key = cacheKey(texts);
+  // Seed synchronously from cache so toggling back to "es" shows Spanish immediately
+  const initial = language === "es" && cache.has(key) ? cache.get(key)! : texts;
+  const [translated, setTranslated] = useState<string[]>(initial);
   const [translating, setTranslating] = useState(false);
-  const lastKeyRef = useRef<string>("");
 
   useEffect(() => {
     if (language !== "es") {
@@ -65,26 +68,31 @@ export function useEntryTranslation(language: string, texts: string[]): {
       return;
     }
 
-    const key = cacheKey(texts);
-
-    // Same texts, already translated — no-op
-    if (key === lastKeyRef.current) return;
-
-    // Cache hit
+    // Cache hit — always re-apply (state may have been reset by an earlier "en" pass)
     if (cache.has(key)) {
       setTranslated(cache.get(key)!);
-      lastKeyRef.current = key;
       return;
     }
 
-    // Cache miss — fetch
     let cancelled = false;
     setTranslating(true);
 
-    translateTexts(texts).then((result) => {
+    // Dedup concurrent requests for the same text set
+    let promise = inflight.get(key);
+    if (!promise) {
+      promise = translateTexts(texts).then((result) => {
+        cache.set(key, result);
+        inflight.delete(key);
+        return result;
+      }).catch((err) => {
+        inflight.delete(key);
+        throw err;
+      });
+      inflight.set(key, promise);
+    }
+
+    promise.then((result) => {
       if (cancelled) return;
-      cache.set(key, result);
-      lastKeyRef.current = key;
       setTranslated(result);
       setTranslating(false);
     }).catch(() => {
@@ -96,7 +104,7 @@ export function useEntryTranslation(language: string, texts: string[]): {
 
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, cacheKey(texts)]);
+  }, [language, key]);
 
   return { translated, translating };
 }

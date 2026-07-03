@@ -687,7 +687,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
                   return (
                     <div key={group ?? "__ungrouped__"} className="mb-4">
                       {group && (
-                        <p className="px-5 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--gold))]">{group}</p>
+                        <TranslatedSectionHeader label={group} language={language} />
                       )}
                       <div className="bg-card border border-border rounded-xl mx-4 overflow-hidden">
                         {groupItems.map((item, idx) => {
@@ -889,5 +889,14 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
         </div>
       </div>
     </div>
+  );
+}
+
+function TranslatedSectionHeader({ label, language }: { label: string; language: string }) {
+  const { translated } = useEntryTranslation(language, [label]);
+  return (
+    <p className="px-5 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--gold))]">
+      {translated[0] || label}
+    </p>
   );
 }
