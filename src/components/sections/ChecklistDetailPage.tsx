@@ -891,3 +891,12 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
     </div>
   );
 }
+
+function TranslatedSectionHeader({ label, language }: { label: string; language: string }) {
+  const { translated } = useEntryTranslation(language, [label]);
+  return (
+    <p className="px-5 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--gold))]">
+      {translated[0] || label}
+    </p>
+  );
+}
