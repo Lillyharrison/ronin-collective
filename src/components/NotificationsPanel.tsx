@@ -32,13 +32,14 @@ const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
 
 /** Sections that can be deep-linked by entity_id stored in NavigationContext */
 const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
-  maintenance_issue: "maintenance",
-  task:              "tasks",
-  order:             "orders",
-  calendar_event:    "calendar",
-  message:           "messages",
-  property_rule:     "rules",
-  checklist:         "checklists",
+  maintenance_issue:   "maintenance",
+  planned_maintenance: "maintenance",
+  task:                "tasks",
+  order:               "orders",
+  calendar_event:      "calendar",
+  message:             "messages",
+  property_rule:       "rules",
+  checklist:           "checklists",
 };
 
 interface Props {
