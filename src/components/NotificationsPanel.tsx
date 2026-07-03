@@ -122,6 +122,8 @@ export function NotificationsPanel({ open, onClose }: Props) {
     // is populated when the target section mounts
     if (n.entity_type === "maintenance_issue" && n.entity_id) {
       setPendingMaintenanceIssueId(n.entity_id);
+    } else if (n.entity_type === "planned_maintenance" && n.entity_id) {
+      setPendingPlannedMaintenanceEntryId(n.entity_id);
     }
 
     onClose();
