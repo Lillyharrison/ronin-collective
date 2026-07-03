@@ -92,8 +92,12 @@ Deno.serve(async (req) => {
       ? new Date(entry.scheduled_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
       : `${months[entry.scheduled_month - 1]} ${entry.scheduled_year}`;
 
+    const propertyName = entry.property_id ? propertyMap.get(entry.property_id) : null;
     const notifTitle = `🔧 Reminder: "${entry.title}" due in ${entry.reminder_days} days`;
     const notifBody = `Scheduled: ${dateLabel}. Time to confirm arrangements with your contractor.`;
+    const pushBody = propertyName
+      ? `Property: ${propertyName}. ${notifBody}`
+      : notifBody;
 
     // Fan-out in-app notifications to users with maintenance alerts
     const { data: usersWithAlerts } = await supabase
