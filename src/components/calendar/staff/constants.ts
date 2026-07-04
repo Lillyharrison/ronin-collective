@@ -21,7 +21,8 @@ export const PROPERTY_COLOR_OVERRIDES: Record<string, number> = {
   rockingham: 0, // blue
   moreno: 3,     // orange
   bristol: 5,    // cyan
-  franklyn: 1,   // emerald
+  franklyn: 7,   // rose (shared with Montana — never scheduled side by side)
+  franklin: 7,   // rose (shared with Montana — never scheduled side by side)
   toyopa: 2,     // purple
   wisconsin: 4,  // pink
   broadbeach: 6, // amber
