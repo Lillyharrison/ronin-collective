@@ -14,6 +14,7 @@ export interface PlannedMaintenanceEntry {
   assigned_to: string | null;
   date_type: "specific" | "month_only";
   scheduled_date: string | null;
+  scheduled_end_date: string | null;
   scheduled_time: string | null;
   scheduled_month: number | null;
   scheduled_year: number | null;
@@ -58,7 +59,7 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
 
     setLoading(true);
     // Named columns only; include description so edit dialogs never reopen with blank notes and overwrite them.
-    const PM_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
+    const PM_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_end_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
     let query = supabase
       .from("planned_maintenance")
       .select(PM_COLS)
@@ -168,6 +169,7 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       assigned_to: patch.assigned_to,
       date_type: patch.date_type,
       scheduled_date: patch.scheduled_date,
+      scheduled_end_date: patch.scheduled_end_date,
       scheduled_time: patch.scheduled_time,
       scheduled_month: patch.scheduled_month,
       scheduled_year: patch.scheduled_year,

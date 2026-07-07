@@ -161,7 +161,11 @@ export function PlannedMaintenanceList({
     if (entry.recurrence_months === -1) return "Weekly";
     if (entry.recurrence_months === -2) return "Monthly";
     if (entry.date_type === "specific" && entry.scheduled_date) {
-      return format(parseISO(entry.scheduled_date), "dd MMM yyyy");
+      const start = format(parseISO(entry.scheduled_date), "dd MMM yyyy");
+      if (entry.scheduled_end_date && entry.scheduled_end_date !== entry.scheduled_date) {
+        return `${start} → ${format(parseISO(entry.scheduled_end_date), "dd MMM yyyy")}`;
+      }
+      return start;
     }
     if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year) {
       return `${MONTHS_SHORT[entry.scheduled_month - 1]} ${entry.scheduled_year}`;

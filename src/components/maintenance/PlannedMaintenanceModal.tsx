@@ -50,8 +50,10 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [assignedTo, setAssignedTo] = useState("");
   const [dateType, setDateType] = useState<"specific" | "month_only">("month_only");
   const [specificDate, setSpecificDate] = useState<Date | undefined>();
+  const [specificEndDate, setSpecificEndDate] = useState<Date | undefined>();
   const [specificTime, setSpecificTime] = useState("");
   const [calOpen, setCalOpen] = useState(false);
+  const [endCalOpen, setEndCalOpen] = useState(false);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [reminderDays, setReminderDays] = useState(90);
@@ -85,6 +87,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setAssignedTo(initial.assigned_to ?? "");
       setDateType(initial.date_type);
       setSpecificDate(initial.scheduled_date ? parseISO(initial.scheduled_date) : undefined);
+      setSpecificEndDate(initial.scheduled_end_date ? parseISO(initial.scheduled_end_date) : undefined);
       setSpecificTime(initial.scheduled_time ? initial.scheduled_time.slice(0, 5) : "");
       setMonth(initial.scheduled_month ?? new Date().getMonth() + 1);
       setYear(initial.scheduled_year ?? new Date().getFullYear());
@@ -99,7 +102,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       else { setRecurrence("custom"); setCustomMonths(String(rec)); }
     } else {
       setTitle(""); setDescription(""); setVendorId(""); setPropertyId("");
-      setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined); setSpecificTime("");
+      setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined); setSpecificEndDate(undefined); setSpecificTime("");
       setMonth(new Date().getMonth() + 1); setYear(new Date().getFullYear());
       setReminderDays(90); setReminderEnabled(true); setRecurrence(""); setCustomMonths(""); setLastServiceDate("");
     }
@@ -119,6 +122,22 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
         ? (parseInt(customMonths) || null)
         : recurrence ? parseInt(recurrence) : null;
 
+    // Auto-set status to "booked" when a specific date is chosen, unless the
+    // entry is already completed/cancelled (preserve terminal states).
+    const preserveStatus = initial?.status === "completed" || initial?.status === "cancelled";
+    const autoStatus: PlannedMaintenanceEntry["status"] = (() => {
+      if (preserveStatus) return initial!.status;
+      if (dateType === "specific" && specificDate) return "booked";
+      // Fall back to existing default logic for month-only / no date
+      if (initial?.status) return initial.status;
+      if (!reminderEnabled || !reminderDays) return "to_be_booked";
+      let target: Date | null = null;
+      if (dateType === "month_only") target = new Date(year, month - 1, 1);
+      if (!target) return "to_be_booked";
+      const daysOut = Math.ceil((target.getTime() - Date.now()) / 86400000);
+      return daysOut > reminderDays ? "future" : "to_be_booked";
+    })();
+
     await onSave({
       title: title.trim(),
       description: description.trim() || null,
@@ -127,21 +146,13 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       assigned_to: assignedTo || null,
       date_type: dateType,
       scheduled_date: dateType === "specific" && specificDate ? format(specificDate, "yyyy-MM-dd") : null,
+      scheduled_end_date: dateType === "specific" && specificEndDate ? format(specificEndDate, "yyyy-MM-dd") : null,
       scheduled_time: dateType === "specific" && specificTime ? specificTime + ":00" : null,
       scheduled_month: dateType === "month_only" ? month : null,
       scheduled_year: dateType === "month_only" ? year : null,
       reminder_days: reminderEnabled ? reminderDays : 0,
       recurrence_months: recurrenceMonths,
-      status: initial?.status ?? (() => {
-        // For new entries, default to "future" if target date is beyond the reminder window
-        if (!reminderEnabled || !reminderDays) return "to_be_booked";
-        let target: Date | null = null;
-        if (dateType === "specific" && specificDate) target = specificDate;
-        else if (dateType === "month_only") target = new Date(year, month - 1, 1);
-        if (!target) return "to_be_booked";
-        const daysOut = Math.ceil((target.getTime() - Date.now()) / 86400000);
-        return daysOut > reminderDays ? "future" : "to_be_booked";
-      })(),
+      status: autoStatus,
       last_service_date: lastServiceDate || null,
       calendar_event_id: initial?.calendar_event_id ?? null,
       created_by: initial?.created_by ?? userId,
@@ -338,6 +349,40 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
                     />
                   </PopoverContent>
                 </Popover>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">End Date (optional — for multi-day jobs)</Label>
+                  <div className="flex gap-2">
+                    <Popover open={endCalOpen} onOpenChange={setEndCalOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("flex-1 justify-start font-normal", !specificEndDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {specificEndDate ? format(specificEndDate, "PPP") : "Same day"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-50" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={specificEndDate}
+                          onSelect={d => { setSpecificEndDate(d); setEndCalOpen(false); }}
+                          disabled={specificDate ? { before: specificDate } : undefined}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {specificEndDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSpecificEndDate(undefined)}
+                        aria-label="Clear end date"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Time (optional)</Label>
                   <Input
