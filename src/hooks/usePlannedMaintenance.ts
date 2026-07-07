@@ -59,7 +59,7 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
 
     setLoading(true);
     // Named columns only; include description so edit dialogs never reopen with blank notes and overwrite them.
-    const PM_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
+    const PM_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_end_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
     let query = supabase
       .from("planned_maintenance")
       .select(PM_COLS)
