@@ -350,6 +350,40 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
                   </PopoverContent>
                 </Popover>
                 <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">End Date (optional — for multi-day jobs)</Label>
+                  <div className="flex gap-2">
+                    <Popover open={endCalOpen} onOpenChange={setEndCalOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("flex-1 justify-start font-normal", !specificEndDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {specificEndDate ? format(specificEndDate, "PPP") : "Same day"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-50" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={specificEndDate}
+                          onSelect={d => { setSpecificEndDate(d); setEndCalOpen(false); }}
+                          disabled={specificDate ? { before: specificDate } : undefined}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {specificEndDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSpecificEndDate(undefined)}
+                        aria-label="Clear end date"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Time (optional)</Label>
                   <Input
                     type="time"
