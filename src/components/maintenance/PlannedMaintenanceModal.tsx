@@ -50,8 +50,10 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
   const [assignedTo, setAssignedTo] = useState("");
   const [dateType, setDateType] = useState<"specific" | "month_only">("month_only");
   const [specificDate, setSpecificDate] = useState<Date | undefined>();
+  const [specificEndDate, setSpecificEndDate] = useState<Date | undefined>();
   const [specificTime, setSpecificTime] = useState("");
   const [calOpen, setCalOpen] = useState(false);
+  const [endCalOpen, setEndCalOpen] = useState(false);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [reminderDays, setReminderDays] = useState(90);
