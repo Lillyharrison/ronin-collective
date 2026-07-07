@@ -87,6 +87,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       setAssignedTo(initial.assigned_to ?? "");
       setDateType(initial.date_type);
       setSpecificDate(initial.scheduled_date ? parseISO(initial.scheduled_date) : undefined);
+      setSpecificEndDate(initial.scheduled_end_date ? parseISO(initial.scheduled_end_date) : undefined);
       setSpecificTime(initial.scheduled_time ? initial.scheduled_time.slice(0, 5) : "");
       setMonth(initial.scheduled_month ?? new Date().getMonth() + 1);
       setYear(initial.scheduled_year ?? new Date().getFullYear());
