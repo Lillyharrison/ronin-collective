@@ -122,6 +122,22 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
         ? (parseInt(customMonths) || null)
         : recurrence ? parseInt(recurrence) : null;
 
+    // Auto-set status to "booked" when a specific date is chosen, unless the
+    // entry is already completed/cancelled (preserve terminal states).
+    const preserveStatus = initial?.status === "completed" || initial?.status === "cancelled";
+    const autoStatus: PlannedMaintenanceEntry["status"] = (() => {
+      if (preserveStatus) return initial!.status;
+      if (dateType === "specific" && specificDate) return "booked";
+      // Fall back to existing default logic for month-only / no date
+      if (initial?.status) return initial.status;
+      if (!reminderEnabled || !reminderDays) return "to_be_booked";
+      let target: Date | null = null;
+      if (dateType === "month_only") target = new Date(year, month - 1, 1);
+      if (!target) return "to_be_booked";
+      const daysOut = Math.ceil((target.getTime() - Date.now()) / 86400000);
+      return daysOut > reminderDays ? "future" : "to_be_booked";
+    })();
+
     await onSave({
       title: title.trim(),
       description: description.trim() || null,
@@ -130,21 +146,13 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       assigned_to: assignedTo || null,
       date_type: dateType,
       scheduled_date: dateType === "specific" && specificDate ? format(specificDate, "yyyy-MM-dd") : null,
+      scheduled_end_date: dateType === "specific" && specificEndDate ? format(specificEndDate, "yyyy-MM-dd") : null,
       scheduled_time: dateType === "specific" && specificTime ? specificTime + ":00" : null,
       scheduled_month: dateType === "month_only" ? month : null,
       scheduled_year: dateType === "month_only" ? year : null,
       reminder_days: reminderEnabled ? reminderDays : 0,
       recurrence_months: recurrenceMonths,
-      status: initial?.status ?? (() => {
-        // For new entries, default to "future" if target date is beyond the reminder window
-        if (!reminderEnabled || !reminderDays) return "to_be_booked";
-        let target: Date | null = null;
-        if (dateType === "specific" && specificDate) target = specificDate;
-        else if (dateType === "month_only") target = new Date(year, month - 1, 1);
-        if (!target) return "to_be_booked";
-        const daysOut = Math.ceil((target.getTime() - Date.now()) / 86400000);
-        return daysOut > reminderDays ? "future" : "to_be_booked";
-      })(),
+      status: autoStatus,
       last_service_date: lastServiceDate || null,
       calendar_event_id: initial?.calendar_event_id ?? null,
       created_by: initial?.created_by ?? userId,
