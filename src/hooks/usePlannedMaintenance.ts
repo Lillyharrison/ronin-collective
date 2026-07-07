@@ -169,6 +169,7 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       assigned_to: patch.assigned_to,
       date_type: patch.date_type,
       scheduled_date: patch.scheduled_date,
+      scheduled_end_date: patch.scheduled_end_date,
       scheduled_time: patch.scheduled_time,
       scheduled_month: patch.scheduled_month,
       scheduled_year: patch.scheduled_year,
