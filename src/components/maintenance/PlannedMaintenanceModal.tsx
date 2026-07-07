@@ -102,7 +102,7 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
       else { setRecurrence("custom"); setCustomMonths(String(rec)); }
     } else {
       setTitle(""); setDescription(""); setVendorId(""); setPropertyId("");
-      setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined); setSpecificTime("");
+      setAssignedTo(""); setDateType("month_only"); setSpecificDate(undefined); setSpecificEndDate(undefined); setSpecificTime("");
       setMonth(new Date().getMonth() + 1); setYear(new Date().getFullYear());
       setReminderDays(90); setReminderEnabled(true); setRecurrence(""); setCustomMonths(""); setLastServiceDate("");
     }
