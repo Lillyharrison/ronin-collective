@@ -1104,6 +1104,7 @@ export type Database = {
           recurrence_months: number | null
           reminder_days: number
           scheduled_date: string | null
+          scheduled_end_date: string | null
           scheduled_month: number | null
           scheduled_time: string | null
           scheduled_year: number | null
@@ -1125,6 +1126,7 @@ export type Database = {
           recurrence_months?: number | null
           reminder_days?: number
           scheduled_date?: string | null
+          scheduled_end_date?: string | null
           scheduled_month?: number | null
           scheduled_time?: string | null
           scheduled_year?: number | null
@@ -1146,6 +1148,7 @@ export type Database = {
           recurrence_months?: number | null
           reminder_days?: number
           scheduled_date?: string | null
+          scheduled_end_date?: string | null
           scheduled_month?: number | null
           scheduled_time?: string | null
           scheduled_year?: number | null

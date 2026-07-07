@@ -1,0 +1,1 @@
+ALTER TABLE public.planned_maintenance ADD COLUMN IF NOT EXISTS scheduled_end_date date;
