@@ -168,10 +168,15 @@ export function PlannedMaintenanceList({
   }
 
   const sorted = [...filtered].sort((a, b) => {
-    const av = getSortValue(a, sortCol);
-    const bv = getSortValue(b, sortCol);
-    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    for (const { col, asc } of sortStack) {
+      const av = getSortValue(a, col);
+      const bv = getSortValue(b, col);
+      const cmp = asc ? av.localeCompare(bv) : bv.localeCompare(av);
+      if (cmp !== 0) return cmp;
+    }
+    return 0;
   });
+
 
   function formatDate(entry: PlannedMaintenanceEntry) {
     if (entry.recurrence_months === -1) return "Weekly";
