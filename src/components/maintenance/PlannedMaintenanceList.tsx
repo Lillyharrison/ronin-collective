@@ -67,13 +67,24 @@ export function PlannedMaintenanceList({
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "list");
-  const [sortCol, setSortCol] = useState<string>("Title");
-  const [sortAsc, setSortAsc] = useState(true);
+  // Cascading sort: stack of up to 3 { col, asc } entries. Index 0 = primary, 1 = secondary, 2 = tertiary.
+  const [sortStack, setSortStack] = useState<{ col: string; asc: boolean }[]>([{ col: "Title", asc: true }]);
 
   function handleSort(col: string) {
-    if (sortCol === col) { setSortAsc(!sortAsc); }
-    else { setSortCol(col); setSortAsc(true); }
+    setSortStack(prev => {
+      const idx = prev.findIndex(s => s.col === col);
+      if (idx === 0) {
+        // Same primary → just flip direction
+        const next = [...prev];
+        next[0] = { col, asc: !next[0].asc };
+        return next;
+      }
+      // Promote this column to primary; keep others (minus this one) as tiebreakers, cap depth at 3
+      const rest = prev.filter(s => s.col !== col);
+      return [{ col, asc: true }, ...rest].slice(0, 3);
+    });
   }
+
 
   const filtered = entries.filter(e => {
     if (filterStatus && e.status !== filterStatus) return false;
