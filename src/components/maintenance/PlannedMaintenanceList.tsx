@@ -62,6 +62,7 @@ export function PlannedMaintenanceList({
   onEdit,
   onDelete,
   onStatusChange,
+  onCopy,
   refetch,
 }: Props) {
   const [filterStatus, setFilterStatus] = useState("");
