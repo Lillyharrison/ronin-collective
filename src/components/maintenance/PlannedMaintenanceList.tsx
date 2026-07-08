@@ -556,11 +556,13 @@ export function PlannedMaintenanceList({
                       ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><Wrench size={9} /> {entry.vendor_name}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    {entry.property_name
-                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={9} /> {entry.property_name}</span>
-                      : <span className="text-xs text-muted-foreground/40">—</span>}
-                  </td>
+                  {!propertyFilter && (
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      {entry.property_name
+                        ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={9} /> {entry.property_name}</span>
+                        : <span className="text-xs text-muted-foreground/40">—</span>}
+                    </td>
+                  )}
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.assignee_name
                       ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {firstName(entry.assignee_name)}</span>
