@@ -439,7 +439,17 @@ export function PlannedMaintenanceList({
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Title", "Status", "Last Service", "Date", "Contractor", "Property", "Assigned", "Reminder", "Recurrence"].map((h, i) => {
+                {[
+                  "Title",
+                  "Status",
+                  "Last Service",
+                  "Date",
+                  "Contractor",
+                  ...(propertyFilter ? [] : ["Property"]),
+                  "Assigned",
+                  "Reminder",
+                  "Recurrence",
+                ].map((h, i) => {
                   const stackIdx = sortStack.findIndex(s => s.col === h);
                   const active = stackIdx !== -1;
                   const isPrimary = stackIdx === 0;
@@ -546,11 +556,13 @@ export function PlannedMaintenanceList({
                       ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><Wrench size={9} /> {entry.vendor_name}</span>
                       : <span className="text-xs text-muted-foreground/40">—</span>}
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    {entry.property_name
-                      ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={9} /> {entry.property_name}</span>
-                      : <span className="text-xs text-muted-foreground/40">—</span>}
-                  </td>
+                  {!propertyFilter && (
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      {entry.property_name
+                        ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin size={9} /> {entry.property_name}</span>
+                        : <span className="text-xs text-muted-foreground/40">—</span>}
+                    </td>
+                  )}
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {entry.assignee_name
                       ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><User size={9} /> {firstName(entry.assignee_name)}</span>
