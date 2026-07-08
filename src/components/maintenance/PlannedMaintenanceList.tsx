@@ -360,6 +360,8 @@ export function PlannedMaintenanceList({
                     <option value="to_be_booked">To Be Booked</option>
                     <option value="booked">Booked</option>
                     <option value="initiated_by_vendor">Initiated by Vendor</option>
+                    <option value="recurring">Recurring</option>
+                    <option value="as_needed">As Needed</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
