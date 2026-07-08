@@ -439,7 +439,17 @@ export function PlannedMaintenanceList({
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Title", "Status", "Last Service", "Date", "Contractor", "Property", "Assigned", "Reminder", "Recurrence"].map((h, i) => {
+                {[
+                  "Title",
+                  "Status",
+                  "Last Service",
+                  "Date",
+                  "Contractor",
+                  ...(propertyFilter ? [] : ["Property"]),
+                  "Assigned",
+                  "Reminder",
+                  "Recurrence",
+                ].map((h, i) => {
                   const stackIdx = sortStack.findIndex(s => s.col === h);
                   const active = stackIdx !== -1;
                   const isPrimary = stackIdx === 0;
