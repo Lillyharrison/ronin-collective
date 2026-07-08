@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search, ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
+import { RefreshCw, Wrench, Building2, User, Calendar, Bell, RotateCcw, Trash2, Edit2, LayoutGrid, Table2, MapPin, Search, ArrowUpDown, ArrowUp, ArrowDown, Download, Copy } from "lucide-react";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { cn } from "@/lib/utils";
 import { format, parseISO, differenceInDays, isPast } from "date-fns";
@@ -47,6 +47,7 @@ interface Props {
   onEdit: (entry: PlannedMaintenanceEntry) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: PlannedMaintenanceEntry["status"]) => void;
+  onCopy: (entry: PlannedMaintenanceEntry, targetPropertyId: string) => void;
   refetch: () => void;
 }
 
@@ -61,11 +62,13 @@ export function PlannedMaintenanceList({
   onEdit,
   onDelete,
   onStatusChange,
+  onCopy,
   refetch,
 }: Props) {
   const [filterStatus, setFilterStatus] = useState("");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [copyOpen, setCopyOpen] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "list");
   // Cascading sort: stack of up to 3 { col, asc } entries. Index 0 = primary, 1 = secondary, 2 = tertiary.
   const [sortStack, setSortStack] = useState<{ col: string; asc: boolean }[]>([{ col: "Title", asc: true }]);
@@ -385,6 +388,29 @@ export function PlannedMaintenanceList({
                     className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                     <Edit2 size={13} />
                   </button>
+                  <div className="relative">
+                    <button onClick={(e) => { e.stopPropagation(); setCopyOpen(copyOpen === entry.id ? null : entry.id); }}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      title="Copy to another property">
+                      <Copy size={13} />
+                    </button>
+                    {copyOpen === entry.id && (
+                      <div className="absolute right-0 top-full mt-1 z-20 w-52 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg py-1"
+                        onClick={e => e.stopPropagation()}>
+                        <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Copy to…</p>
+                        {properties.filter(p => p.id !== entry.property_id).length === 0 && (
+                          <p className="px-3 py-2 text-xs text-muted-foreground/60">No other properties</p>
+                        )}
+                        {properties.filter(p => p.id !== entry.property_id).map(p => (
+                          <button key={p.id}
+                            onClick={() => { onCopy(entry, p.id); setCopyOpen(null); }}
+                            className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors flex items-center gap-2">
+                            <MapPin size={10} className="text-muted-foreground" /> {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {confirmDelete === entry.id ? (
                     <div className="flex items-center gap-1">
                       <button onClick={(e) => { e.stopPropagation(); onDelete(entry.id); setConfirmDelete(null); }}
@@ -547,6 +573,28 @@ export function PlannedMaintenanceList({
                           className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                           <Edit2 size={12} />
                         </button>
+                        <div className="relative">
+                          <button onClick={() => setCopyOpen(copyOpen === entry.id ? null : entry.id)}
+                            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                            title="Copy to another property">
+                            <Copy size={12} />
+                          </button>
+                          {copyOpen === entry.id && (
+                            <div className="absolute right-0 top-full mt-1 z-20 w-52 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg py-1">
+                              <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Copy to…</p>
+                              {properties.filter(p => p.id !== entry.property_id).length === 0 && (
+                                <p className="px-3 py-2 text-xs text-muted-foreground/60">No other properties</p>
+                              )}
+                              {properties.filter(p => p.id !== entry.property_id).map(p => (
+                                <button key={p.id}
+                                  onClick={() => { onCopy(entry, p.id); setCopyOpen(null); }}
+                                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors flex items-center gap-2">
+                                  <MapPin size={10} className="text-muted-foreground" /> {p.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         {confirmDelete === entry.id ? (
                           <>
                             <button onClick={() => { onDelete(entry.id); setConfirmDelete(null); }}

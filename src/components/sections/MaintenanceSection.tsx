@@ -504,6 +504,31 @@ export function MaintenanceSection() {
     refetchPlanned();
   };
 
+  const handleCopyPlanned = async (entry: PlannedMaintenanceEntry, targetPropertyId: string) => {
+    const targetName = properties.find(p => p.id === targetPropertyId)?.name;
+    await handleCreatePlanned({
+      title: entry.title,
+      description: entry.description,
+      vendor_id: entry.vendor_id,
+      property_id: targetPropertyId,
+      assigned_to: entry.assigned_to,
+      date_type: entry.date_type,
+      scheduled_date: entry.scheduled_date,
+      scheduled_end_date: entry.scheduled_end_date,
+      scheduled_time: entry.scheduled_time,
+      scheduled_month: entry.scheduled_month,
+      scheduled_year: entry.scheduled_year,
+      reminder_days: entry.reminder_days,
+      recurrence_months: entry.recurrence_months,
+      status: entry.status,
+      last_service_date: entry.last_service_date,
+      calendar_event_id: null,
+      created_by: userId ?? null,
+    });
+    if (targetName) toast.success(`Copied "${entry.title}" to ${targetName}`);
+  };
+
+
   const handleUpdatePlanned = async (payload: Parameters<typeof updateEntry>[1]) => {
     if (!editPlanned) return;
     await updateEntry(editPlanned.id, payload);
@@ -653,6 +678,7 @@ export function MaintenanceSection() {
             onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
             onDelete={deleteEntry}
             onStatusChange={async (id, status) => { await updateEntry(id, { status }); }}
+            onCopy={handleCopyPlanned}
             refetch={refetchPlanned}
           />
         )}
@@ -906,6 +932,7 @@ export function MaintenanceSection() {
               }
             }
           }}
+          onCopy={handleCopyPlanned}
           refetch={refetchPlanned}
         />
       ) : (
