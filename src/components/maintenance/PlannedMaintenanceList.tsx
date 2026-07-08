@@ -47,6 +47,7 @@ interface Props {
   onEdit: (entry: PlannedMaintenanceEntry) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: PlannedMaintenanceEntry["status"]) => void;
+  onCopy: (entry: PlannedMaintenanceEntry, targetPropertyId: string) => void;
   refetch: () => void;
 }
 
