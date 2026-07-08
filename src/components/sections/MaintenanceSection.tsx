@@ -932,6 +932,7 @@ export function MaintenanceSection() {
               }
             }
           }}
+          onCopy={handleCopyPlanned}
           refetch={refetchPlanned}
         />
       ) : (
