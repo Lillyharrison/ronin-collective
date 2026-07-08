@@ -432,6 +432,8 @@ export function PlannedMaintenanceList({
                           entry.status === "future" ? "border-slate-500/40 text-slate-400 bg-slate-500/10" :
                           entry.status === "booked" ? "border-orange-500/40 text-orange-400 bg-orange-500/10" :
                           entry.status === "initiated_by_vendor" ? "border-purple-500/40 text-purple-400 bg-purple-500/10" :
+                          entry.status === "recurring" ? "border-teal-500/40 text-teal-400 bg-teal-500/10" :
+                          entry.status === "as_needed" ? "border-indigo-500/40 text-indigo-400 bg-indigo-500/10" :
                           entry.status === "to_be_booked" ? (() => {
                             const target = getTargetDate(entry);
                             if (!target || entry.recurrence_months === -1 || entry.recurrence_months === -2)
@@ -449,6 +451,8 @@ export function PlannedMaintenanceList({
                         <option value="to_be_booked">To Be Booked</option>
                         <option value="booked">Booked</option>
                         <option value="initiated_by_vendor">Initiated by Vendor</option>
+                        <option value="recurring">Recurring</option>
+                        <option value="as_needed">As Needed</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
