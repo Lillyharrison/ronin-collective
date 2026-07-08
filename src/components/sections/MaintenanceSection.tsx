@@ -678,6 +678,7 @@ export function MaintenanceSection() {
             onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
             onDelete={deleteEntry}
             onStatusChange={async (id, status) => { await updateEntry(id, { status }); }}
+            onCopy={handleCopyPlanned}
             refetch={refetchPlanned}
           />
         )}
