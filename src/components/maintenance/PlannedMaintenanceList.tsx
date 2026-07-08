@@ -16,6 +16,8 @@ const STATUS_LABELS: Record<string, string> = {
   to_be_booked:        "To Be Booked",
   booked:              "Booked",
   initiated_by_vendor: "Initiated by Vendor",
+  recurring:           "Recurring",
+  as_needed:           "As Needed",
   completed:           "Completed",
   cancelled:           "Cancelled",
 };
@@ -25,9 +27,12 @@ const STATUS_BASE_COLOR: Record<string, string> = {
   to_be_booked:        "bg-amber-500/15 text-amber-400 border-amber-500/30",
   booked:              "bg-blue-500/15 text-blue-400 border-blue-500/30",
   initiated_by_vendor: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  recurring:           "bg-teal-500/15 text-teal-400 border-teal-500/30",
+  as_needed:           "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",
   completed:           "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   cancelled:           "bg-muted text-muted-foreground border-border",
 };
+
 
 type PlannedViewMode = "tile" | "list";
 
@@ -255,7 +260,7 @@ export function PlannedMaintenanceList({
 
       {/* Status filter pills */}
       <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-        {["", "future", "to_be_booked", "booked", "initiated_by_vendor", "completed", "cancelled"].map(s => (
+        {["", "future", "to_be_booked", "booked", "initiated_by_vendor", "recurring", "as_needed", "completed", "cancelled"].map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             className={cn("flex-shrink-0 text-xs rounded-full border px-3 py-1 font-medium transition-colors",
               filterStatus === s
@@ -355,6 +360,8 @@ export function PlannedMaintenanceList({
                     <option value="to_be_booked">To Be Booked</option>
                     <option value="booked">Booked</option>
                     <option value="initiated_by_vendor">Initiated by Vendor</option>
+                    <option value="recurring">Recurring</option>
+                    <option value="as_needed">As Needed</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
@@ -425,6 +432,8 @@ export function PlannedMaintenanceList({
                           entry.status === "future" ? "border-slate-500/40 text-slate-400 bg-slate-500/10" :
                           entry.status === "booked" ? "border-orange-500/40 text-orange-400 bg-orange-500/10" :
                           entry.status === "initiated_by_vendor" ? "border-purple-500/40 text-purple-400 bg-purple-500/10" :
+                          entry.status === "recurring" ? "border-teal-500/40 text-teal-400 bg-teal-500/10" :
+                          entry.status === "as_needed" ? "border-indigo-500/40 text-indigo-400 bg-indigo-500/10" :
                           entry.status === "to_be_booked" ? (() => {
                             const target = getTargetDate(entry);
                             if (!target || entry.recurrence_months === -1 || entry.recurrence_months === -2)
@@ -442,6 +451,8 @@ export function PlannedMaintenanceList({
                         <option value="to_be_booked">To Be Booked</option>
                         <option value="booked">Booked</option>
                         <option value="initiated_by_vendor">Initiated by Vendor</option>
+                        <option value="recurring">Recurring</option>
+                        <option value="as_needed">As Needed</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>

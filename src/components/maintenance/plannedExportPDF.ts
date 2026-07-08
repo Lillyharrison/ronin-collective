@@ -21,6 +21,8 @@ const STATUS_LABELS: Record<string, string> = {
   to_be_booked:        "To Be Booked",
   booked:              "Booked",
   initiated_by_vendor: "Initiated by Vendor",
+  recurring:           "Recurring",
+  as_needed:           "As Needed",
   completed:           "Completed",
   cancelled:           "Cancelled",
 };
@@ -31,6 +33,8 @@ const STATUS_PILL: Record<string, { bg: [number, number, number]; text: [number,
   to_be_booked:        { bg: [254, 243, 199], text: [146, 64, 14] },   // amber
   booked:              { bg: [255, 237, 213], text: [154, 52, 18] },   // orange
   initiated_by_vendor: { bg: [237, 233, 254], text: [91, 33, 182] },   // purple
+  recurring:           { bg: [204, 251, 241], text: [17, 94, 89] },    // teal
+  as_needed:           { bg: [224, 231, 255], text: [55, 48, 163] },   // indigo
   completed:           { bg: [209, 250, 229], text: [6, 95, 70] },     // emerald
   cancelled:           { bg: [243, 244, 246], text: [107, 114, 128] }, // muted
   overdue:             { bg: [254, 226, 226], text: [153, 27, 27] },   // red (urgency override)
