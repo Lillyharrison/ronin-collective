@@ -68,6 +68,7 @@ export function PlannedMaintenanceList({
   const [filterStatus, setFilterStatus] = useState("");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [copyOpen, setCopyOpen] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "list");
   // Cascading sort: stack of up to 3 { col, asc } entries. Index 0 = primary, 1 = secondary, 2 = tertiary.
   const [sortStack, setSortStack] = useState<{ col: string; asc: boolean }[]>([{ col: "Title", asc: true }]);
