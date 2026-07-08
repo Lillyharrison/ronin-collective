@@ -67,13 +67,24 @@ export function PlannedMaintenanceList({
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorage<PlannedViewMode>("planned_maintenance_view_mode", "list");
-  const [sortCol, setSortCol] = useState<string>("Title");
-  const [sortAsc, setSortAsc] = useState(true);
+  // Cascading sort: stack of up to 3 { col, asc } entries. Index 0 = primary, 1 = secondary, 2 = tertiary.
+  const [sortStack, setSortStack] = useState<{ col: string; asc: boolean }[]>([{ col: "Title", asc: true }]);
 
   function handleSort(col: string) {
-    if (sortCol === col) { setSortAsc(!sortAsc); }
-    else { setSortCol(col); setSortAsc(true); }
+    setSortStack(prev => {
+      const idx = prev.findIndex(s => s.col === col);
+      if (idx === 0) {
+        // Same primary → just flip direction
+        const next = [...prev];
+        next[0] = { col, asc: !next[0].asc };
+        return next;
+      }
+      // Promote this column to primary; keep others (minus this one) as tiebreakers, cap depth at 3
+      const rest = prev.filter(s => s.col !== col);
+      return [{ col, asc: true }, ...rest].slice(0, 3);
+    });
   }
+
 
   const filtered = entries.filter(e => {
     if (filterStatus && e.status !== filterStatus) return false;
@@ -157,10 +168,15 @@ export function PlannedMaintenanceList({
   }
 
   const sorted = [...filtered].sort((a, b) => {
-    const av = getSortValue(a, sortCol);
-    const bv = getSortValue(b, sortCol);
-    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    for (const { col, asc } of sortStack) {
+      const av = getSortValue(a, col);
+      const bv = getSortValue(b, col);
+      const cmp = asc ? av.localeCompare(bv) : bv.localeCompare(av);
+      if (cmp !== 0) return cmp;
+    }
+    return 0;
   });
+
 
   function formatDate(entry: PlannedMaintenanceEntry) {
     if (entry.recurrence_months === -1) return "Weekly";
@@ -397,17 +413,39 @@ export function PlannedMaintenanceList({
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {["Title", "Status", "Last Service", "Date", "Contractor", "Property", "Assigned", "Reminder", "Recurrence"].map((h, i) => (
-                  <th key={i}
-                    onClick={() => handleSort(h)}
-                    className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
-                    <span className="inline-flex items-center gap-1">
-                      {h}
-                      {sortCol === h ? (sortAsc ? <ArrowUp size={10} /> : <ArrowDown size={10} />) : <ArrowUpDown size={10} className="opacity-30" />}
-                    </span>
-                  </th>
-                ))}
-                {canManage && <th className="px-3 py-2.5" />}
+                {["Title", "Status", "Last Service", "Date", "Contractor", "Property", "Assigned", "Reminder", "Recurrence"].map((h, i) => {
+                  const stackIdx = sortStack.findIndex(s => s.col === h);
+                  const active = stackIdx !== -1;
+                  const isPrimary = stackIdx === 0;
+                  const asc = active ? sortStack[stackIdx].asc : true;
+                  return (
+                    <th key={i}
+                      onClick={() => handleSort(h)}
+                      className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
+                      <span className={cn("inline-flex items-center gap-1", isPrimary && "text-foreground")}>
+                        {h}
+                        {active
+                          ? (asc
+                              ? <ArrowUp size={10} className={cn(!isPrimary && "opacity-50")} />
+                              : <ArrowDown size={10} className={cn(!isPrimary && "opacity-50")} />)
+                          : <ArrowUpDown size={10} className="opacity-30" />}
+                        {active && !isPrimary && (
+                          <span className="text-[8px] font-bold opacity-60 leading-none">{stackIdx + 1}</span>
+                        )}
+                      </span>
+                    </th>
+                  );
+                })}
+                {canManage && <th className="px-3 py-2.5">
+                  {sortStack.length > 1 && (
+                    <button
+                      onClick={() => setSortStack([{ col: sortStack[0].col, asc: sortStack[0].asc }])}
+                      className="text-[9px] text-muted-foreground hover:text-foreground uppercase tracking-wider"
+                      title="Clear secondary sorts">
+                      Clear sort
+                    </button>
+                  )}
+                </th>}
               </tr>
             </thead>
             <tbody>
