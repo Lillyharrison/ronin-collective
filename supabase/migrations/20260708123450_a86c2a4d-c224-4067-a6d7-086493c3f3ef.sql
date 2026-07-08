@@ -1,0 +1,2 @@
+ALTER TABLE public.planned_maintenance DROP CONSTRAINT planned_maintenance_status_check;
+ALTER TABLE public.planned_maintenance ADD CONSTRAINT planned_maintenance_status_check CHECK (status = ANY (ARRAY['future'::text, 'to_be_booked'::text, 'booked'::text, 'initiated_by_vendor'::text, 'recurring'::text, 'as_needed'::text, 'completed'::text, 'cancelled'::text]));
