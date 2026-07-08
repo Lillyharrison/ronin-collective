@@ -16,6 +16,8 @@ const STATUS_LABELS: Record<string, string> = {
   to_be_booked:        "To Be Booked",
   booked:              "Booked",
   initiated_by_vendor: "Initiated by Vendor",
+  recurring:           "Recurring",
+  as_needed:           "As Needed",
   completed:           "Completed",
   cancelled:           "Cancelled",
 };
@@ -25,9 +27,12 @@ const STATUS_BASE_COLOR: Record<string, string> = {
   to_be_booked:        "bg-amber-500/15 text-amber-400 border-amber-500/30",
   booked:              "bg-blue-500/15 text-blue-400 border-blue-500/30",
   initiated_by_vendor: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  recurring:           "bg-teal-500/15 text-teal-400 border-teal-500/30",
+  as_needed:           "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",
   completed:           "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   cancelled:           "bg-muted text-muted-foreground border-border",
 };
+
 
 type PlannedViewMode = "tile" | "list";
 
