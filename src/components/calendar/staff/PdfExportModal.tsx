@@ -35,7 +35,7 @@ export function PdfExportModal({
   const [start, setStart] = useState<Date>(defaultStart);
   const [end, setEnd] = useState<Date>(defaultEnd);
   const [layout, setLayout] = useState<PdfExportLayout>("weekly");
-  const [includeTracking, setIncludeTracking] = useState<boolean>(true);
+  const [includeTracking, setIncludeTracking] = useState<boolean>(false);
 
   // Sync range to the currently-viewed week/range each time the modal opens.
   useEffect(() => {
