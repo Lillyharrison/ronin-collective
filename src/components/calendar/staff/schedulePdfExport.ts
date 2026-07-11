@@ -193,6 +193,20 @@ function renderWeeklyStacked(
       rows.push({ cells, staffIndex: idx, isSep: false });
     });
 
+    // Per-row max non-leave shift count across the week — drives band height so
+    // single-shift cells in a row containing a split-shift day only fill the top slice.
+    const rowMaxShifts: number[] = rows.map((r) => {
+      if (r.isSep || r.staffIndex < 0) return 1;
+      const person = staffToShow[r.staffIndex];
+      let m = 1;
+      weekDays.forEach((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const n = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave).length;
+        if (n > m) m = n;
+      });
+      return m;
+    });
+
     autoTable(doc, {
       startY: cursorY,
       head: [["Staff", ...dayHeaders]],
@@ -236,19 +250,15 @@ function renderWeeklyStacked(
         const day = weekDays[data.column.index - 1];
         const dateStr = format(day, "yyyy-MM-dd");
         const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave);
-        if (ds.length === 1) {
-          const col = getExportPropColor(ds[0].property_id, properties);
-          const [r, g, b] = hexToRgb(col.bg);
-          const [tr, tg, tb] = hexToRgb(col.text);
-          data.cell.styles.fillColor = [r, g, b];
-          data.cell.styles.textColor = [tr, tg, tb];
-        } else if (ds.length > 1) {
-          // Split shift: paint per-band colours manually in didDrawCell.
+        if (ds.length > 0) {
+          // All shift-content painting happens manually in didDrawCell so single
+          // and split shifts share consistent band sizing per row.
           data.cell.styles.fillColor = [255, 255, 255];
           data.cell.text = [];
+          const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
           data.cell.styles.minCellHeight = Math.max(
             (data.cell.styles.minCellHeight as number) ?? 8,
-            ds.length * 8,
+            rowMax * 8,
           );
         }
       },
@@ -261,35 +271,39 @@ function renderWeeklyStacked(
         const day = weekDays[data.column.index - 1];
         const dateStr = format(day, "yyyy-MM-dd");
         const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave);
-        if (ds.length <= 1) return;
         const { x, y, width, height } = data.cell;
-        const bandH = height / ds.length;
-        ds.forEach((s, i) => {
-          const col = getExportPropColor(s.property_id, properties);
-          const [r, g, b] = hexToRgb(col.bg);
-          const [tr, tg, tb] = hexToRgb(col.text);
-          doc.setFillColor(r, g, b);
-          doc.rect(x, y + i * bandH, width, bandH, "F");
-          doc.setTextColor(tr, tg, tb);
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(6.5);
-          const prop = properties.find((p) => p.id === s.property_id);
-          const name = prop?.name ?? "—";
-          const timeStr = s.start_time && s.end_time
-            ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
-            : s.start_time ? formatTime(s.start_time) : "";
-          const lines = timeStr ? [name, timeStr] : [name];
-          lines.forEach((ln, li) => {
-            doc.text(ln, x + 1.4, y + i * bandH + 2 + li * 2.6, { baseline: "top" });
+        if (ds.length > 0) {
+          const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
+          const bandH = height / rowMax;
+          ds.forEach((s, i) => {
+            const col = getExportPropColor(s.property_id, properties);
+            const [r, g, b] = hexToRgb(col.bg);
+            const [tr, tg, tb] = hexToRgb(col.text);
+            doc.setFillColor(r, g, b);
+            doc.rect(x, y + i * bandH, width, bandH, "F");
+            doc.setTextColor(tr, tg, tb);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(6.5);
+            const prop = properties.find((p) => p.id === s.property_id);
+            const name = prop?.name ?? "—";
+            const timeStr = s.start_time && s.end_time
+              ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
+              : s.start_time ? formatTime(s.start_time) : "";
+            const lines = timeStr ? [name, timeStr] : [name];
+            lines.forEach((ln, li) => {
+              doc.text(ln, x + 1.4, y + i * bandH + 2 + li * 2.6, { baseline: "top" });
+            });
           });
-        });
-        // Re-draw grid border + inter-band dividers
+          doc.setDrawColor(210, 210, 210);
+          doc.setLineWidth(0.08);
+          for (let i = 1; i < ds.length; i++) {
+            doc.line(x, y + i * bandH, x + width, y + i * bandH);
+          }
+        }
+        // Always re-draw outer cell border so boxes are guaranteed to close.
         doc.setDrawColor(210, 210, 210);
         doc.setLineWidth(0.08);
         doc.rect(x, y, width, height);
-        for (let i = 1; i < ds.length; i++) {
-          doc.line(x, y + i * bandH, x + width, y + i * bandH);
-        }
         doc.setTextColor(0, 0, 0);
       },
     });
