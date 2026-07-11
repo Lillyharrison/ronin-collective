@@ -159,8 +159,8 @@ export default function SharedStaffSchedule() {
           <p className="text-sm text-muted-foreground italic">No shifts scheduled this week.</p>
         ) : (
           <div className="rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto">
-            <div className="min-w-[820px]">
-              <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}>
+            <div style={{ minWidth: minInnerWidth }}>
+              <div className="grid border-b border-border" style={{ gridTemplateColumns: gridTemplate }}>
                 <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
                 {weekDays.map((day) => (
                   <div
