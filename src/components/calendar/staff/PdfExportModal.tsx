@@ -37,6 +37,15 @@ export function PdfExportModal({
   const [layout, setLayout] = useState<PdfExportLayout>("weekly");
   const [includeTracking, setIncludeTracking] = useState<boolean>(true);
 
+  // Sync range to the currently-viewed week/range each time the modal opens.
+  useEffect(() => {
+    if (open) {
+      setStart(defaultStart);
+      setEnd(defaultEnd);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const setQuickRange = (kind: "thisWeek" | "thisMonth" | "next3" | "thisYear") => {
     const now = new Date();
     if (kind === "thisWeek") {
