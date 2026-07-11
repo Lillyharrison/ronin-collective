@@ -41,17 +41,20 @@ export default function SharedStaffSchedule() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SharePayload | null>(null);
   const [editing, setEditing] = useState<EditingState | null>(null);
+  const [viewWeekStart, setViewWeekStart] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (weekStart?: string) => {
     if (!token) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("staff-schedule-share-get", {
-        body: { token },
+        body: { token, week_start: weekStart ?? viewWeekStart ?? undefined },
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
-      setData(data as SharePayload);
+      const payload = data as SharePayload;
+      setData(payload);
+      setViewWeekStart(payload.week_start);
       setError(null);
     } catch (e) {
       setError((e as Error)?.message ?? "Couldn't load");
@@ -61,6 +64,19 @@ export default function SharedStaffSchedule() {
   };
 
   useEffect(() => { fetchData(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [token]);
+
+  const canPrev = !!data && data.week_start > data.range_start;
+  const canNext = !!data && data.week_end < data.range_end;
+  const goPrev = () => {
+    if (!data) return;
+    const prev = format(addDays(parseISO(data.week_start), -7), "yyyy-MM-dd");
+    fetchData(prev < data.range_start ? data.range_start : prev);
+  };
+  const goNext = () => {
+    if (!data) return;
+    const next = format(addDays(parseISO(data.week_start), 7), "yyyy-MM-dd");
+    fetchData(next > data.range_end ? data.range_end : next);
+  };
 
   const weekDays = useMemo(() => {
     if (!data) return [];
