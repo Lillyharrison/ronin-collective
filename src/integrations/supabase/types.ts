@@ -1623,6 +1623,7 @@ export type Database = {
           revoked_at: string | null
           share_token: string
           updated_at: string
+          week_end: string | null
           week_start: string
         }
         Insert: {
@@ -1633,6 +1634,7 @@ export type Database = {
           revoked_at?: string | null
           share_token: string
           updated_at?: string
+          week_end?: string | null
           week_start: string
         }
         Update: {
@@ -1643,6 +1645,7 @@ export type Database = {
           revoked_at?: string | null
           share_token?: string
           updated_at?: string
+          week_end?: string | null
           week_start?: string
         }
         Relationships: []
