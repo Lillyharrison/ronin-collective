@@ -95,6 +95,18 @@ export default function SharedStaffSchedule() {
     return data.staff.filter((p) => ids.has(p.id));
   }, [data, displayShifts]);
 
+  // Snap the staff column to the widest name/job-title in view (avatar 24 + gap 6 + text + padding).
+  const staffColWidth = useMemo(() => {
+    const longest = staffToShow.reduce((max, p) => {
+      const name = getDisplayName(p, "?");
+      const job = p.job_title ?? "";
+      return Math.max(max, name.length, job.length * 0.85);
+    }, 0);
+    return Math.max(110, Math.min(220, Math.round(24 + 6 + longest * 7 + 16)));
+  }, [staffToShow]);
+  const gridTemplate = `${staffColWidth}px repeat(7, minmax(0, 1fr))`;
+  const minInnerWidth = staffColWidth + 7 * 88;
+
   const titleRange = useMemo(() => {
     if (!data) return "";
     const s = parseISO(data.week_start);
