@@ -148,7 +148,7 @@ export default function SharedStaffSchedule() {
         ) : (
           <div className="rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto">
             <div className="min-w-[820px]">
-              <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
+              <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}>
                 <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
                 {weekDays.map((day) => (
                   <div
@@ -175,7 +175,7 @@ export default function SharedStaffSchedule() {
                 const personShifts = displayShifts.filter((s) => s.staff_id === person.id);
                 return (
                   <div key={person.id} className="border-b border-border last:border-b-0">
-                    <div className="grid" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
+                    <div className="grid" style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}>
                       <div className="px-1.5 py-2 border-r border-border flex items-center gap-1.5 min-w-0">
                         <div className={cn(
                           "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
