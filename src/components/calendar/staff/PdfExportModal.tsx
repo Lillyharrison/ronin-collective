@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -36,6 +36,15 @@ export function PdfExportModal({
   const [end, setEnd] = useState<Date>(defaultEnd);
   const [layout, setLayout] = useState<PdfExportLayout>("weekly");
   const [includeTracking, setIncludeTracking] = useState<boolean>(true);
+
+  // Sync range to the currently-viewed week/range each time the modal opens.
+  useEffect(() => {
+    if (open) {
+      setStart(defaultStart);
+      setEnd(defaultEnd);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const setQuickRange = (kind: "thisWeek" | "thisMonth" | "next3" | "thisYear") => {
     const now = new Date();
