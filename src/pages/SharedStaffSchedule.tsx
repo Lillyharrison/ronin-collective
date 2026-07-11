@@ -124,10 +124,23 @@ export default function SharedStaffSchedule() {
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6">
       <div className="max-w-7xl mx-auto space-y-4">
-        <header className="space-y-1 border-b border-border pb-4">
+        <header className="space-y-2 border-b border-border pb-4">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Shared staff schedule</p>
-          <h1 className="text-xl sm:text-2xl font-semibold">{titleRange}</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-xl sm:text-2xl font-semibold">{titleRange}</h1>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={goPrev} disabled={!canPrev} className="h-8 w-8 p-0">
+                <ChevronLeft size={16} />
+              </Button>
+              <Button variant="outline" size="sm" onClick={goNext} disabled={!canNext} className="h-8 w-8 p-0">
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </div>
           {data.label && <p className="text-sm text-muted-foreground">{data.label}</p>}
+          <p className="text-[11px] text-muted-foreground">
+            Editable range: {format(parseISO(data.range_start), "d MMM yyyy")} – {format(parseISO(data.range_end), "d MMM yyyy")}
+          </p>
         </header>
 
         {staffToShow.length === 0 ? (
