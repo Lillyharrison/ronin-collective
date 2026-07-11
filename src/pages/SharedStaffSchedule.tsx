@@ -95,6 +95,18 @@ export default function SharedStaffSchedule() {
     return data.staff.filter((p) => ids.has(p.id));
   }, [data, displayShifts]);
 
+  // Snap the staff column to the widest name/job-title in view (avatar 24 + gap 6 + text + padding).
+  const staffColWidth = useMemo(() => {
+    const longest = staffToShow.reduce((max, p) => {
+      const name = getDisplayName(p, "?");
+      const job = p.job_title ?? "";
+      return Math.max(max, name.length, job.length * 0.85);
+    }, 0);
+    return Math.max(110, Math.min(220, Math.round(24 + 6 + longest * 7 + 16)));
+  }, [staffToShow]);
+  const gridTemplate = `${staffColWidth}px repeat(7, minmax(0, 1fr))`;
+  const minInnerWidth = staffColWidth + 7 * 88;
+
   const titleRange = useMemo(() => {
     if (!data) return "";
     const s = parseISO(data.week_start);
@@ -147,8 +159,8 @@ export default function SharedStaffSchedule() {
           <p className="text-sm text-muted-foreground italic">No shifts scheduled this week.</p>
         ) : (
           <div className="rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto">
-            <div className="min-w-[820px]">
-              <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}>
+            <div style={{ minWidth: minInnerWidth }}>
+              <div className="grid border-b border-border" style={{ gridTemplateColumns: gridTemplate }}>
                 <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
                 {weekDays.map((day) => (
                   <div
@@ -175,7 +187,7 @@ export default function SharedStaffSchedule() {
                 const personShifts = displayShifts.filter((s) => s.staff_id === person.id);
                 return (
                   <div key={person.id} className="border-b border-border last:border-b-0">
-                    <div className="grid" style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}>
+                    <div className="grid" style={{ gridTemplateColumns: gridTemplate }}>
                       <div className="px-1.5 py-2 border-r border-border flex items-center gap-1.5 min-w-0">
                         <div className={cn(
                           "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
