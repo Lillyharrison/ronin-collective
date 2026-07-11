@@ -19,6 +19,8 @@ import type { StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useSt
 interface SharePayload {
   week_start: string;
   week_end: string;
+  range_start: string;
+  range_end: string;
   label: string | null;
   staff: Profile[];
   properties: Property[];
