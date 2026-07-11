@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ interface ShareRow {
   id: string;
   share_token: string;
   week_start: string;
+  week_end: string | null;
   label: string | null;
   revoked_at: string | null;
   created_at: string;
@@ -35,31 +36,41 @@ export function ShareWeekDialog({
   userId: string | null;
 }) {
   const [label, setLabel] = useState("");
+  const [startDate, setStartDate] = useState(format(weekStart, "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(format(addDays(weekStart, 6), "yyyy-MM-dd"));
   const [creating, setCreating] = useState(false);
   const [shares, setShares] = useState<ShareRow[]>([]);
-  const weekStartStr = format(weekStart, "yyyy-MM-dd");
+
+  useEffect(() => {
+    if (open) {
+      setStartDate(format(weekStart, "yyyy-MM-dd"));
+      setEndDate(format(addDays(weekStart, 6), "yyyy-MM-dd"));
+      loadShares();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, weekStart]);
 
   const loadShares = async () => {
     const { data } = await supabase
       .from("staff_schedule_shares")
-      .select("id, share_token, week_start, label, revoked_at, created_at")
-      .eq("week_start", weekStartStr)
+      .select("id, share_token, week_start, week_end, label, revoked_at, created_at")
       .order("created_at", { ascending: false })
       .limit(20);
     setShares((data as ShareRow[]) ?? []);
   };
 
-  useEffect(() => {
-    if (open) loadShares();
-  }, [open, weekStartStr]);
-
   const createShare = async () => {
     if (!userId) return;
+    if (endDate < startDate) {
+      toast.error("End date must be on or after start date");
+      return;
+    }
     setCreating(true);
     const token = randomToken();
     const { error } = await supabase.from("staff_schedule_shares").insert({
       share_token: token,
-      week_start: weekStartStr,
+      week_start: startDate,
+      week_end: endDate,
       label: label.trim() || null,
       created_by: userId,
     });
@@ -93,28 +104,58 @@ export function ShareWeekDialog({
     }
   };
 
+  const rangeLabel = (s: string, e: string | null) => {
+    const start = new Date(s + "T00:00:00");
+    const end = new Date((e ?? s) + "T00:00:00");
+    return `${format(start, "d MMM")} – ${format(end, "d MMM yyyy")}`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col max-w-md">
         <DialogHeader>
-          <DialogTitle>Share this week</DialogTitle>
+          <DialogTitle>Share the schedule</DialogTitle>
           <DialogDescription>
-            Generates a link that lets a non-user edit shifts for the week of{" "}
-            <span className="text-foreground font-medium">{format(weekStart, "d MMM yyyy")}</span> only.
+            Generates a link that lets a non-user edit shifts within the date range you choose.
             Changes save live. You can revoke anytime.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="share-label" className="text-xs">Label (optional)</Label>
-            <Input
-              id="share-label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Maria — cover week"
-              className="text-base"
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="share-start" className="text-xs">Start date</Label>
+                <Input
+                  id="share-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-base"
+                />
+              </div>
+              <div>
+                <Label htmlFor="share-end" className="text-xs">End date</Label>
+                <Input
+                  id="share-end"
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-base"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="share-label" className="text-xs">Label (optional)</Label>
+              <Input
+                id="share-label"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="e.g. Maria — cover weeks"
+                className="text-base"
+              />
+            </div>
             <Button onClick={createShare} disabled={creating || !userId} className="w-full gap-2">
               <Link2 size={14} /> Create share link
             </Button>
@@ -122,7 +163,7 @@ export function ShareWeekDialog({
 
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Active links for this week
+              Recent share links
             </p>
             {shares.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">No links yet.</p>
@@ -141,6 +182,7 @@ export function ShareWeekDialog({
                           {s.label || "Untitled link"}
                           {revoked && <span className="ml-2 text-xs text-destructive">(revoked)</span>}
                         </p>
+                        <p className="text-[11px] text-muted-foreground">{rangeLabel(s.week_start, s.week_end)}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{url}</p>
                       </div>
                     </div>

@@ -12,11 +12,18 @@ function addDays(iso: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
+function clamp(iso: string, min: string, max: string) {
+  if (iso < min) return min;
+  if (iso > max) return max;
+  return iso;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { token } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { token, week_start: requestedWeekStart } = body ?? {};
     if (!token || typeof token !== "string" || token.length < 16 || token.length > 128) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -30,7 +37,7 @@ Deno.serve(async (req) => {
 
     const { data: share, error: shareErr } = await supabase
       .from("staff_schedule_shares")
-      .select("id, week_start, label, revoked_at, created_by")
+      .select("id, week_start, week_end, label, revoked_at, created_by")
       .eq("share_token", token)
       .maybeSingle();
 
@@ -46,8 +53,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const weekStart = share.week_start as string;
-    const weekEnd = addDays(weekStart, 6);
+    const rangeStart = share.week_start as string;
+    const rangeEnd = (share.week_end as string) ?? addDays(rangeStart, 6);
+
+    // The client can request a specific week within the range. Default to first week.
+    let weekStart = typeof requestedWeekStart === "string" ? requestedWeekStart : rangeStart;
+    weekStart = clamp(weekStart, rangeStart, rangeEnd);
+    let weekEnd = addDays(weekStart, 6);
+    if (weekEnd > rangeEnd) weekEnd = rangeEnd;
 
     const [staffRes, propertiesRes, shiftsRes, schedulesRes, leaveRes] = await Promise.all([
       supabase
@@ -81,6 +94,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       week_start: weekStart,
       week_end: weekEnd,
+      range_start: rangeStart,
+      range_end: rangeEnd,
       label: share.label,
       staff: staffRes.data ?? [],
       properties: propertiesRes.data ?? [],

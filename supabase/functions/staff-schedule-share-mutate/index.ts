@@ -12,8 +12,8 @@ function addDays(iso: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-function inWeek(date: string, weekStart: string): boolean {
-  return date >= weekStart && date <= addDays(weekStart, 6);
+function inRange(date: string, start: string, end: string): boolean {
+  return date >= start && date <= end;
 }
 
 Deno.serve(async (req) => {
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
 
     const { data: share, error: shareErr } = await supabase
       .from("staff_schedule_shares")
-      .select("week_start, revoked_at")
+      .select("week_start, week_end, revoked_at")
       .eq("share_token", token)
       .maybeSingle();
     if (shareErr) throw shareErr;
@@ -55,7 +55,8 @@ Deno.serve(async (req) => {
         status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const weekStart = share.week_start as string;
+    const rangeStart = share.week_start as string;
+    const rangeEnd = (share.week_end as string) ?? addDays(rangeStart, 6);
 
     if (action === "create") {
       if (!shift?.staff_id || !shift?.shift_date) {
@@ -63,8 +64,8 @@ Deno.serve(async (req) => {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (!inWeek(shift.shift_date, weekStart)) {
-        return new Response(JSON.stringify({ error: "Date outside shared week" }), {
+      if (!inRange(shift.shift_date, rangeStart, rangeEnd)) {
+        return new Response(JSON.stringify({ error: "Date outside shared range" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -90,18 +91,16 @@ Deno.serve(async (req) => {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Verify the existing shift is in this week
       const { data: existing, error: exErr } = await supabase
         .from("staff_shifts").select("shift_date").eq("id", shift.id).maybeSingle();
       if (exErr) throw exErr;
-      if (!existing || !inWeek(existing.shift_date, weekStart)) {
-        return new Response(JSON.stringify({ error: "Shift not in shared week" }), {
+      if (!existing || !inRange(existing.shift_date, rangeStart, rangeEnd)) {
+        return new Response(JSON.stringify({ error: "Shift not in shared range" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // New date (if changed) must also be in this week
-      if (shift.shift_date && !inWeek(shift.shift_date, weekStart)) {
-        return new Response(JSON.stringify({ error: "New date outside shared week" }), {
+      if (shift.shift_date && !inRange(shift.shift_date, rangeStart, rangeEnd)) {
+        return new Response(JSON.stringify({ error: "New date outside shared range" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -125,8 +124,8 @@ Deno.serve(async (req) => {
       const { data: existing, error: exErr } = await supabase
         .from("staff_shifts").select("shift_date").eq("id", shift.id).maybeSingle();
       if (exErr) throw exErr;
-      if (!existing || !inWeek(existing.shift_date, weekStart)) {
-        return new Response(JSON.stringify({ error: "Shift not in shared week" }), {
+      if (!existing || !inRange(existing.shift_date, rangeStart, rangeEnd)) {
+        return new Response(JSON.stringify({ error: "Shift not in shared range" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

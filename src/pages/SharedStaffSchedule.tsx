@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ShiftChip } from "@/components/calendar/staff/ShiftChip";
@@ -19,6 +19,8 @@ import type { StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useSt
 interface SharePayload {
   week_start: string;
   week_end: string;
+  range_start: string;
+  range_end: string;
   label: string | null;
   staff: Profile[];
   properties: Property[];
@@ -39,17 +41,20 @@ export default function SharedStaffSchedule() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SharePayload | null>(null);
   const [editing, setEditing] = useState<EditingState | null>(null);
+  const [viewWeekStart, setViewWeekStart] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (weekStart?: string) => {
     if (!token) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("staff-schedule-share-get", {
-        body: { token },
+        body: { token, week_start: weekStart ?? viewWeekStart ?? undefined },
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
-      setData(data as SharePayload);
+      const payload = data as SharePayload;
+      setData(payload);
+      setViewWeekStart(payload.week_start);
       setError(null);
     } catch (e) {
       setError((e as Error)?.message ?? "Couldn't load");
@@ -59,6 +64,19 @@ export default function SharedStaffSchedule() {
   };
 
   useEffect(() => { fetchData(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [token]);
+
+  const canPrev = !!data && data.week_start > data.range_start;
+  const canNext = !!data && data.week_end < data.range_end;
+  const goPrev = () => {
+    if (!data) return;
+    const prev = format(addDays(parseISO(data.week_start), -7), "yyyy-MM-dd");
+    fetchData(prev < data.range_start ? data.range_start : prev);
+  };
+  const goNext = () => {
+    if (!data) return;
+    const next = format(addDays(parseISO(data.week_start), 7), "yyyy-MM-dd");
+    fetchData(next > data.range_end ? data.range_end : next);
+  };
 
   const weekDays = useMemo(() => {
     if (!data) return [];
@@ -106,10 +124,23 @@ export default function SharedStaffSchedule() {
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6">
       <div className="max-w-7xl mx-auto space-y-4">
-        <header className="space-y-1 border-b border-border pb-4">
+        <header className="space-y-2 border-b border-border pb-4">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Shared staff schedule</p>
-          <h1 className="text-xl sm:text-2xl font-semibold">{titleRange}</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-xl sm:text-2xl font-semibold">{titleRange}</h1>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={goPrev} disabled={!canPrev} className="h-8 w-8 p-0">
+                <ChevronLeft size={16} />
+              </Button>
+              <Button variant="outline" size="sm" onClick={goNext} disabled={!canNext} className="h-8 w-8 p-0">
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </div>
           {data.label && <p className="text-sm text-muted-foreground">{data.label}</p>}
+          <p className="text-[11px] text-muted-foreground">
+            Editable range: {format(parseISO(data.range_start), "d MMM yyyy")} – {format(parseISO(data.range_end), "d MMM yyyy")}
+          </p>
         </header>
 
         {staffToShow.length === 0 ? (
