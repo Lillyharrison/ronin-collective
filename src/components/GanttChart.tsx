@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
 interface Phase {
