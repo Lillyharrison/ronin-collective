@@ -289,12 +289,9 @@ function renderWeeklyStacked(
           // and split shifts share consistent band sizing per row.
           data.cell.styles.fillColor = [255, 255, 255];
           data.cell.text = [];
-          const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
-          const linesPerShift = rowMaxLinesPerShift[data.row.index] ?? 2;
-          const bandH = Math.max(8, 3 + linesPerShift * 2.6);
           data.cell.styles.minCellHeight = Math.max(
             (data.cell.styles.minCellHeight as number) ?? 8,
-            rowMax * bandH,
+            rowRequiredHeight[data.row.index] ?? 8,
           );
         }
       },
