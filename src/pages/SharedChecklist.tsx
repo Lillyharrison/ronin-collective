@@ -99,19 +99,25 @@ export default function SharedChecklist() {
 
   const isSubmitted = session?.status === "submitted";
 
-  // Persist a state change to DB (debounce-free; called on each toggle/blur)
+  // Persist a state change via the secure edge function (RLS blocks anon direct writes).
   const persist = async (next: Partial<Session>) => {
     if (!session || isSubmitted) return;
     const merged = { ...session, ...next };
     setSession(merged);
-    await supabase
-      .from("checklist_public_sessions")
-      .update({
-        checked_item_ids: merged.checked_item_ids,
-        assignee_name: merged.assignee_name,
-        notes: merged.notes,
-      })
-      .eq("id", session.id);
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    await fetch(
+      `https://${projectId}.supabase.co/functions/v1/checklist-public-update`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          share_token: token,
+          checked_item_ids: merged.checked_item_ids,
+          assignee_name: merged.assignee_name,
+          notes: merged.notes,
+        }),
+      },
+    );
   };
 
   const toggleItem = (id: string) => {
