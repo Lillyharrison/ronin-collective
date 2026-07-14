@@ -216,26 +216,30 @@ function renderWeeklyStacked(
       return m;
     });
 
-    // Per-row max lines-per-shift (2 = name+time, +N wrapped note lines) so rows
-    // with notes get taller bands and text isn't clipped.
-    const rowMaxLinesPerShift: number[] = rows.map((r) => {
-      if (r.isSep || r.staffIndex < 0) return 2;
+    // Per-row required height: max across all day-cells of the total vertical
+    // space actually needed by that cell's shifts (including any notes).
+    // Split-shift cells no longer inflate the whole row just because a
+    // different day in the row happens to have notes.
+    const linesForShift = (s: DisplayShift) => {
+      const note = extractNoteBody(s.notes);
+      const noteLines = note ? Math.min(3, Math.ceil(note.length / 18)) : 0;
+      return 2 + noteLines; // name + time + note lines
+    };
+    const heightForShift = (s: DisplayShift) => 3 + linesForShift(s) * 2.4;
+    const rowRequiredHeight: number[] = rows.map((r) => {
+      if (r.isSep || r.staffIndex < 0) return 8;
       const person = staffToShow[r.staffIndex];
-      let maxLines = 2;
+      let maxCellH = 8;
       weekDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
         const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave);
-        ds.forEach((s) => {
-          const note = extractNoteBody(s.notes);
-          if (!note) return;
-          // approximate: split note into ~18-char chunks (fits dayColW at 6.5pt)
-          const noteLines = Math.min(3, Math.ceil(note.length / 18));
-          const lines = 2 + noteLines;
-          if (lines > maxLines) maxLines = lines;
-        });
+        if (ds.length === 0) return;
+        const cellH = ds.reduce((sum, s) => sum + Math.max(8, heightForShift(s)), 0);
+        if (cellH > maxCellH) maxCellH = cellH;
       });
-      return maxLines;
+      return maxCellH;
     });
+
 
     autoTable(doc, {
       startY: cursorY,
