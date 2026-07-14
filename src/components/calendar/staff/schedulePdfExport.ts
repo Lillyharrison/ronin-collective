@@ -57,6 +57,11 @@ function propAbbrev(prop: Property | undefined) {
 }
 
 // ─ Shared helpers ────────────────────────────────────────────────────────────
+function extractNoteBody(notes: string | null | undefined): string {
+  const raw = (notes ?? "").trim();
+  return raw.replace(/^📍 (?:Office|Remote)(?:\s*[–—-]\s*)?/, "").trim();
+}
+
 function shiftCellText(s: DisplayShift, properties: Property[]) {
   if (s.is_leave) return "Leave";
   const prop = properties.find((p) => p.id === s.property_id);
@@ -64,7 +69,11 @@ function shiftCellText(s: DisplayShift, properties: Property[]) {
   const timeStr = s.start_time && s.end_time
     ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
     : s.start_time ? formatTime(s.start_time) : "";
-  return timeStr ? `${name}\n${timeStr}` : name;
+  const note = extractNoteBody(s.notes);
+  const parts = [name];
+  if (timeStr) parts.push(timeStr);
+  if (note) parts.push(note);
+  return parts.join("\n");
 }
 
 // ─ Header (title + range subtitle) ───────────────────────────────────────────
