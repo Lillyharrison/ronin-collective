@@ -23,3 +23,24 @@ verify_jwt = false
 
 [functions.debug-vapid]
 verify_jwt = false
+
+[functions.checklist-public-get]
+verify_jwt = false
+
+[functions.checklist-public-submit]
+verify_jwt = false
+
+[functions.checklist-public-update]
+verify_jwt = false
+
+[functions.timeline-share-get]
+verify_jwt = false
+
+[functions.timeline-share-save]
+verify_jwt = false
+
+[functions.staff-schedule-share-get]
+verify_jwt = false
+
+[functions.staff-schedule-share-mutate]
+verify_jwt = false
