@@ -147,7 +147,9 @@ export function StaffMonthGrid({
 
             {monthDays.map((day) => {
               const dateStr = format(day, "yyyy-MM-dd");
-              const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
+              const dayShifts = personShifts
+                .filter((s) => s.shift_date === dateStr)
+                .sort((a, b) => (a.start_time ?? "99:99").localeCompare(b.start_time ?? "99:99"));
               const hasLeave = dayShifts.some((s) => s.is_leave);
               const workShifts = dayShifts.filter((s) => !s.is_leave);
               const dim = isOutOfVisibleRange(day);
