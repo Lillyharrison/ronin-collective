@@ -288,20 +288,33 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     let cancelled = false;
     async function loadBoard() {
       setIsLoadingBoard(true);
-      const { data, error } = await supabase
-        .from("gantt_shared_boards")
-        .select("projects, next_id")
-        .eq("share_token", SHARE_TOKEN)
-        .maybeSingle();
-
-      if (cancelled) return;
-      if (error) {
-        toast({ title: "Timeline not loaded", description: error.message, variant: "destructive" });
-      } else if (data) {
-        setProjects(data.projects as unknown as Project[]);
-        setNextId(data.next_id);
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/timeline-share-get`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: SHARE_TOKEN }),
+          },
+        );
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.projects) {
+            setProjects(data.projects as unknown as Project[]);
+            setNextId(data.next_id ?? 1);
+          }
+        } else if (res.status !== 404) {
+          const txt = await res.text();
+          toast({ title: "Timeline not loaded", description: txt, variant: "destructive" });
+        }
+      } catch (e) {
+        if (!cancelled) {
+          toast({ title: "Timeline not loaded", description: String((e as Error)?.message ?? e), variant: "destructive" });
+        }
       }
-      setIsLoadingBoard(false);
+      if (!cancelled) setIsLoadingBoard(false);
     }
     loadBoard();
     return () => { cancelled = true; };
@@ -309,22 +322,34 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
 
   async function saveBoard(nextProjects: Project[], nextNextId = nextId) {
     setIsSavingBoard(true);
-    const { error } = await supabase
-      .from("gantt_shared_boards")
-      .upsert({
-        share_token: SHARE_TOKEN,
-        projects: nextProjects as unknown as Json,
-        next_id: nextNextId,
-        total_months: viewMonths,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "share_token" });
-
-    setIsSavingBoard(false);
-    if (error) {
-      toast({ title: "Timeline not saved", description: error.message, variant: "destructive" });
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    try {
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/timeline-share-save`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: SHARE_TOKEN,
+            projects: nextProjects,
+            next_id: nextNextId,
+            total_months: viewMonths,
+            create_if_missing: true,
+          }),
+        },
+      );
+      setIsSavingBoard(false);
+      if (!res.ok) {
+        const txt = await res.text();
+        toast({ title: "Timeline not saved", description: txt, variant: "destructive" });
+        return false;
+      }
+      return true;
+    } catch (e) {
+      setIsSavingBoard(false);
+      toast({ title: "Timeline not saved", description: String((e as Error)?.message ?? e), variant: "destructive" });
       return false;
     }
-    return true;
   }
 
   function openEditor(id: number) {
