@@ -57,6 +57,11 @@ function propAbbrev(prop: Property | undefined) {
 }
 
 // ─ Shared helpers ────────────────────────────────────────────────────────────
+function extractNoteBody(notes: string | null | undefined): string {
+  const raw = (notes ?? "").trim();
+  return raw.replace(/^📍 (?:Office|Remote)(?:\s*[–—-]\s*)?/, "").trim();
+}
+
 function shiftCellText(s: DisplayShift, properties: Property[]) {
   if (s.is_leave) return "Leave";
   const prop = properties.find((p) => p.id === s.property_id);
@@ -64,7 +69,11 @@ function shiftCellText(s: DisplayShift, properties: Property[]) {
   const timeStr = s.start_time && s.end_time
     ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
     : s.start_time ? formatTime(s.start_time) : "";
-  return timeStr ? `${name}\n${timeStr}` : name;
+  const note = extractNoteBody(s.notes);
+  const parts = [name];
+  if (timeStr) parts.push(timeStr);
+  if (note) parts.push(note);
+  return parts.join("\n");
 }
 
 // ─ Header (title + range subtitle) ───────────────────────────────────────────
@@ -207,6 +216,27 @@ function renderWeeklyStacked(
       return m;
     });
 
+    // Per-row max lines-per-shift (2 = name+time, +N wrapped note lines) so rows
+    // with notes get taller bands and text isn't clipped.
+    const rowMaxLinesPerShift: number[] = rows.map((r) => {
+      if (r.isSep || r.staffIndex < 0) return 2;
+      const person = staffToShow[r.staffIndex];
+      let maxLines = 2;
+      weekDays.forEach((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave);
+        ds.forEach((s) => {
+          const note = extractNoteBody(s.notes);
+          if (!note) return;
+          // approximate: split note into ~18-char chunks (fits dayColW at 6.5pt)
+          const noteLines = Math.min(3, Math.ceil(note.length / 18));
+          const lines = 2 + noteLines;
+          if (lines > maxLines) maxLines = lines;
+        });
+      });
+      return maxLines;
+    });
+
     autoTable(doc, {
       startY: cursorY,
       head: [["Staff", ...dayHeaders]],
@@ -256,9 +286,11 @@ function renderWeeklyStacked(
           data.cell.styles.fillColor = [255, 255, 255];
           data.cell.text = [];
           const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
+          const linesPerShift = rowMaxLinesPerShift[data.row.index] ?? 2;
+          const bandH = Math.max(8, 3 + linesPerShift * 2.6);
           data.cell.styles.minCellHeight = Math.max(
             (data.cell.styles.minCellHeight as number) ?? 8,
-            rowMax * 8,
+            rowMax * bandH,
           );
         }
       },
@@ -289,9 +321,17 @@ function renderWeeklyStacked(
             const timeStr = s.start_time && s.end_time
               ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
               : s.start_time ? formatTime(s.start_time) : "";
-            const lines = timeStr ? [name, timeStr] : [name];
+            const note = extractNoteBody(s.notes);
+            const lines: { text: string; italic?: boolean; size?: number }[] = [{ text: name }];
+            if (timeStr) lines.push({ text: timeStr });
+            if (note) {
+              const wrapped = doc.splitTextToSize(note, width - 2.8) as string[];
+              wrapped.slice(0, 3).forEach((ln) => lines.push({ text: ln, italic: true, size: 5.8 }));
+            }
             lines.forEach((ln, li) => {
-              doc.text(ln, x + 1.4, y + i * bandH + 2 + li * 2.6, { baseline: "top" });
+              doc.setFont("helvetica", ln.italic ? "italic" : "normal");
+              doc.setFontSize(ln.size ?? 6.5);
+              doc.text(ln.text, x + 1.4, y + i * bandH + 2 + li * 2.4, { baseline: "top" });
             });
           });
           doc.setDrawColor(210, 210, 210);
