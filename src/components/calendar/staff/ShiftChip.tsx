@@ -27,9 +27,15 @@ export function ShiftChip({
   const prop = properties.find((p) => p.id === shift.property_id);
 
   // Extract virtual location from notes (e.g. "📍 Office – some note")
-  const virtualLocMatch = shift.notes?.match(/^📍 (Office|Remote)/);
+  const rawNotes = (shift.notes ?? "").trim();
+  const virtualLocMatch = rawNotes.match(/^📍 (Office|Remote)/);
   const virtualLoc = virtualLocMatch?.[1];
   const displayLabel = prop?.name ?? virtualLoc ?? "—";
+
+  // Show any note text that isn't just the location prefix
+  const noteBody = rawNotes
+    .replace(/^📍 (?:Office|Remote)(?:\s*[–—-]\s*)?/, "")
+    .trim();
 
   const timeLabel = shift.start_time && shift.end_time
     ? `${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`
@@ -41,7 +47,7 @@ export function ShiftChip({
       onDragStart={onDragStart}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      title="Double-click to edit"
+      title={noteBody || "Double-click to edit"}
       className={cn(
         "rounded px-1.5 py-1 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight w-full",
         virtualLoc && !prop
@@ -57,6 +63,11 @@ export function ShiftChip({
       </div>
       {timeLabel && (
         <div className="opacity-70 text-[9px]">{timeLabel}</div>
+      )}
+      {noteBody && (
+        <div className="opacity-80 text-[9px] line-clamp-2 break-words mt-0.5">
+          {noteBody}
+        </div>
       )}
     </div>
   );
