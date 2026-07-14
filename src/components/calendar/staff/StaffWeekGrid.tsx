@@ -148,7 +148,9 @@ export function StaffWeekGrid({
 
                 {weekDays.map((day) => {
                   const dateStr = format(day, "yyyy-MM-dd");
-                  const dayShifts = personShifts.filter((s) => s.shift_date === dateStr);
+                  const dayShifts = personShifts
+                    .filter((s) => s.shift_date === dateStr)
+                    .sort((a, b) => (a.start_time ?? "99:99").localeCompare(b.start_time ?? "99:99"));
                   return (
                     <StaffDayCell
                       key={dateStr}
