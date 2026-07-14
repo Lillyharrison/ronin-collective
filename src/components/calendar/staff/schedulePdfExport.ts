@@ -216,6 +216,27 @@ function renderWeeklyStacked(
       return m;
     });
 
+    // Per-row max lines-per-shift (2 = name+time, +N wrapped note lines) so rows
+    // with notes get taller bands and text isn't clipped.
+    const rowMaxLinesPerShift: number[] = rows.map((r) => {
+      if (r.isSep || r.staffIndex < 0) return 2;
+      const person = staffToShow[r.staffIndex];
+      let maxLines = 2;
+      weekDays.forEach((day) => {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave);
+        ds.forEach((s) => {
+          const note = extractNoteBody(s.notes);
+          if (!note) return;
+          // approximate: split note into ~18-char chunks (fits dayColW at 6.5pt)
+          const noteLines = Math.min(3, Math.ceil(note.length / 18));
+          const lines = 2 + noteLines;
+          if (lines > maxLines) maxLines = lines;
+        });
+      });
+      return maxLines;
+    });
+
     autoTable(doc, {
       startY: cursorY,
       head: [["Staff", ...dayHeaders]],
