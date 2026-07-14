@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { LeaveCard } from "./LeaveCard";
 import type { Profile } from "./types";
@@ -21,9 +22,11 @@ export function LeavePanel({
   userId: string | null;
   canEdit: boolean;
 }) {
-  const pending = leaveRequests.filter((r) => r.status === "pending");
-  const myRequests = leaveRequests.filter((r) => r.staff_id === userId);
-  const adminList = canEdit ? leaveRequests : [];
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const activeRequests = leaveRequests.filter((r) => r.end_date >= todayKey);
+  const pending = activeRequests.filter((r) => r.status === "pending");
+  const myRequests = activeRequests.filter((r) => r.staff_id === userId);
+  const adminList = canEdit ? activeRequests : [];
 
   return (
     <div className="space-y-3">
