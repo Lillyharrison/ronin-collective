@@ -286,9 +286,11 @@ function renderWeeklyStacked(
           data.cell.styles.fillColor = [255, 255, 255];
           data.cell.text = [];
           const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
+          const linesPerShift = rowMaxLinesPerShift[data.row.index] ?? 2;
+          const bandH = Math.max(8, 3 + linesPerShift * 2.6);
           data.cell.styles.minCellHeight = Math.max(
             (data.cell.styles.minCellHeight as number) ?? 8,
-            rowMax * 8,
+            rowMax * bandH,
           );
         }
       },
@@ -319,9 +321,17 @@ function renderWeeklyStacked(
             const timeStr = s.start_time && s.end_time
               ? `${formatTime(s.start_time)}–${formatTime(s.end_time)}`
               : s.start_time ? formatTime(s.start_time) : "";
-            const lines = timeStr ? [name, timeStr] : [name];
+            const note = extractNoteBody(s.notes);
+            const lines: { text: string; italic?: boolean; size?: number }[] = [{ text: name }];
+            if (timeStr) lines.push({ text: timeStr });
+            if (note) {
+              const wrapped = doc.splitTextToSize(note, width - 2.8) as string[];
+              wrapped.slice(0, 3).forEach((ln) => lines.push({ text: ln, italic: true, size: 5.8 }));
+            }
             lines.forEach((ln, li) => {
-              doc.text(ln, x + 1.4, y + i * bandH + 2 + li * 2.6, { baseline: "top" });
+              doc.setFont("helvetica", ln.italic ? "italic" : "normal");
+              doc.setFontSize(ln.size ?? 6.5);
+              doc.text(ln.text, x + 1.4, y + i * bandH + 2 + li * 2.4, { baseline: "top" });
             });
           });
           doc.setDrawColor(210, 210, 210);
