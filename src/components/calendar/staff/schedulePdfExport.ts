@@ -204,17 +204,6 @@ function renderWeeklyStacked(
 
     // Per-row max non-leave shift count across the week — drives band height so
     // single-shift cells in a row containing a split-shift day only fill the top slice.
-    const rowMaxShifts: number[] = rows.map((r) => {
-      if (r.isSep || r.staffIndex < 0) return 1;
-      const person = staffToShow[r.staffIndex];
-      let m = 1;
-      weekDays.forEach((day) => {
-        const dateStr = format(day, "yyyy-MM-dd");
-        const n = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave).length;
-        if (n > m) m = n;
-      });
-      return m;
-    });
 
     // Per-row required height: max across all day-cells of the total vertical
     // space actually needed by that cell's shifts (including any notes).
