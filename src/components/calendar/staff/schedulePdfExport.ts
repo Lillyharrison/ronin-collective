@@ -204,38 +204,31 @@ function renderWeeklyStacked(
 
     // Per-row max non-leave shift count across the week — drives band height so
     // single-shift cells in a row containing a split-shift day only fill the top slice.
-    const rowMaxShifts: number[] = rows.map((r) => {
-      if (r.isSep || r.staffIndex < 0) return 1;
-      const person = staffToShow[r.staffIndex];
-      let m = 1;
-      weekDays.forEach((day) => {
-        const dateStr = format(day, "yyyy-MM-dd");
-        const n = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave).length;
-        if (n > m) m = n;
-      });
-      return m;
-    });
 
-    // Per-row max lines-per-shift (2 = name+time, +N wrapped note lines) so rows
-    // with notes get taller bands and text isn't clipped.
-    const rowMaxLinesPerShift: number[] = rows.map((r) => {
-      if (r.isSep || r.staffIndex < 0) return 2;
+    // Per-row required height: max across all day-cells of the total vertical
+    // space actually needed by that cell's shifts (including any notes).
+    // Split-shift cells no longer inflate the whole row just because a
+    // different day in the row happens to have notes.
+    const linesForShift = (s: DisplayShift) => {
+      const note = extractNoteBody(s.notes);
+      const noteLines = note ? Math.min(3, Math.ceil(note.length / 18)) : 0;
+      return 2 + noteLines; // name + time + note lines
+    };
+    const heightForShift = (s: DisplayShift) => 3 + linesForShift(s) * 2.4;
+    const rowRequiredHeight: number[] = rows.map((r) => {
+      if (r.isSep || r.staffIndex < 0) return 8;
       const person = staffToShow[r.staffIndex];
-      let maxLines = 2;
+      let maxCellH = 8;
       weekDays.forEach((day) => {
         const dateStr = format(day, "yyyy-MM-dd");
         const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave);
-        ds.forEach((s) => {
-          const note = extractNoteBody(s.notes);
-          if (!note) return;
-          // approximate: split note into ~18-char chunks (fits dayColW at 6.5pt)
-          const noteLines = Math.min(3, Math.ceil(note.length / 18));
-          const lines = 2 + noteLines;
-          if (lines > maxLines) maxLines = lines;
-        });
+        if (ds.length === 0) return;
+        const cellH = ds.reduce((sum, s) => sum + Math.max(8, heightForShift(s)), 0);
+        if (cellH > maxCellH) maxCellH = cellH;
       });
-      return maxLines;
+      return maxCellH;
     });
+
 
     autoTable(doc, {
       startY: cursorY,
@@ -285,12 +278,9 @@ function renderWeeklyStacked(
           // and split shifts share consistent band sizing per row.
           data.cell.styles.fillColor = [255, 255, 255];
           data.cell.text = [];
-          const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
-          const linesPerShift = rowMaxLinesPerShift[data.row.index] ?? 2;
-          const bandH = Math.max(8, 3 + linesPerShift * 2.6);
           data.cell.styles.minCellHeight = Math.max(
             (data.cell.styles.minCellHeight as number) ?? 8,
-            rowMax * bandH,
+            rowRequiredHeight[data.row.index] ?? 8,
           );
         }
       },
@@ -305,10 +295,9 @@ function renderWeeklyStacked(
         const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr && !s.is_leave);
         const { x, y, width, height } = data.cell;
         if (ds.length > 0) {
-          const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
-          // Single-shift cells in a row that also contains split-shift days
-          // should fill the full cell height (no whitespace below).
-          const bandH = ds.length === 1 ? height : height / rowMax;
+          // Each shift gets an equal share of the cell height, so single-shift
+          // cells fill their whole cell and split-shift cells split evenly.
+          const bandH = height / ds.length;
           ds.forEach((s, i) => {
             const col = getExportPropColor(s.property_id, properties);
             const [r, g, b] = hexToRgb(col.bg);
