@@ -306,7 +306,9 @@ function renderWeeklyStacked(
         const { x, y, width, height } = data.cell;
         if (ds.length > 0) {
           const rowMax = rowMaxShifts[data.row.index] ?? ds.length;
-          const bandH = height / rowMax;
+          // Single-shift cells in a row that also contains split-shift days
+          // should fill the full cell height (no whitespace below).
+          const bandH = ds.length === 1 ? height : height / rowMax;
           ds.forEach((s, i) => {
             const col = getExportPropColor(s.property_id, properties);
             const [r, g, b] = hexToRgb(col.bg);
