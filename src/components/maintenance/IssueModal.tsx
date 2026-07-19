@@ -96,7 +96,7 @@ function ModalContent({
     type === "main" ? setUploading(true) : setCloseUp(true);
     const { data, error } = await supabase.storage
       .from("maintenance")
-      .upload(path, file, { upsert: true });
+      .upload(path, file, { upsert: false });
     if (!error && data) {
       const { data: urlData } = supabase.storage
         .from("maintenance")
