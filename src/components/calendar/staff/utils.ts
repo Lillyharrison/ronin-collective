@@ -74,25 +74,8 @@ export function buildDisplayShifts(
           lr.start_date <= dateStr &&
           lr.end_date >= dateStr,
       );
-      if (onLeave) {
-        if (!result.find((r) => r.staff_id === staffId && r.shift_date === dateStr && r.is_leave)) {
-          result.push({
-            key: `leave-${staffId}-${dateStr}`,
-            staff_id: staffId,
-            property_id: null,
-            schedule_id: null,
-            concrete_id: null,
-            shift_date: dateStr,
-            start_time: null,
-            end_time: null,
-            status: "leave",
-            notes: null,
-            is_virtual: false,
-            is_leave: true,
-          });
-        }
-        continue;
-      }
+      // Leave chips are appended in a dedicated pass below (covers non-working days too)
+      if (onLeave) continue;
 
       // Concrete override for this schedule + date?
       const override = concreteShifts.find(
