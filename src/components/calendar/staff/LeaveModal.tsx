@@ -18,18 +18,24 @@ export function LeaveModal({
   open,
   onClose,
   onSave,
+  onUpdate,
+  onDelete,
   profiles,
   userId,
   canEdit,
   prefillStart,
+  editLeave,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: Omit<StaffLeaveRequest, "id" | "created_at" | "updated_at">) => Promise<boolean>;
+  onUpdate?: (id: string, data: Partial<Omit<StaffLeaveRequest, "id" | "created_at" | "updated_at">>) => Promise<boolean>;
+  onDelete?: (id: string) => Promise<boolean>;
   profiles: Profile[];
   userId: string | null;
   canEdit: boolean;
   prefillStart?: string;
+  editLeave?: StaffLeaveRequest | null;
 }) {
   const today = format(new Date(), "yyyy-MM-dd");
   const [form, setForm] = useState({
@@ -44,15 +50,15 @@ export function LeaveModal({
   useEffect(() => {
     if (open) {
       setForm({
-        staff_id: userId ?? "",
-        start_date: prefillStart ?? today,
-        end_date: prefillStart ?? today,
-        leave_type: "vacation",
-        reason: "",
+        staff_id: editLeave?.staff_id ?? userId ?? "",
+        start_date: editLeave?.start_date ?? prefillStart ?? today,
+        end_date: editLeave?.end_date ?? prefillStart ?? today,
+        leave_type: editLeave?.leave_type ?? "vacation",
+        reason: editLeave?.reason ?? "",
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, userId, prefillStart]);
+  }, [open, userId, prefillStart, editLeave]);
 
   if (!open) return null;
 
