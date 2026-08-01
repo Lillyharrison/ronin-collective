@@ -46,6 +46,7 @@ export interface DisplayShift {
   property_id: string | null;
   schedule_id: string | null;
   concrete_id: string | null;
+  leave_id?: string | null;
   shift_date: string;
   start_time: string | null;
   end_time: string | null;
