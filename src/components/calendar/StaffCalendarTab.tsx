@@ -120,6 +120,7 @@ export function StaffCalendarTab({
 
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [editingLeaveId, setEditingLeaveId] = useState<string | null>(null);
   const [showScheduleManager, setShowScheduleManager] = useState(false);
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [prefillStaff, setPrefillStaff] = useState<string | undefined>();
