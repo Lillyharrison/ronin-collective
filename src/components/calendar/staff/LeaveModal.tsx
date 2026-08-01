@@ -62,10 +62,12 @@ export function LeaveModal({
 
   if (!open) return null;
 
+  const isEditing = !!editLeave;
   const workdays = calcWorkdays(form.start_date, form.end_date);
   const selectedPerson = profiles.find((p) => p.id === form.staff_id);
   const staffStartDate = normalizeDateKey(selectedPerson?.start_date);
-  const startMin = staffStartDate && staffStartDate > today ? staffStartDate : today;
+  const baseMin = isEditing ? (normalizeDateKey(editLeave?.start_date) ?? today) : today;
+  const startMin = staffStartDate && staffStartDate > baseMin ? staffStartDate : baseMin;
   const totalDays = form.start_date && form.end_date
     ? differenceInCalendarDays(parseISO(form.end_date), parseISO(form.start_date)) + 1
     : 0;
@@ -80,17 +82,33 @@ export function LeaveModal({
       return;
     }
     setSaving(true);
-    const ok = await onSave({
-      staff_id: form.staff_id,
-      start_date: form.start_date,
-      end_date: form.end_date,
-      leave_type: form.leave_type,
-      reason: form.reason.trim() || null,
-      status: "pending",
-      reviewed_by: null,
-      reviewed_at: null,
-      created_by: userId,
-    });
+    const ok = isEditing && editLeave && onUpdate
+      ? await onUpdate(editLeave.id, {
+          staff_id: form.staff_id,
+          start_date: form.start_date,
+          end_date: form.end_date,
+          leave_type: form.leave_type,
+          reason: form.reason.trim() || null,
+        })
+      : await onSave({
+          staff_id: form.staff_id,
+          start_date: form.start_date,
+          end_date: form.end_date,
+          leave_type: form.leave_type,
+          reason: form.reason.trim() || null,
+          status: "pending",
+          reviewed_by: null,
+          reviewed_at: null,
+          created_by: userId,
+        });
+    setSaving(false);
+    if (ok) onClose();
+  };
+
+  const handleDelete = async () => {
+    if (!editLeave || !onDelete) return;
+    setSaving(true);
+    const ok = await onDelete(editLeave.id);
     setSaving(false);
     if (ok) onClose();
   };
@@ -106,8 +124,10 @@ export function LeaveModal({
               <PlaneTakeoff size={16} className="text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold leading-none">Request Time Off</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Submit a leave request for review</p>
+              <h2 className="text-base font-semibold leading-none">{isEditing ? "Edit Leave" : "Request Time Off"}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isEditing ? "Update or remove this leave entry" : "Submit a leave request for review"}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
