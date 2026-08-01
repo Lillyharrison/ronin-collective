@@ -241,22 +241,34 @@ export function LeaveModal({
           </div>
 
           {/* Info notice */}
-          <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5">
-            <AlertCircle size={13} className="text-muted-foreground flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground">
-              Your request will be sent to management for review. You'll see the status update in the leave panel below the schedule.
-            </p>
-          </div>
+          {!isEditing && (
+            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5">
+              <AlertCircle size={13} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Your request will be sent to management for review. You'll see the status update in the leave panel below the schedule.
+              </p>
+            </div>
+          )}
+
+          {isEditing && onDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={saving}
+              className="text-xs text-destructive/80 hover:text-destructive transition-colors flex items-center gap-1.5 py-2 px-2 rounded-lg hover:bg-destructive/10 min-h-[40px]"
+            >
+              <Trash2 size={14} /> Delete leave
+            </button>
+          )}
         </div>
 
         {/* Footer */}
         <div className="flex-shrink-0 flex gap-3 px-5 py-4 border-t border-border">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button className="flex-1 gap-2" disabled={saving || !isValid} onClick={handleSave}>
-            {saving ? "Submitting…" : (
+            {saving ? "Saving…" : (
               <>
                 <PlaneTakeoff size={14} />
-                Submit Request
+                {isEditing ? "Save Changes" : "Submit Request"}
               </>
             )}
           </Button>
