@@ -120,6 +120,7 @@ export function StaffCalendarTab({
 
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [editingLeaveId, setEditingLeaveId] = useState<string | null>(null);
   const [showScheduleManager, setShowScheduleManager] = useState(false);
   const [prefillDate, setPrefillDate] = useState<string | undefined>();
   const [prefillStaff, setPrefillStaff] = useState<string | undefined>();
@@ -197,7 +198,7 @@ export function StaffCalendarTab({
     schedules, shifts, leaveRequests, loading, refetch,
     createSchedule, editSchedule, updateSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
-    submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
+    submitLeaveRequest, updateLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
   } = useStaffSchedules(
     calView === "month" ? monthStart : weekStart,
     userId,
@@ -427,6 +428,12 @@ export function StaffCalendarTab({
   }, [deactivateSchedule]);
 
   const handleShiftDoubleClick = (shift: DisplayShift) => {
+    if (shift.is_leave) {
+      if (!shift.leave_id) return;
+      setEditingLeaveId(shift.leave_id);
+      setShowLeaveModal(true);
+      return;
+    }
     setEditingShift(shift);
     setPrefillDate(shift.shift_date);
     setPrefillStaff(shift.staff_id);
@@ -724,8 +731,11 @@ export function StaffCalendarTab({
 
       <LeaveModal
         open={showLeaveModal}
-        onClose={() => setShowLeaveModal(false)}
+        onClose={() => { setShowLeaveModal(false); setEditingLeaveId(null); }}
         onSave={submitLeaveRequest}
+        onUpdate={updateLeaveRequest}
+        onDelete={deleteLeaveRequest}
+        editLeave={editingLeaveId ? leaveRequests.find((lr) => lr.id === editingLeaveId) ?? null : null}
         profiles={profiles}
         userId={userId}
         canEdit={canEdit}

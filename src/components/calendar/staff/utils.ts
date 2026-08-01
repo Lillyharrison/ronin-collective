@@ -74,25 +74,8 @@ export function buildDisplayShifts(
           lr.start_date <= dateStr &&
           lr.end_date >= dateStr,
       );
-      if (onLeave) {
-        if (!result.find((r) => r.staff_id === staffId && r.shift_date === dateStr && r.is_leave)) {
-          result.push({
-            key: `leave-${staffId}-${dateStr}`,
-            staff_id: staffId,
-            property_id: null,
-            schedule_id: null,
-            concrete_id: null,
-            shift_date: dateStr,
-            start_time: null,
-            end_time: null,
-            status: "leave",
-            notes: null,
-            is_virtual: false,
-            is_leave: true,
-          });
-        }
-        continue;
-      }
+      // Leave chips are appended in a dedicated pass below (covers non-working days too)
+      if (onLeave) continue;
 
       // Concrete override for this schedule + date?
       const override = concreteShifts.find(
@@ -154,6 +137,31 @@ export function buildDisplayShifts(
         notes: shift.notes,
         is_virtual: false,
         is_leave: false,
+      });
+    }
+
+    // ─ Approved leave (independent of any working pattern) ────────────────────
+    for (const lr of leaveRequests) {
+      if (lr.status !== "approved") continue;
+      if (lr.start_date > dateStr || lr.end_date < dateStr) continue;
+      const person = profiles.find((p) => p.id === lr.staff_id);
+      if (profiles.length > 0 && !person) continue;
+      if (!isEmployedOn(person, dateStr)) continue;
+      if (result.find((r) => r.staff_id === lr.staff_id && r.shift_date === dateStr && r.is_leave)) continue;
+      result.push({
+        key: `leave-${lr.id}-${dateStr}`,
+        staff_id: lr.staff_id,
+        property_id: null,
+        schedule_id: null,
+        concrete_id: null,
+        leave_id: lr.id,
+        shift_date: dateStr,
+        start_time: null,
+        end_time: null,
+        status: "leave",
+        notes: null,
+        is_virtual: false,
+        is_leave: true,
       });
     }
   }

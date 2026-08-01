@@ -49,7 +49,7 @@ export function StaffDayCell({
               properties={properties}
               onDragStart={(_e) => onDragStart(shift)}
               onClick={(e) => { e.stopPropagation(); }}
-              onDoubleClick={canEdit ? (e) => { e.stopPropagation(); onShiftDoubleClick(shift); } : undefined}
+              onDoubleClick={(canEdit || shift.is_leave) ? (e) => { e.stopPropagation(); onShiftDoubleClick(shift); } : undefined}
             />
             {canEdit && !shift.is_leave && (
               <button

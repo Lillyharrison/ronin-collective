@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
-import { AlertCircle, Clock, PlaneTakeoff, X } from "lucide-react";
+import { AlertCircle, Clock, PlaneTakeoff, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,18 +18,24 @@ export function LeaveModal({
   open,
   onClose,
   onSave,
+  onUpdate,
+  onDelete,
   profiles,
   userId,
   canEdit,
   prefillStart,
+  editLeave,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: Omit<StaffLeaveRequest, "id" | "created_at" | "updated_at">) => Promise<boolean>;
+  onUpdate?: (id: string, data: Partial<Omit<StaffLeaveRequest, "id" | "created_at" | "updated_at">>) => Promise<boolean>;
+  onDelete?: (id: string) => Promise<boolean>;
   profiles: Profile[];
   userId: string | null;
   canEdit: boolean;
   prefillStart?: string;
+  editLeave?: StaffLeaveRequest | null;
 }) {
   const today = format(new Date(), "yyyy-MM-dd");
   const [form, setForm] = useState({
@@ -44,22 +50,24 @@ export function LeaveModal({
   useEffect(() => {
     if (open) {
       setForm({
-        staff_id: userId ?? "",
-        start_date: prefillStart ?? today,
-        end_date: prefillStart ?? today,
-        leave_type: "vacation",
-        reason: "",
+        staff_id: editLeave?.staff_id ?? userId ?? "",
+        start_date: editLeave?.start_date ?? prefillStart ?? today,
+        end_date: editLeave?.end_date ?? prefillStart ?? today,
+        leave_type: editLeave?.leave_type ?? "vacation",
+        reason: editLeave?.reason ?? "",
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, userId, prefillStart]);
+  }, [open, userId, prefillStart, editLeave]);
 
   if (!open) return null;
 
+  const isEditing = !!editLeave;
   const workdays = calcWorkdays(form.start_date, form.end_date);
   const selectedPerson = profiles.find((p) => p.id === form.staff_id);
   const staffStartDate = normalizeDateKey(selectedPerson?.start_date);
-  const startMin = staffStartDate && staffStartDate > today ? staffStartDate : today;
+  const baseMin = isEditing ? (normalizeDateKey(editLeave?.start_date) ?? today) : today;
+  const startMin = staffStartDate && staffStartDate > baseMin ? staffStartDate : baseMin;
   const totalDays = form.start_date && form.end_date
     ? differenceInCalendarDays(parseISO(form.end_date), parseISO(form.start_date)) + 1
     : 0;
@@ -74,17 +82,33 @@ export function LeaveModal({
       return;
     }
     setSaving(true);
-    const ok = await onSave({
-      staff_id: form.staff_id,
-      start_date: form.start_date,
-      end_date: form.end_date,
-      leave_type: form.leave_type,
-      reason: form.reason.trim() || null,
-      status: "pending",
-      reviewed_by: null,
-      reviewed_at: null,
-      created_by: userId,
-    });
+    const ok = isEditing && editLeave && onUpdate
+      ? await onUpdate(editLeave.id, {
+          staff_id: form.staff_id,
+          start_date: form.start_date,
+          end_date: form.end_date,
+          leave_type: form.leave_type,
+          reason: form.reason.trim() || null,
+        })
+      : await onSave({
+          staff_id: form.staff_id,
+          start_date: form.start_date,
+          end_date: form.end_date,
+          leave_type: form.leave_type,
+          reason: form.reason.trim() || null,
+          status: "pending",
+          reviewed_by: null,
+          reviewed_at: null,
+          created_by: userId,
+        });
+    setSaving(false);
+    if (ok) onClose();
+  };
+
+  const handleDelete = async () => {
+    if (!editLeave || !onDelete) return;
+    setSaving(true);
+    const ok = await onDelete(editLeave.id);
     setSaving(false);
     if (ok) onClose();
   };
@@ -100,8 +124,10 @@ export function LeaveModal({
               <PlaneTakeoff size={16} className="text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold leading-none">Request Time Off</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Submit a leave request for review</p>
+              <h2 className="text-base font-semibold leading-none">{isEditing ? "Edit Leave" : "Request Time Off"}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isEditing ? "Update or remove this leave entry" : "Submit a leave request for review"}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -215,22 +241,34 @@ export function LeaveModal({
           </div>
 
           {/* Info notice */}
-          <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5">
-            <AlertCircle size={13} className="text-muted-foreground flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground">
-              Your request will be sent to management for review. You'll see the status update in the leave panel below the schedule.
-            </p>
-          </div>
+          {!isEditing && (
+            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5">
+              <AlertCircle size={13} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                Your request will be sent to management for review. You'll see the status update in the leave panel below the schedule.
+              </p>
+            </div>
+          )}
+
+          {isEditing && onDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={saving}
+              className="text-xs text-destructive/80 hover:text-destructive transition-colors flex items-center gap-1.5 py-2 px-2 rounded-lg hover:bg-destructive/10 min-h-[40px]"
+            >
+              <Trash2 size={14} /> Delete leave
+            </button>
+          )}
         </div>
 
         {/* Footer */}
         <div className="flex-shrink-0 flex gap-3 px-5 py-4 border-t border-border">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button className="flex-1 gap-2" disabled={saving || !isValid} onClick={handleSave}>
-            {saving ? "Submitting…" : (
+            {saving ? "Saving…" : (
               <>
                 <PlaneTakeoff size={14} />
-                Submit Request
+                {isEditing ? "Save Changes" : "Submit Request"}
               </>
             )}
           </Button>

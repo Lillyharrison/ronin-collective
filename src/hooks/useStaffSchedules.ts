@@ -247,6 +247,20 @@ export function useStaffSchedules(
     return true;
   };
 
+  const updateLeaveRequest = async (
+    id: string,
+    data: Partial<Omit<StaffLeaveRequest, "id" | "created_at" | "updated_at">>
+  ) => {
+    const { error } = await supabase
+      .from("staff_leave_requests")
+      .update(data as never)
+      .eq("id", id);
+    if (error) { toast.error("Failed to update leave request"); return false; }
+    toast.success("Leave request updated");
+    await fetchData();
+    return true;
+  };
+
   return {
     schedules,
     shifts,
@@ -261,6 +275,7 @@ export function useStaffSchedules(
     updateShift,
     deleteShift,
     submitLeaveRequest,
+    updateLeaveRequest,
     reviewLeaveRequest,
     deleteLeaveRequest,
   };
