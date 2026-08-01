@@ -731,8 +731,11 @@ export function StaffCalendarTab({
 
       <LeaveModal
         open={showLeaveModal}
-        onClose={() => setShowLeaveModal(false)}
+        onClose={() => { setShowLeaveModal(false); setEditingLeaveId(null); }}
         onSave={submitLeaveRequest}
+        onUpdate={updateLeaveRequest}
+        onDelete={deleteLeaveRequest}
+        editLeave={editingLeaveId ? leaveRequests.find((lr) => lr.id === editingLeaveId) ?? null : null}
         profiles={profiles}
         userId={userId}
         canEdit={canEdit}
