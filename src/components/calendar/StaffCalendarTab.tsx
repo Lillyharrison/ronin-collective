@@ -428,6 +428,12 @@ export function StaffCalendarTab({
   }, [deactivateSchedule]);
 
   const handleShiftDoubleClick = (shift: DisplayShift) => {
+    if (shift.is_leave) {
+      if (!shift.leave_id) return;
+      setEditingLeaveId(shift.leave_id);
+      setShowLeaveModal(true);
+      return;
+    }
     setEditingShift(shift);
     setPrefillDate(shift.shift_date);
     setPrefillStaff(shift.staff_id);
