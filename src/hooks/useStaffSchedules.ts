@@ -275,6 +275,7 @@ export function useStaffSchedules(
     updateShift,
     deleteShift,
     submitLeaveRequest,
+    updateLeaveRequest,
     reviewLeaveRequest,
     deleteLeaveRequest,
   };
