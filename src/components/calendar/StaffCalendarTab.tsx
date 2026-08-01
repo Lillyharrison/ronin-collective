@@ -198,7 +198,7 @@ export function StaffCalendarTab({
     schedules, shifts, leaveRequests, loading, refetch,
     createSchedule, editSchedule, updateSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
-    submitLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
+    submitLeaveRequest, updateLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
   } = useStaffSchedules(
     calView === "month" ? monthStart : weekStart,
     userId,
