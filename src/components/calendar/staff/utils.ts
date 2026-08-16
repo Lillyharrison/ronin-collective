@@ -170,6 +170,7 @@ export function buildDisplayShifts(
         is_virtual: false,
         is_leave: true,
         leave_status: lr.status,
+        leave_type: lr.leave_type,
       });
     }
   }

@@ -56,4 +56,6 @@ export interface DisplayShift {
   is_leave: boolean;
   /** For leave chips: "approved" | "pending" */
   leave_status?: string;
+  /** For leave chips: vacation | sick | personal | public_holiday | other */
+  leave_type?: string;
 }

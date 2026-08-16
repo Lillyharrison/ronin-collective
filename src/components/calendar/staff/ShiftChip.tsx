@@ -1,6 +1,7 @@
 import { CalendarOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propColor, formatTime } from "./utils";
+import { LEAVE_TYPE_CONFIG } from "./constants";
 import type { DisplayShift, Property } from "./types";
 
 export function ShiftChip({
@@ -18,11 +19,12 @@ export function ShiftChip({
 }) {
   if (shift.is_leave) {
     const pending = shift.leave_status === "pending";
+    const typeLabel = (LEAVE_TYPE_CONFIG[shift.leave_type ?? "other"] ?? LEAVE_TYPE_CONFIG.other).label;
     return (
       <div
         onClick={onClick}
         onDoubleClick={onDoubleClick}
-        title={pending ? "Leave requested — awaiting approval" : "Approved leave"}
+        title={`${typeLabel}${pending ? " — awaiting approval" : " — approved"}`}
         className={cn(
           "rounded px-1.5 py-0.5 text-[10px] font-medium flex items-center gap-0.5 leading-tight",
           pending
@@ -31,7 +33,7 @@ export function ShiftChip({
         )}
       >
         <CalendarOff size={9} className="flex-shrink-0" />
-        <span className="truncate">{pending ? "Leave · Pending" : "Leave"}</span>
+        <span className="truncate">{typeLabel}{pending ? " · Pending" : ""}</span>
       </div>
     );
   }
