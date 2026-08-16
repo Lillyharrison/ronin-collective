@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useStaffSchedules } from "@/hooks/useStaffSchedules";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSchedulePublications } from "@/hooks/useSchedulePublications";
 
 import type { Profile, Property, DisplayShift, FamilyEvent, RosterStats } from "./staff/types";
 import { getDisplayName, buildDisplayShifts } from "./staff/utils";
