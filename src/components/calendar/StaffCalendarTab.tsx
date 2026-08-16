@@ -255,7 +255,19 @@ export function StaffCalendarTab({
 
   const visibleRangeStart = calView === "month" ? rangeStart : weekStart;
   const visibleRangeEnd = calView === "month" ? monthRangeEnd : endOfWeek(weekStart, { weekStartsOn: 1 });
-  const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests, profiles);
+  const allDisplayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests, profiles);
+
+  // ── Week publishing ─────────────────────────────────────────────────────────
+  // Managers/admins plan ahead; staff & family only see a week once published.
+  const { isPublished, publishWeek, unpublishWeek } = useSchedulePublications(
+    visibleRangeStart,
+    visibleRangeEnd,
+  );
+  const canPublish = isMasterAdmin || isAdmin || isManager;
+  const displayShifts = canPublish
+    ? allDisplayShifts
+    : allDisplayShifts.filter((s) => s.is_leave || isPublished(s.shift_date));
+  const currentWeekPublished = isPublished(weekStart);
 
   const staffToShow = !canEdit && userId && !scopeFilterIds
     ? profiles.filter((p) => p.id === userId && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd))
