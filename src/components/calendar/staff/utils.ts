@@ -140,14 +140,21 @@ export function buildDisplayShifts(
       });
     }
 
-    // ─ Approved leave (independent of any working pattern) ────────────────────
+    // ─ Leave (approved + pending), independent of any working pattern ─────────
     for (const lr of leaveRequests) {
-      if (lr.status !== "approved") continue;
+      if (lr.status !== "approved" && lr.status !== "pending") continue;
       if (lr.start_date > dateStr || lr.end_date < dateStr) continue;
       const person = profiles.find((p) => p.id === lr.staff_id);
       if (profiles.length > 0 && !person) continue;
       if (!isEmployedOn(person, dateStr)) continue;
-      if (result.find((r) => r.staff_id === lr.staff_id && r.shift_date === dateStr && r.is_leave)) continue;
+      // One leave chip per staff/day. Approved always wins over pending.
+      const existingIdx = result.findIndex(
+        (r) => r.staff_id === lr.staff_id && r.shift_date === dateStr && r.is_leave,
+      );
+      if (existingIdx !== -1) {
+        if (!(lr.status === "approved" && result[existingIdx].leave_status === "pending")) continue;
+        result.splice(existingIdx, 1);
+      }
       result.push({
         key: `leave-${lr.id}-${dateStr}`,
         staff_id: lr.staff_id,
@@ -162,6 +169,7 @@ export function buildDisplayShifts(
         notes: null,
         is_virtual: false,
         is_leave: true,
+        leave_status: lr.status,
       });
     }
   }

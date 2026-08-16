@@ -1614,6 +1614,27 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_schedule_publications: {
+        Row: {
+          id: string
+          published_at: string
+          published_by: string | null
+          week_start: string
+        }
+        Insert: {
+          id?: string
+          published_at?: string
+          published_by?: string | null
+          week_start: string
+        }
+        Update: {
+          id?: string
+          published_at?: string
+          published_by?: string | null
+          week_start?: string
+        }
+        Relationships: []
+      }
       staff_schedule_shares: {
         Row: {
           created_at: string

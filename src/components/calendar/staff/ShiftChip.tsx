@@ -17,9 +17,21 @@ export function ShiftChip({
   onDoubleClick?: (e: React.MouseEvent) => void;
 }) {
   if (shift.is_leave) {
+    const pending = shift.leave_status === "pending";
     return (
-      <div className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted border border-border text-muted-foreground flex items-center gap-0.5">
-        <CalendarOff size={9} /> Leave
+      <div
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        title={pending ? "Leave requested — awaiting approval" : "Approved leave"}
+        className={cn(
+          "rounded px-1.5 py-0.5 text-[10px] font-medium flex items-center gap-0.5 leading-tight",
+          pending
+            ? "bg-amber-500/10 border border-dashed border-amber-500/60 text-amber-700 dark:text-amber-400"
+            : "bg-muted border border-border text-muted-foreground",
+        )}
+      >
+        <CalendarOff size={9} className="flex-shrink-0" />
+        <span className="truncate">{pending ? "Leave · Pending" : "Leave"}</span>
       </div>
     );
   }

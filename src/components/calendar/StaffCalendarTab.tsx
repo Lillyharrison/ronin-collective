@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useStaffSchedules } from "@/hooks/useStaffSchedules";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSchedulePublications } from "@/hooks/useSchedulePublications";
 
 import type { Profile, Property, DisplayShift, FamilyEvent, RosterStats } from "./staff/types";
 import { getDisplayName, buildDisplayShifts } from "./staff/utils";
@@ -40,6 +41,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function StaffCalendarTab({
   canEdit,
@@ -255,7 +257,19 @@ export function StaffCalendarTab({
 
   const visibleRangeStart = calView === "month" ? rangeStart : weekStart;
   const visibleRangeEnd = calView === "month" ? monthRangeEnd : endOfWeek(weekStart, { weekStartsOn: 1 });
-  const displayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests, profiles);
+  const allDisplayShifts = buildDisplayShifts(weekDays, schedules, shifts, leaveRequests, profiles);
+
+  // ── Week publishing ─────────────────────────────────────────────────────────
+  // Managers/admins plan ahead; staff & family only see a week once published.
+  const { isPublished, publishWeek, unpublishWeek } = useSchedulePublications(
+    visibleRangeStart,
+    visibleRangeEnd,
+  );
+  const canPublish = isMasterAdmin || isAdmin || isManager;
+  const displayShifts = canPublish
+    ? allDisplayShifts
+    : allDisplayShifts.filter((s) => s.is_leave || isPublished(s.shift_date));
+  const currentWeekPublished = isPublished(weekStart);
 
   const staffToShow = !canEdit && userId && !scopeFilterIds
     ? profiles.filter((p) => p.id === userId && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd))
@@ -530,7 +544,8 @@ export function StaffCalendarTab({
 
     exportSchedulePDFv2({
       staffToShow,
-      displayShifts: exportShifts,
+      // Pending leave is provisional — keep it out of printed schedules.
+      displayShifts: exportShifts.filter((s) => !(s.is_leave && s.leave_status === "pending")),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       leaveRequests: (leaveRes.data ?? []) as any,
       properties,
@@ -677,6 +692,34 @@ export function StaffCalendarTab({
           </>
         );
       })()}
+
+      {calView === "week" && canPublish && (
+        <div className={cn(
+          "flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2",
+          currentWeekPublished
+            ? "border-emerald-500/40 bg-emerald-500/5"
+            : "border-amber-500/40 bg-amber-500/5"
+        )}>
+          <p className="text-xs text-muted-foreground">
+            {currentWeekPublished
+              ? "Published — staff & family can see this week."
+              : "Draft — this week is hidden from staff & family until you publish it."}
+          </p>
+          <Button
+            size="sm"
+            variant={currentWeekPublished ? "outline" : "default"}
+            onClick={() => (currentWeekPublished ? unpublishWeek(weekStart) : publishWeek(weekStart, userId))}
+          >
+            {currentWeekPublished ? "Unpublish week" : "Publish week"}
+          </Button>
+        </div>
+      )}
+
+      {calView === "week" && !canPublish && !currentWeekPublished && (
+        <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-center text-xs text-muted-foreground">
+          This week's schedule hasn't been published yet.
+        </div>
+      )}
 
       {calView === "week" && (
         <StaffWeekGrid

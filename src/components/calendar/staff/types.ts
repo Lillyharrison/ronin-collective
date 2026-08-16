@@ -54,4 +54,6 @@ export interface DisplayShift {
   notes: string | null;
   is_virtual: boolean;
   is_leave: boolean;
+  /** For leave chips: "approved" | "pending" */
+  leave_status?: string;
 }
