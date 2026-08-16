@@ -162,6 +162,7 @@ export function buildDisplayShifts(
         notes: null,
         is_virtual: false,
         is_leave: true,
+        leave_status: lr.status,
       });
     }
   }
