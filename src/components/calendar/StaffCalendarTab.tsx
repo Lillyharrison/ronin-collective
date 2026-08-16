@@ -30,7 +30,6 @@ import { StaffDaysSummary } from "./staff/StaffDaysSummary";
 import { StaffWeekGrid } from "./staff/StaffWeekGrid";
 import { CalendarToolbar } from "./staff/CalendarToolbar";
 import { StaffFilterBar } from "./staff/StaffFilterBar";
-import { PropertyLegend } from "./staff/PropertyLegend";
 import { exportScheduleExcel } from "./staff/exportUtils";
 import { exportSchedulePDFv2 } from "./staff/schedulePdfExport";
 import { PdfExportModal, type PdfExportOptions } from "./staff/PdfExportModal";
@@ -755,7 +754,6 @@ export function StaffCalendarTab({
         canEdit={canEdit}
       />
 
-      <PropertyLegend properties={properties} />
 
       <ShiftModal
         open={showShiftModal}
