@@ -543,7 +543,8 @@ export function StaffCalendarTab({
 
     exportSchedulePDFv2({
       staffToShow,
-      displayShifts: exportShifts,
+      // Pending leave is provisional — keep it out of printed schedules.
+      displayShifts: exportShifts.filter((s) => !(s.is_leave && s.leave_status === "pending")),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       leaveRequests: (leaveRes.data ?? []) as any,
       properties,
