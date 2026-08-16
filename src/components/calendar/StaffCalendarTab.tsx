@@ -692,6 +692,34 @@ export function StaffCalendarTab({
         );
       })()}
 
+      {calView === "week" && canPublish && (
+        <div className={cn(
+          "flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2",
+          currentWeekPublished
+            ? "border-emerald-500/40 bg-emerald-500/5"
+            : "border-amber-500/40 bg-amber-500/5"
+        )}>
+          <p className="text-xs text-muted-foreground">
+            {currentWeekPublished
+              ? "Published — staff & family can see this week."
+              : "Draft — this week is hidden from staff & family until you publish it."}
+          </p>
+          <Button
+            size="sm"
+            variant={currentWeekPublished ? "outline" : "default"}
+            onClick={() => (currentWeekPublished ? unpublishWeek(weekStart) : publishWeek(weekStart, userId))}
+          >
+            {currentWeekPublished ? "Unpublish week" : "Publish week"}
+          </Button>
+        </div>
+      )}
+
+      {calView === "week" && !canPublish && !currentWeekPublished && (
+        <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-center text-xs text-muted-foreground">
+          This week's schedule hasn't been published yet.
+        </div>
+      )}
+
       {calView === "week" && (
         <StaffWeekGrid
           weekDays={weekDays}
