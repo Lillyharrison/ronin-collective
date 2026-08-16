@@ -140,9 +140,9 @@ export function buildDisplayShifts(
       });
     }
 
-    // ─ Approved leave (independent of any working pattern) ────────────────────
+    // ─ Leave (approved + pending), independent of any working pattern ─────────
     for (const lr of leaveRequests) {
-      if (lr.status !== "approved") continue;
+      if (lr.status !== "approved" && lr.status !== "pending") continue;
       if (lr.start_date > dateStr || lr.end_date < dateStr) continue;
       const person = profiles.find((p) => p.id === lr.staff_id);
       if (profiles.length > 0 && !person) continue;
