@@ -70,6 +70,9 @@ export function MaintenanceSection() {
     pendingPlannedMaintenanceEntryIdRef,
     activePropertyId,
     setActivePropertyId,
+    maintenanceReturnSection,
+    setMaintenanceReturnSection,
+    setActiveSection,
   } = useNavigation();
 
   // Planned maintenance
@@ -228,7 +231,7 @@ export function MaintenanceSection() {
         .eq("id", pendingId)
         .maybeSingle();
       if (cancelled) return;
-      if (!data) { setPendingPlannedMaintenanceEntryId(null); return; }
+      if (!data) { setPendingPlannedMaintenanceEntryId(null); setMaintenanceReturnSection(null); return; }
       setActiveTab("planned");
       setEditPlanned(data as PlannedMaintenanceEntry);
       setPlannedModalOpen(true);
@@ -1159,7 +1162,15 @@ export function MaintenanceSection() {
 
       <PlannedMaintenanceModal
         open={plannedModalOpen}
-        onClose={() => { setPlannedModalOpen(false); setEditPlanned(null); }}
+        onClose={() => {
+          setPlannedModalOpen(false);
+          setEditPlanned(null);
+          if (maintenanceReturnSection) {
+            const target = maintenanceReturnSection;
+            setMaintenanceReturnSection(null);
+            setActiveSection(target);
+          }
+        }}
         onSave={editPlanned ? handleUpdatePlanned : handleCreatePlanned}
         initial={editPlanned}
         vendors={vendors}
