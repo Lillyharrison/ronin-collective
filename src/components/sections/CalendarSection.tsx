@@ -1658,7 +1658,6 @@ export function CalendarSection() {
                     if (ev._source === "planned_maintenance") {
                       persistMaintenanceTab("planned");
                       if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
-                setMaintenanceReturnSection("calendar");
                       setMaintenanceReturnSection("calendar");
                       setActiveSection("maintenance");
                       return;
@@ -1690,6 +1689,7 @@ export function CalendarSection() {
               if (ev._source === "planned_maintenance") {
                 persistMaintenanceTab("planned");
                 if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
+                setMaintenanceReturnSection("calendar");
                 setActiveSection("maintenance");
                 return;
               }
