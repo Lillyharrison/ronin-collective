@@ -974,7 +974,17 @@ serve(async (req) => {
       if (!target_user_id) return new Response(JSON.stringify({ error: "Missing target_user_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (target_user_id === callerUserId) return new Response(JSON.stringify({ error: "You cannot delete yourself" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const { error: deleteErr } = await adminClient.auth.admin.deleteUser(target_user_id);
-      if (deleteErr) return new Response(JSON.stringify({ error: deleteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (deleteErr) {
+        // Draft users have no auth account — remove their profile + related rows directly.
+        const notFound = /not\s*found|does not exist/i.test(deleteErr.message ?? "");
+        if (!notFound) {
+          return new Response(JSON.stringify({ error: deleteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        await adminClient.from("user_section_permissions").delete().eq("user_id", target_user_id);
+        await adminClient.from("user_roles").delete().eq("user_id", target_user_id);
+        const { error: profileErr } = await adminClient.from("profiles").delete().eq("id", target_user_id);
+        if (profileErr) return new Response(JSON.stringify({ error: profileErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

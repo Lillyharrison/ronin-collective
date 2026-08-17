@@ -143,13 +143,19 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
           else if (error.message) msg = error.message;
         } catch { /* use default */ }
         console.error("Delete user error:", msg);
+        document.body.style.pointerEvents = "";
         import("sonner").then(({ toast }) => toast.error(msg));
         setDeleting(false);
         return;
       }
+      // Radix can leave `pointer-events: none` on <body> when the dialog's parent
+      // unmounts mid-close — clear it so the app doesn't appear frozen.
+      document.body.style.pointerEvents = "";
+      setTimeout(() => { document.body.style.pointerEvents = ""; }, 300);
       onDeleted();
     } catch (e) {
       console.error("Delete user exception:", e);
+      document.body.style.pointerEvents = "";
       import("sonner").then(({ toast }) => toast.error("An unexpected error occurred."));
     }
     setDeleting(false);
