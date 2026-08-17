@@ -287,6 +287,19 @@ export function useNotificationCount() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Realtime DELETE events only carry the primary key, so a `user_id` filter
+  // never matches them — clearing notifications on another device would leave
+  // this badge stale. Re-check whenever the tab/app regains focus.
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") load(); };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [load]);
+
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
