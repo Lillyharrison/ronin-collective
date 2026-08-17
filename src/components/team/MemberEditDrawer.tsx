@@ -9,7 +9,7 @@ import {
   Zap,
 } from "lucide-react";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialog, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -130,6 +130,11 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
 
   async function handleDelete() {
     setDeleting(true);
+    // Close the modal before starting the request. Keeping a Radix modal mounted
+    // during an async deletion can strand its body pointer lock if the drawer
+    // unmounts or the request fails.
+    setDeleteDialogOpen(false);
+    await new Promise(resolve => setTimeout(resolve, 250));
     try {
       const { data, error } = await supabase.functions.invoke("ronin-ai", {
         body: { action: "delete_user", target_user_id: member.id },
@@ -147,7 +152,6 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
         toast.error(msg);
         return;
       }
-      setDeleteDialogOpen(false);
       onDeleted();
     } catch (e) {
       console.error("Delete user exception:", e);
@@ -753,13 +757,14 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>{isEN ? "Cancel" : "Cancelar"}</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={event => { event.preventDefault(); void handleDelete(); }}
+                    <Button
+                      type="button"
+                      onClick={() => { void handleDelete(); }}
                       disabled={deleting}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       {deleting ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Delete" : "Eliminar")}
-                    </AlertDialogAction>
+                    </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

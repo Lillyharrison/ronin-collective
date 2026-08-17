@@ -1865,7 +1865,7 @@ export type Database = {
           category: string | null
           completed_at: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description_en: string | null
           description_es: string | null
           due_date: string | null
@@ -1891,7 +1891,7 @@ export type Database = {
           category?: string | null
           completed_at?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description_en?: string | null
           description_es?: string | null
           due_date?: string | null
@@ -1917,7 +1917,7 @@ export type Database = {
           category?: string | null
           completed_at?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description_en?: string | null
           description_es?: string | null
           due_date?: string | null
