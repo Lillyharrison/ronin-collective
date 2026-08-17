@@ -20,6 +20,9 @@ interface Notification {
   property: { name: string } | null;
 }
 
+const NOTIF_CHANGED = "ronin:notifications-changed";
+const emitChanged = () => window.dispatchEvent(new Event(NOTIF_CHANGED));
+
 const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
   success: { dot: "bg-[hsl(var(--status-done))]",   bg: "border-l-[hsl(var(--status-done))]" },
   warning: { dot: "bg-[hsl(var(--status-urgent))]", bg: "border-l-[hsl(var(--status-urgent))]" },
@@ -97,18 +100,21 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const markRead = async (id: string) => {
     await supabase.from("notifications").update({ is_read: true }).eq("id", id);
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    emitChanged();
   };
 
   const markAllRead = async () => {
     if (!userId) return;
     await supabase.from("notifications").update({ is_read: true }).eq("user_id", userId).eq("is_read", false);
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    emitChanged();
   };
 
   const deleteNotification = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await supabase.from("notifications").delete().eq("id", id);
     setNotifications(prev => prev.filter(n => n.id !== id));
+    emitChanged();
   };
 
   const handleNotificationClick = async (n: Notification) => {
@@ -293,9 +299,11 @@ export function useNotificationCount() {
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === "visible") load(); };
     window.addEventListener("focus", refresh);
+    window.addEventListener(NOTIF_CHANGED, load);
     document.addEventListener("visibilitychange", refresh);
     return () => {
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(NOTIF_CHANGED, load);
       document.removeEventListener("visibilitychange", refresh);
     };
   }, [load]);
