@@ -231,7 +231,7 @@ export function MaintenanceSection() {
         .eq("id", pendingId)
         .maybeSingle();
       if (cancelled) return;
-      if (!data) { setPendingPlannedMaintenanceEntryId(null); return; }
+      if (!data) { setPendingPlannedMaintenanceEntryId(null); setMaintenanceReturnSection(null); return; }
       setActiveTab("planned");
       setEditPlanned(data as PlannedMaintenanceEntry);
       setPlannedModalOpen(true);
