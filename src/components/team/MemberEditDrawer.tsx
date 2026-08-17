@@ -37,6 +37,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const [tab, setTab] = useState<"details" | "access" | "quickactions">("details");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resending, setResending] = useState(false);
   const [resettingPwd, setResettingPwd] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
@@ -143,22 +144,17 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
           else if (error.message) msg = error.message;
         } catch { /* use default */ }
         console.error("Delete user error:", msg);
-        document.body.style.pointerEvents = "";
-        import("sonner").then(({ toast }) => toast.error(msg));
-        setDeleting(false);
+        toast.error(msg);
         return;
       }
-      // Radix can leave `pointer-events: none` on <body> when the dialog's parent
-      // unmounts mid-close — clear it so the app doesn't appear frozen.
-      document.body.style.pointerEvents = "";
-      setTimeout(() => { document.body.style.pointerEvents = ""; }, 300);
+      setDeleteDialogOpen(false);
       onDeleted();
     } catch (e) {
       console.error("Delete user exception:", e);
-      document.body.style.pointerEvents = "";
-      import("sonner").then(({ toast }) => toast.error("An unexpected error occurred."));
+      toast.error("An unexpected error occurred.");
+    } finally {
+      setDeleting(false);
     }
-    setDeleting(false);
   }
 
   async function handleSave() {
@@ -739,7 +735,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               {saving ? (isEN ? "Saving…" : "Guardando…") : (isDraft ? (isEN ? "Save Draft" : "Guardar Borrador") : (isEN ? "Save Changes" : "Guardar Cambios"))}
             </Button>
             {isMasterAdmin && (
-              <AlertDialog>
+              <AlertDialog open={deleteDialogOpen} onOpenChange={open => { if (!deleting) setDeleteDialogOpen(open); }}>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" disabled={deleting} className="w-full border-destructive/40 text-destructive hover:bg-destructive/10">
                     {deleting ? <Loader2 size={16} className="animate-spin mr-2" /> : <Trash2 size={16} className="mr-2" />}
@@ -758,10 +754,11 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                   <AlertDialogFooter>
                     <AlertDialogCancel>{isEN ? "Cancel" : "Cancelar"}</AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={handleDelete}
+                      onClick={event => { event.preventDefault(); void handleDelete(); }}
+                      disabled={deleting}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      {isEN ? "Delete" : "Eliminar"}
+                      {deleting ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Delete" : "Eliminar")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
