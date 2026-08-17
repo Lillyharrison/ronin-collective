@@ -104,6 +104,9 @@ interface NavigationContextType {
   pendingPlannedMaintenanceEntryId: string | null;
   setPendingPlannedMaintenanceEntryId: (id: string | null) => void;
   pendingPlannedMaintenanceEntryIdRef: React.MutableRefObject<string | null>;
+  /** When a maintenance deep-link comes from the calendar, remember to return there on close */
+  maintenanceReturnSection: ActiveSection | null;
+  setMaintenanceReturnSection: (section: ActiveSection | null) => void;
   canGoBack: boolean;
   goBack: () => void;
   isChatOpen: boolean;
@@ -146,6 +149,8 @@ const NavigationContext = createContext<NavigationContextType>({
   pendingPlannedMaintenanceEntryId: null,
   setPendingPlannedMaintenanceEntryId: () => {},
   pendingPlannedMaintenanceEntryIdRef: { current: null },
+  maintenanceReturnSection: null,
+  setMaintenanceReturnSection: () => {},
   canGoBack: false,
   goBack: () => {},
   isChatOpen: false,
@@ -195,6 +200,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
   const [pendingPlannedMaintenanceEntryId, setPendingPlannedMaintenanceEntryIdState] = useState<string | null>(null);
   const pendingPlannedMaintenanceEntryIdRef = useRef<string | null>(null);
+  const [maintenanceReturnSection, setMaintenanceReturnSection] = useState<ActiveSection | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [totalUnread, setTotalUnread] = useState(0);
   // In-memory breadcrumb stack for the back button (sections only, not browser history)
@@ -325,6 +331,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         pendingPlannedMaintenanceEntryId,
         setPendingPlannedMaintenanceEntryId,
         pendingPlannedMaintenanceEntryIdRef,
+        maintenanceReturnSection,
+        setMaintenanceReturnSection,
         canGoBack,
         goBack,
         isChatOpen,

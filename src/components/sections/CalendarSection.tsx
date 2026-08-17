@@ -1208,7 +1208,7 @@ function RightPanel({
 
 export function CalendarSection() {
   const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee, assignedPropertyIds } = usePermissions();
-  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setMaintenanceReturnSection } = useNavigation();
   // Only principal/extended_family default to Family; everyone else (including admin) defaults to Ronin
   const canSeeFamilyCal = canSee("family-calendar");
   const isFamilyUser = isFamily && !isMasterAdmin && !isAdmin && !isManager;
@@ -1658,6 +1658,8 @@ export function CalendarSection() {
                     if (ev._source === "planned_maintenance") {
                       persistMaintenanceTab("planned");
                       if (ev._source_id) setPendingPlannedMaintenanceEntryId(ev._source_id);
+                setMaintenanceReturnSection("calendar");
+                      setMaintenanceReturnSection("calendar");
                       setActiveSection("maintenance");
                       return;
                     }

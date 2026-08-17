@@ -70,6 +70,9 @@ export function MaintenanceSection() {
     pendingPlannedMaintenanceEntryIdRef,
     activePropertyId,
     setActivePropertyId,
+    maintenanceReturnSection,
+    setMaintenanceReturnSection,
+    setActiveSection,
   } = useNavigation();
 
   // Planned maintenance
@@ -1159,7 +1162,15 @@ export function MaintenanceSection() {
 
       <PlannedMaintenanceModal
         open={plannedModalOpen}
-        onClose={() => { setPlannedModalOpen(false); setEditPlanned(null); }}
+        onClose={() => {
+          setPlannedModalOpen(false);
+          setEditPlanned(null);
+          if (maintenanceReturnSection) {
+            const target = maintenanceReturnSection;
+            setMaintenanceReturnSection(null);
+            setActiveSection(target);
+          }
+        }}
         onSave={editPlanned ? handleUpdatePlanned : handleCreatePlanned}
         initial={editPlanned}
         vendors={vendors}
