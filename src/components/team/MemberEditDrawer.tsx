@@ -8,11 +8,6 @@ import {
   X, Check, Eye, Pencil, Bell, Save, Loader2, Trash2, Mail,
   Zap,
 } from "lucide-react";
-import {
-  AlertDialog, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -130,11 +125,6 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
 
   async function handleDelete() {
     setDeleting(true);
-    // Close the modal before starting the request. Keeping a Radix modal mounted
-    // during an async deletion can strand its body pointer lock if the drawer
-    // unmounts or the request fails.
-    setDeleteDialogOpen(false);
-    await new Promise(resolve => setTimeout(resolve, 250));
     try {
       const { data, error } = await supabase.functions.invoke("ronin-ai", {
         body: { action: "delete_user", target_user_id: member.id },
@@ -150,8 +140,10 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
         } catch { /* use default */ }
         console.error("Delete user error:", msg);
         toast.error(msg);
+        setDeleteDialogOpen(false);
         return;
       }
+      setDeleteDialogOpen(false);
       onDeleted();
     } catch (e) {
       console.error("Delete user exception:", e);
@@ -738,36 +730,47 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
               {saving ? (isEN ? "Saving…" : "Guardando…") : (isDraft ? (isEN ? "Save Draft" : "Guardar Borrador") : (isEN ? "Save Changes" : "Guardar Cambios"))}
             </Button>
-            {isMasterAdmin && (
-              <AlertDialog open={deleteDialogOpen} onOpenChange={open => { if (!deleting) setDeleteDialogOpen(open); }}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" disabled={deleting} className="w-full border-destructive/40 text-destructive hover:bg-destructive/10">
-                    {deleting ? <Loader2 size={16} className="animate-spin mr-2" /> : <Trash2 size={16} className="mr-2" />}
-                    {isEN ? "Delete User" : "Eliminar Usuario"}
+            {isMasterAdmin && !deleteDialogOpen && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={deleting}
+                onClick={() => setDeleteDialogOpen(true)}
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 size={16} className="mr-2" />
+                {isEN ? "Delete User" : "Eliminar Usuario"}
+              </Button>
+            )}
+            {isMasterAdmin && deleteDialogOpen && (
+              <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3" role="alert">
+                <p className="text-sm font-semibold text-destructive">
+                  {isEN ? "Permanently delete this user?" : "¿Eliminar permanentemente este usuario?"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isEN
+                    ? `${member.full_name || "This user"} and all their data will be deleted. This cannot be undone.`
+                    : `${member.full_name || "Este usuario"} y todos sus datos serán eliminados. Esta acción no se puede deshacer.`}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={deleting}
+                    onClick={() => setDeleteDialogOpen(false)}
+                  >
+                    {isEN ? "Cancel" : "Cancelar"}
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{isEN ? "Delete User?" : "¿Eliminar usuario?"}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {isEN
-                        ? `This will permanently delete ${member.full_name || "this user"} and all their data. This cannot be undone.`
-                        : `Esto eliminará permanentemente a ${member.full_name || "este usuario"} y todos sus datos. Esta acción no se puede deshacer.`}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{isEN ? "Cancel" : "Cancelar"}</AlertDialogCancel>
-                    <Button
-                      type="button"
-                      onClick={() => { void handleDelete(); }}
-                      disabled={deleting}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {deleting ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Delete" : "Eliminar")}
-                    </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                  <Button
+                    type="button"
+                    onClick={() => { void handleDelete(); }}
+                    disabled={deleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleting ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Delete" : "Eliminar")}
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         )}
