@@ -188,11 +188,14 @@ export function ScheduleManagerDrawer({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Property</Label>
-                  <Select value={form.property_id} onValueChange={(v) => setForm((f) => ({ ...f, property_id: v }))}>
+                  <Select
+                    value={form.property_id ? form.property_id : "__none__"}
+                    onValueChange={(v) => setForm((f) => ({ ...f, property_id: v === "__none__" ? "" : v }))}
+                  >
                     <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {properties.map((p) => (
+                      <SelectItem value="__none__">None</SelectItem>
+                      {properties.filter((p) => p.id).map((p) => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
