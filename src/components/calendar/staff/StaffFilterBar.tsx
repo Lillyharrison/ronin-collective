@@ -43,7 +43,7 @@ export function StaffFilterBar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All departments</SelectItem>
-          {departmentOptions.map((d) => (
+          {departmentOptions.filter((d) => d && d.trim() !== "").map((d) => (
             <SelectItem key={d} value={d}>{d}</SelectItem>
           ))}
         </SelectContent>
@@ -54,7 +54,7 @@ export function StaffFilterBar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All properties</SelectItem>
-          {properties.map((p) => (
+          {properties.filter((p) => p.id && p.id.trim() !== "").map((p) => (
             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
           ))}
         </SelectContent>
