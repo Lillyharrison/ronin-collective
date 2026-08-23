@@ -361,10 +361,17 @@ function renderWeeklyStacked(
             doc.line(x, y + i * bandH, x + width, y + i * bandH);
           }
         }
-        // Always re-draw outer cell border so boxes are guaranteed to close.
+        // Always re-draw the outer cell border after custom fills. Passing "S"
+        // is essential: without an explicit stroke operation jsPDF can leave
+        // the rectangle path unpainted, which makes coloured cells appear open.
         doc.setDrawColor(210, 210, 210);
         doc.setLineWidth(0.08);
-        doc.rect(x, y, width, height);
+        doc.rect(x, y, width, height, "S");
+        if (data.column.index === 7) {
+          // Close the entire staff row with one uninterrupted bottom edge. This
+          // avoids tiny gaps between individually painted day cells.
+          doc.line(marginL, y + height, marginL + usableWidth, y + height);
+        }
         doc.setTextColor(0, 0, 0);
       },
     });
