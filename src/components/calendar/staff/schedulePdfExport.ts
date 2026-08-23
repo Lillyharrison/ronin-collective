@@ -186,9 +186,16 @@ function renderWeeklyStacked(
     type Row = { cells: string[]; staffIndex: number; isSep: boolean };
     const rows: Row[] = [];
     let lastDept: string | null | undefined = undefined;
-    staffToShow.forEach((person, idx) => {
+    const weekDateStrs = weekDays.map((d) => format(d, "yyyy-MM-dd"));
+    // Only include staff who actually have something scheduled this week.
+    const weekStaff = staffToShow
+      .map((person, idx) => ({ person, idx }))
+      .filter(({ person }) =>
+        displayShifts.some((s) => s.staff_id === person.id && weekDateStrs.includes(s.shift_date)),
+      );
+    weekStaff.forEach(({ person, idx }, i) => {
       const dept = person.department ?? null;
-      if (idx > 0 && dept !== lastDept) rows.push({ cells: Array(8).fill(""), staffIndex: -1, isSep: true });
+      if (i > 0 && dept !== lastDept) rows.push({ cells: Array(8).fill(""), staffIndex: -1, isSep: true });
       lastDept = dept;
       const cells = [
         getDisplayName(person),
@@ -201,6 +208,11 @@ function renderWeeklyStacked(
       ];
       rows.push({ cells, staffIndex: idx, isSep: false });
     });
+    if (rows.length === 0) {
+      cursorY += 2;
+      continue;
+    }
+
 
     // Per-row max non-leave shift count across the week — drives band height so
     // single-shift cells in a row containing a split-shift day only fill the top slice.
