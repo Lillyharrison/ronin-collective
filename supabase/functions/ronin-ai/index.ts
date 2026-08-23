@@ -979,7 +979,14 @@ serve(async (req) => {
         .eq("id", target_user_id)
         .maybeSingle();
       if (lookupErr) return new Response(JSON.stringify({ error: lookupErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (!targetProfile) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Deletion is intentionally idempotent. Mobile browsers can replay a tap
+      // while the drawer is closing; if the first request already removed the
+      // profile, the replay should not turn a successful deletion into an error.
+      if (!targetProfile) {
+        return new Response(JSON.stringify({ success: true, already_deleted: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       if (targetProfile.is_draft) {
         // Draft profiles deliberately have no auth account. Delete their dependent
@@ -993,7 +1000,16 @@ serve(async (req) => {
       } else {
         // Auth deletion cascades to the regular user's profile and related rows.
         const { error: deleteErr } = await adminClient.auth.admin.deleteUser(target_user_id);
-        if (deleteErr) return new Response(JSON.stringify({ error: deleteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (deleteErr) {
+          // A stale profile can remain if the auth account was removed by an
+          // earlier request. Finish that cleanup and still report success.
+          if (deleteErr.message.toLowerCase().includes("user not found")) {
+            const { error: profileErr } = await adminClient.from("profiles").delete().eq("id", target_user_id);
+            if (profileErr) return new Response(JSON.stringify({ error: profileErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          } else {
+            return new Response(JSON.stringify({ error: deleteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        }
       }
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
