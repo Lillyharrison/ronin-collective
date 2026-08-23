@@ -287,8 +287,26 @@ function renderWeeklyStacked(
       didDrawCell: (data) => {
         if (data.section !== "body") return;
         const row = rows[data.row.index];
-        if (!row || row.isSep) return;
+        if (!row) return;
+        if (row.isSep) {
+          // Close the group boxes above and below the spacer band so each
+          // department block reads as a complete rectangle.
+          if (data.column.index === 0) {
+            doc.setDrawColor(190, 190, 190);
+            doc.setLineWidth(0.12);
+            const gridW = staffColW + dayColW * 7;
+            doc.line(data.cell.x, data.cell.y, data.cell.x + gridW, data.cell.y);
+            doc.line(
+              data.cell.x,
+              data.cell.y + data.cell.height,
+              data.cell.x + gridW,
+              data.cell.y + data.cell.height,
+            );
+          }
+          return;
+        }
         if (data.column.index === 0) return;
+
         const person = staffToShow[row.staffIndex];
         const day = weekDays[data.column.index - 1];
         const dateStr = format(day, "yyyy-MM-dd");
