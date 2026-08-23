@@ -491,11 +491,30 @@ export function StaffCalendarTab({
   };
 
   // Fetch fresh data for the requested PDF range (which may be wider than the current view)
-  // and trigger the v2 export. Schedules/shifts/leave are scoped to whatever staff are
-  // currently visible after filters.
+  // and trigger the v2 export. Staff selection is recomputed for the export range so people
+  // who only have shifts in a later week (e.g. draft/future hires) are still included.
   const handlePdfExport = useCallback(async (opts: PdfExportOptions) => {
-    const visibleIds = staffToShow.map((p) => p.id);
+    const q = filterSearch.trim().toLowerCase();
+    const scopeSet = scopeFilterIds ? new Set(scopeFilterIds) : null;
+    const candidates = (!canEdit && userId && !scopeFilterIds)
+      ? profiles.filter((p) => p.id === userId)
+      : profiles.filter((p) => {
+          if (filterStaff !== "all" && p.id !== filterStaff) return false;
+          if (scopeSet && !scopeSet.has(p.id)) return false;
+          if (!isEmployedDuringRange(p, opts.rangeStart, opts.rangeEnd)) return false;
+          if (q) {
+            const name = (p.full_name ?? "").toLowerCase();
+            const title = (p.job_title ?? "").toLowerCase();
+            if (!name.includes(q) && !title.includes(q)) return false;
+          }
+          if (filterDepartment !== "all" && (p.department ?? "—") !== filterDepartment) return false;
+          if (filterProperty !== "all" && !(p.assigned_property_ids ?? []).includes(filterProperty)) return false;
+          return true;
+        });
+
+    const visibleIds = candidates.map((p) => p.id);
     if (visibleIds.length === 0) { toast.error("No staff to export"); return; }
+
 
     const startStr = format(opts.rangeStart, "yyyy-MM-dd");
     const endStr = format(opts.rangeEnd, "yyyy-MM-dd");
@@ -538,11 +557,23 @@ export function StaffCalendarTab({
       (shiftRes.data ?? []) as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (leaveRes.data ?? []) as any,
-      staffToShow,
+      candidates,
     );
 
+    // Only include people who actually have something in the export range,
+    // falling back to the current on-screen list if nothing matches.
+    const activeIds = new Set(exportShifts.map((s) => s.staff_id));
+    const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
+    let exportStaff = candidates.filter((p) => activeIds.has(p.id));
+    if (exportStaff.length === 0) exportStaff = staffToShow;
+    exportStaff = [...exportStaff].sort((a, b) => {
+      const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+      const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+      return ai - bi;
+    });
+
     exportSchedulePDFv2({
-      staffToShow,
+      staffToShow: exportStaff,
       // Pending leave is provisional — keep it out of printed schedules.
       displayShifts: exportShifts.filter((s) => !(s.is_leave && s.leave_status === "pending")),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -553,7 +584,8 @@ export function StaffCalendarTab({
       layout: opts.layout,
       includeTracking: opts.includeTracking,
     });
-  }, [staffToShow, properties]);
+  }, [staffToShow, properties, profiles, staffOrder, filterStaff, filterSearch, filterDepartment, filterProperty, scopeFilterIds, canEdit, userId]);
+
 
   return (
     <div className="space-y-4">
