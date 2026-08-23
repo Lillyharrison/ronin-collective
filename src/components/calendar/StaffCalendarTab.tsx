@@ -557,11 +557,23 @@ export function StaffCalendarTab({
       (shiftRes.data ?? []) as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (leaveRes.data ?? []) as any,
-      staffToShow,
+      candidates,
     );
 
+    // Only include people who actually have something in the export range,
+    // falling back to the current on-screen list if nothing matches.
+    const activeIds = new Set(exportShifts.map((s) => s.staff_id));
+    const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
+    let exportStaff = candidates.filter((p) => activeIds.has(p.id));
+    if (exportStaff.length === 0) exportStaff = staffToShow;
+    exportStaff = [...exportStaff].sort((a, b) => {
+      const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+      const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+      return ai - bi;
+    });
+
     exportSchedulePDFv2({
-      staffToShow,
+      staffToShow: exportStaff,
       // Pending leave is provisional — keep it out of printed schedules.
       displayShifts: exportShifts.filter((s) => !(s.is_leave && s.leave_status === "pending")),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -572,7 +584,8 @@ export function StaffCalendarTab({
       layout: opts.layout,
       includeTracking: opts.includeTracking,
     });
-  }, [staffToShow, properties]);
+  }, [staffToShow, properties, profiles, staffOrder, filterStaff, filterSearch, filterDepartment, filterProperty, scopeFilterIds, canEdit, userId]);
+
 
   return (
     <div className="space-y-4">
