@@ -67,7 +67,8 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       .limit(200); // generous cap; planned maintenance grows slowly
 
     if (scopedPropertyIds && scopedPropertyIds.length > 0) {
-      query = query.in("property_id", scopedPropertyIds);
+      // Include rows with no property assigned — they belong to the "all properties" view.
+      query = query.or(`property_id.is.null,property_id.in.(${scopedPropertyIds.join(",")})`);
     }
 
     const { data, error } = await query;
