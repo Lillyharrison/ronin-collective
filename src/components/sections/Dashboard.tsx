@@ -587,6 +587,7 @@ export function Dashboard() {
         )}
 
       </div>
+      )}
 
 
       {/* Notifications widget — always visible, shows "all clear" when empty */}
