@@ -2299,6 +2299,7 @@ export type Database = {
         Args: { _message_ids: string[]; _user_id: string }
         Returns: undefined
       }
+      can_edit_contacts: { Args: { _user_id: string }; Returns: boolean }
       can_edit_maintenance: { Args: { _user_id: string }; Returns: boolean }
       can_edit_orders: { Args: { _user_id: string }; Returns: boolean }
       can_user_see_checklist: {
