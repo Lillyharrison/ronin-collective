@@ -3,7 +3,7 @@
 
 import { format, getDay, eachDayOfInterval, parseISO, isWeekend } from "date-fns";
 import type { StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useStaffSchedules";
-import { PROPERTY_COLORS, PROPERTY_COLOR_OVERRIDES } from "./constants";
+import { PROPERTY_COLORS, PROPERTY_COLOR_OVERRIDES, stablePropColorIndex } from "./constants";
 import type { Profile, Property, DisplayShift } from "./types";
 import { isEmployedOn } from "./leaveMath";
 
@@ -24,8 +24,7 @@ export function propColor(propId: string | null, properties: Property[]) {
       if (nameLower.includes(key)) return PROPERTY_COLORS[colorIdx % PROPERTY_COLORS.length];
     }
   }
-  const idx = properties.findIndex((p) => p.id === propId);
-  return PROPERTY_COLORS[Math.abs(idx) % PROPERTY_COLORS.length];
+  return PROPERTY_COLORS[stablePropColorIndex(propId, PROPERTY_COLORS.length)];
 }
 
 export function formatTime(t: string | null) {

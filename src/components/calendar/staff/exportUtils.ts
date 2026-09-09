@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
-import { PROPERTY_COLOR_OVERRIDES } from "./constants";
+import { PROPERTY_COLOR_OVERRIDES, stablePropColorIndex } from "./constants";
 import { getDisplayName, formatTime } from "./utils";
 import type { DisplayShift, Profile, Property } from "./types";
 
@@ -30,8 +30,7 @@ function getExportPropColor(propId: string | null, properties: Property[]) {
       if (nameLower.includes(key)) return EXPORT_PROP_COLORS[colorIdx % EXPORT_PROP_COLORS.length];
     }
   }
-  const idx = properties.findIndex((p) => p.id === propId);
-  return EXPORT_PROP_COLORS[Math.abs(idx) % EXPORT_PROP_COLORS.length];
+  return EXPORT_PROP_COLORS[stablePropColorIndex(propId, EXPORT_PROP_COLORS.length)];
 }
 
 function buildExportRows(
