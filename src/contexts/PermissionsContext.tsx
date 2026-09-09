@@ -64,6 +64,8 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   timeline:             ["master_admin"],
   // Feature visibility — defaults to admin/manager only; staff must be granted explicitly
   "principal-location":   ["master_admin", "admin", "manager", "principal"],
+  // Dashboard "Today's Snapshot" panel — on for staff/managers, off for family by default
+  "todays-snapshot":      ["master_admin", "admin", "manager", "staff"],
   // Calendar sub-tab visibility
   "family-calendar":      ["master_admin", "admin", "manager", "principal"],
   "calendar-travel":      ["master_admin", "admin", "manager", "staff", "principal"],
