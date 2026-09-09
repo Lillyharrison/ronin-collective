@@ -31,7 +31,22 @@ export const PROPERTY_COLOR_OVERRIDES: Record<string, number> = {
   aman: 9,       // indigo
   "new york": 10, // light grey
   newyork: 10,
+  lvc: 4,         // pink
+  "502 park": 1,  // emerald
 };
+
+/**
+ * Deterministic colour index for properties without an explicit override.
+ * Hashes the property id so every user sees the same colour, regardless of
+ * how many properties their account can access.
+ */
+export function stablePropColorIndex(propId: string, paletteLength: number): number {
+  let hash = 0;
+  for (let i = 0; i < propId.length; i++) {
+    hash = (hash * 31 + propId.charCodeAt(i)) >>> 0;
+  }
+  return hash % paletteLength;
+}
 
 export const LEAVE_TYPES = ["vacation", "sick", "personal", "public_holiday", "other"];
 export const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
