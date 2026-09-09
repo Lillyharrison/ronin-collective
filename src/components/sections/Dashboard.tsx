@@ -37,6 +37,7 @@ interface DashNotification {
   entity_id: string | null;
   entity_type: string | null;
   user_id?: string;
+  property?: { name: string } | null;
 }
 
 interface PrincipalLocation {
@@ -186,7 +187,7 @@ export function Dashboard() {
     if (!userId || permLoading) return;
     const { data } = await supabase
       .from("notifications")
-      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id")
+      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, property:properties(name)")
       .eq("user_id", userId)
       .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
@@ -225,7 +226,7 @@ export function Dashboard() {
       // 3. Dashboard notifications (unread)
       supabase
         .from("notifications")
-        .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id")
+        .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, property:properties(name)")
         .eq("user_id", userId)
         .not("acknowledged_by", "cs", `{${userId}}`)
         .order("created_at", { ascending: false })
@@ -638,7 +639,12 @@ export function Dashboard() {
                 >
                   <div className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", styles.dot)} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground leading-snug truncate">{n.title}</p>
+                    <p className="text-xs font-medium text-foreground leading-snug truncate">
+                      {n.property?.name && (
+                        <span className="font-bold">{n.property.name} · </span>
+                      )}
+                      {n.title}
+                    </p>
                     <p className="text-[10px] text-muted-foreground leading-none mt-0.5 truncate">
                       {n.body ? `${n.body} · ` : ""}Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
