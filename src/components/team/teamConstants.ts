@@ -56,6 +56,7 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
   // ── Dashboard sub-features ──
   { key: "principal-location",   label: "   ↳ Principal Location", labelEs: "   ↳ Ubicación del Principal", hasEdit: false, isFeature: true, isDashboardSub: true },
+  { key: "todays-snapshot",      label: "   ↳ Today's Snapshot",   labelEs: "   ↳ Resumen de Hoy",          hasEdit: false, isFeature: true, isDashboardSub: true },
   { key: "property",           label: "Property",            labelEs: "Propiedad",         hasEdit: true  },
   { key: "messages",           label: "Messages",            labelEs: "Mensajes",          hasEdit: true  },
   { key: "maintenance",        label: "Maintenance",         labelEs: "Mantenimiento",     hasEdit: true  },
@@ -158,8 +159,8 @@ export function defaultPermissionsForLevel(level: Level | string): SectionPermis
   const base: Record<string, string[]> = {
     principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","family-movements"],
     extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","family-movements"],
-    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","calendar-travel","calendar-birthdays","calendar-maintenance"],
+    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","todays-snapshot","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","family-movements"],
+    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","todays-snapshot","calendar-travel","calendar-birthdays","calendar-maintenance"],
   };
   const allowed = base[level] || base["staff"];
   const perms: SectionPermissions = {};

@@ -498,7 +498,8 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* Today's Snapshot */}
+      {/* Today's Snapshot — visibility controlled per user in Team settings */}
+      {canSee("todays-snapshot") && (
       <div className="mx-4 mt-4 rounded-xl bg-card border border-border p-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
@@ -586,6 +587,7 @@ export function Dashboard() {
         )}
 
       </div>
+      )}
 
 
       {/* Notifications widget — always visible, shows "all clear" when empty */}
