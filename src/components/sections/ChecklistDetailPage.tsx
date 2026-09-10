@@ -360,9 +360,12 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
               <div className="flex items-center gap-1.5 group/title">
                 <h2 className="text-cream font-semibold text-sm leading-tight truncate">{displayTitle}</h2>
                 {isMasterAdmin && (
-                  <button onClick={() => { setEditingTitle(true); setTitleDraft(template.title); }}
-                    className="opacity-0 group-hover/title:opacity-100 transition-opacity text-cream/40 hover:text-gold">
-                    <Pencil size={11} />
+                  <button
+                    type="button"
+                    aria-label="Rename checklist"
+                    onClick={() => { setEditingTitle(true); setTitleDraft(template.title); }}
+                    className="p-2 -m-1 flex items-center justify-center text-cream/60 hover:text-gold transition-colors">
+                    <Pencil size={13} />
                   </button>
                 )}
               </div>

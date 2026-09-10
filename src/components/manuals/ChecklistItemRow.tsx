@@ -248,7 +248,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
 
         {/* Admin actions */}
         {isAdmin && !editing && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <div className="flex items-center gap-0.5 opacity-60 hover:opacity-100 group-hover:opacity-100 transition-opacity flex-shrink-0">
             <button
               onClick={() => fileRef.current?.click()}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
