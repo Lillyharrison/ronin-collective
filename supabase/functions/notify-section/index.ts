@@ -43,7 +43,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const { section, payload, excludeUserId, idempotencyKey } = body as {
-      section: string;
+      section: string | string[];
       payload: {
         title: string;
         body?: string;
@@ -62,7 +62,9 @@ serve(async (req) => {
       idempotencyKey?: string | null;
     };
 
-    if (!section || !payload?.title) {
+    const sections = Array.isArray(section) ? section.filter(Boolean) : [section];
+
+    if (!sections.length || !payload?.title) {
       return new Response(JSON.stringify({ error: "Missing section or payload.title" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
