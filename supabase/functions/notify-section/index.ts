@@ -167,6 +167,26 @@ serve(async (req) => {
       });
     }
 
+    // Fire the actual push notifications to subscribed devices for the same recipients.
+    // Best-effort / non-blocking: a push failure should never fail the in-app notification insert.
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          recipientUserIds: recipients,
+          title: payload.title,
+          body: payload.body ?? "",
+          url: payload.action_url ?? "/",
+        }),
+      });
+    } catch (pushErr) {
+      console.error("[notify-section] push dispatch failed:", pushErr);
+    }
+
     return new Response(
       JSON.stringify({ inserted: recipients.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
