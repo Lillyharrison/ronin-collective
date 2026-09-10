@@ -25,7 +25,7 @@ function ModalContent({
   onClose, onSave, initial = {}, categories, onCategoryAdded,
   properties, profiles, existingIssues = [], mode = "create",
 }: Omit<Props, "open">) {
-  const { userId, isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const { userId, isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
   const { t, language } = useLanguage();
   const isL = language === "es";
   const canManageCategories = isMasterAdmin || isAdmin || isManager;
@@ -377,17 +377,26 @@ function ModalContent({
             </div>
           )}
 
-          {/* Scheduled date (admin only) */}
-          {(isAdmin || isManager || isMasterAdmin) && (
+          {/* Scheduled date */}
+          {(isAdmin || isManager || isMasterAdmin || canEdit("maintenance")) && (
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                 {t("scheduledDate")}
               </label>
-              <input type="date" value={scheduledDate} onChange={e => setScheduled(e.target.value)}
-                style={{ fontSize: "16px" }}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
+              <div className="flex items-center gap-2">
+                <input type="date" value={scheduledDate} onChange={e => setScheduled(e.target.value)}
+                  style={{ fontSize: "16px" }}
+                  className="flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
+                {scheduledDate && (
+                  <button type="button" onClick={() => setScheduled("")}
+                    className="shrink-0 rounded-lg border border-input px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground">
+                    {isL ? "Borrar" : "Clear"}
+                  </button>
+                )}
+              </div>
             </div>
           )}
+
 
           {/* Related issue */}
           {existingIssues.length > 0 && (
