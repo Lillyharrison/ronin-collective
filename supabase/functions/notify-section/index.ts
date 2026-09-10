@@ -109,7 +109,7 @@ serve(async (req) => {
     const { data: permRows } = await supabaseAdmin
       .from("user_section_permissions")
       .select("user_id")
-      .eq("section", section)
+      .in("section", sections)
       .eq("notifications", true);
 
     const optedInIds = new Set<string>((permRows ?? []).map((r: { user_id: string }) => r.user_id));
