@@ -260,11 +260,22 @@ export function useChecklistComments(templateId: string | null, propertyId?: str
     setLoading(true);
     const { data } = await supabase
       .from("checklist_comments")
-      .select("*, profile:profiles(full_name, avatar_url)")
+      .select("id, template_id, property_id, session_date, user_id, content, created_at")
       .eq("template_id", templateId)
       .eq("session_date", today)
-      .order("created_at", { ascending: true });
-    setComments((data as any[]) ?? []);
+      .order("created_at", { ascending: true })
+      .limit(200);
+    const rows = (data as any[]) ?? [];
+    const userIds = Array.from(new Set(rows.map(r => r.user_id).filter(Boolean)));
+    let profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", userIds);
+      profileMap = new Map((profs ?? []).map((p: any) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }]));
+    }
+    setComments(rows.map(r => ({ ...r, profile: profileMap.get(r.user_id) ?? null })) as any[]);
     setLoading(false);
   }, [templateId, today]);
 
