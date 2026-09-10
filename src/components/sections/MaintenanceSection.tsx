@@ -392,8 +392,13 @@ export function MaintenanceSection() {
     // Weekly and monthly recurring tasks are excluded from the calendar
     if (entry.recurrence_months === -1 || entry.recurrence_months === -2) return;
 
+    // A rough month is not a booking — only entries with a real, specific date
+    // are allowed on the calendar.
     const shouldBeOnCalendar =
-      entry.status != null && CALENDAR_VISIBLE_STATUSES.has(entry.status);
+      entry.status != null &&
+      CALENDAR_VISIBLE_STATUSES.has(entry.status) &&
+      entry.date_type === "specific" &&
+      !!entry.scheduled_date;
 
     // Not bookable yet → ensure no calendar event exists
     if (!shouldBeOnCalendar) {
@@ -407,19 +412,15 @@ export function MaintenanceSection() {
       return;
     }
 
-    // Build calendar start/end date from the entry's current date fields
+    // Build calendar start/end date from the entry's specific date
     let calStartDate: string | null = null;
     let calEndDate: string | null = null;
-    if (entry.date_type === "specific" && entry.scheduled_date) {
+    {
       const time = entry.scheduled_time ? entry.scheduled_time.slice(0, 5) : "09:00";
       calStartDate = `${entry.scheduled_date}T${time}:00`;
       const [h, m] = time.split(":").map(Number);
       const endH = String(Math.min(h + 1, 23)).padStart(2, "0");
-      calEndDate = `${entry.scheduled_date}T${endH}:${String(m).padStart(2, "0")}:00`;
-    } else if (entry.date_type === "month_only" && entry.scheduled_month && entry.scheduled_year) {
-      const mm = String(entry.scheduled_month).padStart(2, "0");
-      calStartDate = `${entry.scheduled_year}-${mm}-01T09:00:00`;
-      calEndDate = `${entry.scheduled_year}-${mm}-01T17:00:00`;
+      calEndDate = `${entry.scheduled_end_date ?? entry.scheduled_date}T${endH}:${String(m).padStart(2, "0")}:00`;
     }
 
     if (!calStartDate) return;
