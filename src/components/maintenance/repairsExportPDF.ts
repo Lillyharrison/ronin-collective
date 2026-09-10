@@ -274,15 +274,11 @@ function drawHeader(doc: jsPDF, ctx: RepairsExportContext, pageWidth: number, ma
 }
 
 function drawFooter(doc: jsPDF, pageWidth: number, pageHeight: number) {
-  const pageCount = doc.getNumberOfPages();
   doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(140, 140, 140);
-  for (let i = 1; i <= pageCount; i++) {
+  for (let i = 1; i <= doc.getNumberOfPages(); i++) {
     doc.setPage(i);
-    const text = `Page ${i} of ${pageCount}`;
-    const w = doc.getTextWidth(text);
-    doc.text(text, pageWidth - 10 - w, pageHeight - 6);
     doc.text("Ronin · Repairs", 10, pageHeight - 6);
   }
 }
