@@ -20,7 +20,7 @@ export interface NotifyPayload {
 }
 
 export async function notifySection(
-  section: string,
+  section: string | string[],
   payload: NotifyPayload,
   excludeUserId?: string | null,
 ): Promise<void> {
