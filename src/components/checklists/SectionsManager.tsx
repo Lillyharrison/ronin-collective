@@ -88,13 +88,13 @@ export function SectionsManager({ template, items, isAdmin, onTemplateChange, on
             )}
             {isAdmin && editing !== s && (
               <>
-                <button onClick={() => { setEditing(s); setEditDraft(s); }}
-                  className="opacity-0 group-hover/sec:opacity-100 transition-opacity">
-                  <Pencil size={9} />
+                <button type="button" aria-label="Rename section" onClick={() => { setEditing(s); setEditDraft(s); }}
+                  className="p-1 -m-0.5 opacity-70 hover:opacity-100 transition-opacity">
+                  <Pencil size={11} />
                 </button>
-                <button onClick={() => deleteSection(s)}
-                  className="opacity-0 group-hover/sec:opacity-100 transition-opacity text-[hsl(var(--status-urgent))]">
-                  <Trash2 size={9} />
+                <button type="button" aria-label="Delete section" onClick={() => deleteSection(s)}
+                  className="p-1 -m-0.5 opacity-70 hover:opacity-100 transition-opacity text-[hsl(var(--status-urgent))]">
+                  <Trash2 size={11} />
                 </button>
               </>
             )}
