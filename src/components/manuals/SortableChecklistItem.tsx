@@ -9,7 +9,7 @@ interface Props {
   isAdmin: boolean;
   completedAt?: string;
   onToggle: () => void;
-  onUpdate: (id: string, changes: Partial<ChecklistItem>) => void;
+  onUpdate: (id: string, changes: Partial<ChecklistItem>) => Promise<boolean>;
   onDelete: (id: string) => void;
   onPhotoUpload: (id: string, url: string) => void;
 }
