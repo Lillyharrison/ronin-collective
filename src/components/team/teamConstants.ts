@@ -52,7 +52,7 @@ export interface AddUserForm {
 }
 
 // All navigable sections in the app
-export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; hasScope?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean }[] = [
+export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; hasScope?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean; isMaintenanceSub?: boolean }[] = [
   { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
   // ── Dashboard sub-features ──
   { key: "principal-location",   label: "   ↳ Principal Location", labelEs: "   ↳ Ubicación del Principal", hasEdit: false, isFeature: true, isDashboardSub: true },
@@ -60,6 +60,9 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "property",           label: "Property",            labelEs: "Propiedad",         hasEdit: true  },
   { key: "messages",           label: "Messages",            labelEs: "Mensajes",          hasEdit: true  },
   { key: "maintenance",        label: "Maintenance",         labelEs: "Mantenimiento",     hasEdit: true  },
+  // ── Maintenance alert sub-types (control which alerts a person receives) ──
+  { key: "maintenance-repairs", label: "   ↳ Repairs",             labelEs: "   ↳ Reparaciones",           hasEdit: false, isFeature: true, isMaintenanceSub: true },
+  { key: "maintenance-planned", label: "   ↳ Planned Maintenance", labelEs: "   ↳ Mantenimiento Planificado", hasEdit: false, isFeature: true, isMaintenanceSub: true },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
   // ── Calendar + sub-tabs (match Ronin calendar tabs) ──
   { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
