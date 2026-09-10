@@ -11,7 +11,7 @@ interface Props {
   isCompleted: boolean;
   isAdmin: boolean;
   onToggle: () => void;
-  onUpdate: (id: string, changes: Partial<ChecklistItem>) => void;
+  onUpdate: (id: string, changes: Partial<ChecklistItem>) => Promise<boolean>;
   onDelete: (id: string) => void;
   onPhotoUpload: (id: string, url: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -53,6 +53,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
   const [editIcon, setEditIcon] = useState(item.icon);
   const [editNotes, setEditNotes] = useState(item.notes ?? "");
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -72,7 +73,12 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
     if (editIcon !== item.icon) changes.icon = editIcon;
     const nextNotes = editNotes.trim() || null;
     if (nextNotes !== (item.notes ?? null)) changes.notes = nextNotes;
-    if (Object.keys(changes).length > 0) onUpdate(item.id, changes);
+    if (Object.keys(changes).length > 0) {
+      setSaving(true);
+      const saved = await onUpdate(item.id, changes);
+      setSaving(false);
+      if (!saved) return;
+    }
     setEditing(false);
     setShowIconPicker(false);
   };
@@ -217,9 +223,10 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
                 <button
                   type="button"
                   onClick={saveEdit}
+                  disabled={saving}
                   className="px-3 py-1.5 text-xs font-medium rounded bg-gold text-charcoal hover:opacity-90"
                 >
-                  {t("save")}
+                  {saving ? "…" : t("save")}
                 </button>
                 <button
                   type="button"
