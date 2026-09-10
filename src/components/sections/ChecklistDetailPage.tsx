@@ -85,8 +85,18 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
 
   const saveTitle = async () => {
     if (!titleDraft.trim() || titleDraft === template.title) { setEditingTitle(false); return; }
-    await supabase.from("checklist_templates").update({ title: titleDraft.trim() }).eq("id", template.id);
-    setTemplate(t => ({ ...t, title: titleDraft.trim() }));
+    const nextTitle = titleDraft.trim();
+    const { data, error } = await supabase
+      .from("checklist_templates")
+      .update({ title: nextTitle })
+      .eq("id", template.id)
+      .select("title")
+      .single();
+    if (error) {
+      toast.error(t("couldNotSaveChange"));
+      return;
+    }
+    setTemplate(current => ({ ...current, title: data.title }));
     setEditingTitle(false);
   };
 
@@ -345,7 +355,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
 
           {/* Title — inline edit for master admin */}
           <div className="flex-1 min-w-0">
-            {editingTitle && isMasterAdmin ? (
+            {editingTitle && isAdmin ? (
               <input
                 autoFocus
                 value={titleDraft}
@@ -357,7 +367,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
             ) : (
               <div className="flex items-center gap-1.5 group/title">
                 <h2 className="text-cream font-semibold text-sm leading-tight truncate">{displayTitle}</h2>
-                {isMasterAdmin && (
+                {isAdmin && (
                   <button
                     type="button"
                     aria-label="Rename checklist"
