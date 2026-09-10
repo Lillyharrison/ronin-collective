@@ -25,7 +25,7 @@ function ModalContent({
   onClose, onSave, initial = {}, categories, onCategoryAdded,
   properties, profiles, existingIssues = [], mode = "create",
 }: Omit<Props, "open">) {
-  const { userId, isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const { userId, isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
   const { t, language } = useLanguage();
   const isL = language === "es";
   const canManageCategories = isMasterAdmin || isAdmin || isManager;
