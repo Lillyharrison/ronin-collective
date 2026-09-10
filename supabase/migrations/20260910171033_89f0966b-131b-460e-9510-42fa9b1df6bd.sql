@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.notify_on_calendar_event_insert() FROM PUBLIC, anon, authenticated;

@@ -43,7 +43,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const { section, payload, excludeUserId, idempotencyKey } = body as {
-      section: string;
+      section: string | string[];
       payload: {
         title: string;
         body?: string;
@@ -62,7 +62,9 @@ serve(async (req) => {
       idempotencyKey?: string | null;
     };
 
-    if (!section || !payload?.title) {
+    const sections = Array.isArray(section) ? section.filter(Boolean) : [section];
+
+    if (!sections.length || !payload?.title) {
       return new Response(JSON.stringify({ error: "Missing section or payload.title" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -107,7 +109,7 @@ serve(async (req) => {
     const { data: permRows } = await supabaseAdmin
       .from("user_section_permissions")
       .select("user_id")
-      .eq("section", section)
+      .in("section", sections)
       .eq("notifications", true);
 
     const optedInIds = new Set<string>((permRows ?? []).map((r: { user_id: string }) => r.user_id));

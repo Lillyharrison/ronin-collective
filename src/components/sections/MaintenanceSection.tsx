@@ -316,7 +316,7 @@ export function MaintenanceSection() {
       const key = `create-${newIssue.id}`;
       if (notifyingRef.current.has(key)) return;
       notifyingRef.current.add(key);
-      await notifySection("maintenance", {
+      await notifySection("maintenance-repairs", {
         title: `🔧 New issue reported: ${payload.title ?? "Maintenance issue"}`,
         body: payload.location_detail ? `Location: ${payload.location_detail}` : undefined,
         type: "warning",
@@ -356,7 +356,7 @@ export function MaintenanceSection() {
       notifyingRef.current.add(key);
       const approverProfile = profiles.find(p => p.id === userId);
       const approverName = approverProfile?.name ?? "Admin";
-      await notifySection("maintenance", {
+      await notifySection("maintenance-repairs", {
         title: `Issue marked for Summer Maintenance: ${issue.title}`,
         body: `${approverName} marked a maintenance issue for Summer Maintenance on ${issue.property_name ?? "a property"}.`,
         type: "success",
@@ -492,7 +492,7 @@ export function MaintenanceSection() {
           scheduledLabel = `Scheduled: ${monthName} (date TBC)`;
         }
         const notifBody = [scheduledLabel, payload.description].filter(Boolean).join(" · ") || undefined;
-        await notifySection("maintenance", {
+        await notifySection("maintenance-planned", {
           title: `🔧 Planned maintenance scheduled: ${payload.title}`,
           body: notifBody,
           type: "info",

@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     const { data: usersWithAlerts } = await supabase
       .from("user_section_permissions")
       .select("user_id")
-      .eq("section", "maintenance")
+      .eq("section", "maintenance-planned")
       .eq("notifications", true);
 
     const { data: masterAdmins } = await supabase

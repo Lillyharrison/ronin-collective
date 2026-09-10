@@ -52,7 +52,7 @@ export interface AddUserForm {
 }
 
 // All navigable sections in the app
-export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; hasScope?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean }[] = [
+export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdit?: boolean; hasScope?: boolean; isFeature?: boolean; isCalendarSub?: boolean; isDashboardSub?: boolean; isMaintenanceSub?: boolean }[] = [
   { key: "dashboard",          label: "Dashboard",           labelEs: "Panel",             hasEdit: false },
   // ── Dashboard sub-features ──
   { key: "principal-location",   label: "   ↳ Principal Location", labelEs: "   ↳ Ubicación del Principal", hasEdit: false, isFeature: true, isDashboardSub: true },
@@ -60,6 +60,9 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "property",           label: "Property",            labelEs: "Propiedad",         hasEdit: true  },
   { key: "messages",           label: "Messages",            labelEs: "Mensajes",          hasEdit: true  },
   { key: "maintenance",        label: "Maintenance",         labelEs: "Mantenimiento",     hasEdit: true  },
+  // ── Maintenance alert sub-types (control which alerts a person receives) ──
+  { key: "maintenance-repairs", label: "   ↳ Repairs",             labelEs: "   ↳ Reparaciones",           hasEdit: false, isFeature: true, isMaintenanceSub: true },
+  { key: "maintenance-planned", label: "   ↳ Planned Maintenance", labelEs: "   ↳ Mantenimiento Planificado", hasEdit: false, isFeature: true, isMaintenanceSub: true },
   { key: "profile",            label: "Profile",             labelEs: "Perfil",            hasEdit: true  },
   // ── Calendar + sub-tabs (match Ronin calendar tabs) ──
   { key: "calendar",           label: "Calendar",            labelEs: "Calendario",        hasEdit: true  },
@@ -159,8 +162,8 @@ export function defaultPermissionsForLevel(level: Level | string): SectionPermis
   const base: Record<string, string[]> = {
     principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","family-movements"],
     extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
-    manager:         ["dashboard","property","maintenance","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","todays-snapshot","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","family-movements"],
-    staff:           ["dashboard","maintenance","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","todays-snapshot","calendar-travel","calendar-birthdays","calendar-maintenance"],
+    manager:         ["dashboard","property","maintenance","maintenance-repairs","maintenance-planned","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","todays-snapshot","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","family-movements"],
+    staff:           ["dashboard","maintenance","maintenance-repairs","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","todays-snapshot","calendar-travel","calendar-birthdays","calendar-maintenance"],
   };
   const allowed = base[level] || base["staff"];
   const perms: SectionPermissions = {};
