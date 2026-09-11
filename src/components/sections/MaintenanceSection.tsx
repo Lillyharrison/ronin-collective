@@ -244,7 +244,7 @@ export function MaintenanceSection() {
   const STATUS_COLUMNS: { key: IssueStatus; label: string; labelEs: string }[] = [
     { key: "reported",            label: "Reported",              labelEs: "Reportado" },
     { key: "under_investigation", label: "Under Investigation",   labelEs: "En Investigación" },
-    { key: "approved",            label: "Summer Maintenance",    labelEs: "Mantenimiento de Verano" },
+    { key: "approved",            label: "On hold",               labelEs: "En espera" },
     { key: "scheduled",           label: "Scheduled/In Progress", labelEs: "Programado/En Progreso" },
   ];
 
@@ -357,8 +357,8 @@ export function MaintenanceSection() {
       const approverProfile = profiles.find(p => p.id === userId);
       const approverName = approverProfile?.name ?? "Admin";
       await notifySection("maintenance-repairs", {
-        title: `Issue marked for Summer Maintenance: ${issue.title}`,
-        body: `${approverName} marked a maintenance issue for Summer Maintenance on ${issue.property_name ?? "a property"}.`,
+        title: `Issue marked for On hold: ${issue.title}`,
+        body: `${approverName} marked a maintenance issue for On hold on ${issue.property_name ?? "a property"}.`,
         type: "success",
         action_url: "maintenance",
         entity_id: issue.id,
