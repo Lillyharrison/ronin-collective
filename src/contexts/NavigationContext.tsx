@@ -104,6 +104,9 @@ interface NavigationContextType {
   pendingPlannedMaintenanceEntryId: string | null;
   setPendingPlannedMaintenanceEntryId: (id: string | null) => void;
   pendingPlannedMaintenanceEntryIdRef: React.MutableRefObject<string | null>;
+  pendingTaskId: string | null;
+  setPendingTaskId: (id: string | null) => void;
+  pendingTaskIdRef: React.MutableRefObject<string | null>;
   /** When a maintenance deep-link comes from the calendar, remember to return there on close */
   maintenanceReturnSection: ActiveSection | null;
   setMaintenanceReturnSection: (section: ActiveSection | null) => void;
@@ -149,6 +152,9 @@ const NavigationContext = createContext<NavigationContextType>({
   pendingPlannedMaintenanceEntryId: null,
   setPendingPlannedMaintenanceEntryId: () => {},
   pendingPlannedMaintenanceEntryIdRef: { current: null },
+  pendingTaskId: null,
+  setPendingTaskId: () => {},
+  pendingTaskIdRef: { current: null },
   maintenanceReturnSection: null,
   setMaintenanceReturnSection: () => {},
   canGoBack: false,
@@ -200,6 +206,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
   const [pendingPlannedMaintenanceEntryId, setPendingPlannedMaintenanceEntryIdState] = useState<string | null>(null);
   const pendingPlannedMaintenanceEntryIdRef = useRef<string | null>(null);
+  const [pendingTaskId, setPendingTaskIdState] = useState<string | null>(null);
+  const pendingTaskIdRef = useRef<string | null>(null);
   const [maintenanceReturnSection, setMaintenanceReturnSection] = useState<ActiveSection | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [totalUnread, setTotalUnread] = useState(0);
@@ -221,6 +229,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const setPendingPlannedMaintenanceEntryId = (id: string | null) => {
     pendingPlannedMaintenanceEntryIdRef.current = id;
     setPendingPlannedMaintenanceEntryIdState(id);
+  };
+
+  const setPendingTaskId = (id: string | null) => {
+    pendingTaskIdRef.current = id;
+    setPendingTaskIdState(id);
   };
 
   const setActiveSection = useCallback((section: ActiveSection) => {
@@ -331,6 +344,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         pendingPlannedMaintenanceEntryId,
         setPendingPlannedMaintenanceEntryId,
         pendingPlannedMaintenanceEntryIdRef,
+        pendingTaskId,
+        setPendingTaskId,
+        pendingTaskIdRef,
         maintenanceReturnSection,
         setMaintenanceReturnSection,
         canGoBack,
