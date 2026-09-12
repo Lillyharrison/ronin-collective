@@ -191,7 +191,7 @@ export function TasksSection() {
   const [draftCount, setDraftCount] = useState(0);
   // Pre-filter: if arriving from a property deep-link, pre-set property filter
   const [filterPropId, setFilterPropId] = useState<string | null>(null);
-
+  const [taskViewFilter, setTaskViewFilter] = useState<'mine' | 'all'>('all');
 
   const [modalTask, setModalTask]   = useState<FullTask | null | undefined>(undefined);
   const [newStatus, setNewStatus]   = useState<TaskStatus>("pending");
@@ -266,9 +266,11 @@ export function TasksSection() {
 
   const liveTasks = tasks.filter(t => !t.is_draft && (!filterPropId || t.property_id === filterPropId));
   const draftTasks = tasks.filter(t => t.is_draft);
+  const visibleLiveTasks = taskViewFilter === 'mine' ? liveTasks.filter(t => t.assigned_to === userId) : liveTasks;
+  const visibleDraftTasks = taskViewFilter === 'mine' ? draftTasks.filter(t => t.assigned_to === userId) : draftTasks;
 
   const columns: TaskStatus[] = ["urgent", "pending", "in_progress", "completed"];
-  const byStatus = (s: TaskStatus) => liveTasks.filter(t => t.status === s);
+  const byStatus = (s: TaskStatus) => visibleLiveTasks.filter(t => t.status === s);
 
   // Drag-and-drop status updates
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
