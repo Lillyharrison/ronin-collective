@@ -559,6 +559,14 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                   ✏️ {isL ? "Editar" : "Edit"}
                 </button>
               )}
+              {canEdit && !showOrderComplete && (
+                <button
+                  onClick={handleDelete}
+                  className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-destructive hover:bg-destructive/10 hover:border-destructive/50 transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 size={14} /> {isL ? "Eliminar" : "Delete"}
+                </button>
+              )}
               {task.status !== "completed" && !completed && (
                 <button
                   onClick={handleComplete}
