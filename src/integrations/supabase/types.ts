@@ -2357,6 +2357,7 @@ export type Database = {
         | "vacant"
         | "maintenance"
         | "under_construction"
+        | "for_sale"
       task_status: "pending" | "in_progress" | "completed" | "urgent"
       thread_type: "private" | "group" | "system_ai" | "property"
     }
@@ -2501,6 +2502,7 @@ export const Constants = {
         "vacant",
         "maintenance",
         "under_construction",
+        "for_sale",
       ],
       task_status: ["pending", "in_progress", "completed", "urgent"],
       thread_type: ["private", "group", "system_ai", "property"],
