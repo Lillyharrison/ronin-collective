@@ -265,6 +265,26 @@ export function TasksSection() {
     }
   }, [activePropertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Consume task deep-link from a notification: open that task in the modal
+  useEffect(() => {
+    if (isFamily || permLoading) return;
+    const pending = pendingTaskIdRef.current;
+    if (!pending) return;
+    setPendingTaskId(null);
+    (async () => {
+      const { data } = await supabase
+        .from("tasks")
+        .select(`
+          id, title_en, title_es, description_en, status, priority, due_date,
+          assigned_to, property_id, assigned_department, assigned_role,
+          linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category
+        `)
+        .eq("id", pending)
+        .maybeSingle();
+      if (data) openEdit(data as unknown as KanbanTask);
+    })();
+  }, [permLoading, isFamily]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const liveTasks = tasks.filter(t => !t.is_draft && (!filterPropId || t.property_id === filterPropId));
   const draftTasks = tasks.filter(t => t.is_draft);
   const visibleLiveTasks = taskViewFilter === 'mine' ? liveTasks.filter(t => t.assigned_to === userId) : liveTasks;
