@@ -191,7 +191,7 @@ export function TasksSection() {
   const [draftCount, setDraftCount] = useState(0);
   // Pre-filter: if arriving from a property deep-link, pre-set property filter
   const [filterPropId, setFilterPropId] = useState<string | null>(null);
-
+  const [taskViewFilter, setTaskViewFilter] = useState<'mine' | 'all'>('all');
 
   const [modalTask, setModalTask]   = useState<FullTask | null | undefined>(undefined);
   const [newStatus, setNewStatus]   = useState<TaskStatus>("pending");
@@ -266,9 +266,11 @@ export function TasksSection() {
 
   const liveTasks = tasks.filter(t => !t.is_draft && (!filterPropId || t.property_id === filterPropId));
   const draftTasks = tasks.filter(t => t.is_draft);
+  const visibleLiveTasks = taskViewFilter === 'mine' ? liveTasks.filter(t => t.assigned_to === userId) : liveTasks;
+  const visibleDraftTasks = taskViewFilter === 'mine' ? draftTasks.filter(t => t.assigned_to === userId) : draftTasks;
 
   const columns: TaskStatus[] = ["urgent", "pending", "in_progress", "completed"];
-  const byStatus = (s: TaskStatus) => liveTasks.filter(t => t.status === s);
+  const byStatus = (s: TaskStatus) => visibleLiveTasks.filter(t => t.status === s);
 
   // Drag-and-drop status updates
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -344,7 +346,7 @@ export function TasksSection() {
         </p>
       </div>
 
-      {/* Top bar: new task button + property filter chip */}
+      {/* Top bar: new task button + property filter chip + admin view toggle */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border gap-3">
         {filterPropId ? (
           <button
@@ -355,6 +357,32 @@ export function TasksSection() {
             <span className="text-[hsl(var(--gold)/0.6)] hover:text-[hsl(var(--gold))]">✕</span>
           </button>
         ) : <div />}
+        {(isAdmin || isMasterAdmin) && (
+          <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
+            <button
+              onClick={() => setTaskViewFilter('mine')}
+              className={cn(
+                "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
+                taskViewFilter === 'mine'
+                  ? "bg-[hsl(var(--gold))] text-charcoal"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {isL ? "Mis tareas" : "My tasks"}
+            </button>
+            <button
+              onClick={() => setTaskViewFilter('all')}
+              className={cn(
+                "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
+                taskViewFilter === 'all'
+                  ? "bg-[hsl(var(--gold))] text-charcoal"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {isL ? "Todas" : "All tasks"}
+            </button>
+          </div>
+        )}
         {canManageTasks && (
           <button
             onClick={() => openNew("pending")}
@@ -366,7 +394,7 @@ export function TasksSection() {
       </div>
 
       {/* Draft tasks banner */}
-      {draftCount > 0 && (isAdmin || isMasterAdmin) && (
+      {visibleDraftTasks.length > 0 && (isAdmin || isMasterAdmin) && (
         <button
           onClick={() => setShowDrafts(v => !v)}
           className="w-full flex items-center gap-2.5 px-4 py-3 bg-[hsl(var(--gold)/0.08)] border-b border-[hsl(var(--gold)/0.2)] text-left"
@@ -374,7 +402,7 @@ export function TasksSection() {
           <Bot size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
           <div className="flex-1">
             <p className="text-xs font-semibold text-[hsl(var(--gold))]">
-              {draftCount} {isL ? "tarea(s) en borrador" : `draft task${draftCount > 1 ? "s" : ""}`} {isL ? "de Ronin pendientes" : "awaiting review"}
+              {visibleDraftTasks.length} {isL ? "tarea(s) en borrador" : `draft task${visibleDraftTasks.length > 1 ? "s" : ""}`} {isL ? "de Ronin pendientes" : "awaiting review"}
             </p>
             <p className="text-[10px] text-[hsl(var(--gold)/0.6)]">
               {isL ? "Toca para revisar y publicar" : "Tap to review & publish"}
@@ -385,9 +413,9 @@ export function TasksSection() {
       )}
 
       {/* Draft tasks list */}
-      {showDrafts && draftTasks.length > 0 && (
+      {showDrafts && visibleDraftTasks.length > 0 && (
         <div className="px-4 py-3 bg-[hsl(var(--gold)/0.04)] border-b border-[hsl(var(--gold)/0.15)] space-y-2">
-          {draftTasks.map(t => (
+          {visibleDraftTasks.map(t => (
             <TaskCard key={t.id} task={t} onClick={() => openEdit(t)} />
           ))}
         </div>
