@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical, DoorOpen, Home } from "lucide-react";
+import { Plus, MapPin, ArrowLeft, Building2, Users, Wrench, Calendar, BookOpen, Trash2, Pencil, CheckCircle, Clock, AlertTriangle, Upload, X, GripVertical, DoorOpen, Home, Tag } from "lucide-react";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { imageUrl } from "@/lib/imageUrl";
 import { toast } from "sonner";
@@ -42,6 +42,7 @@ const STATUS_CONFIG: Record<PropertyStatus, { label: string; color: string; icon
   vacant:            { label: "Vacant",            color: "bg-muted text-muted-foreground border-border",             icon: <Clock size={12} /> },
   maintenance:       { label: "Maintenance",       color: "bg-amber-500/20 text-amber-400 border-amber-500/30",       icon: <AlertTriangle size={12} /> },
   under_construction:{ label: "Under Construction",color: "bg-black/60 text-white border-white/30 backdrop-blur-sm",  icon: <Wrench size={12} /> },
+  for_sale:          { label: "For Sale",          color: "bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border-[hsl(var(--gold)/0.4)]", icon: <Tag size={12} /> },
 };
 
 const PROPERTY_SUB_SECTIONS = [
@@ -1099,6 +1100,7 @@ function PropertyFormDialog({ open, editing, form, setForm, saving, onSave, onCl
                 <SelectItem value="vacant">Vacant</SelectItem>
                 <SelectItem value="maintenance">Maintenance</SelectItem>
                 <SelectItem value="under_construction">Under Construction</SelectItem>
+                <SelectItem value="for_sale">For Sale</SelectItem>
               </SelectContent>
             </Select>
           </div>
