@@ -354,6 +354,24 @@ export function TasksSection() {
     });
   };
 
+  // ── Family members get a simple task sender instead of the Kanban board ──
+  if (isFamily && !isAdmin && !isManager) {
+    return (
+      <div className="animate-fade-in pb-6">
+        <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light">
+          <h1 className="font-display text-3xl text-cream leading-tight">
+            {isL ? "Tareas" : "Tasks"} <span className="text-gold">&</span>{" "}
+            {isL ? "Asignaciones" : "Assignments"}
+          </h1>
+          <p className="text-cream/40 text-xs mt-1 tracking-wide">
+            {isL ? "Envía una tarea al equipo" : "Send a task to the team"}
+          </p>
+        </div>
+        <FamilyTasksView />
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in pb-6">
       {/* Header */}
