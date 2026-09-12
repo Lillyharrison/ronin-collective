@@ -786,15 +786,23 @@ function PropertyImageUploader({ value, onChange }: { value: string; onChange: (
   const [dragOver, setDragOver] = useState(false);
 
   async function handleFile(file: File) {
-    if (!file.type.startsWith("image/")) return;
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${crypto.randomUUID()}.${ext}`;
-    const { data, error } = await supabase.storage.from("property-images").upload(path, file, { upsert: true });
-    if (!error && data) {
-      const { data: { publicUrl } } = supabase.storage.from("property-images").getPublicUrl(data.path);
-      onChange(publicUrl);
+    if (!file.type.startsWith("image/")) {
+      toast.error("That file isn't an image. Please choose a photo.");
+      return;
     }
+    setUploading(true);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { data, error } = await supabase.storage
+      .from("property-images")
+      .upload(path, file, { upsert: false, contentType: file.type });
+    if (error || !data) {
+      toast.error(error?.message ?? "Photo upload failed. Please try again.");
+      setUploading(false);
+      return;
+    }
+    const { data: { publicUrl } } = supabase.storage.from("property-images").getPublicUrl(data.path);
+    onChange(publicUrl);
     setUploading(false);
   }
 

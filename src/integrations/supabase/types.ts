@@ -1873,6 +1873,7 @@ export type Database = {
           is_draft: boolean
           linked_checklist_id: string | null
           linked_inventory_ids: string[]
+          linked_planned_maintenance_id: string | null
           photo_url: string | null
           priority: number
           property_id: string | null
@@ -1899,6 +1900,7 @@ export type Database = {
           is_draft?: boolean
           linked_checklist_id?: string | null
           linked_inventory_ids?: string[]
+          linked_planned_maintenance_id?: string | null
           photo_url?: string | null
           priority?: number
           property_id?: string | null
@@ -1925,6 +1927,7 @@ export type Database = {
           is_draft?: boolean
           linked_checklist_id?: string | null
           linked_inventory_ids?: string[]
+          linked_planned_maintenance_id?: string | null
           photo_url?: string | null
           priority?: number
           property_id?: string | null
@@ -1940,6 +1943,13 @@ export type Database = {
             columns: ["linked_checklist_id"]
             isOneToOne: false
             referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_linked_planned_maintenance_id_fkey"
+            columns: ["linked_planned_maintenance_id"]
+            isOneToOne: false
+            referencedRelation: "planned_maintenance"
             referencedColumns: ["id"]
           },
           {
@@ -2302,6 +2312,7 @@ export type Database = {
       can_edit_contacts: { Args: { _user_id: string }; Returns: boolean }
       can_edit_maintenance: { Args: { _user_id: string }; Returns: boolean }
       can_edit_orders: { Args: { _user_id: string }; Returns: boolean }
+      can_edit_properties: { Args: { _user_id: string }; Returns: boolean }
       can_user_see_checklist: {
         Args: {
           _template_assigned_dept: string
