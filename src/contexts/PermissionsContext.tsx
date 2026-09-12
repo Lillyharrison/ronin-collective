@@ -50,7 +50,7 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   achievements:         ["master_admin", "admin", "manager", "staff", "principal"],
   manuals:              ["master_admin", "admin", "manager", "staff"],
   checklists:           ["master_admin", "admin", "manager", "staff"],
-  tasks:                ["master_admin", "admin", "manager", "staff"],
+  tasks:                ["master_admin", "admin", "manager", "staff", "principal"],
   contacts:             ["master_admin", "admin", "manager"],
   inventory:            ["master_admin", "admin", "manager"],
   laundry:              ["master_admin", "admin", "manager", "staff"],

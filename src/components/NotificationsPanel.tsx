@@ -52,7 +52,7 @@ interface Props {
 
 export function NotificationsPanel({ open, onClose }: Props) {
   const { userId, isMasterAdmin } = usePermissions();
-  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -130,6 +130,8 @@ export function NotificationsPanel({ open, onClose }: Props) {
       setPendingMaintenanceIssueId(n.entity_id);
     } else if (n.entity_type === "planned_maintenance" && n.entity_id) {
       setPendingPlannedMaintenanceEntryId(n.entity_id);
+    } else if (n.entity_type === "task" && n.entity_id) {
+      setPendingTaskId(n.entity_id);
     }
 
     onClose();

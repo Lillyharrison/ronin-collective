@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { TaskCard, KanbanTask, STATUS_CONFIG, TaskStatus } from "@/components/tasks/TaskCard";
 import { TaskModal, FullTask } from "@/components/tasks/TaskModal";
+import { FamilyTasksView } from "@/components/tasks/FamilyTasksView";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable,
@@ -178,9 +179,9 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin, canDrag
 // ─── Main TasksSection ────────────────────────────────────────────────────────
 export function TasksSection() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
+  const { userId, isAdmin, isManager, isMasterAdmin, isFamily, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
   const canManageTasks = isMasterAdmin || isAdmin || isManager || canEdit("tasks");
-  const { activePropertyId, setActivePropertyId } = useNavigation();
+  const { activePropertyId, setActivePropertyId, pendingTaskIdRef, setPendingTaskId } = useNavigation();
   const isL = language === "es";
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
@@ -264,6 +265,26 @@ export function TasksSection() {
     }
   }, [activePropertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Consume task deep-link from a notification: open that task in the modal
+  useEffect(() => {
+    if (isFamily || permLoading) return;
+    const pending = pendingTaskIdRef.current;
+    if (!pending) return;
+    setPendingTaskId(null);
+    (async () => {
+      const { data } = await supabase
+        .from("tasks")
+        .select(`
+          id, title_en, title_es, description_en, status, priority, due_date,
+          assigned_to, property_id, assigned_department, assigned_role,
+          linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category
+        `)
+        .eq("id", pending)
+        .maybeSingle();
+      if (data) openEdit(data as unknown as KanbanTask);
+    })();
+  }, [permLoading, isFamily]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const liveTasks = tasks.filter(t => !t.is_draft && (!filterPropId || t.property_id === filterPropId));
   const draftTasks = tasks.filter(t => t.is_draft);
   const visibleLiveTasks = taskViewFilter === 'mine' ? liveTasks.filter(t => t.assigned_to === userId) : liveTasks;
@@ -332,6 +353,24 @@ export function TasksSection() {
       category: task.category ?? null,
     });
   };
+
+  // ── Family members get a simple task sender instead of the Kanban board ──
+  if (isFamily && !isAdmin && !isManager) {
+    return (
+      <div className="animate-fade-in pb-6">
+        <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light">
+          <h1 className="font-display text-3xl text-cream leading-tight">
+            {isL ? "Tareas" : "Tasks"} <span className="text-gold">&</span>{" "}
+            {isL ? "Asignaciones" : "Assignments"}
+          </h1>
+          <p className="text-cream/40 text-xs mt-1 tracking-wide">
+            {isL ? "Envía una tarea al equipo" : "Send a task to the team"}
+          </p>
+        </div>
+        <FamilyTasksView />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in pb-6">
