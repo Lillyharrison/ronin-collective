@@ -12,7 +12,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { imageUrl } from "@/lib/imageUrl";
 import { toast } from "sonner";
 
-type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction";
+type PropertyStatus = "occupied" | "vacant" | "maintenance" | "under_construction" | "for_sale";
 
 interface Property {
   id: string;
