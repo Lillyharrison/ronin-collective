@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { TaskCard, KanbanTask, STATUS_CONFIG, TaskStatus } from "@/components/tasks/TaskCard";
 import { TaskModal, FullTask } from "@/components/tasks/TaskModal";
+import { FamilyTasksView } from "@/components/tasks/FamilyTasksView";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable,
@@ -178,9 +179,9 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin, canDrag
 // ─── Main TasksSection ────────────────────────────────────────────────────────
 export function TasksSection() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isManager, isMasterAdmin, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
+  const { userId, isAdmin, isManager, isMasterAdmin, isFamily, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
   const canManageTasks = isMasterAdmin || isAdmin || isManager || canEdit("tasks");
-  const { activePropertyId, setActivePropertyId } = useNavigation();
+  const { activePropertyId, setActivePropertyId, pendingTaskIdRef, setPendingTaskId } = useNavigation();
   const isL = language === "es";
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
