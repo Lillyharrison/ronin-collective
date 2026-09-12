@@ -2312,6 +2312,7 @@ export type Database = {
       can_edit_contacts: { Args: { _user_id: string }; Returns: boolean }
       can_edit_maintenance: { Args: { _user_id: string }; Returns: boolean }
       can_edit_orders: { Args: { _user_id: string }; Returns: boolean }
+      can_edit_properties: { Args: { _user_id: string }; Returns: boolean }
       can_user_see_checklist: {
         Args: {
           _template_assigned_dept: string
