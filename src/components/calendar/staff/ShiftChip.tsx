@@ -84,6 +84,15 @@ export function ShiftChip({
       {timeLabel && (
         <div className="opacity-70 text-[9px]">{timeLabel}</div>
       )}
+      {checklistTitle && (
+        <div
+          title={`Checklist: ${checklistTitle}`}
+          className="flex items-center gap-0.5 opacity-80 text-[9px] mt-0.5"
+        >
+          <ClipboardList size={9} className="flex-shrink-0" />
+          <span className="truncate">{checklistTitle}</span>
+        </div>
+      )}
       {noteBody && (
         <div className="opacity-80 text-[9px] line-clamp-2 break-words mt-0.5">
           {noteBody}
