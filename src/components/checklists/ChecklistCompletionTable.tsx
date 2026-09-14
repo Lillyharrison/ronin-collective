@@ -185,7 +185,6 @@ export function ChecklistCompletionTable() {
   });
 
   const deleteOlderThan = async (days: number) => {
-    if (!confirm(`Permanently delete all public link submissions older than ${days} days?`)) return;
     const cutoff = new Date(Date.now() - days * 86400000).toISOString();
     const { error } = await supabase
       .from("checklist_public_sessions")
@@ -198,7 +197,6 @@ export function ChecklistCompletionTable() {
   };
 
   const deleteRow = async (r: LogRow) => {
-    if (!confirm("Delete this entry? This can't be undone.")) return;
     let error: { message: string } | null = null;
 
     if (r.source === "public_link") {
@@ -217,6 +215,16 @@ export function ChecklistCompletionTable() {
     if (error) { toast.error("Delete failed"); return; }
     setRows(prev => prev.filter(x => x.id !== r.id));
     toast.success("Deleted");
+  };
+
+  const executePendingDelete = async () => {
+    if (!pendingDelete) return;
+    if (pendingDelete.type === "bulk") {
+      await deleteOlderThan(pendingDelete.days);
+    } else {
+      await deleteRow(pendingDelete.row);
+    }
+    setPendingDelete(null);
   };
 
   return (
