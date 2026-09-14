@@ -55,6 +55,9 @@ export function ChecklistCompletionTable() {
   const [statusFilter, setStatusFilter] = useState<"" | RowStatus>("");
   const [search, setSearch] = useState("");
   const [sortStack, setSortStack] = useState<{ col: Column; asc: boolean }[]>([{ col: "Date", asc: false }]);
+  const [pendingDelete, setPendingDelete] = useState<
+    { type: "row"; row: LogRow } | { type: "bulk"; days: number } | null
+  >(null);
 
   const load = async () => {
     setLoading(true);
