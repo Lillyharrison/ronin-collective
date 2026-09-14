@@ -4,6 +4,10 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isPast } from "date-fns";
 import { toast } from "sonner";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Link2, FileText, Search, RefreshCw, Trash2,
 } from "lucide-react";
 
@@ -51,6 +55,9 @@ export function ChecklistCompletionTable() {
   const [statusFilter, setStatusFilter] = useState<"" | RowStatus>("");
   const [search, setSearch] = useState("");
   const [sortStack, setSortStack] = useState<{ col: Column; asc: boolean }[]>([{ col: "Date", asc: false }]);
+  const [pendingDelete, setPendingDelete] = useState<
+    { type: "row"; row: LogRow } | { type: "bulk"; days: number } | null
+  >(null);
 
   const load = async () => {
     setLoading(true);
@@ -178,7 +185,6 @@ export function ChecklistCompletionTable() {
   });
 
   const deleteOlderThan = async (days: number) => {
-    if (!confirm(`Permanently delete all public link submissions older than ${days} days?`)) return;
     const cutoff = new Date(Date.now() - days * 86400000).toISOString();
     const { error } = await supabase
       .from("checklist_public_sessions")
@@ -191,7 +197,6 @@ export function ChecklistCompletionTable() {
   };
 
   const deleteRow = async (r: LogRow) => {
-    if (!confirm("Delete this entry? This can't be undone.")) return;
     let error: { message: string } | null = null;
 
     if (r.source === "public_link") {
@@ -210,6 +215,16 @@ export function ChecklistCompletionTable() {
     if (error) { toast.error("Delete failed"); return; }
     setRows(prev => prev.filter(x => x.id !== r.id));
     toast.success("Deleted");
+  };
+
+  const executePendingDelete = async () => {
+    if (!pendingDelete) return;
+    if (pendingDelete.type === "bulk") {
+      await deleteOlderThan(pendingDelete.days);
+    } else {
+      await deleteRow(pendingDelete.row);
+    }
+    setPendingDelete(null);
   };
 
   return (
@@ -249,7 +264,7 @@ export function ChecklistCompletionTable() {
 
       <div className="flex flex-wrap gap-2">
         {[30, 60, 90].map(d => (
-          <button key={d} onClick={() => deleteOlderThan(d)}
+          <button key={d} onClick={() => setPendingDelete({ type: "bulk", days: d })}
             className="text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gold">
             Clear &gt; {d} days
           </button>
@@ -339,7 +354,7 @@ export function ChecklistCompletionTable() {
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap text-right">
                       <button
-                        onClick={() => deleteRow(r)}
+                        onClick={() => setPendingDelete({ type: "row", row: r })}
                         title="Delete entry"
                         aria-label="Delete entry"
                         className="p-2 rounded-lg text-[hsl(var(--status-urgent))] hover:bg-[hsl(var(--status-urgent)/0.1)]">
@@ -353,6 +368,32 @@ export function ChecklistCompletionTable() {
           </table>
         </div>
       )}
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        {pendingDelete && (
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {pendingDelete.type === "row" ? "Delete this entry?" : `Clear submissions older than ${pendingDelete.days} days?`}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingDelete.type === "row"
+                  ? "This can't be undone."
+                  : `This will permanently delete public link submissions older than ${pendingDelete.days} days. This can't be undone.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={executePendingDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        )}
+      </AlertDialog>
     </div>
   );
 }
