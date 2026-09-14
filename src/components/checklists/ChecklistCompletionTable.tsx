@@ -292,6 +292,7 @@ export function ChecklistCompletionTable() {
                     </th>
                   );
                 })}
+                <th className="px-3 py-2.5" />
               </tr>
             </thead>
             <tbody>
@@ -335,6 +336,15 @@ export function ChecklistCompletionTable() {
                             ? <><Smartphone size={11} /> In-app</>
                             : <><FileText size={11} /> Outstanding</>}
                       </span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-right">
+                      <button
+                        onClick={() => deleteRow(r)}
+                        title="Delete entry"
+                        aria-label="Delete entry"
+                        className="p-2 rounded-lg text-[hsl(var(--status-urgent))] hover:bg-[hsl(var(--status-urgent)/0.1)]">
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 );
