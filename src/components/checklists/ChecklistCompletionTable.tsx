@@ -368,6 +368,32 @@ export function ChecklistCompletionTable() {
           </table>
         </div>
       )}
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        {pendingDelete && (
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {pendingDelete.type === "row" ? "Delete this entry?" : `Clear submissions older than ${pendingDelete.days} days?`}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingDelete.type === "row"
+                  ? "This can't be undone."
+                  : `This will permanently delete public link submissions older than ${pendingDelete.days} days. This can't be undone.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={executePendingDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        )}
+      </AlertDialog>
     </div>
   );
 }
