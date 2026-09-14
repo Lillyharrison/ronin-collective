@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isPast } from "date-fns";
 import { toast } from "sonner";
 import {
-  ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Link2, FileText, Search, RefreshCw,
+  ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Link2, FileText, Search, RefreshCw, Trash2,
 } from "lucide-react";
 
 type Source = "app" | "public_link" | "task";
@@ -12,6 +12,7 @@ type RowStatus = "complete" | "partial" | "pending" | "overdue";
 
 interface LogRow {
   id: string;
+  rawId: string;
   source: Source;
   template_id: string | null;
   checklist_title: string | null;
@@ -71,6 +72,7 @@ export function ChecklistCompletionTable() {
 
     const completionRows: LogRow[] = ((completions.data as any[]) ?? []).map(r => ({
       id: `c-${r.id}`,
+      rawId: r.id as string,
       source: r.source as Source,
       template_id: r.template_id,
       checklist_title: r.checklist_title,
@@ -98,6 +100,7 @@ export function ChecklistCompletionTable() {
       const overdue = !!due && isPast(new Date(due));
       return {
         id: `t-${t.id}`,
+        rawId: t.id as string,
         source: "task" as Source,
         template_id: t.linked_checklist_id ?? null,
         checklist_title: t.checklist_templates?.title ?? t.title_en ?? "Checklist",
