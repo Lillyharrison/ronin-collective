@@ -64,9 +64,11 @@ export function ShiftModal({
     start_time: "09:00",
     end_time: "17:00",
     notes: "",
+    checklist_template_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [scopePrompt, setScopePrompt] = useState(false);
+  const allTemplates = useChecklistTemplates();
 
   useEffect(() => {
     if (open) {
@@ -86,6 +88,7 @@ export function ShiftModal({
         start_time: editShift?.start_time?.slice(0, 5) ?? "09:00",
         end_time: editShift?.end_time?.slice(0, 5) ?? "17:00",
         notes: restNotes,
+        checklist_template_id: editShift?.checklist_template_id ?? "",
       });
     }
   }, [open, prefillDate, prefillStaff, editShift]);
