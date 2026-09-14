@@ -264,7 +264,7 @@ export function ChecklistCompletionTable() {
 
       <div className="flex flex-wrap gap-2">
         {[30, 60, 90].map(d => (
-          <button key={d} onClick={() => deleteOlderThan(d)}
+          <button key={d} onClick={() => setPendingDelete({ type: "bulk", days: d })}
             className="text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gold">
             Clear &gt; {d} days
           </button>
