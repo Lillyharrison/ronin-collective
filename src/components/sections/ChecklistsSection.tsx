@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useChecklistTemplates } from "@/hooks/useChecklists";
 import { ChecklistCard } from "@/components/manuals/ChecklistCard";
 import { ChecklistImportModal } from "@/components/manuals/ChecklistImportModal";
-import { ChecklistSubmissionsArchive } from "@/components/checklists/ChecklistSubmissionsArchive";
+import { ChecklistCompletionTable } from "@/components/checklists/ChecklistCompletionTable";
 import { cn } from "@/lib/utils";
 import {
   ClipboardList, Backpack, ChevronDown, Plus, MapPin, Upload, Inbox,
@@ -42,7 +42,7 @@ export function ChecklistsSection() {
   const TABS = [
     { id: "cleaning" as Tab,  icon: <ClipboardList size={14} />, label: "Checklists",   labelEs: t("checklists"), show: true },
     { id: "activity" as Tab,  icon: <Backpack size={14} />,      label: "Activities",   labelEs: t("activitiesTitle"), show: true },
-    { id: "submissions" as Tab, icon: <Inbox size={14} />,       label: "Submissions",  labelEs: "Entregas",          show: isMasterAdmin },
+    { id: "submissions" as Tab, icon: <Inbox size={14} />,       label: "Submissions",  labelEs: "Entregas",          show: isMasterAdmin || isAdmin },
   ].filter(t => t.show);
 
   useEffect(() => {
@@ -270,7 +270,7 @@ export function ChecklistsSection() {
         )}
 
         {/* SUBMISSIONS (master admin only) */}
-        {tab === "submissions" && isMasterAdmin && <ChecklistSubmissionsArchive />}
+        {tab === "submissions" && (isMasterAdmin || isAdmin) && <ChecklistCompletionTable />}
       </div>
 
       <ChecklistImportModal
