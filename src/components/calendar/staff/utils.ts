@@ -97,6 +97,7 @@ export function buildDisplayShifts(
           notes: override.notes,
           is_virtual: false,
           is_leave: false,
+          checklist_template_id: override.checklist_template_id ?? null,
         });
         continue;
       }
@@ -136,6 +137,7 @@ export function buildDisplayShifts(
         notes: shift.notes,
         is_virtual: false,
         is_leave: false,
+        checklist_template_id: shift.checklist_template_id ?? null,
       });
     }
 

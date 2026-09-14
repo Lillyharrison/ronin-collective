@@ -54,6 +54,8 @@ export interface DisplayShift {
   notes: string | null;
   is_virtual: boolean;
   is_leave: boolean;
+  /** Optional checklist attached to a dated shift */
+  checklist_template_id?: string | null;
   /** For leave chips: "approved" | "pending" */
   leave_status?: string;
   /** For leave chips: vacation | sick | personal | public_holiday | other */

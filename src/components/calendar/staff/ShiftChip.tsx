@@ -1,7 +1,8 @@
-import { CalendarOff } from "lucide-react";
+import { CalendarOff, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propColor, formatTime } from "./utils";
 import { LEAVE_TYPE_CONFIG } from "./constants";
+import { useChecklistTemplates } from "./useChecklistTemplates";
 import type { DisplayShift, Property } from "./types";
 
 export function ShiftChip({
@@ -17,6 +18,11 @@ export function ShiftChip({
   onClick: (e: React.MouseEvent) => void;
   onDoubleClick?: (e: React.MouseEvent) => void;
 }) {
+  const templates = useChecklistTemplates();
+  const checklistTitle = shift.checklist_template_id
+    ? templates.find((t) => t.id === shift.checklist_template_id)?.title ?? null
+    : null;
+
   if (shift.is_leave) {
     const pending = shift.leave_status === "pending";
     const typeLabel = (LEAVE_TYPE_CONFIG[shift.leave_type ?? "other"] ?? LEAVE_TYPE_CONFIG.other).label;
@@ -77,6 +83,15 @@ export function ShiftChip({
       </div>
       {timeLabel && (
         <div className="opacity-70 text-[9px]">{timeLabel}</div>
+      )}
+      {checklistTitle && (
+        <div
+          title={`Checklist: ${checklistTitle}`}
+          className="flex items-center gap-0.5 opacity-80 text-[9px] mt-0.5"
+        >
+          <ClipboardList size={9} className="flex-shrink-0" />
+          <span className="truncate">{checklistTitle}</span>
+        </div>
       )}
       {noteBody && (
         <div className="opacity-80 text-[9px] line-clamp-2 break-words mt-0.5">

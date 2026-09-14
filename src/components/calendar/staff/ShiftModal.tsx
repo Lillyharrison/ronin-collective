@@ -16,6 +16,7 @@ import { DOW_FULL, DOW_LABELS } from "./constants";
 import { getDisplayName } from "./utils";
 import type { DisplayShift, Profile, Property } from "./types";
 import { isEmployedOn } from "./leaveMath";
+import { useChecklistTemplates, templatesForProperty } from "./useChecklistTemplates";
 import { toast } from "sonner";
 
 type ShiftMode = "single" | "range" | "recurring";
@@ -63,9 +64,11 @@ export function ShiftModal({
     start_time: "09:00",
     end_time: "17:00",
     notes: "",
+    checklist_template_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [scopePrompt, setScopePrompt] = useState(false);
+  const allTemplates = useChecklistTemplates();
 
   useEffect(() => {
     if (open) {
@@ -85,6 +88,7 @@ export function ShiftModal({
         start_time: editShift?.start_time?.slice(0, 5) ?? "09:00",
         end_time: editShift?.end_time?.slice(0, 5) ?? "17:00",
         notes: restNotes,
+        checklist_template_id: editShift?.checklist_template_id ?? "",
       });
     }
   }, [open, prefillDate, prefillStaff, editShift]);
@@ -130,6 +134,7 @@ export function ShiftModal({
         start_time: form.start_time || null,
         end_time: form.end_time || null,
         notes: noteVal,
+        checklist_template_id: form.checklist_template_id || null,
       });
       setSaving(false);
       if (ok) onClose();
@@ -177,6 +182,7 @@ export function ShiftModal({
           end_time: form.end_time || null,
           status: "scheduled",
           notes: noteVal,
+          checklist_template_id: form.checklist_template_id || null,
           created_by: userId,
         });
         if (!ok) allOk = false;
@@ -205,6 +211,7 @@ export function ShiftModal({
       end_time: form.end_time || null,
       status: "scheduled",
       notes: noteVal,
+      checklist_template_id: form.checklist_template_id || null,
       created_by: userId,
     });
     setSaving(false);
@@ -279,9 +286,15 @@ export function ShiftModal({
             <Select value={form.location || form.property_id || "__none__"} onValueChange={(v) => {
               const virtualLocs = ["Office", "Remote"];
               if (virtualLocs.includes(v)) {
-                setForm((f) => ({ ...f, location: v, property_id: "" }));
+                // Property changed → attached checklist no longer applies
+                setForm((f) => ({ ...f, location: v, property_id: "", checklist_template_id: "" }));
               } else {
-                setForm((f) => ({ ...f, property_id: v === "__none__" ? "" : v, location: "" }));
+                setForm((f) => ({
+                  ...f,
+                  property_id: v === "__none__" ? "" : v,
+                  location: "",
+                  checklist_template_id: f.property_id === v ? f.checklist_template_id : "",
+                }));
               }
             }}>
               <SelectTrigger><SelectValue placeholder="Select location…" /></SelectTrigger>
@@ -294,6 +307,32 @@ export function ShiftModal({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Checklist (property-scoped) */}
+          <div className="space-y-1.5">
+            <Label>Checklist</Label>
+            {form.property_id ? (
+              <Select
+                value={form.checklist_template_id || "__none__"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, checklist_template_id: v === "__none__" ? "" : v }))
+                }
+              >
+                <SelectTrigger><SelectValue placeholder="No checklist" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No checklist</SelectItem>
+                  {templatesForProperty(allTemplates, form.property_id).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select disabled value="">
+                <SelectTrigger><SelectValue placeholder="Select a property first" /></SelectTrigger>
+                <SelectContent />
+              </Select>
+            )}
           </div>
 
           {/* Date fields — Single */}
