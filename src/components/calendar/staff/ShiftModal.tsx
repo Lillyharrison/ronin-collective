@@ -182,6 +182,7 @@ export function ShiftModal({
           end_time: form.end_time || null,
           status: "scheduled",
           notes: noteVal,
+          checklist_template_id: form.checklist_template_id || null,
           created_by: userId,
         });
         if (!ok) allOk = false;
