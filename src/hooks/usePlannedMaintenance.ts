@@ -142,8 +142,8 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
           patch.last_service_date = currentTarget;
 
           // Parse date parts directly to avoid timezone issues
-          const [yStr, mStr, dStr] = currentTarget.split("-");
-          let y = Number(yStr), m = Number(mStr) - 1, d = Number(dStr);
+          const [yStr, mStr] = currentTarget.split("-");
+          let y = Number(yStr), m = Number(mStr) - 1;
 
           // Add recurrence months
           m += entry.recurrence_months;
@@ -157,18 +157,6 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
           patch.scheduled_end_date = null;
           patch.scheduled_time = null;
           patch.calendar_event_id = null;
-
-          // Recompute status for the new cycle based on lead time.
-          const targetDate = new Date(Date.UTC(y, m, 1));
-          const today = new Date();
-          const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-          const msPerDay = 1000 * 60 * 60 * 24;
-          const daysOut = Math.floor((targetDate.getTime() - todayUtc) / msPerDay);
-          if (!entry.reminder_days) {
-            patch.status = "to_be_booked";
-          } else {
-            patch.status = daysOut > entry.reminder_days ? "future" : "to_be_booked";
-          }
         }
       }
     }
