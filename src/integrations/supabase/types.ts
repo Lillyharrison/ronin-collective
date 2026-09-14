@@ -2318,7 +2318,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      checklist_completion_log: {
+        Row: {
+          checklist_title: string | null
+          completed_at: string | null
+          completion_date: string | null
+          id: string | null
+          items_done: number | null
+          items_total: number | null
+          person_id: string | null
+          person_name: string | null
+          property_id: string | null
+          property_name: string | null
+          source: string | null
+          template_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       acknowledge_notification: {
