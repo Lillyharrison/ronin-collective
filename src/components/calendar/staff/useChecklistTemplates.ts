@@ -15,7 +15,7 @@ const listeners = new Set<(t: ChecklistTemplateOption[]) => void>();
 async function load(): Promise<ChecklistTemplateOption[]> {
   if (cache) return cache;
   if (!inflight) {
-    inflight = supabase
+    inflight = Promise.resolve(supabase
       .from("checklist_templates")
       .select("id, title, property_id, is_universal")
       .eq("is_published", true)
@@ -26,7 +26,7 @@ async function load(): Promise<ChecklistTemplateOption[]> {
         listeners.forEach((l) => l(cache!));
         inflight = null;
         return cache;
-      });
+      }));
   }
   return inflight;
 }

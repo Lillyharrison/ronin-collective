@@ -1,7 +1,8 @@
-import { CalendarOff } from "lucide-react";
+import { CalendarOff, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propColor, formatTime } from "./utils";
 import { LEAVE_TYPE_CONFIG } from "./constants";
+import { useChecklistTemplates } from "./useChecklistTemplates";
 import type { DisplayShift, Property } from "./types";
 
 export function ShiftChip({
