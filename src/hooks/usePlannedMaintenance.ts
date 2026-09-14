@@ -149,14 +149,25 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
           m += entry.recurrence_months;
           while (m > 11) { y++; m -= 12; }
 
-          if (entry.date_type === "specific") {
-            // Clamp day to valid range for the target month
-            const maxDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-            const clampedDay = Math.min(d, maxDay);
-            patch.scheduled_date = `${y}-${String(m + 1).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+          // A freshly-rolled recurrence is a rough target, not a booked exact date.
+          patch.date_type = "month_only";
+          patch.scheduled_month = m + 1;
+          patch.scheduled_year = y;
+          patch.scheduled_date = null;
+          patch.scheduled_end_date = null;
+          patch.scheduled_time = null;
+          patch.calendar_event_id = null;
+
+          // Recompute status for the new cycle based on lead time.
+          const targetDate = new Date(Date.UTC(y, m, 1));
+          const today = new Date();
+          const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+          const msPerDay = 1000 * 60 * 60 * 24;
+          const daysOut = Math.floor((targetDate.getTime() - todayUtc) / msPerDay);
+          if (!entry.reminder_days) {
+            patch.status = "to_be_booked";
           } else {
-            patch.scheduled_month = m + 1;
-            patch.scheduled_year = y;
+            patch.status = daysOut > entry.reminder_days ? "future" : "to_be_booked";
           }
         }
       }
