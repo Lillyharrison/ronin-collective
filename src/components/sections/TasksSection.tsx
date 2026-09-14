@@ -17,76 +17,72 @@ import {
 import { toast } from "sonner";
 
 // ─── Partial checklists widget (keep from original) ───────────────────────────
-function PartialChecklistsWidget() {
+function PartialChecklistsWidget({ mineOnly }: { mineOnly: boolean }) {
   const { openChecklistDetail } = useNavigation();
-  const { assignedPropertyIds, isAdmin, userId, loading: permLoading } = usePermissions();
+  const { userId, loading: permLoading } = usePermissions();
   const { language } = useLanguage();
-  const [assignedChecklists, setAssignedChecklists] = useState<Array<{
-    id: string; title: string; icon: string; propertyId: string | null;
+  const [shiftChecklists, setShiftChecklists] = useState<Array<{
+    shiftId: string; id: string; title: string; icon: string;
+    propertyId: string | null; propertyName: string | null;
   }>>([]);
 
   useEffect(() => {
     if (permLoading || !userId) return;
     async function load() {
-      const { data: profile } = await supabase.from("profiles").select("department, level, assigned_property_ids").eq("id", userId!).single();
-      if (!profile) return;
-      const { data: roleRow } = await supabase.from("user_roles").select("role").eq("user_id", userId!).single();
-      const userRole = roleRow?.role ?? profile.level ?? "staff";
-      const propIds: string[] = profile.assigned_property_ids ?? assignedPropertyIds;
-      let q = supabase.from("checklist_templates").select("id, title, icon, property_id, recurrence, assigned_role, assigned_department").in("category", ["cleaning", "audit", "checklist", "activity"]).eq("is_published", true);
-      if (propIds.length > 0) {
-        q = q.or(`property_id.in.(${propIds.join(",")}),is_universal.eq.true`);
-      } else {
-        q = q.eq("is_universal", true);
-      }
-      const { data: templates } = await q;
-      if (!templates) return;
-      const relevant = templates.filter((t: any) => {
-        const roleMatch = !t.assigned_role || t.assigned_role === userRole;
-        const deptMatch = !t.assigned_department || !profile.department || t.assigned_department === profile.department;
-        return roleMatch && deptMatch;
-      });
       const today = new Date().toISOString().slice(0, 10);
-      const relevantIds = relevant.map((t: any) => t.id);
-      if (!relevantIds.length) return;
-      const [{ data: sessions }, { data: itemCounts }] = await Promise.all([
-        supabase.from("checklist_sessions").select("template_id, item_id").in("template_id", relevantIds).eq("session_date", today),
-        supabase.from("checklist_items").select("template_id, id").in("template_id", relevantIds),
-      ]);
-      const sessionMap: Record<string, Set<string>> = {};
-      for (const s of sessions ?? []) {
-        if (!sessionMap[s.template_id]) sessionMap[s.template_id] = new Set();
-        sessionMap[s.template_id].add(s.item_id);
-      }
-      const itemCountMap: Record<string, number> = {};
-      for (const item of itemCounts ?? []) {
-        itemCountMap[item.template_id] = (itemCountMap[item.template_id] ?? 0) + 1;
-      }
-      const incomplete = relevant.filter((t: any) => {
-        const total = itemCountMap[t.id] ?? 0;
-        if (total === 0) return false;
-        const done = sessionMap[t.id]?.size ?? 0;
-        return done < total;
-      });
-      setAssignedChecklists(incomplete.map((t: any) => ({ id: t.id, title: t.title, icon: t.icon, propertyId: t.property_id })));
+      let q = supabase
+        .from("staff_shifts")
+        .select("id, property_id, checklist_template_id, checklist_templates(title, icon), properties(name)")
+        .eq("shift_date", today)
+        .not("checklist_template_id", "is", null)
+        .neq("status", "cancelled");
+      if (mineOnly) q = q.eq("staff_id", userId!);
+      const { data: shifts } = await q;
+      if (!shifts?.length) { setShiftChecklists([]); return; }
+      // Exclude shifts whose auto-generated checklist task is already completed.
+      const shiftIds = shifts.map((s: any) => s.id);
+      const { data: linkedTasks } = await supabase
+        .from("tasks")
+        .select("linked_shift_id, status")
+        .in("linked_shift_id", shiftIds);
+      const doneShiftIds = new Set(
+        (linkedTasks ?? []).filter((t: any) => t.status === "completed").map((t: any) => t.linked_shift_id)
+      );
+      setShiftChecklists(
+        shifts
+          .filter((s: any) => !doneShiftIds.has(s.id) && s.checklist_templates)
+          .map((s: any) => ({
+            shiftId: s.id,
+            id: s.checklist_template_id,
+            title: s.checklist_templates.title,
+            icon: s.checklist_templates.icon,
+            propertyId: s.property_id,
+            propertyName: s.properties?.name ?? null,
+          }))
+      );
     }
     load();
-  }, [permLoading, userId, assignedPropertyIds]);
+  }, [permLoading, userId, mineOnly]);
 
-  if (!assignedChecklists.length) return null;
+  if (!shiftChecklists.length) return null;
   return (
     <div className="mb-3">
       <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">
         {language === "es" ? "Listas pendientes hoy" : "Pending checklists today"}
       </p>
-      {assignedChecklists.map(c => (
+      {shiftChecklists.map(c => (
         <button
-          key={c.id}
+          key={c.shiftId}
           onClick={() => openChecklistDetail(c.id, c.propertyId ?? undefined)}
           className="w-full flex items-center gap-2 mb-1.5 px-3 py-2.5 bg-card border border-border rounded-xl text-left hover:border-[hsl(var(--gold)/0.3)] transition-colors"
         >
           <span className="text-base">{c.icon}</span>
-          <span className="flex-1 text-sm font-medium text-foreground truncate">{c.title}</span>
+          <span className="flex-1 text-sm font-medium text-foreground truncate">
+            {c.title}
+            {c.propertyName && (
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">{c.propertyName}</span>
+            )}
+          </span>
           <CheckSquare size={13} className="text-muted-foreground flex-shrink-0" />
         </button>
       ))}
