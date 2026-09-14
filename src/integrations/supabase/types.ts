@@ -1729,6 +1729,7 @@ export type Database = {
       }
       staff_shifts: {
         Row: {
+          checklist_template_id: string | null
           created_at: string
           created_by: string | null
           end_time: string | null
@@ -1743,6 +1744,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          checklist_template_id?: string | null
           created_at?: string
           created_by?: string | null
           end_time?: string | null
@@ -1757,6 +1759,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          checklist_template_id?: string | null
           created_at?: string
           created_by?: string | null
           end_time?: string | null
@@ -1771,6 +1774,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "staff_shifts_checklist_template_id_fkey"
+            columns: ["checklist_template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "staff_shifts_property_id_fkey"
             columns: ["property_id"]
@@ -1874,6 +1884,7 @@ export type Database = {
           linked_checklist_id: string | null
           linked_inventory_ids: string[]
           linked_planned_maintenance_id: string | null
+          linked_shift_id: string | null
           photo_url: string | null
           priority: number
           property_id: string | null
@@ -1901,6 +1912,7 @@ export type Database = {
           linked_checklist_id?: string | null
           linked_inventory_ids?: string[]
           linked_planned_maintenance_id?: string | null
+          linked_shift_id?: string | null
           photo_url?: string | null
           priority?: number
           property_id?: string | null
@@ -1928,6 +1940,7 @@ export type Database = {
           linked_checklist_id?: string | null
           linked_inventory_ids?: string[]
           linked_planned_maintenance_id?: string | null
+          linked_shift_id?: string | null
           photo_url?: string | null
           priority?: number
           property_id?: string | null
@@ -1950,6 +1963,13 @@ export type Database = {
             columns: ["linked_planned_maintenance_id"]
             isOneToOne: false
             referencedRelation: "planned_maintenance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_linked_shift_id_fkey"
+            columns: ["linked_shift_id"]
+            isOneToOne: false
+            referencedRelation: "staff_shifts"
             referencedColumns: ["id"]
           },
           {
@@ -2319,6 +2339,10 @@ export type Database = {
           _template_assigned_role: string
         }
         Returns: boolean
+      }
+      create_checklist_tasks_for_todays_shifts: {
+        Args: never
+        Returns: undefined
       }
       get_staff_schedule_profiles: {
         Args: never
