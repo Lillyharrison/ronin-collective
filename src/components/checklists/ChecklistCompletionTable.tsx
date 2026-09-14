@@ -190,6 +190,28 @@ export function ChecklistCompletionTable() {
     await load();
   };
 
+  const deleteRow = async (r: LogRow) => {
+    if (!confirm("Delete this entry? This can't be undone.")) return;
+    let error: { message: string } | null = null;
+
+    if (r.source === "public_link") {
+      ({ error } = await supabase.from("checklist_public_sessions").delete().eq("id", r.rawId));
+    } else if (r.source === "task") {
+      ({ error } = await supabase.from("tasks").delete().eq("id", r.rawId));
+    } else {
+      let q = supabase.from("checklist_sessions").delete();
+      if (r.template_id) q = q.eq("template_id", r.template_id);
+      q = r.property_id ? q.eq("property_id", r.property_id) : q.is("property_id", null);
+      if (r.completion_date) q = q.eq("session_date", r.completion_date);
+      if (r.person_id) q = q.eq("completed_by", r.person_id);
+      ({ error } = await q);
+    }
+
+    if (error) { toast.error("Delete failed"); return; }
+    setRows(prev => prev.filter(x => x.id !== r.id));
+    toast.success("Deleted");
+  };
+
   return (
     <div className="space-y-3">
       {/* Filters */}
