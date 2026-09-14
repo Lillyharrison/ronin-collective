@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isPast } from "date-fns";
 import { toast } from "sonner";
 import {
-  ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Link2, FileText, Search, RefreshCw,
+  ArrowUpDown, ArrowUp, ArrowDown, Smartphone, Link2, FileText, Search, RefreshCw, Trash2,
 } from "lucide-react";
 
 type Source = "app" | "public_link" | "task";
@@ -12,6 +12,7 @@ type RowStatus = "complete" | "partial" | "pending" | "overdue";
 
 interface LogRow {
   id: string;
+  rawId: string;
   source: Source;
   template_id: string | null;
   checklist_title: string | null;
@@ -71,6 +72,7 @@ export function ChecklistCompletionTable() {
 
     const completionRows: LogRow[] = ((completions.data as any[]) ?? []).map(r => ({
       id: `c-${r.id}`,
+      rawId: r.id as string,
       source: r.source as Source,
       template_id: r.template_id,
       checklist_title: r.checklist_title,
@@ -98,6 +100,7 @@ export function ChecklistCompletionTable() {
       const overdue = !!due && isPast(new Date(due));
       return {
         id: `t-${t.id}`,
+        rawId: t.id as string,
         source: "task" as Source,
         template_id: t.linked_checklist_id ?? null,
         checklist_title: t.checklist_templates?.title ?? t.title_en ?? "Checklist",
@@ -187,6 +190,28 @@ export function ChecklistCompletionTable() {
     await load();
   };
 
+  const deleteRow = async (r: LogRow) => {
+    if (!confirm("Delete this entry? This can't be undone.")) return;
+    let error: { message: string } | null = null;
+
+    if (r.source === "public_link") {
+      ({ error } = await supabase.from("checklist_public_sessions").delete().eq("id", r.rawId));
+    } else if (r.source === "task") {
+      ({ error } = await supabase.from("tasks").delete().eq("id", r.rawId));
+    } else {
+      let q = supabase.from("checklist_sessions").delete();
+      if (r.template_id) q = q.eq("template_id", r.template_id);
+      q = r.property_id ? q.eq("property_id", r.property_id) : q.is("property_id", null);
+      if (r.completion_date) q = q.eq("session_date", r.completion_date);
+      if (r.person_id) q = q.eq("completed_by", r.person_id);
+      ({ error } = await q);
+    }
+
+    if (error) { toast.error("Delete failed"); return; }
+    setRows(prev => prev.filter(x => x.id !== r.id));
+    toast.success("Deleted");
+  };
+
   return (
     <div className="space-y-3">
       {/* Filters */}
@@ -267,6 +292,7 @@ export function ChecklistCompletionTable() {
                     </th>
                   );
                 })}
+                <th className="px-3 py-2.5" />
               </tr>
             </thead>
             <tbody>
@@ -310,6 +336,15 @@ export function ChecklistCompletionTable() {
                             ? <><Smartphone size={11} /> In-app</>
                             : <><FileText size={11} /> Outstanding</>}
                       </span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-right">
+                      <button
+                        onClick={() => deleteRow(r)}
+                        title="Delete entry"
+                        aria-label="Delete entry"
+                        className="p-2 rounded-lg text-[hsl(var(--status-urgent))] hover:bg-[hsl(var(--status-urgent)/0.1)]">
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 );
