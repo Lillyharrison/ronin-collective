@@ -18,6 +18,11 @@ export function ShiftChip({
   onClick: (e: React.MouseEvent) => void;
   onDoubleClick?: (e: React.MouseEvent) => void;
 }) {
+  const templates = useChecklistTemplates();
+  const checklistTitle = shift.checklist_template_id
+    ? templates.find((t) => t.id === shift.checklist_template_id)?.title ?? null
+    : null;
+
   if (shift.is_leave) {
     const pending = shift.leave_status === "pending";
     const typeLabel = (LEAVE_TYPE_CONFIG[shift.leave_type ?? "other"] ?? LEAVE_TYPE_CONFIG.other).label;
