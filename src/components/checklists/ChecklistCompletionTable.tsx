@@ -354,7 +354,7 @@ export function ChecklistCompletionTable() {
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap text-right">
                       <button
-                        onClick={() => deleteRow(r)}
+                        onClick={() => setPendingDelete({ type: "row", row: r })}
                         title="Delete entry"
                         aria-label="Delete entry"
                         className="p-2 rounded-lg text-[hsl(var(--status-urgent))] hover:bg-[hsl(var(--status-urgent)/0.1)]">
