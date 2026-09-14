@@ -458,7 +458,7 @@ export function TasksSection() {
 
       {/* Partial checklists widget */}
       <div className="px-4 pt-4">
-        <PartialChecklistsWidget />
+        <PartialChecklistsWidget mineOnly={!(isAdmin || isMasterAdmin) || taskViewFilter === 'mine'} />
       </div>
 
       {/* Kanban board */}
