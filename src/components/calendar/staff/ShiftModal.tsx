@@ -16,6 +16,7 @@ import { DOW_FULL, DOW_LABELS } from "./constants";
 import { getDisplayName } from "./utils";
 import type { DisplayShift, Profile, Property } from "./types";
 import { isEmployedOn } from "./leaveMath";
+import { useChecklistTemplates, templatesForProperty } from "./useChecklistTemplates";
 import { toast } from "sonner";
 
 type ShiftMode = "single" | "range" | "recurring";
