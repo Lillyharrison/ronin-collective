@@ -28,6 +28,7 @@ export interface StaffShift {
   status: string; // scheduled | cancelled | leave
   notes: string | null;
   created_by: string | null;
+  checklist_template_id?: string | null;
 }
 
 export interface StaffLeaveRequest {
@@ -76,7 +77,7 @@ export function useStaffSchedules(
 
     let shiftsQuery = supabase
       .from("staff_shifts")
-      .select("id, staff_id, schedule_id, property_id, shift_date, start_time, end_time, status, notes")
+      .select("id, staff_id, schedule_id, property_id, shift_date, start_time, end_time, status, notes, checklist_template_id")
       .gte("shift_date", weekStartStr)
       .lte("shift_date", weekEndStr)
       .limit(500);
