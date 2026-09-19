@@ -129,6 +129,17 @@ self.addEventListener("push", (event) => {
       vibrate: [200, 100, 200],
       tag: "ronin-message",
       renotify: true,
+    }).then(() => {
+      // Home-screen badge count via the Badging API (feature-checked).
+      return self.registration.getNotifications().then((notifications) => {
+        try {
+          if (typeof navigator.setAppBadge === "function") {
+            navigator.setAppBadge(notifications.length);
+          }
+        } catch (err) {
+          console.error("[sw] setAppBadge failed:", err);
+        }
+      });
     })
   );
 });
