@@ -242,9 +242,10 @@ async function sendPush(
   endpoint: string,
   p256dh: string,
   auth: string,
-  payload: string
+  payload: string,
+  debug = false
 ): Promise<{ ok: boolean; status: number; body: string }> {
-  const { token, pubKeyB64u } = await buildVapidToken(endpoint);
+  const { token, pubKeyB64u } = await buildVapidToken(endpoint, debug);
   const encrypted = await encryptPayload(payload, p256dh, auth);
 
   const res = await fetch(endpoint, {
