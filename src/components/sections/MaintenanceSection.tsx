@@ -1130,6 +1130,12 @@ export function MaintenanceSection() {
               );
             })}
           </div>
+          {hasMore && (
+            <button onClick={loadMore} disabled={loading}
+              className="w-full py-2.5 text-xs text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors">
+              {loading ? "Loading…" : "Load more"}
+            </button>
+          )}
         </div>
       ) : viewMode === "list" ? (
         <div className="px-4 pb-4 space-y-3">
@@ -1223,6 +1229,12 @@ export function MaintenanceSection() {
               ))}
             </tbody>
           </table>
+          {hasMore && (
+            <button onClick={loadMore} disabled={loading}
+              className="w-full mt-3 py-2.5 text-xs text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors">
+              {loading ? "Loading…" : "Load more"}
+            </button>
+          )}
         </div>
       );
       })()}
