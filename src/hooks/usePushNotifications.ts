@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "";
 // Version bump forces re-subscription when VAPID keys change
-const VAPID_KEY_VERSION = "v4";
+const VAPID_KEY_VERSION = "v5";
 const VAPID_VERSION_KEY = "vapid_key_version";
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
