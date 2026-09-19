@@ -6,7 +6,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { notifyUsers } from "@/lib/notifySection";
 import { cn } from "@/lib/utils";
-import { Send, User, MapPin, Clock } from "lucide-react";
+import { Send, User, MapPin, Clock, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface SimpleTask {
@@ -43,6 +43,72 @@ export function FamilyTasksView() {
   const [what, setWhat] = useState("");
   const [propertyId, setPropertyId] = useState("");
   const [dueDate, setDueDate] = useState("");
+
+  // Edit modal state
+  const [editingTask, setEditingTask] = useState<SimpleTask | null>(null);
+  const [editAssignedTo, setEditAssignedTo] = useState("");
+  const [editWhat, setEditWhat] = useState("");
+  const [editPropertyId, setEditPropertyId] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (t: SimpleTask) => {
+    setEditingTask(t);
+    setEditAssignedTo(t.assigned_to ?? "");
+    setEditWhat(t.title_en);
+    setEditPropertyId(t.property_id ?? "");
+    setEditDueDate(t.due_date ? t.due_date.slice(0, 10) : "");
+  };
+
+  const closeEdit = () => setEditingTask(null);
+
+  const saveEdit = async () => {
+    if (!editingTask) return;
+    if (!editWhat.trim()) { toast.error(isL ? "Escribe la tarea" : "Please describe the task"); return; }
+    if (!editAssignedTo) { toast.error(isL ? "Elige a quién enviar" : "Please choose who to send it to"); return; }
+    setEditSaving(true);
+    const { error } = await supabase.from("tasks").update({
+      title_en: editWhat.trim(),
+      assigned_to: editAssignedTo,
+      property_id: editPropertyId || null,
+      due_date: editDueDate || null,
+    } as any).eq("id", editingTask.id);
+    setEditSaving(false);
+    if (error) {
+      toast.error(isL ? "No se pudo guardar" : "Could not save changes");
+      return;
+    }
+    if (editAssignedTo !== editingTask.assigned_to && editAssignedTo !== userId) {
+      notifyUsers([editAssignedTo], {
+        title: `📋 You've been assigned a task: ${editWhat.trim()}`,
+        body: editPropertyId ? `Property: ${properties.find(p => p.id === editPropertyId)?.name ?? ""}` : undefined,
+        type: "info",
+        action_url: "tasks",
+        entity_id: editingTask.id,
+        entity_type: "task",
+        property_id: editPropertyId || undefined,
+      }, userId);
+    }
+    toast.success(isL ? "Cambios guardados" : "Changes saved");
+    closeEdit();
+    loadTasks();
+  };
+
+  const deleteEdit = async () => {
+    if (!editingTask) return;
+    if (!window.confirm(isL ? "¿Eliminar esta tarea? Esto no se puede deshacer." : "Delete this task? This can't be undone.")) return;
+    setEditSaving(true);
+    await supabase.from("notifications").delete().eq("entity_id", editingTask.id).eq("entity_type", "task");
+    const { error } = await supabase.from("tasks").delete().eq("id", editingTask.id);
+    setEditSaving(false);
+    if (error) {
+      toast.error(isL ? "No se pudo eliminar" : "Could not delete the task");
+      return;
+    }
+    toast.success(isL ? "Tarea eliminada" : "Task deleted");
+    closeEdit();
+    loadTasks();
+  };
 
   const loadTasks = useCallback(async () => {
     if (!userId) return;
@@ -191,8 +257,9 @@ export function FamilyTasksView() {
                 <div
                   key={t.id}
                   id={`fam-task-${t.id}`}
+                  onClick={() => openEdit(t)}
                   className={cn(
-                    "bg-card border rounded-xl p-3",
+                    "bg-card border rounded-xl p-3 cursor-pointer active:scale-[0.99] transition-transform",
                     highlightId === t.id ? "border-[hsl(var(--gold))] ring-1 ring-[hsl(var(--gold)/0.4)]" : "border-border"
                   )}
                 >
@@ -224,6 +291,79 @@ export function FamilyTasksView() {
           </div>
         )}
       </div>
+
+      {/* Edit / delete sent task */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeEdit} />
+          <div className="relative w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl z-10 flex flex-col h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <p className="text-sm font-semibold text-foreground">{isL ? "Editar tarea" : "Edit task"}</p>
+              <button
+                onClick={closeEdit}
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                aria-label={isL ? "Cerrar" : "Close"}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Para" : "To"}</label>
+                <select className={inputCls} value={editAssignedTo} onChange={e => setEditAssignedTo(e.target.value)}>
+                  <option value="">{isL ? "Elegir persona" : "Choose a person"}</option>
+                  {staff.map(s => <option key={s.id} value={s.id}>{s.full_name ?? "—"}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Qué" : "What"}</label>
+                <input className={inputCls} value={editWhat} onChange={e => setEditWhat(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Propiedad" : "Property"}</label>
+                  <select className={inputCls} value={editPropertyId} onChange={e => setEditPropertyId(e.target.value)}>
+                    <option value="">{isL ? "Opcional" : "Optional"}</option>
+                    {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Fecha límite" : "Due date"}</label>
+                  <input type="date" className={inputCls} value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 px-4 py-3 border-t border-border flex items-center gap-2">
+              <button
+                onClick={deleteEdit}
+                disabled={editSaving}
+                className="min-h-[44px] px-4 rounded-xl border border-[hsl(var(--status-urgent)/0.4)] text-status-urgent text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                {isL ? "Eliminar" : "Delete"}
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={closeEdit}
+                className="min-h-[44px] px-4 rounded-xl border border-border text-muted-foreground text-sm font-semibold active:scale-[0.98] transition-transform"
+              >
+                {isL ? "Cancelar" : "Cancel"}
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={editSaving}
+                className="min-h-[44px] px-5 bg-[hsl(var(--gold))] text-charcoal text-sm font-semibold rounded-xl active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                {editSaving ? (isL ? "Guardando…" : "Saving…") : (isL ? "Guardar" : "Save")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
