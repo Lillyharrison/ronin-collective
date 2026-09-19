@@ -350,7 +350,31 @@ export function MaintenanceSection() {
   const handleEdit = async (patch: Partial<MaintenanceIssue>) => {
     if (!editIssue) return false;
     const { error } = await updateIssue(editIssue.id, patch);
-    if (!error) setEditIssue(null);
+    if (!error) {
+      setEditIssue(null);
+      // Direct assignment notification when the assignee changed.
+      if (
+        userId &&
+        patch.assigned_to &&
+        patch.assigned_to !== editIssue.assigned_to &&
+        patch.assigned_to !== userId
+      ) {
+        const assignKey = `assign-edit-${editIssue.id}`;
+        if (!notifyingRef.current.has(assignKey)) {
+          notifyingRef.current.add(assignKey);
+          await notifyUsers([patch.assigned_to], {
+            title: `🔧 You've been assigned a repair: ${editIssue.title}`,
+            body: editIssue.location_detail ? `Location: ${editIssue.location_detail}` : undefined,
+            type: "info",
+            action_url: "maintenance",
+            entity_id: editIssue.id,
+            entity_type: "maintenance_issue",
+            property_id: editIssue.property_id ?? undefined,
+          }, userId);
+          setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+        }
+      }
+    }
     return !error;
   };
 
@@ -519,6 +543,23 @@ export function MaintenanceSection() {
           property_id: payload.property_id ?? undefined,
         }, userId);
         setTimeout(() => notifyingRef.current.delete(key), 5000);
+        // Direct assignment notification — only the assignee, never the whole section.
+        if (payload.assigned_to && payload.assigned_to !== userId) {
+          const assignKey = `assign-planned-create-${entry.id}`;
+          if (!notifyingRef.current.has(assignKey)) {
+            notifyingRef.current.add(assignKey);
+            await notifyUsers([payload.assigned_to], {
+              title: `🔧 You've been assigned planned maintenance: ${payload.title}`,
+              body: notifBody,
+              type: "info",
+              action_url: "maintenance",
+              entity_id: entry.id,
+              entity_type: "planned_maintenance",
+              property_id: payload.property_id ?? undefined,
+            }, userId);
+            setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+          }
+        }
       }
     }
 
