@@ -20,7 +20,7 @@ import { IssueModal } from "@/components/maintenance/IssueModal";
 import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/IssueStatusBadge";
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
-import { notifySection } from "@/lib/notifySection";
+import { notifySection, notifyUsers } from "@/lib/notifySection";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { format, parseISO } from "date-fns";
 import { useBatchTranslation } from "@/hooks/useEntryTranslation";

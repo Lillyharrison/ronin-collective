@@ -48,3 +48,38 @@ export async function notifySection(
     console.warn("[notifySection] failed silently:", err);
   }
 }
+
+/**
+ * Fan-out an in-app notification (+ push) to specific user IDs directly,
+ * bypassing the section/role lookup. Used e.g. to notify one assignee
+ * without broadcasting to the whole section.
+ */
+export async function notifyUsers(
+  userIds: string[],
+  payload: NotifyPayload,
+  excludeUserId?: string | null,
+): Promise<void> {
+  try {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const url = `https://${projectId}.supabase.co/functions/v1/notify-section`;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ userIds, payload, excludeUserId }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn("[notifyUsers] edge function error:", res.status, text);
+    }
+  } catch (err) {
+    console.warn("[notifyUsers] failed silently:", err);
+  }
+}
