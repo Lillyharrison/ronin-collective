@@ -211,15 +211,6 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       savedTaskId = data?.id;
       // Notify users with tasks alerts enabled
       if (savedTaskId && !isDraft) {
-        await notifySection("tasks", {
-          title: `📋 New task: ${title.trim()}`,
-          body: assignedTo ? `Assigned to a team member` : undefined,
-          type: "task",
-          action_url: "tasks",
-          entity_id: savedTaskId,
-          entity_type: "task",
-          property_id: propertyId || undefined,
-        }, userId ?? undefined);
         if (assignedTo && assignedTo !== userId) {
           await notifyUsers([assignedTo], {
             title: `📋 You've been assigned a task: ${title.trim()}`,
