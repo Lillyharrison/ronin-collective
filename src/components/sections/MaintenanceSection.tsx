@@ -606,6 +606,42 @@ export function MaintenanceSection() {
       await syncCalendarForPlanned(editPlanned.id, updated.calendar_event_id, updated as PlannedMaintenanceEntry);
     }
 
+    // Direct assignment notification when the assignee changed.
+    if (
+      userId &&
+      payload.assigned_to &&
+      payload.assigned_to !== editPlanned.assigned_to &&
+      payload.assigned_to !== userId
+    ) {
+      const assignKey = `assign-planned-edit-${editPlanned.id}`;
+      if (!notifyingRef.current.has(assignKey)) {
+        notifyingRef.current.add(assignKey);
+        const title = payload.title ?? editPlanned.title;
+        let scheduledLabel: string | undefined;
+        const dateType = payload.date_type ?? editPlanned.date_type;
+        const schedDate = payload.scheduled_date ?? editPlanned.scheduled_date;
+        const schedMonth = payload.scheduled_month ?? editPlanned.scheduled_month;
+        const schedYear = payload.scheduled_year ?? editPlanned.scheduled_year;
+        if (dateType === "specific" && schedDate) {
+          scheduledLabel = `Scheduled: ${new Date(schedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+        } else if (dateType === "month_only" && schedMonth && schedYear) {
+          const monthName = new Date(schedYear, schedMonth - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+          scheduledLabel = `Scheduled: ${monthName} (date TBC)`;
+        }
+        const assignNotifBody = [scheduledLabel, payload.description ?? editPlanned.description].filter(Boolean).join(" · ") || undefined;
+        await notifyUsers([payload.assigned_to], {
+          title: `🔧 You've been assigned planned maintenance: ${title}`,
+          body: assignNotifBody,
+          type: "info",
+          action_url: "maintenance",
+          entity_id: editPlanned.id,
+          entity_type: "planned_maintenance",
+          property_id: (payload.property_id ?? editPlanned.property_id) ?? undefined,
+        }, userId);
+        setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+      }
+    }
+
     refetchPlanned();
     setEditPlanned(null);
   };
