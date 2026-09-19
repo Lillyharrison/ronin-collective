@@ -20,7 +20,7 @@ import { IssueModal } from "@/components/maintenance/IssueModal";
 import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/IssueStatusBadge";
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { cn } from "@/lib/utils";
-import { notifySection } from "@/lib/notifySection";
+import { notifySection, notifyUsers } from "@/lib/notifySection";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { format, parseISO } from "date-fns";
 import { useBatchTranslation } from "@/hooks/useEntryTranslation";
@@ -326,6 +326,23 @@ export function MaintenanceSection() {
         property_id: payload.property_id ?? undefined,
       }, userId);
       setTimeout(() => notifyingRef.current.delete(key), 5000);
+      // Direct assignment notification — only the assignee, never the whole section.
+      if (payload.assigned_to && payload.assigned_to !== userId) {
+        const assignKey = `assign-create-${newIssue.id}`;
+        if (!notifyingRef.current.has(assignKey)) {
+          notifyingRef.current.add(assignKey);
+          await notifyUsers([payload.assigned_to], {
+            title: `🔧 You've been assigned a repair: ${payload.title ?? "Maintenance issue"}`,
+            body: payload.location_detail ? `Location: ${payload.location_detail}` : undefined,
+            type: "info",
+            action_url: "maintenance",
+            entity_id: newIssue.id,
+            entity_type: "maintenance_issue",
+            property_id: payload.property_id ?? undefined,
+          }, userId);
+          setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+        }
+      }
     }
     return Boolean(newIssue);
   };
@@ -333,7 +350,31 @@ export function MaintenanceSection() {
   const handleEdit = async (patch: Partial<MaintenanceIssue>) => {
     if (!editIssue) return false;
     const { error } = await updateIssue(editIssue.id, patch);
-    if (!error) setEditIssue(null);
+    if (!error) {
+      setEditIssue(null);
+      // Direct assignment notification when the assignee changed.
+      if (
+        userId &&
+        patch.assigned_to &&
+        patch.assigned_to !== editIssue.assigned_to &&
+        patch.assigned_to !== userId
+      ) {
+        const assignKey = `assign-edit-${editIssue.id}`;
+        if (!notifyingRef.current.has(assignKey)) {
+          notifyingRef.current.add(assignKey);
+          await notifyUsers([patch.assigned_to], {
+            title: `🔧 You've been assigned a repair: ${editIssue.title}`,
+            body: editIssue.location_detail ? `Location: ${editIssue.location_detail}` : undefined,
+            type: "info",
+            action_url: "maintenance",
+            entity_id: editIssue.id,
+            entity_type: "maintenance_issue",
+            property_id: editIssue.property_id ?? undefined,
+          }, userId);
+          setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+        }
+      }
+    }
     return !error;
   };
 
@@ -502,6 +543,23 @@ export function MaintenanceSection() {
           property_id: payload.property_id ?? undefined,
         }, userId);
         setTimeout(() => notifyingRef.current.delete(key), 5000);
+        // Direct assignment notification — only the assignee, never the whole section.
+        if (payload.assigned_to && payload.assigned_to !== userId) {
+          const assignKey = `assign-planned-create-${entry.id}`;
+          if (!notifyingRef.current.has(assignKey)) {
+            notifyingRef.current.add(assignKey);
+            await notifyUsers([payload.assigned_to], {
+              title: `🔧 You've been assigned planned maintenance: ${payload.title}`,
+              body: notifBody,
+              type: "info",
+              action_url: "maintenance",
+              entity_id: entry.id,
+              entity_type: "planned_maintenance",
+              property_id: payload.property_id ?? undefined,
+            }, userId);
+            setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+          }
+        }
       }
     }
 
@@ -546,6 +604,42 @@ export function MaintenanceSection() {
 
     if (updated) {
       await syncCalendarForPlanned(editPlanned.id, updated.calendar_event_id, updated as PlannedMaintenanceEntry);
+    }
+
+    // Direct assignment notification when the assignee changed.
+    if (
+      userId &&
+      payload.assigned_to &&
+      payload.assigned_to !== editPlanned.assigned_to &&
+      payload.assigned_to !== userId
+    ) {
+      const assignKey = `assign-planned-edit-${editPlanned.id}`;
+      if (!notifyingRef.current.has(assignKey)) {
+        notifyingRef.current.add(assignKey);
+        const title = payload.title ?? editPlanned.title;
+        let scheduledLabel: string | undefined;
+        const dateType = payload.date_type ?? editPlanned.date_type;
+        const schedDate = payload.scheduled_date ?? editPlanned.scheduled_date;
+        const schedMonth = payload.scheduled_month ?? editPlanned.scheduled_month;
+        const schedYear = payload.scheduled_year ?? editPlanned.scheduled_year;
+        if (dateType === "specific" && schedDate) {
+          scheduledLabel = `Scheduled: ${new Date(schedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+        } else if (dateType === "month_only" && schedMonth && schedYear) {
+          const monthName = new Date(schedYear, schedMonth - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+          scheduledLabel = `Scheduled: ${monthName} (date TBC)`;
+        }
+        const assignNotifBody = [scheduledLabel, payload.description ?? editPlanned.description].filter(Boolean).join(" · ") || undefined;
+        await notifyUsers([payload.assigned_to], {
+          title: `🔧 You've been assigned planned maintenance: ${title}`,
+          body: assignNotifBody,
+          type: "info",
+          action_url: "maintenance",
+          entity_id: editPlanned.id,
+          entity_type: "planned_maintenance",
+          property_id: (payload.property_id ?? editPlanned.property_id) ?? undefined,
+        }, userId);
+        setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+      }
     }
 
     refetchPlanned();
