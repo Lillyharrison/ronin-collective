@@ -326,6 +326,23 @@ export function MaintenanceSection() {
         property_id: payload.property_id ?? undefined,
       }, userId);
       setTimeout(() => notifyingRef.current.delete(key), 5000);
+      // Direct assignment notification — only the assignee, never the whole section.
+      if (payload.assigned_to && payload.assigned_to !== userId) {
+        const assignKey = `assign-create-${newIssue.id}`;
+        if (!notifyingRef.current.has(assignKey)) {
+          notifyingRef.current.add(assignKey);
+          await notifyUsers([payload.assigned_to], {
+            title: `🔧 You've been assigned a repair: ${payload.title ?? "Maintenance issue"}`,
+            body: payload.location_detail ? `Location: ${payload.location_detail}` : undefined,
+            type: "info",
+            action_url: "maintenance",
+            entity_id: newIssue.id,
+            entity_type: "maintenance_issue",
+            property_id: payload.property_id ?? undefined,
+          }, userId);
+          setTimeout(() => notifyingRef.current.delete(assignKey), 5000);
+        }
+      }
     }
     return Boolean(newIssue);
   };
