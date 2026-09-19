@@ -57,23 +57,26 @@ export function usePushNotifications(userId: string | null) {
         if (result !== "granted") return false;
       }
 
-      // Always unsubscribe the old subscription first.
-      // This is critical when VAPID keys are rotated — old subscriptions
-      // will always fail with 403 BadJwtToken if the keys don't match.
+      // Only unsubscribe/force a fresh subscription when the VAPID key
+      // version actually changed. Reusing the existing subscription avoids
+      // creating duplicate rows in push_subscriptions on every app load.
       const existingSub = await registration.pushManager.getSubscription();
-      if (existingSub) {
-        const storedVersion = localStorage.getItem(VAPID_VERSION_KEY);
-        // Force unsubscribe if key version changed OR always to be safe
-        if (storedVersion !== VAPID_KEY_VERSION || existingSub) {
-          await existingSub.unsubscribe();
-          localStorage.setItem(VAPID_VERSION_KEY, VAPID_KEY_VERSION);
-        }
+      const storedVersion = localStorage.getItem(VAPID_VERSION_KEY);
+      let sub = existingSub;
+
+      if (existingSub && storedVersion !== VAPID_KEY_VERSION) {
+        // Key version changed — old subscriptions will fail with 403
+        // BadJwtToken, so drop it and get a fresh one.
+        await existingSub.unsubscribe();
+        sub = null;
       }
 
-      const sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
+      if (!sub) {
+        sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
 
       const subJson = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
 
