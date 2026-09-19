@@ -52,6 +52,7 @@ export interface MaintenanceFilters {
   search?: string;
   category?: string;
   priority?: string;
+  property?: string;
 }
 
 export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: MaintenanceFilters) {
@@ -105,6 +106,9 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     if (filters?.priority) {
       query = query.eq("priority", filters.priority);
     }
+    if (filters?.property) {
+      query = query.eq("property_id", filters.property);
+    }
 
     const { data, error } = await query;
 
@@ -148,7 +152,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     setIssues(prev => pageIndex === 0 ? enriched : [...prev, ...enriched]);
     setPage(pageIndex);
     setLoading(false);
-  }, [filterPropertyIds?.join(","), filters?.search, filters?.category, filters?.priority]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filterPropertyIds?.join(","), filters?.search, filters?.category, filters?.priority, filters?.property]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) fetchIssues(page + 1);

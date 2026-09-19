@@ -58,7 +58,8 @@ export function MaintenanceSection() {
     search: debouncedSearch || undefined,
     category: filterCat || undefined,
     priority: filterPri || undefined,
-  }), [debouncedSearch, filterCat, filterPri]);
+    property: filterProp || undefined,
+  }), [debouncedSearch, filterCat, filterPri, filterProp]);
 
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
   const {
@@ -278,10 +279,9 @@ export function MaintenanceSection() {
     return [...list].sort(cmp);
   };
 
-  // Only sort + property-picker filter remain client-side; search/cat/priority go to DB
+  // Only sort remains client-side; search/cat/priority/property all go to DB
   const filtered = useCallback(() => {
     let list = [...issues];
-    if (filterProp) list = list.filter(i => i.property_id === filterProp);
     // Archived items are hidden by default. Only surface them when the user
     // is in the resolved-only view AND has explicitly opted in.
     if (!(showResolved && showArchived)) {
@@ -295,7 +295,7 @@ export function MaintenanceSection() {
       return 0;
     });
     return list;
-  }, [issues, filterProp, sortBy, showResolved, showArchived]);
+  }, [issues, sortBy, showResolved, showArchived]);
 
   const rawIssues = filtered();
 
