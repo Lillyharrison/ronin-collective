@@ -212,6 +212,27 @@ export function AppShell() {
     },
   });
 
+  // ── Home-screen badge clearing ─────────────────────────────────────────────
+  // Clear the badge on open and whenever the app returns to the foreground,
+  // not just when a push banner is tapped (public/sw.js handles that path).
+  useEffect(() => {
+    function clearAppBadge() {
+      try {
+        if (typeof navigator !== "undefined" && typeof navigator.clearAppBadge === "function") {
+          navigator.clearAppBadge();
+        }
+      } catch (err) {
+        console.error("[AppShell] clearAppBadge failed:", err);
+      }
+    }
+    clearAppBadge();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") clearAppBadge();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
   const showDetail = !!checklistDetailId && !!detailTemplate;
 
   return (
