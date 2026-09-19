@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
     await Promise.allSettled(
       subs.map(async (s) => {
         try {
-          const result = await sendPush(s.endpoint, s.p256dh, s.auth, payload);
+          const result = await sendPush(s.endpoint, s.p256dh, s.auth, payload, !!debug && s.endpoint.includes("web.push.apple.com"));
           if (result.ok || result.status === 201) {
             sent++;
             console.log(`✓ Delivered → ${s.endpoint.slice(0, 60)}…`);
