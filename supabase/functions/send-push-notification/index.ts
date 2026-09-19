@@ -272,11 +272,12 @@ Deno.serve(async (req) => {
   try {
     const db = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    const { recipientUserIds, title, body, url } = await req.json() as {
+    const { recipientUserIds, title, body, url, debug } = await req.json() as {
       recipientUserIds: string[];
       title: string;
       body: string;
       url?: string;
+      debug?: boolean;
     };
 
     if (!recipientUserIds?.length) {
