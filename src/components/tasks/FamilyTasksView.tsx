@@ -104,14 +104,6 @@ export function FamilyTasksView() {
     }
     const newTaskId = (inserted as { id: string } | null)?.id;
     if (newTaskId) {
-      notifySection("tasks", {
-        title: `📋 New task: ${what.trim()}`,
-        type: "task",
-        action_url: "tasks",
-        entity_id: newTaskId,
-        entity_type: "task",
-        property_id: propertyId || undefined,
-      }, userId);
       if (assignedTo !== userId) {
         notifyUsers([assignedTo], {
           title: `📋 You've been assigned a task: ${what.trim()}`,
