@@ -6,7 +6,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { fireConfetti } from "@/lib/confetti";
-import { notifySection } from "@/lib/notifySection";
+import { notifySection, notifyUsers } from "@/lib/notifySection";
 import { enqueue } from "@/lib/offlineDB";
 import { OfflineSyncContext } from "@/hooks/useOfflineSync";
 import {
@@ -193,6 +193,30 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
         syncCtx?.notifyQueued();
       } else {
         await supabase.from("tasks").update(payload as any).eq("id", task.id);
+        // (a) Draft → published: treat as the task's first appearance
+        if (task.is_draft && payload.is_draft === false) {
+          await notifySection("tasks", {
+            title: `📋 New task: ${title.trim()}`,
+            body: assignedTo ? `Assigned to a team member` : undefined,
+            type: "task",
+            action_url: "tasks",
+            entity_id: task.id,
+            entity_type: "task",
+            property_id: propertyId || undefined,
+          }, userId ?? undefined);
+        }
+        // (b) New/changed assignee on a published task: notify them directly
+        if (payload.is_draft === false && assignedTo && assignedTo !== userId && assignedTo !== task.assigned_to) {
+          await notifyUsers([assignedTo], {
+            title: `📋 You've been assigned a task: ${title.trim()}`,
+            body: propertyId ? `Property: ${properties.find(p => p.id === propertyId)?.name ?? ""}` : undefined,
+            type: "info",
+            action_url: "tasks",
+            entity_id: task.id,
+            entity_type: "task",
+            property_id: propertyId || undefined,
+          }, userId ?? undefined);
+        }
       }
     } else {
       const { data } = await supabase.from("tasks").insert({ ...payload, created_by: userId } as any).select("id").single();
@@ -208,6 +232,17 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           entity_type: "task",
           property_id: propertyId || undefined,
         }, userId ?? undefined);
+        if (assignedTo && assignedTo !== userId) {
+          await notifyUsers([assignedTo], {
+            title: `📋 You've been assigned a task: ${title.trim()}`,
+            body: propertyId ? `Property: ${properties.find(p => p.id === propertyId)?.name ?? ""}` : undefined,
+            type: "info",
+            action_url: "tasks",
+            entity_id: savedTaskId,
+            entity_type: "task",
+            property_id: propertyId || undefined,
+          }, userId ?? undefined);
+        }
       }
     }
 

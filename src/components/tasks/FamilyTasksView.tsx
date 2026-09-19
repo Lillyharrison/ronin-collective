@@ -4,6 +4,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
+import { notifySection, notifyUsers } from "@/lib/notifySection";
 import { cn } from "@/lib/utils";
 import { Send, User, MapPin, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -85,7 +86,7 @@ export function FamilyTasksView() {
     if (!what.trim()) { toast.error(isL ? "Escribe la tarea" : "Please describe the task"); return; }
     if (!assignedTo) { toast.error(isL ? "Elige a quién enviar" : "Please choose who to send it to"); return; }
     setSaving(true);
-    const { error } = await supabase.from("tasks").insert({
+    const { data: inserted, error } = await supabase.from("tasks").insert({
       title_en: what.trim(),
       status: "pending",
       priority: 2,
@@ -95,11 +96,33 @@ export function FamilyTasksView() {
       property_id: propertyId || null,
       due_date: dueDate || null,
       created_by: userId,
-    } as any);
+    } as any).select("id").single();
     setSaving(false);
     if (error) {
       toast.error(isL ? "No se pudo enviar" : "Could not send the task");
       return;
+    }
+    const newTaskId = (inserted as { id: string } | null)?.id;
+    if (newTaskId) {
+      notifySection("tasks", {
+        title: `📋 New task: ${what.trim()}`,
+        type: "task",
+        action_url: "tasks",
+        entity_id: newTaskId,
+        entity_type: "task",
+        property_id: propertyId || undefined,
+      }, userId);
+      if (assignedTo !== userId) {
+        notifyUsers([assignedTo], {
+          title: `📋 You've been assigned a task: ${what.trim()}`,
+          body: propertyId ? `Property: ${properties.find(p => p.id === propertyId)?.name ?? ""}` : undefined,
+          type: "info",
+          action_url: "tasks",
+          entity_id: newTaskId,
+          entity_type: "task",
+          property_id: propertyId || undefined,
+        }, userId);
+      }
     }
     toast.success(isL ? "Tarea enviada" : "Task sent");
     setWhat(""); setDueDate(""); setPropertyId("");
