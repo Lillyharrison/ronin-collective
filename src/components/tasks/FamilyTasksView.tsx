@@ -44,6 +44,72 @@ export function FamilyTasksView() {
   const [propertyId, setPropertyId] = useState("");
   const [dueDate, setDueDate] = useState("");
 
+  // Edit modal state
+  const [editingTask, setEditingTask] = useState<SimpleTask | null>(null);
+  const [editAssignedTo, setEditAssignedTo] = useState("");
+  const [editWhat, setEditWhat] = useState("");
+  const [editPropertyId, setEditPropertyId] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (t: SimpleTask) => {
+    setEditingTask(t);
+    setEditAssignedTo(t.assigned_to ?? "");
+    setEditWhat(t.title_en);
+    setEditPropertyId(t.property_id ?? "");
+    setEditDueDate(t.due_date ? t.due_date.slice(0, 10) : "");
+  };
+
+  const closeEdit = () => setEditingTask(null);
+
+  const saveEdit = async () => {
+    if (!editingTask) return;
+    if (!editWhat.trim()) { toast.error(isL ? "Escribe la tarea" : "Please describe the task"); return; }
+    if (!editAssignedTo) { toast.error(isL ? "Elige a quién enviar" : "Please choose who to send it to"); return; }
+    setEditSaving(true);
+    const { error } = await supabase.from("tasks").update({
+      title_en: editWhat.trim(),
+      assigned_to: editAssignedTo,
+      property_id: editPropertyId || null,
+      due_date: editDueDate || null,
+    } as any).eq("id", editingTask.id);
+    setEditSaving(false);
+    if (error) {
+      toast.error(isL ? "No se pudo guardar" : "Could not save changes");
+      return;
+    }
+    if (editAssignedTo !== editingTask.assigned_to && editAssignedTo !== userId) {
+      notifyUsers([editAssignedTo], {
+        title: `📋 You've been assigned a task: ${editWhat.trim()}`,
+        body: editPropertyId ? `Property: ${properties.find(p => p.id === editPropertyId)?.name ?? ""}` : undefined,
+        type: "info",
+        action_url: "tasks",
+        entity_id: editingTask.id,
+        entity_type: "task",
+        property_id: editPropertyId || undefined,
+      }, userId);
+    }
+    toast.success(isL ? "Cambios guardados" : "Changes saved");
+    closeEdit();
+    loadTasks();
+  };
+
+  const deleteEdit = async () => {
+    if (!editingTask) return;
+    if (!window.confirm(isL ? "¿Eliminar esta tarea? Esto no se puede deshacer." : "Delete this task? This can't be undone.")) return;
+    setEditSaving(true);
+    await supabase.from("notifications").delete().eq("entity_id", editingTask.id).eq("entity_type", "task");
+    const { error } = await supabase.from("tasks").delete().eq("id", editingTask.id);
+    setEditSaving(false);
+    if (error) {
+      toast.error(isL ? "No se pudo eliminar" : "Could not delete the task");
+      return;
+    }
+    toast.success(isL ? "Tarea eliminada" : "Task deleted");
+    closeEdit();
+    loadTasks();
+  };
+
   const loadTasks = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
