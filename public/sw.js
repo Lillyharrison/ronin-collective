@@ -9,7 +9,7 @@
 // next page load — critical for iOS Safari PWA where SW updates are sticky.
 
 // ⚠️ BUMP THIS on every meaningful release to force a clean cache wipe.
-const CACHE_VERSION = "ronin-v9";
+const CACHE_VERSION = "ronin-v10";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 
 // Assets that form the app shell — cached aggressively (hashed by Vite)
@@ -129,6 +129,17 @@ self.addEventListener("push", (event) => {
       vibrate: [200, 100, 200],
       tag: "ronin-message",
       renotify: true,
+    }).then(() => {
+      // Home-screen badge count via the Badging API (feature-checked).
+      return self.registration.getNotifications().then((notifications) => {
+        try {
+          if (typeof navigator.setAppBadge === "function") {
+            navigator.setAppBadge(notifications.length);
+          }
+        } catch (err) {
+          console.error("[sw] setAppBadge failed:", err);
+        }
+      });
     })
   );
 });
@@ -140,6 +151,15 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Clear the home-screen badge once the user has opened/focused the app.
+      try {
+        if (typeof navigator.clearAppBadge === "function") {
+          navigator.clearAppBadge();
+        }
+      } catch (err) {
+        console.error("[sw] clearAppBadge failed:", err);
+      }
+
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();

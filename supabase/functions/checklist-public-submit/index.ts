@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     if (adminIds.length > 0 && tpl) {
       const title = `${tpl.icon ?? "✅"} Checklist submitted: ${tpl.title}`;
       const body = `${assignee_name || "Someone"} completed and submitted this checklist.`;
-      await admin.from("notifications").insert(
+      const { error: notifErr } = await admin.from("notifications").insert(
         adminIds.map((uid) => ({
           user_id: uid,
           title,
@@ -83,6 +83,22 @@ Deno.serve(async (req) => {
           property_id: session.property_id,
         })),
       );
+
+      // Best-effort push to the same admins — never fails the submission.
+      if (!notifErr) {
+        try {
+          await admin.functions.invoke("send-push-notification", {
+            body: {
+              recipientUserIds: adminIds,
+              title,
+              body,
+              url: "checklists",
+            },
+          });
+        } catch (pushErr) {
+          console.error("[checklist-public-submit] push dispatch failed:", pushErr);
+        }
+      }
     }
 
     return new Response(JSON.stringify({ ok: true }), {
