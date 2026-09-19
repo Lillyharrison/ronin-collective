@@ -152,7 +152,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     setIssues(prev => pageIndex === 0 ? enriched : [...prev, ...enriched]);
     setPage(pageIndex);
     setLoading(false);
-  }, [filterPropertyIds?.join(","), filters?.search, filters?.category, filters?.priority]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filterPropertyIds?.join(","), filters?.search, filters?.category, filters?.priority, filters?.property]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) fetchIssues(page + 1);

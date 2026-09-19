@@ -58,7 +58,8 @@ export function MaintenanceSection() {
     search: debouncedSearch || undefined,
     category: filterCat || undefined,
     priority: filterPri || undefined,
-  }), [debouncedSearch, filterCat, filterPri]);
+    property: filterProp || undefined,
+  }), [debouncedSearch, filterCat, filterPri, filterProp]);
 
   const { issues, categories, loading, hasMore, loadMore, fetchIssues, createIssue, updateIssue, deleteIssue, addCategory } = useMaintenanceIssues(scopedPropertyIds, dbFilters);
   const {
