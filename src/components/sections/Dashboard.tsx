@@ -203,18 +203,13 @@ export function Dashboard() {
 
     Promise.all([
       // 1. Pending tasks (count only — very fast HEAD request)
-      // Admins see all active tasks; others see only their assignments
-      (() => {
-        let q = supabase
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["pending", "in_progress", "urgent"])
-          .eq("is_draft", false);
-        if (!isAdmin && !isMasterAdmin) {
-          q = q.eq("assigned_to", userId);
-        }
-        return q;
-      })(),
+      // Always the current user's own assignments, regardless of role
+      supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["pending", "in_progress", "urgent"])
+        .eq("is_draft", false)
+        .eq("assigned_to", userId),
 
       // 2. Quick action prefs from profile
       supabase
