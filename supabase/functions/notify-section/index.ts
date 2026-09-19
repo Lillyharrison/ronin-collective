@@ -102,47 +102,58 @@ serve(async (req) => {
 
     // ── Build recipient list ────────────────────────────────────────────────────
 
-    // 1. Get all master_admin / admin user IDs
-    const { data: adminRoles } = await supabaseAdmin
-      .from("user_roles")
-      .select("user_id")
-      .in("role", ["master_admin", "admin"]);
+    let recipients: string[];
 
-    const adminIds = new Set<string>((adminRoles ?? []).map((r: { user_id: string }) => r.user_id));
+    if (userIds && userIds.length > 0) {
+      // Direct targeting: notify the specified users only, bypassing the
+      // admin-role and section-permission lookup (used for assignment
+      // notifications where only the assignee should be notified).
+      const recipientSet = new Set<string>(userIds);
+      if (excludeUserId) recipientSet.delete(excludeUserId);
+      recipients = [...recipientSet];
+    } else {
+      // 1. Get all master_admin / admin user IDs
+      const { data: adminRoles } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["master_admin", "admin"]);
 
-    // 2. Find users who opted into notifications for this section (single query on the
-    //    user_section_permissions table — the source of truth).
-    const { data: permRows } = await supabaseAdmin
-      .from("user_section_permissions")
-      .select("user_id")
-      .in("section", sections)
-      .eq("notifications", true);
+      const adminIds = new Set<string>((adminRoles ?? []).map((r: { user_id: string }) => r.user_id));
 
-    const optedInIds = new Set<string>((permRows ?? []).map((r: { user_id: string }) => r.user_id));
+      // 2. Find users who opted into notifications for this section (single query on the
+      //    user_section_permissions table — the source of truth).
+      const { data: permRows } = await supabaseAdmin
+        .from("user_section_permissions")
+        .select("user_id")
+        .in("section", sections)
+        .eq("notifications", true);
 
-    // 3. If property-scoped, filter opted-in users to those assigned to that property.
-    let extraIds: string[] = [];
-    if (optedInIds.size > 0) {
-      const candidateIds = [...optedInIds].filter(id => !adminIds.has(id));
-      if (candidateIds.length > 0) {
-        if (payload.property_id) {
-          const { data: profs } = await supabaseAdmin
-            .from("profiles")
-            .select("id, assigned_property_ids")
-            .in("id", candidateIds);
-          extraIds = (profs ?? [])
-            .filter((p: { id: string; assigned_property_ids: string[] | null }) =>
-              (p.assigned_property_ids ?? []).includes(payload.property_id))
-            .map((p: { id: string }) => p.id);
-        } else {
-          extraIds = candidateIds;
+      const optedInIds = new Set<string>((permRows ?? []).map((r: { user_id: string }) => r.user_id));
+
+      // 3. If property-scoped, filter opted-in users to those assigned to that property.
+      let extraIds: string[] = [];
+      if (optedInIds.size > 0) {
+        const candidateIds = [...optedInIds].filter(id => !adminIds.has(id));
+        if (candidateIds.length > 0) {
+          if (payload.property_id) {
+            const { data: profs } = await supabaseAdmin
+              .from("profiles")
+              .select("id, assigned_property_ids")
+              .in("id", candidateIds);
+            extraIds = (profs ?? [])
+              .filter((p: { id: string; assigned_property_ids: string[] | null }) =>
+                (p.assigned_property_ids ?? []).includes(payload.property_id))
+              .map((p: { id: string }) => p.id);
+          } else {
+            extraIds = candidateIds;
+          }
         }
       }
-    }
 
-    const recipientSet = new Set<string>([...adminIds, ...extraIds]);
-    if (excludeUserId) recipientSet.delete(excludeUserId);
-    const recipients = [...recipientSet];
+      const recipientSet = new Set<string>([...adminIds, ...extraIds]);
+      if (excludeUserId) recipientSet.delete(excludeUserId);
+      recipients = [...recipientSet];
+    }
 
     if (!recipients.length) {
       return new Response(JSON.stringify({ inserted: 0, message: "No recipients found" }), {
