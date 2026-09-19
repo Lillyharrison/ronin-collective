@@ -52,6 +52,7 @@ export interface MaintenanceFilters {
   search?: string;
   category?: string;
   priority?: string;
+  property?: string;
 }
 
 export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: MaintenanceFilters) {
@@ -104,6 +105,9 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     }
     if (filters?.priority) {
       query = query.eq("priority", filters.priority);
+    }
+    if (filters?.property) {
+      query = query.eq("property_id", filters.property);
     }
 
     const { data, error } = await query;
