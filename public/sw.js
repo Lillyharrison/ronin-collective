@@ -151,6 +151,15 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Clear the home-screen badge once the user has opened/focused the app.
+      try {
+        if (typeof navigator.clearAppBadge === "function") {
+          navigator.clearAppBadge();
+        }
+      } catch (err) {
+        console.error("[sw] clearAppBadge failed:", err);
+      }
+
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
