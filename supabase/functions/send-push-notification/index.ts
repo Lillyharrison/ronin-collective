@@ -48,7 +48,7 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
 // ─── VAPID JWT ───────────────────────────────────────────────────────────────
 // Apple APNs requires aud = origin (https://web.push.apple.com), NOT the full URL.
 
-async function buildVapidToken(endpoint: string): Promise<{ token: string; pubKeyB64u: string }> {
+async function buildVapidToken(endpoint: string, debug = false): Promise<{ token: string; pubKeyB64u: string }> {
   const rawPub  = (Deno.env.get("VAPID_PUBLIC_KEY")  ?? "").trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
   const rawPriv = (Deno.env.get("VAPID_PRIVATE_KEY") ?? "").trim().replace(/^["']/, "").replace(/["',;]+$/, "").trim();
 
@@ -75,27 +75,73 @@ async function buildVapidToken(endpoint: string): Promise<{ token: string; pubKe
   // aud MUST be the origin only — this is what Apple validates
   const aud = new URL(endpoint).origin;
 
-  const headerB64  = bytesToB64u(new TextEncoder().encode(JSON.stringify({ typ: "JWT", alg: "ES256" })));
-  const payloadB64 = bytesToB64u(new TextEncoder().encode(JSON.stringify({
+  const headerJson  = JSON.stringify({ typ: "JWT", alg: "ES256" });
+  const payloadJson = JSON.stringify({
     aud,
     exp: Math.floor(Date.now() / 1000) + 43200, // 12 hours
     sub: VAPID_SUBJECT,
-  })));
+  });
+  const headerB64  = bytesToB64u(new TextEncoder().encode(headerJson));
+  const payloadB64 = bytesToB64u(new TextEncoder().encode(payloadJson));
 
   const unsigned = `${headerB64}.${payloadB64}`;
+  const unsignedBytes = new TextEncoder().encode(unsigned);
   const sig = new Uint8Array(
     await crypto.subtle.sign(
       { name: "ECDSA", hash: "SHA-256" },
       signingKey,
-      new TextEncoder().encode(unsigned)
+      unsignedBytes
     )
   );
 
-  return {
-    token:      `${unsigned}.${bytesToB64u(sig)}`,
-    pubKeyB64u: bytesToB64u(pubBytes),
-  };
+  const token = `${unsigned}.${bytesToB64u(sig)}`;
+  const pubKeyB64u = bytesToB64u(pubBytes);
+
+  if (debug) {
+    // 1. Self-verification against the SAME public key bytes
+    let selfVerify = "n/a";
+    try {
+      const verifyKey = await crypto.subtle.importKey(
+        "jwk",
+        { kty: "EC", crv: "P-256", x, y, key_ops: ["verify"] },
+        { name: "ECDSA", namedCurve: "P-256" },
+        false,
+        ["verify"]
+      );
+      const ok = await crypto.subtle.verify(
+        { name: "ECDSA", hash: "SHA-256" },
+        verifyKey,
+        sig,
+        unsignedBytes
+      );
+      selfVerify = ok ? "PASS" : "FAIL";
+    } catch (e) {
+      selfVerify = `ERROR ${String(e)}`;
+    }
+
+    // 4. Signature shape: raw r||s is 64 bytes; DER starts with 0x30
+    const sigShape = sig.length === 64
+      ? "RAW r||s (64 bytes) — correct for ES256"
+      : `NOT RAW: length=${sig.length} first byte=0x${sig[0].toString(16)} (0x30 = DER)`;
+
+    console.log("─── VAPID DIAGNOSTIC ───");
+    console.log(`selfVerify: ${selfVerify}`);
+    console.log(`signature: ${sigShape}`);
+    console.log(`rawSubject env (piped): |${Deno.env.get("VAPID_SUBJECT") ?? "<<UNSET>>"}|`);
+    console.log(`VAPID_SUBJECT used (piped): |${VAPID_SUBJECT}| len=${VAPID_SUBJECT.length}`);
+    console.log(`subject char codes: ${Array.from(VAPID_SUBJECT).map(c => c.charCodeAt(0)).join(",")}`);
+    console.log(`aud (piped): |${aud}|`);
+    console.log(`header JSON: ${headerJson}`);
+    console.log(`payload JSON: ${payloadJson}`);
+    console.log(`pubkey b64u: ${pubKeyB64u} (len=${pubKeyB64u.length}, bytes=${pubBytes.length})`);
+    console.log(`priv bytes: ${privBytes.length}`);
+    console.log(`Authorization: |vapid t=${token.slice(0, 20)}…[${token.length} chars],k=${pubKeyB64u.slice(0, 12)}…[${pubKeyB64u.length} chars]|`);
+    console.log("────────────────────────");
+  }
+
+  return { token, pubKeyB64u };
 }
+
 
 // ─── RFC 8291 aes128gcm Encryption ──────────────────────────────────────────
 
