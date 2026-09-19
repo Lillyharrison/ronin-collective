@@ -6,7 +6,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { notifyUsers } from "@/lib/notifySection";
 import { cn } from "@/lib/utils";
-import { Send, User, MapPin, Clock } from "lucide-react";
+import { Send, User, MapPin, Clock, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface SimpleTask {
