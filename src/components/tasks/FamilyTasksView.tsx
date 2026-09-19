@@ -67,14 +67,14 @@ export function FamilyTasksView() {
     if (!editWhat.trim()) { toast.error(isL ? "Escribe la tarea" : "Please describe the task"); return; }
     if (!editAssignedTo) { toast.error(isL ? "Elige a quién enviar" : "Please choose who to send it to"); return; }
     setEditSaving(true);
-    const { error } = await supabase.from("tasks").update({
+    const { data, error } = await supabase.from("tasks").update({
       title_en: editWhat.trim(),
       assigned_to: editAssignedTo,
       property_id: editPropertyId || null,
       due_date: editDueDate || null,
-    } as any).eq("id", editingTask.id);
+    } as any).eq("id", editingTask.id).select();
     setEditSaving(false);
-    if (error) {
+    if (error || !data || data.length === 0) {
       toast.error(isL ? "No se pudo guardar" : "Could not save changes");
       return;
     }
@@ -99,9 +99,9 @@ export function FamilyTasksView() {
     if (!window.confirm(isL ? "¿Eliminar esta tarea? Esto no se puede deshacer." : "Delete this task? This can't be undone.")) return;
     setEditSaving(true);
     await supabase.from("notifications").delete().eq("entity_id", editingTask.id).eq("entity_type", "task");
-    const { error } = await supabase.from("tasks").delete().eq("id", editingTask.id);
+    const { data, error } = await supabase.from("tasks").delete().eq("id", editingTask.id).select();
     setEditSaving(false);
-    if (error) {
+    if (error || !data || data.length === 0) {
       toast.error(isL ? "No se pudo eliminar" : "Could not delete the task");
       return;
     }

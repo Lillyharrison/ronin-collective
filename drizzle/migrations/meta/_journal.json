@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789827432061,
+      "tag": "0000_tasks_rls_principal_creator_update_delete",
+      "breakpoints": true
+    }
+  ]
+}
