@@ -13,14 +13,26 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-// Clean VAPID subject: strip quotes, angle brackets, and spaces after "mailto:"
-// Apple APNs requires a valid URI like "mailto:user@example.com" — NO spaces, NO angle brackets
-const rawSubject = (Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com")
-  .trim().replace(/^["']/, "").replace(/["',;>]+$/, "").trim();
-const VAPID_SUBJECT = rawSubject
-  .replace(/<([^>]+)>/, "$1")       // <email@example.com> → email@example.com
-  .replace(/^mailto:\s+/, "mailto:") // mailto: email → mailto:email (remove space after colon)
-  .trim();
+// Normalise the VAPID subject into a strictly valid URI.
+// Apple rejects anything that isn't exactly "mailto:user@host" or "https://…"
+// (BadJwtToken), so strip quotes, angle brackets, commas and all whitespace.
+function normaliseSubject(raw: string): string {
+  const cleaned = (raw ?? "")
+    .replace(/[<>"'`,;]/g, "")  // angle brackets, quotes, separators
+    .replace(/\s+/g, "")        // ALL whitespace, incl. after "mailto:"
+    .trim();
+  if (!cleaned) return "mailto:admin@roninestates.com";
+  if (/^https:\/\/\S+$/.test(cleaned)) return cleaned;
+  // Accept a bare email or a mailto: form; rebuild canonically
+  const email = cleaned.replace(/^mailto:/i, "");
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)
+    ? `mailto:${email}`
+    : "mailto:admin@roninestates.com";
+}
+const VAPID_SUBJECT = normaliseSubject(
+  Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@roninestates.com"
+);
+
 
 // ─── Base64url helpers ───────────────────────────────────────────────────────
 
