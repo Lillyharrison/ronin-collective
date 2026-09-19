@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
   define: {
     // VAPID public key is intentionally public — required by browser push API
     "import.meta.env.VITE_VAPID_PUBLIC_KEY": JSON.stringify(
-      "BJs_mOzCTGQf9t951OSQQmrtYLW3IcaMaB8wRoC9S9JfZGKX74aFeSNWdaBCova6niN6Ck_DtY26Gsl9bywdDqw"
+      "BBz95Jozfe6VXGKyN5b5eqQ9vVNTSYDl72BNAppEpfEWfyOLjUHvXAb4qqFezHQTU1xQ1WRO1Gwkd_dT5HBXSj4"
     ),
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
