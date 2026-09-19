@@ -291,6 +291,79 @@ export function FamilyTasksView() {
           </div>
         )}
       </div>
+
+      {/* Edit / delete sent task */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeEdit} />
+          <div className="relative w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl z-10 flex flex-col h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+              <p className="text-sm font-semibold text-foreground">{isL ? "Editar tarea" : "Edit task"}</p>
+              <button
+                onClick={closeEdit}
+                className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                aria-label={isL ? "Cerrar" : "Close"}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Para" : "To"}</label>
+                <select className={inputCls} value={editAssignedTo} onChange={e => setEditAssignedTo(e.target.value)}>
+                  <option value="">{isL ? "Elegir persona" : "Choose a person"}</option>
+                  {staff.map(s => <option key={s.id} value={s.id}>{s.full_name ?? "—"}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Qué" : "What"}</label>
+                <input className={inputCls} value={editWhat} onChange={e => setEditWhat(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Propiedad" : "Property"}</label>
+                  <select className={inputCls} value={editPropertyId} onChange={e => setEditPropertyId(e.target.value)}>
+                    <option value="">{isL ? "Opcional" : "Optional"}</option>
+                    {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Fecha límite" : "Due date"}</label>
+                  <input type="date" className={inputCls} value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 px-4 py-3 border-t border-border flex items-center gap-2">
+              <button
+                onClick={deleteEdit}
+                disabled={editSaving}
+                className="min-h-[44px] px-4 rounded-xl border border-[hsl(var(--status-urgent)/0.4)] text-status-urgent text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                {isL ? "Eliminar" : "Delete"}
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={closeEdit}
+                className="min-h-[44px] px-4 rounded-xl border border-border text-muted-foreground text-sm font-semibold active:scale-[0.98] transition-transform"
+              >
+                {isL ? "Cancelar" : "Cancel"}
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={editSaving}
+                className="min-h-[44px] px-5 bg-[hsl(var(--gold))] text-charcoal text-sm font-semibold rounded-xl active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                {editSaving ? (isL ? "Guardando…" : "Saving…") : (isL ? "Guardar" : "Save")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
