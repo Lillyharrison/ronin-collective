@@ -42,8 +42,10 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { section, payload, excludeUserId, idempotencyKey } = body as {
-      section: string | string[];
+    const { section, userIds, payload, excludeUserId, idempotencyKey } = body as {
+      section?: string | string[];
+      /** Direct recipient targeting — bypasses the section/role lookup entirely. */
+      userIds?: string[];
       payload: {
         title: string;
         body?: string;
@@ -62,10 +64,14 @@ serve(async (req) => {
       idempotencyKey?: string | null;
     };
 
-    const sections = Array.isArray(section) ? section.filter(Boolean) : [section];
+    const sections = Array.isArray(section)
+      ? section.filter(Boolean)
+      : section
+        ? [section]
+        : [];
 
-    if (!sections.length || !payload?.title) {
-      return new Response(JSON.stringify({ error: "Missing section or payload.title" }), {
+    if ((!sections.length && !(userIds && userIds.length > 0)) || !payload?.title) {
+      return new Response(JSON.stringify({ error: "Missing section/userIds or payload.title" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
