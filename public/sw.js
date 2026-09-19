@@ -9,7 +9,7 @@
 // next page load — critical for iOS Safari PWA where SW updates are sticky.
 
 // ⚠️ BUMP THIS on every meaningful release to force a clean cache wipe.
-const CACHE_VERSION = "ronin-v9";
+const CACHE_VERSION = "ronin-v10";
 const SHELL_CACHE   = `${CACHE_VERSION}-shell`;
 
 // Assets that form the app shell — cached aggressively (hashed by Vite)
