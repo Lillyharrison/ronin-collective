@@ -4,7 +4,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
-import { notifySection, notifyUsers } from "@/lib/notifySection";
+import { notifyUsers } from "@/lib/notifySection";
 import { cn } from "@/lib/utils";
 import { Send, User, MapPin, Clock } from "lucide-react";
 import { toast } from "sonner";
