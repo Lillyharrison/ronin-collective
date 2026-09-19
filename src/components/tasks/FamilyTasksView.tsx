@@ -257,8 +257,9 @@ export function FamilyTasksView() {
                 <div
                   key={t.id}
                   id={`fam-task-${t.id}`}
+                  onClick={() => openEdit(t)}
                   className={cn(
-                    "bg-card border rounded-xl p-3",
+                    "bg-card border rounded-xl p-3 cursor-pointer active:scale-[0.99] transition-transform",
                     highlightId === t.id ? "border-[hsl(var(--gold))] ring-1 ring-[hsl(var(--gold)/0.4)]" : "border-border"
                   )}
                 >
