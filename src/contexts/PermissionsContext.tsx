@@ -492,9 +492,21 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
   }, [applySnapshot]);
 
+  // Re-run the permissions load for the current session user (used by error UI).
+  const retry = useCallback(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && loadRef.current) {
+        setPerms((p) => ({ ...p, loading: true, error: null }));
+        loadRef.current(session.user.id);
+      }
+    }).catch((err) => {
+      console.error("[Permissions] retry getSession failed:", err);
+    });
+  }, []);
+
   return (
     <PermissionsContext.Provider value={perms}>
-      <PermissionsControlContext.Provider value={{ enterPreview, exitPreview }}>
+      <PermissionsControlContext.Provider value={{ enterPreview, exitPreview, retry }}>
         {children}
       </PermissionsControlContext.Provider>
     </PermissionsContext.Provider>
