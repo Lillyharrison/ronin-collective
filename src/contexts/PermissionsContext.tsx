@@ -156,6 +156,7 @@ const defaultPermissions: UserPermissions = {
   canEdit: () => false,
   wantsAlerts: () => false,
   loading: true,
+  error: null,
   isPreviewing: false,
   realUserId: null,
   realIsMasterAdmin: false,
@@ -167,12 +168,15 @@ interface PermissionsControl {
   enterPreview: (targetUserId: string) => Promise<void>;
   /** Exit preview mode and restore the master admin's own view. */
   exitPreview: () => void;
+  /** Re-run the permissions fetch for the current session user (e.g. after a load failure). */
+  retry: () => void;
 }
 
 const PermissionsContext = createContext<UserPermissions>(defaultPermissions);
 const PermissionsControlContext = createContext<PermissionsControl>({
   enterPreview: async () => {},
   exitPreview: () => {},
+  retry: () => {},
 });
 
 function buildPermissions(
