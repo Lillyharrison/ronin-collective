@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissions, usePermissionsControl } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
@@ -157,7 +157,8 @@ function eventDotColor(eventType: string): string {
 export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
-  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
+  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading, error: permError } = usePermissions();
+  const { retry: retryPermissions } = usePermissionsControl();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
   const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
 
@@ -664,7 +665,17 @@ export function Dashboard() {
           {language === "es" ? "Acciones Rápidas" : "Quick Actions"}
         </p>
         {/* Wait until user prefs are loaded to avoid flashing unfiltered actions */}
-        {(permLoading || qaLoading) ? (
+        {(permError && !permLoading) ? (
+          <div className="col-span-2 flex flex-col items-center justify-center gap-3 bg-card border border-border rounded-xl p-6 text-center">
+            <p className="text-sm text-muted-foreground">{permError}</p>
+            <button
+              onClick={retryPermissions}
+              className="px-4 py-2 rounded-lg bg-gold/10 border border-gold/40 text-gold text-sm font-medium hover:bg-gold/20 transition-all active:scale-95"
+            >
+              {language === "es" ? "Reintentar" : "Retry"}
+            </button>
+          </div>
+        ) : (permLoading || qaLoading) ? (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-card border border-border rounded-xl p-4 min-h-[88px] animate-pulse" />

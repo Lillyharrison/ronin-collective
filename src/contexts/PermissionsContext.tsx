@@ -29,6 +29,8 @@ export interface UserPermissions {
   canEdit: (section: string) => boolean;
   wantsAlerts: (section: string) => boolean;
   loading: boolean;
+  /** Non-null when the permissions fetch failed. Null on the happy path. */
+  error: string | null;
   // ── Preview / "View as user" mode ─────────────────────────────────────────
   /** True when a master admin is currently viewing the app through another user's lens. */
   isPreviewing: boolean;
@@ -106,6 +108,17 @@ function readCache(userId: string): PermissionsCache | null {
   } catch { return null; }
 }
 
+/** Failure fallback: read the cache ignoring the TTL (version still enforced). */
+function readCacheIgnoreTtl(userId: string): PermissionsCache | null {
+  try {
+    const raw = localStorage.getItem(`ronin_perms_${userId}`);
+    if (!raw) return null;
+    const parsed: PermissionsCache = JSON.parse(raw);
+    if (parsed.version !== CACHE_VERSION) return null;
+    return parsed;
+  } catch { return null; }
+}
+
 function writeCache(data: Omit<PermissionsCache, "version" | "cachedAt">) {
   try {
     localStorage.setItem(
@@ -143,6 +156,7 @@ const defaultPermissions: UserPermissions = {
   canEdit: () => false,
   wantsAlerts: () => false,
   loading: true,
+  error: null,
   isPreviewing: false,
   realUserId: null,
   realIsMasterAdmin: false,
@@ -154,12 +168,15 @@ interface PermissionsControl {
   enterPreview: (targetUserId: string) => Promise<void>;
   /** Exit preview mode and restore the master admin's own view. */
   exitPreview: () => void;
+  /** Re-run the permissions fetch for the current session user (e.g. after a load failure). */
+  retry: () => void;
 }
 
 const PermissionsContext = createContext<UserPermissions>(defaultPermissions);
 const PermissionsControlContext = createContext<PermissionsControl>({
   enterPreview: async () => {},
   exitPreview: () => {},
+  retry: () => {},
 });
 
 function buildPermissions(
@@ -172,6 +189,7 @@ function buildPermissions(
   avatarUrl: string | null,
   sectionPermissions: Record<string, SectionPermEntry> | null,
   loading: boolean,
+  error: string | null,
   preview: { isPreviewing: boolean; realUserId: string | null; realIsMasterAdmin: boolean; previewName: string | null },
 ): UserPermissions {
   const isMasterAdmin = role === "master_admin";
@@ -237,6 +255,7 @@ function buildPermissions(
     canEdit,
     wantsAlerts,
     loading,
+    error,
     ...preview,
   };
 }
@@ -294,15 +313,19 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const previewStateRef = useRef<typeof previewState>(null);
   useEffect(() => { previewStateRef.current = previewState; }, [previewState]);
 
+  // Latest load() instance so `retry()` (exposed via context) can re-trigger it.
+  const loadRef = useRef<((userId: string) => Promise<void>) | null>(null);
+
   // Apply a snapshot (real or previewed) to the context state.
   const applySnapshot = useCallback((
     snap: Awaited<ReturnType<typeof fetchPermissionsSnapshot>>,
     preview: { isPreviewing: boolean; realUserId: string | null; realIsMasterAdmin: boolean; previewName: string | null },
+    error: string | null = null,
   ) => {
     setPerms(buildPermissions(
       snap.userId, snap.role, snap.level, snap.department,
       snap.assignedPropertyIds, snap.fullName, snap.avatarUrl,
-      snap.sectionPermissions, false, preview,
+      snap.sectionPermissions, false, error, preview,
     ));
   }, []);
 
@@ -335,8 +358,38 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      // Fetch fresh from DB
-      const fresh = await fetchPermissionsSnapshot(userId);
+      // Fetch fresh from DB — a failure must never leave the app stuck on loading.
+      let fresh: Awaited<ReturnType<typeof fetchPermissionsSnapshot>>;
+      try {
+        fresh = await fetchPermissionsSnapshot(userId);
+      } catch (err) {
+        console.error("[Permissions] fetchPermissionsSnapshot failed:", err);
+        if (cancelled) return;
+        // Fall back to any cached snapshot (even TTL-expired) so the user still
+        // gets a working app, but flag the error so the UI can offer a retry.
+        const fallback = readCacheIgnoreTtl(userId);
+        if (fallback) {
+          const snap = {
+            userId: fallback.userId, role: fallback.role, level: fallback.level, department: fallback.department,
+            assignedPropertyIds: fallback.assignedPropertyIds, fullName: fallback.fullName, avatarUrl: fallback.avatarUrl,
+            sectionPermissions: fallback.sectionPermissions,
+          };
+          realSnapshotRef.current = snap;
+          if (previewStateRef.current === null) {
+            applySnapshot(snap, {
+              isPreviewing: false, realUserId: userId,
+              realIsMasterAdmin: snap.role === "master_admin", previewName: null,
+            }, "Couldn't refresh your profile — showing cached data. Tap to retry.");
+          }
+        } else if (previewStateRef.current === null) {
+          setPerms({
+            ...defaultPermissions,
+            loading: false,
+            error: "Couldn't load your profile. Check your connection and try again.",
+          });
+        }
+        return;
+      }
       if (cancelled) return;
 
       writeCache(fresh);
@@ -350,6 +403,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         });
       }
     }
+
+    loadRef.current = load;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
@@ -370,6 +425,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && !cancelled) load(session.user.id);
       else if (!session && !cancelled) setPerms({ ...defaultPermissions, loading: false });
+    }).catch((err) => {
+      console.error("[Permissions] getSession failed:", err);
+      if (!cancelled) {
+        setPerms({
+          ...defaultPermissions,
+          loading: false,
+          error: "Couldn't load your profile. Check your connection and try again.",
+        });
+      }
     });
 
     return () => {
@@ -428,9 +492,21 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
   }, [applySnapshot]);
 
+  // Re-run the permissions load for the current session user (used by error UI).
+  const retry = useCallback(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && loadRef.current) {
+        setPerms((p) => ({ ...p, loading: true, error: null }));
+        loadRef.current(session.user.id);
+      }
+    }).catch((err) => {
+      console.error("[Permissions] retry getSession failed:", err);
+    });
+  }, []);
+
   return (
     <PermissionsContext.Provider value={perms}>
-      <PermissionsControlContext.Provider value={{ enterPreview, exitPreview }}>
+      <PermissionsControlContext.Provider value={{ enterPreview, exitPreview, retry }}>
         {children}
       </PermissionsControlContext.Provider>
     </PermissionsContext.Provider>
