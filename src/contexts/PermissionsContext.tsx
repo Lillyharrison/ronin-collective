@@ -29,6 +29,8 @@ export interface UserPermissions {
   canEdit: (section: string) => boolean;
   wantsAlerts: (section: string) => boolean;
   loading: boolean;
+  /** Non-null when the permissions fetch failed. Null on the happy path. */
+  error: string | null;
   // ── Preview / "View as user" mode ─────────────────────────────────────────
   /** True when a master admin is currently viewing the app through another user's lens. */
   isPreviewing: boolean;
@@ -102,6 +104,17 @@ function readCache(userId: string): PermissionsCache | null {
     const parsed: PermissionsCache = JSON.parse(raw);
     if (parsed.version !== CACHE_VERSION) return null;
     if (Date.now() - parsed.cachedAt > CACHE_TTL_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+/** Failure fallback: read the cache ignoring the TTL (version still enforced). */
+function readCacheIgnoreTtl(userId: string): PermissionsCache | null {
+  try {
+    const raw = localStorage.getItem(`ronin_perms_${userId}`);
+    if (!raw) return null;
+    const parsed: PermissionsCache = JSON.parse(raw);
+    if (parsed.version !== CACHE_VERSION) return null;
     return parsed;
   } catch { return null; }
 }
