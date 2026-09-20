@@ -313,6 +313,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const previewStateRef = useRef<typeof previewState>(null);
   useEffect(() => { previewStateRef.current = previewState; }, [previewState]);
 
+  // Latest load() instance so `retry()` (exposed via context) can re-trigger it.
+  const loadRef = useRef<((userId: string) => Promise<void>) | null>(null);
+
   // Apply a snapshot (real or previewed) to the context state.
   const applySnapshot = useCallback((
     snap: Awaited<ReturnType<typeof fetchPermissionsSnapshot>>,
@@ -422,6 +425,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && !cancelled) load(session.user.id);
       else if (!session && !cancelled) setPerms({ ...defaultPermissions, loading: false });
+    }).catch((err) => {
+      console.error("[Permissions] getSession failed:", err);
+      if (!cancelled) {
+        setPerms({
+          ...defaultPermissions,
+          loading: false,
+          error: "Couldn't load your profile. Check your connection and try again.",
+        });
+      }
     });
 
     return () => {
