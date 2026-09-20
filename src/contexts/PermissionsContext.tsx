@@ -355,8 +355,38 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      // Fetch fresh from DB
-      const fresh = await fetchPermissionsSnapshot(userId);
+      // Fetch fresh from DB — a failure must never leave the app stuck on loading.
+      let fresh: Awaited<ReturnType<typeof fetchPermissionsSnapshot>>;
+      try {
+        fresh = await fetchPermissionsSnapshot(userId);
+      } catch (err) {
+        console.error("[Permissions] fetchPermissionsSnapshot failed:", err);
+        if (cancelled) return;
+        // Fall back to any cached snapshot (even TTL-expired) so the user still
+        // gets a working app, but flag the error so the UI can offer a retry.
+        const fallback = readCacheIgnoreTtl(userId);
+        if (fallback) {
+          const snap = {
+            userId: fallback.userId, role: fallback.role, level: fallback.level, department: fallback.department,
+            assignedPropertyIds: fallback.assignedPropertyIds, fullName: fallback.fullName, avatarUrl: fallback.avatarUrl,
+            sectionPermissions: fallback.sectionPermissions,
+          };
+          realSnapshotRef.current = snap;
+          if (previewStateRef.current === null) {
+            applySnapshot(snap, {
+              isPreviewing: false, realUserId: userId,
+              realIsMasterAdmin: snap.role === "master_admin", previewName: null,
+            }, "Couldn't refresh your profile — showing cached data. Tap to retry.");
+          }
+        } else if (previewStateRef.current === null) {
+          setPerms({
+            ...defaultPermissions,
+            loading: false,
+            error: "Couldn't load your profile. Check your connection and try again.",
+          });
+        }
+        return;
+      }
       if (cancelled) return;
 
       writeCache(fresh);
@@ -370,6 +400,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         });
       }
     }
+
+    loadRef.current = load;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
