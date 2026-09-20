@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissions, usePermissionsControl } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
@@ -157,7 +157,8 @@ function eventDotColor(eventType: string): string {
 export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
-  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading } = usePermissions();
+  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading, error: permError } = usePermissions();
+  const { retry: retryPermissions } = usePermissionsControl();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
   const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
 
