@@ -189,6 +189,7 @@ function buildPermissions(
   avatarUrl: string | null,
   sectionPermissions: Record<string, SectionPermEntry> | null,
   loading: boolean,
+  error: string | null,
   preview: { isPreviewing: boolean; realUserId: string | null; realIsMasterAdmin: boolean; previewName: string | null },
 ): UserPermissions {
   const isMasterAdmin = role === "master_admin";
@@ -254,6 +255,7 @@ function buildPermissions(
     canEdit,
     wantsAlerts,
     loading,
+    error,
     ...preview,
   };
 }
