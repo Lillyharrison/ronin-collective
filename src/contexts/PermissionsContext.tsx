@@ -317,11 +317,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const applySnapshot = useCallback((
     snap: Awaited<ReturnType<typeof fetchPermissionsSnapshot>>,
     preview: { isPreviewing: boolean; realUserId: string | null; realIsMasterAdmin: boolean; previewName: string | null },
+    error: string | null = null,
   ) => {
     setPerms(buildPermissions(
       snap.userId, snap.role, snap.level, snap.department,
       snap.assignedPropertyIds, snap.fullName, snap.avatarUrl,
-      snap.sectionPermissions, false, preview,
+      snap.sectionPermissions, false, error, preview,
     ));
   }, []);
 
