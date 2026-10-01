@@ -359,7 +359,15 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       const { data, error } = await supabase.functions.invoke("set-user-password", {
         body: { userId: member.id, password: newPwd },
       });
-      const errMsg = (data as { error?: string } | null)?.error;
+      let errMsg = (data as { error?: string } | null)?.error;
+      if (error && !errMsg) {
+        // Non-2xx: read the real reason from the response body
+        try {
+          const ctx = (error as { context?: Response }).context;
+          const body = ctx ? await ctx.json() : null;
+          errMsg = body?.error;
+        } catch { /* ignore */ }
+      }
       if (error || errMsg) throw new Error(errMsg || error?.message || "Failed");
       toast.success(isEN ? "Password set — share it with them so they can sign in." : "Contraseña guardada.");
       setNewPwd("");
