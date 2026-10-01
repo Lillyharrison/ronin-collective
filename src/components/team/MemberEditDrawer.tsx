@@ -36,6 +36,8 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const [resending, setResending] = useState(false);
   const [resettingPwd, setResettingPwd] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [newPwd, setNewPwd] = useState("");
+  const [settingPwd, setSettingPwd] = useState(false);
 
   // Draft state
   const [isDraft, setIsDraft] = useState(member.is_draft ?? false);
@@ -349,6 +351,22 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       toast.error(msg);
     }
     setResettingPwd(false);
+  }
+
+  async function handleSetPassword() {
+    setSettingPwd(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("set-user-password", {
+        body: { userId: member.id, password: newPwd },
+      });
+      const errMsg = (data as { error?: string } | null)?.error;
+      if (error || errMsg) throw new Error(errMsg || error?.message || "Failed");
+      toast.success(isEN ? "Password set — share it with them so they can sign in." : "Contraseña guardada.");
+      setNewPwd("");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to set password.");
+    }
+    setSettingPwd(false);
   }
 
   const TABS = [
@@ -724,6 +742,30 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                   ? (isEN ? "Sending…" : "Enviando…")
                   : (isEN ? "Send Password Reset" : "Enviar Restablecer Contraseña")}
               </Button>
+            )}
+
+            {/* Master admin: set a password directly (bypasses email) */}
+            {isMasterAdmin && !isDraft && (
+              <div className="space-y-2 rounded-xl border border-gold/30 p-3">
+                <FieldLabel label={isEN ? "Set password directly" : "Establecer contraseña"} />
+                <Input
+                  type="text"
+                  autoComplete="new-password"
+                  value={newPwd}
+                  onChange={e => setNewPwd(e.target.value)}
+                  placeholder={isEN ? "Min. 8 characters" : "Mín. 8 caracteres"}
+                  className="text-base"
+                />
+                <Button
+                  variant="outline"
+                  disabled={settingPwd || newPwd.length < 8}
+                  onClick={handleSetPassword}
+                  className="w-full bg-charcoal-light border border-gold/30 text-cream hover:bg-gold/10 hover:border-gold/60 gap-2 font-semibold"
+                >
+                  {settingPwd ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                  {isEN ? "Set Password" : "Guardar Contraseña"}
+                </Button>
+              </div>
             )}
 
             <Button onClick={handleSave} disabled={saving || deleting} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
