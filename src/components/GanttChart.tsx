@@ -10,7 +10,7 @@ interface Phase {
 }
 
 interface Milestone {
-  date: [number, number];
+  date?: [number, number]; // optional — a milestone can be a note only, with no date set yet
   label: string;
 }
 
@@ -139,11 +139,15 @@ function fmtDate(ym: [number, number]) {
 function getDue(proj: Project, csy: number, csm: number) {
   if (proj.status === "complete") return null;
   const future = proj.milestones.filter(
-    (ms) => ms.date[0] > csy || (ms.date[0] === csy && ms.date[1] >= csm)
+    (ms) => ms.date && (ms.date[0] > csy || (ms.date[0] === csy && ms.date[1] >= csm))
   );
   if (future.length > 0) {
-    future.sort((a, b) => mo(a.date[0], a.date[1], csy, csm) - mo(b.date[0], b.date[1], csy, csm));
-    return { label: fmtDate(future[0].date), desc: future[0].label };
+    future.sort((a, b) => mo(a.date![0], a.date![1], csy, csm) - mo(b.date![0], b.date![1], csy, csm));
+    return { label: fmtDate(future[0].date!), desc: future[0].label };
+  }
+  const undated = proj.milestones.filter((ms) => !ms.date);
+  if (undated.length > 0) {
+    return { label: undated[0].label, desc: "No date set yet" };
   }
   const active = proj.phases.filter((p) => p.type !== "complete");
   if (active.length > 0) {
