@@ -14,6 +14,12 @@ interface Milestone {
   label: string;
 }
 
+// A milestone has a real date only if both parts are present and valid (stored data can
+// contain a blank/NaN date from older saves — treat those as note-only too).
+function msHasDate(ms: Milestone): ms is Milestone & { date: [number, number] } {
+  return !!ms.date && Number.isFinite(ms.date[0]) && Number.isFinite(ms.date[1]);
+}
+
 interface Project {
   id: number;
   location: string;
