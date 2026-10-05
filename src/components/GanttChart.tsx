@@ -152,11 +152,6 @@ function getDue(proj: Project, csy: number, csm: number) {
     future.sort((a, b) => mo(a.date[0], a.date[1], csy, csm) - mo(b.date[0], b.date[1], csy, csm));
     return { label: fmtDate(future[0].date), desc: future[0].label };
   }
-  const active = proj.phases.filter((p) => p.type !== "complete");
-  if (active.length > 0) {
-    active.sort((a, b) => mo(b.end[0], b.end[1], csy, csm) - mo(a.end[0], a.end[1], csy, csm));
-    return { label: fmtDate(active[0].end), desc: "Est. completion" };
-  }
   return null;
 }
 
