@@ -145,11 +145,11 @@ function fmtDate(ym: [number, number]) {
 function getDue(proj: Project, csy: number, csm: number) {
   if (proj.status === "complete") return null;
   const future = proj.milestones.filter(
-    (ms) => ms.date && (ms.date[0] > csy || (ms.date[0] === csy && ms.date[1] >= csm))
+    (ms) => msHasDate(ms) && (ms.date[0] > csy || (ms.date[0] === csy && ms.date[1] >= csm))
   );
   if (future.length > 0) {
-    future.sort((a, b) => mo(a.date![0], a.date![1], csy, csm) - mo(b.date![0], b.date![1], csy, csm));
-    return { label: fmtDate(future[0].date!), desc: future[0].label };
+    future.sort((a, b) => mo(a.date[0], a.date[1], csy, csm) - mo(b.date[0], b.date[1], csy, csm));
+    return { label: fmtDate(future[0].date), desc: future[0].label };
   }
   const active = proj.phases.filter((p) => p.type !== "complete");
   if (active.length > 0) {
@@ -594,7 +594,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
         let dueHtml = due
           ? "<div style=\"font-size:10px;font-weight:700;color:#1a2e44\">" + due.label + "</div><div style=\"font-size:9px;color:#999\">" + due.desc + "</div>"
           : "";
-        const undatedMs = (proj.milestones || []).filter((ms: Milestone) => !ms.date);
+        const undatedMs = (proj.milestones || []).filter((ms: Milestone) => !msHasDate(ms));
         undatedMs.forEach((ms: Milestone, ui: number) => {
           dueHtml += "<div style=\"margin-top:" + (due || ui > 0 ? "4px" : "0") + ";font-size:10px;font-weight:700;color:#1a2e44\">" + ms.label + "</div><div style=\"font-size:9px;color:#999\">No date set</div>";
         });
@@ -744,7 +744,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
               <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Milestones <span style={{ color: "#999", fontWeight: 500, textTransform: "none", letterSpacing: ".2px" }}>&mdash; leave the date blank for a note-only milestone</span></div>
               {editorMs.map((ms, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                  <input type="month" value={ms.date ? fmtYM(ms.date[0], ms.date[1]) : ""}
+                  <input type="month" value={msHasDate(ms) ? fmtYM(ms.date[0], ms.date[1]) : ""}
                     onChange={(e) => { const a = [...editorMs]; a[i] = e.target.value ? { ...ms, date: parseYM(e.target.value) } : { ...ms, date: undefined }; setEditorMs(a); }}
                     style={{ ...inputStyle, width: 140 }} title="Leave blank for a note with no date" />
                   <input type="text" value={ms.label}
@@ -833,7 +833,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                             </>
                           )}
                           {(() => {
-                            const undated = proj.milestones.filter((ms) => !ms.date);
+                            const undated = proj.milestones.filter((ms) => !msHasDate(ms));
                             return undated.map((ms, i) => (
                               <div key={i} style={{ marginTop: due || i > 0 ? 5 : 0 }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2e44", lineHeight: 1.4, marginBottom: 2 }}>{ms.label}</div>
