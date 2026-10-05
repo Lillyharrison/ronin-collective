@@ -18,7 +18,7 @@ interface Project {
   id: number;
   location: string;
   property: string;
-  status: "construction" | "install" | "maintenance" | "design" | "complete" | "on_hold";
+  status: "construction" | "snagging" | "install" | "maintenance" | "design" | "complete" | "on_hold";
   phases: Phase[];
   milestones: Milestone[];
 }
@@ -29,6 +29,7 @@ const MONTH_NAMES = ["January","February","March","April","May","June","July","A
 
 const COLORS = {
   construction: { bar: "#a8c8e8", pill: "#d0e8f8", pillText: "#0d4270" },
+  snagging:     { bar: "#a8c8e8", pill: "#d0e8f8", pillText: "#0d4270" }, // sub-category of construction — same colour
   install:      { bar: "#a8d8b8", pill: "#cdf0e0", pillText: "#0d5236" },
   maintenance:  { bar: "#f0cc88", pill: "#fde9c8", pillText: "#7a4a08" },
   design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
@@ -38,7 +39,7 @@ const COLORS = {
 
 const TYPE_LABEL = {
   construction: "Construction", install: "Install", maintenance: "Maintenance",
-  design: "Design", complete: "Complete", on_hold: "On Hold",
+  design: "Design", complete: "Complete", on_hold: "On Hold", snagging: "Snagging",
 };
 
 const SHARE_TOKEN = "ronin-public-timeline-share-v1";
@@ -538,6 +539,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
 
     const CLRS: Record<string, { bar: string; pill: string; pillText: string }> = {
       construction: { bar: "#a8c8e8", pill: "#d0e8f8", pillText: "#0d4270" },
+      snagging:     { bar: "#a8c8e8", pill: "#d0e8f8", pillText: "#0d4270" },
       install:      { bar: "#a8d8b8", pill: "#cdf0e0", pillText: "#0d5236" },
       maintenance:  { bar: "#f0cc88", pill: "#fde9c8", pillText: "#7a4a08" },
       design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
@@ -546,7 +548,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     };
     const TL: Record<string, string> = {
       construction: "Construction", install: "Install",
-      maintenance: "Maintenance", design: "Design", complete: "Complete", on_hold: "On Hold",
+      maintenance: "Maintenance", design: "Design", complete: "Complete", on_hold: "On Hold", snagging: "Snagging",
     };
 
     locs.forEach((loc: string) => {
@@ -705,7 +707,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                   { label: "Property Name",   content: <input style={inputStyle} value={editorProp} onChange={(e) => setEditorProp(e.target.value)} /> },
                   { label: "Status", content: (
                     <select style={inputStyle} value={editorStatus} onChange={(e) => setEditorStatus(e.target.value as Project["status"])}>
-                      {(["construction","install","maintenance","design","complete","on_hold"] as const).map(t => (
+                      {(["construction","snagging","install","maintenance","design","complete","on_hold"] as const).map(t => (
                         <option key={t} value={t}>{TYPE_LABEL[t]}</option>
                       ))}
                     </select>
