@@ -17,7 +17,7 @@ interface Project {
   id: number;
   location: string;
   property: string;
-  status: "construction" | "install" | "maintenance" | "design" | "complete";
+  status: "construction" | "install" | "maintenance" | "design" | "complete" | "on_hold";
   phases: Phase[];
   milestones: Milestone[];
 }
@@ -32,11 +32,12 @@ const COLORS = {
   maintenance:  { bar: "#f0cc88", pill: "#fde9c8", pillText: "#7a4a08" },
   design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
   complete:     { bar: "#cccccc", pill: "#e8e8e8", pillText: "#444444" },
+  on_hold:      { bar: "#e8a8a8", pill: "#fadcdc", pillText: "#7a1a1a" },
 };
 
 const TYPE_LABEL = {
   construction: "Construction", install: "Install", maintenance: "Maintenance",
-  design: "Design", complete: "Complete",
+  design: "Design", complete: "Complete", on_hold: "On Hold",
 };
 
 const SHARE_TOKEN = "ronin-public-timeline-share-v1";
@@ -497,10 +498,11 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
       maintenance:  { bar: "#f0cc88", pill: "#fde9c8", pillText: "#7a4a08" },
       design:       { bar: "#c8b8e8", pill: "#e6e0fa", pillText: "#3a2880" },
       complete:     { bar: "#cccccc", pill: "#e8e8e8", pillText: "#444" },
+      on_hold:      { bar: "#e8a8a8", pill: "#fadcdc", pillText: "#7a1a1a" },
     };
     const TL: Record<string, string> = {
       construction: "Construction", install: "Install",
-      maintenance: "Maintenance", design: "Design", complete: "Complete",
+      maintenance: "Maintenance", design: "Design", complete: "Complete", on_hold: "On Hold",
     };
 
     locs.forEach((loc: string) => {
@@ -659,7 +661,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                   { label: "Property Name",   content: <input style={inputStyle} value={editorProp} onChange={(e) => setEditorProp(e.target.value)} /> },
                   { label: "Status", content: (
                     <select style={inputStyle} value={editorStatus} onChange={(e) => setEditorStatus(e.target.value as Project["status"])}>
-                      {(["construction","install","maintenance","design","complete"] as const).map(t => (
+                      {(["construction","install","maintenance","design","complete","on_hold"] as const).map(t => (
                         <option key={t} value={t}>{TYPE_LABEL[t]}</option>
                       ))}
                     </select>
