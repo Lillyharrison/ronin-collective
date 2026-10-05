@@ -6,6 +6,7 @@ interface Phase {
   start: [number, number];
   end: [number, number];
   label: string;
+  notes?: string;
 }
 
 interface Milestone {
@@ -156,6 +157,7 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
   const FULL_H = ROW - PAD * 2;
   const HALF_H = Math.floor(FULL_H / 2) - 1;
   const multiPhase = proj.phases.length > 1;
+  const [hover, setHover] = useState<{ idx: number; x: number; y: number } | null>(null);
 
   const visPhases = proj.phases
     .map((ph) => ({
@@ -165,8 +167,11 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
     }))
     .filter((item) => item.ce > item.cs);
 
+  const hoverItem = hover !== null ? visPhases[hover.idx] : null;
+
   return (
-    <div style={{ position: "relative", width: "100%", height: ROW, overflow: "visible" }}>
+    <div style={{ position: "relative", width: "100%", height: ROW, overflow: "visible" }}
+      onMouseLeave={() => setHover(null)}>
       {visPhases.map((item, idx) => {
         const { ph, cs, ce } = item;
         const bc = COLORS[ph.type] || COLORS.complete;
@@ -178,13 +183,16 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
         return (
           <div key={idx}>
             <div
-              title={ph.label}
+              title={ph.notes ? undefined : ph.label}
               style={{
                 position: "absolute", top: barTop, height: barH,
                 borderRadius: 3, cursor: "default", zIndex: 2,
                 background: bc.bar,
                 left: cs * COL_W + 2, width: barW,
               }}
+              onMouseEnter={(e) => setHover({ idx, x: e.clientX, y: e.clientY })}
+              onMouseMove={(e) => setHover({ idx, x: e.clientX, y: e.clientY })}
+              onMouseLeave={() => setHover(null)}
             />
             <div
               style={{
@@ -199,6 +207,34 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
           </div>
         );
       })}
+
+      {hoverItem && (
+        <div style={{
+          position: "fixed", zIndex: 5000, pointerEvents: "none",
+          top: Math.min(hover.y + 16, (typeof window !== "undefined" ? window.innerHeight : 800) - 160),
+          left: Math.min(hover.x + 14, (typeof window !== "undefined" ? window.innerWidth : 1200) - 340),
+          width: 320, maxWidth: "calc(100vw - 24px)",
+          background: "#fff", border: "1px solid #d8d2c6", borderRadius: 8,
+          boxShadow: "0 6px 24px rgba(0,0,0,0.18)", padding: "12px 14px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: (COLORS[hoverItem.ph.type] || COLORS.complete).bar, flexShrink: 0, display: "inline-block" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.35 }}>{hoverItem.ph.label}</span>
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "#888", letterSpacing: ".4px", marginBottom: hoverItem.ph.notes ? 6 : 0 }}>
+            {TYPE_LABEL[hoverItem.ph.type]} &bull; {fmtDate(hoverItem.ph.start)} → {fmtDate(hoverItem.ph.end)}
+          </div>
+          {hoverItem.ph.notes && (
+            <div style={{
+              fontSize: 11, color: "#444", lineHeight: 1.55,
+              maxHeight: 110, overflowY: "auto", whiteSpace: "pre-wrap",
+              borderTop: "1px solid #eee8de", paddingTop: 6,
+            }}>
+              {hoverItem.ph.notes}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -247,6 +283,14 @@ function PhaseRow({
           {content}
         </div>
       ))}
+      <div style={{ gridColumn: "1 / -1" }}>
+        <div style={{ fontSize: 9, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>Notes (shown on hover over the bar)</div>
+        <textarea value={phase.notes || ""}
+          onChange={(e) => onChange(idx, { ...phase, notes: e.target.value })}
+          rows={2}
+          placeholder="Optional — longer details shown when hovering the bar on the timeline"
+          style={{ width: "100%", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff", resize: "vertical", minHeight: 40 }} />
+      </div>
       <button onClick={() => onRemove(idx)}
         style={{ background: "#fde8e6", color: "#c0392b", border: "1px solid #f5c6c2", borderRadius: 4, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700, alignSelf: "flex-end", fontFamily: "inherit" }}>
         Remove
