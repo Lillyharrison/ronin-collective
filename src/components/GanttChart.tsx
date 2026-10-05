@@ -617,7 +617,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
           : "";
         const undatedMs = (proj.milestones || []).filter((ms: Milestone) => !msHasDate(ms));
         undatedMs.forEach((ms: Milestone, ui: number) => {
-          dueHtml += "<div style=\"margin-top:" + (due || ui > 0 ? "4px" : "0") + ";font-size:10px;font-weight:700;color:#1a2e44\">" + ms.label + "</div><div style=\"font-size:9px;color:#999\">No date set</div>";
+          dueHtml += "<div style=\"margin-top:" + (due || ui > 0 ? "4px" : "0") + ";font-size:10px;font-weight:700;color:#1a2e44\">" + ms.label + "</div>";
         });
 
         rows += "<tr style=\"border-bottom:1px solid #e8e3da\">";
@@ -862,8 +862,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                             const undated = proj.milestones.filter((ms) => !msHasDate(ms));
                             return undated.map((ms, i) => (
                               <div key={i} style={{ marginTop: due || i > 0 ? 5 : 0 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2e44", lineHeight: 1.4, marginBottom: 2 }}>{ms.label}</div>
-                                <div style={{ fontSize: 10, color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>No date set</div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2e44", lineHeight: 1.4 }}>{ms.label}</div>
                               </div>
                             ));
                           })()}
