@@ -283,6 +283,14 @@ function PhaseRow({
           {content}
         </div>
       ))}
+      <div style={{ gridColumn: "1 / -1" }}>
+        <div style={{ fontSize: 9, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>Notes (shown on hover over the bar)</div>
+        <textarea value={phase.notes || ""}
+          onChange={(e) => onChange(idx, { ...phase, notes: e.target.value })}
+          rows={2}
+          placeholder="Optional — longer details shown when hovering the bar on the timeline"
+          style={{ width: "100%", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff", resize: "vertical", minHeight: 40 }} />
+      </div>
       <button onClick={() => onRemove(idx)}
         style={{ background: "#fde8e6", color: "#c0392b", border: "1px solid #f5c6c2", borderRadius: 4, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700, alignSelf: "flex-end", fontFamily: "inherit" }}>
         Remove
