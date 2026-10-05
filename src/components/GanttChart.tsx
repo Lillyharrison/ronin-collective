@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 interface Phase {
   type: "construction" | "install" | "maintenance" | "design" | "complete";
@@ -311,6 +312,10 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
   const CSY = now.getFullYear();
   const CSM = now.getMonth() + 1;
   const { toast } = useToast();
+  const { canEdit } = usePermissions();
+  const canReorder = canEdit("timeline");
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
 
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [nextId, setNextId] = useState(23);
@@ -422,6 +427,22 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     if (!(await saveBoard(nextProjects))) return;
     setProjects(nextProjects);
     setEditingId(null);
+  }
+
+  async function moveProject(fromId: number, toId: number) {
+    if (fromId === toId) return;
+    const from = projects.find((p) => p.id === fromId);
+    const to = projects.find((p) => p.id === toId);
+    if (!from || !to || from.location !== to.location) return;
+    const without = projects.filter((p) => p.id !== fromId);
+    const fromIdx = projects.findIndex((p) => p.id === fromId);
+    const toIdx = projects.findIndex((p) => p.id === toId);
+    let insertAt = without.findIndex((p) => p.id === toId);
+    if (fromIdx < toIdx) insertAt += 1;
+    const nextProjects = [...without.slice(0, insertAt), from, ...without.slice(insertAt)];
+    const prev = projects;
+    if (!(await saveBoard(nextProjects))) { setProjects(prev); return; }
+    setProjects(nextProjects);
   }
 
   async function deleteProject() {
@@ -814,11 +835,16 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                     const due = getDue(proj, viewFrom[0], viewFrom[1]);
                     const c = COLORS[proj.status] || COLORS.complete;
                     return (
-                      <tr key={proj.id} style={{ borderBottom: "1px solid #ede8e0" }}
+                      <tr key={proj.id} style={{ borderBottom: "1px solid #ede8e0", opacity: dragId === proj.id ? 0.4 : 1, boxShadow: dragOverId === proj.id && dragId !== proj.id ? "inset 0 2px 0 #c9a84c" : undefined }}
+                        draggable={canReorder && !isSavingBoard}
+                        onDragStart={(e) => { if (!canReorder) return; setDragId(proj.id); e.dataTransfer.effectAllowed = "move"; }}
+                        onDragOver={(e) => { if (dragId == null) return; const d = projects.find((p) => p.id === dragId); if (d?.location !== proj.location) return; e.preventDefault(); setDragOverId(proj.id); }}
+                        onDrop={(e) => { e.preventDefault(); const f = dragId; setDragId(null); setDragOverId(null); if (f != null) moveProject(f, proj.id); }}
+                        onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                         onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#faf6f0"; }}
                         onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ""; }}>
                         <td onClick={() => openEditor(proj.id)} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 500, color: "#222", background: "#fbfbfb", borderRight: "1px solid #ddd", cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle", height: 44 }}>
-                          {proj.property} <span style={{ fontSize: 9, color: "#bbb" }}>✏</span>
+                          {canReorder && <span title="Drag to reorder" style={{ cursor: "grab", color: "#bbb", marginRight: 6 }}>⠿</span>}{proj.property} <span style={{ fontSize: 9, color: "#bbb" }}>✏</span>
                         </td>
                         <td style={{ padding: "4px 10px", textAlign: "center", background: "#fafaf8", borderRight: "1px solid #ede8e0", verticalAlign: "middle" }}>
                           <span style={{ display: "inline-block", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 4, background: c.pill, color: c.pillText, textTransform: "uppercase", letterSpacing: ".5px", whiteSpace: "nowrap" }}>
