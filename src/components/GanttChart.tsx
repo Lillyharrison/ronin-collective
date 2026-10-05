@@ -145,10 +145,6 @@ function getDue(proj: Project, csy: number, csm: number) {
     future.sort((a, b) => mo(a.date![0], a.date![1], csy, csm) - mo(b.date![0], b.date![1], csy, csm));
     return { label: fmtDate(future[0].date!), desc: future[0].label };
   }
-  const undated = proj.milestones.filter((ms) => !ms.date);
-  if (undated.length > 0) {
-    return { label: undated[0].label, desc: "No date set yet" };
-  }
   const active = proj.phases.filter((p) => p.type !== "complete");
   if (active.length > 0) {
     active.sort((a, b) => mo(b.end[0], b.end[1], csy, csm) - mo(a.end[0], a.end[1], csy, csm));
@@ -589,9 +585,13 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
         });
         svg += "</svg>";
 
-        const dueHtml = due
+        let dueHtml = due
           ? "<div style=\"font-size:10px;font-weight:700;color:#1a2e44\">" + due.label + "</div><div style=\"font-size:9px;color:#999\">" + due.desc + "</div>"
           : "";
+        const undatedMs = (proj.milestones || []).filter((ms: Milestone) => !ms.date);
+        undatedMs.forEach((ms: Milestone, ui: number) => {
+          dueHtml += "<div style=\"margin-top:" + (due || ui > 0 ? "4px" : "0") + ";font-size:10px;font-weight:700;color:#1a2e44\">" + ms.label + "</div><div style=\"font-size:9px;color:#999\">No date set</div>";
+        });
 
         rows += "<tr style=\"border-bottom:1px solid #e8e3da\">";
         rows += "<td style=\"padding:4px 12px;font-size:10px;font-weight:500;color:#222;background:#fbfbfb;border-right:1px solid #ddd\">" + proj.property + "</td>";
@@ -735,12 +735,12 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                 + Add Phase
               </button>
 
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Milestones</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Milestones <span style={{ color: "#999", fontWeight: 500, textTransform: "none", letterSpacing: ".2px" }}>&mdash; leave the date blank for a note-only milestone</span></div>
               {editorMs.map((ms, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                  <input type="month" value={fmtYM(ms.date[0], ms.date[1])}
-                    onChange={(e) => { const a = [...editorMs]; a[i] = { ...ms, date: parseYM(e.target.value) }; setEditorMs(a); }}
-                    style={{ ...inputStyle, width: 140 }} />
+                  <input type="month" value={ms.date ? fmtYM(ms.date[0], ms.date[1]) : ""}
+                    onChange={(e) => { const a = [...editorMs]; a[i] = e.target.value ? { ...ms, date: parseYM(e.target.value) } : { ...ms, date: undefined }; setEditorMs(a); }}
+                    style={{ ...inputStyle, width: 140 }} title="Leave blank for a note with no date" />
                   <input type="text" value={ms.label}
                     onChange={(e) => { const a = [...editorMs]; a[i] = { ...ms, label: e.target.value }; setEditorMs(a); }}
                     style={inputStyle} placeholder="Milestone description" />
@@ -826,6 +826,15 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                               <div style={{ fontSize: 10, color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>{due.desc}</div>
                             </>
                           )}
+                          {(() => {
+                            const undated = proj.milestones.filter((ms) => !ms.date);
+                            return undated.map((ms, i) => (
+                              <div key={i} style={{ marginTop: due || i > 0 ? 5 : 0 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2e44", lineHeight: 1.4, marginBottom: 2 }}>{ms.label}</div>
+                                <div style={{ fontSize: 10, color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>No date set</div>
+                              </div>
+                            ));
+                          })()}
                         </td>
                         <td colSpan={viewMonths} style={{ padding: 0, overflow: "visible", verticalAlign: "middle" }}>
                           <BarCanvas proj={proj} csy={viewFrom[0]} csm={viewFrom[1]} totalMonths={viewMonths} />
