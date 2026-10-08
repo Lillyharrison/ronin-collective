@@ -42,6 +42,9 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
 
   return (
     <div className="space-y-0">
+      {canEdit && <div className="flex flex-wrap gap-x-3 gap-y-1 pb-2 text-base text-muted-foreground">
+        {properties.filter(property => displayShifts.some(shift => shift.property_id === property.id)).map(property => <span key={property.id}><span className="font-semibold text-foreground">P{properties.indexOf(property) + 1}</span> · {property.name}</span>)}
+      </div>}
       {canEdit && (
         <div className="grid grid-cols-7 border-b border-border bg-card sticky top-0 z-10">
           {days.map(({ day, date }) => (
@@ -76,7 +79,7 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
                         const label = shiftLabel(shift, properties);
                         return (
                           <Button key={shift.key} variant="outline" title={`${label} ${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`} onClick={() => setSelected(shift)} className={cn("w-full h-auto min-h-11 text-base whitespace-normal font-normal", canEdit ? "px-0.5 py-1 flex-col gap-0 leading-tight" : "items-start text-left px-2 py-2 flex-col gap-1", shift.is_leave ? "bg-muted text-muted-foreground border-border" : `${color.bg} ${color.text}`)}>
-                            <span className="block truncate max-w-full font-medium">{label}</span>
+                            <span className="block truncate max-w-full font-medium">{canEdit && shift.property_id ? `P${properties.findIndex(p => p.id === shift.property_id) + 1}` : label}</span>
                             {shift.start_time && <span>{canEdit ? shortTime(shift.start_time) : formatTime(shift.start_time)}{!canEdit && shift.end_time ? `–${formatTime(shift.end_time)}` : ""}</span>}
                             {canEdit && shift.end_time && <span className="opacity-80">{shortTime(shift.end_time)}</span>}
                             {shift.is_leave && shift.leave_status === "pending" && <span className="break-all">Pending</span>}
@@ -85,7 +88,7 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
                           </Button>
                         );
                       })}
-                      {canEdit && <Button variant="ghost" size="icon" className="min-h-11 h-11 w-full text-muted-foreground" aria-label={`Add shift for ${getDisplayName(person)} on ${format(day, "EEE d MMM")}`} onClick={() => onCellClick(date, person.id)}><Plus size={16} /></Button>}
+                      {canEdit && !dayShifts.length && <Button variant="ghost" size="icon" className="min-h-11 h-11 w-full text-muted-foreground" aria-label={`Add shift for ${getDisplayName(person)} on ${format(day, "EEE d MMM")}`} onClick={() => onCellClick(date, person.id)}><Plus size={16} /></Button>}
                     </div>
                   </div>
                 );
@@ -110,6 +113,7 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
           <div className="shrink-0 flex gap-2 pt-3 border-t border-border">
             <Button variant="outline" onClick={() => setSelected(null)}>Close</Button>
             {canEdit && selected && <Button onClick={() => { onShiftDoubleClick(selected); setSelected(null); }}>{selected.is_leave ? "Review leave" : "Edit shift"}</Button>}
+            {canEdit && selected && <Button variant="outline" onClick={() => { onCellClick(selected.shift_date, selected.staff_id); setSelected(null); }}><Plus size={16} className="mr-1" />Shift</Button>}
           </div>
         </DialogContent>
       </Dialog>
