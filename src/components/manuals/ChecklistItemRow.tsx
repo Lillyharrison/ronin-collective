@@ -4,6 +4,7 @@ import { ChecklistItem } from "@/hooks/useChecklists";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEntryTranslation } from "@/hooks/useEntryTranslation";
+import { Button } from "@/components/ui/button";
 import { Check, Camera, Pencil, Trash2, GripVertical, X } from "lucide-react";
 
 interface Props {
@@ -39,9 +40,8 @@ const DOT_MAP: Record<string, string> = {
 
 const ICON_BANK = ["🧹","🛏️","🚿","🍳","🗑️","💧","🧴","🧽","💡","🔒","🌿","📸","❄️","🔧","⚠️","✅","☀️","🪣","🧊","🔑","📅","🛒","🕯️","🥂","🍷","🌸","🎵","📺","🔊","📶","🚨","📹","🏊","🪑","🌬️","🔌","💎","🎨","🪵","⬜","✨","🛋️","🌀","🔋","⛔","📄","💼","💻","💃","⚽","⚾","🏀","⛷️","⛵","🔥","🥩","🥗"];
 
-/** Uniform 56px square — used for both image thumbs and icon tiles so rows
- *  line up whether or not a photo has been added. */
-const TILE = "w-14 h-14";
+/** Compact on phones; reference photos remain tappable at either size. */
+const TILE = "w-11 h-11 sm:w-14 sm:h-14";
 
 export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdate, onDelete, onPhotoUpload, dragHandleProps }: Props) {
   const { language, t } = useLanguage();
@@ -168,7 +168,7 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
     <>
       <div
         className={cn(
-          "group flex items-start gap-3 px-4 py-3 border-b border-border last:border-0 transition-all",
+          "group grid grid-cols-[44px_44px_minmax(0,1fr)] items-start gap-x-2 gap-y-2 px-3 py-3 sm:flex sm:gap-3 sm:px-4 border-b border-border last:border-0 transition-all",
           isCompleted && "opacity-60"
         )}
         onDragOver={isAdmin ? (e) => e.preventDefault() : undefined}
@@ -178,30 +178,38 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
         {isAdmin && (
           <div
             {...(dragHandleProps ?? {})}
-            className="mt-5 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+            className="col-start-1 row-start-2 min-h-11 w-11 flex items-center justify-center sm:min-h-0 sm:w-auto sm:mt-5 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+            aria-label={language === "es" ? "Reordenar elemento" : "Reorder item"}
           >
             <GripVertical size={14} />
           </div>
         )}
 
         {/* Checkbox */}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={onToggle}
-          className={cn(
-            "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-5 transition-all",
+          aria-label={displayTitle}
+          aria-pressed={isCompleted}
+          className="col-start-1 row-start-1 h-11 w-11 p-0 sm:-mx-3 sm:mt-2"
+        >
+          <span className={cn(
+            "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
             isCompleted
               ? "bg-[hsl(var(--status-done))] border-[hsl(var(--status-done))]"
               : "border-border hover:border-[hsl(var(--status-done))]"
-          )}
-        >
-          {isCompleted && <Check size={11} className="text-white" strokeWidth={3} />}
-        </button>
+          )}>
+            {isCompleted && <Check size={11} className="text-primary-foreground" strokeWidth={3} />}
+          </span>
+        </Button>
 
         {/* Uniform tile */}
         {tile}
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="col-start-3 row-start-1 flex-1 min-w-0">
           {editing && isAdmin ? (
             <div className="space-y-2">
               <input
@@ -217,66 +225,76 @@ export function ChecklistItemRow({ item, isCompleted, isAdmin, onToggle, onUpdat
                 onChange={e => setEditNotes(e.target.value)}
                 placeholder={t("subNotePlaceholder")}
                 rows={2}
-                className="w-full text-sm bg-muted/50 border border-border rounded px-2 py-1.5 outline-none focus:border-gold resize-none"
+                className="w-full text-base sm:text-sm bg-muted/50 border border-border rounded px-2 py-1.5 outline-none focus:border-gold resize-none"
               />
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={saveEdit}
                   disabled={saving}
-                  className="px-3 py-1.5 text-xs font-medium rounded bg-gold text-charcoal hover:opacity-90"
+                  className="min-h-11 px-3 sm:min-h-0"
                 >
                   {saving ? "…" : t("save")}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   type="button"
                   onClick={() => { setEditing(false); setEditTitle(item.title); setEditNotes(item.notes ?? ""); setEditIcon(item.icon); }}
-                  className="px-3 py-1.5 text-xs font-medium rounded border border-border hover:bg-muted"
+                  className="min-h-11 px-3 sm:min-h-0"
                 >
                   {t("cancel")}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <>
-              <p className={cn("text-sm leading-snug pt-1", isCompleted && "line-through text-muted-foreground")}>
+              <p className={cn("text-base sm:text-sm leading-relaxed sm:leading-snug pt-0.5 sm:pt-1 break-words", isCompleted && "line-through text-muted-foreground")}>
                 {displayTitle}
                 {item.is_required && <span className="ml-1 text-[hsl(var(--status-urgent))] text-xs">*</span>}
               </p>
               {displayNotes && (
-                <p className="text-xs text-muted-foreground mt-1 italic leading-snug">{displayNotes}</p>
+                <p className="text-base sm:text-xs text-muted-foreground mt-1.5 sm:mt-1 leading-relaxed sm:leading-snug whitespace-pre-line break-words">{displayNotes}</p>
               )}
             </>
           )}
         </div>
 
         {/* Color dot */}
-        <div className={cn("w-1.5 h-1.5 rounded-full mt-6 flex-shrink-0", DOT_MAP[item.color] ?? DOT_MAP.default)} />
+        <div className={cn("hidden sm:block w-1.5 h-1.5 rounded-full mt-6 flex-shrink-0", DOT_MAP[item.color] ?? DOT_MAP.default)} />
 
         {/* Admin actions */}
         {isAdmin && !editing && (
-          <div className="flex items-center gap-0.5 opacity-60 hover:opacity-100 group-hover:opacity-100 transition-opacity flex-shrink-0">
-            <button
+          <div className="col-start-2 col-span-2 row-start-2 flex justify-end items-center gap-1 sm:gap-0.5 sm:opacity-60 hover:opacity-100 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => fileRef.current?.click()}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
               title={item.photo_url ? t("replacePhotoTitle") : t("addPhotoTitle")}
+              aria-label={item.photo_url ? t("replacePhotoTitle") : t("addPhotoTitle")}
             >
               {uploading ? <span className="text-xs">…</span> : <Camera size={13} />}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setEditing(true)}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
               title={t("editTitle")}
+              aria-label={t("editTitle")}
             >
               <Pencil size={13} />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onDelete(item.id)}
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 text-destructive"
               title={t("deleteTitle")}
+              aria-label={t("deleteTitle")}
             >
               <Trash2 size={16} />
-            </button>
+            </Button>
           </div>
         )}
 
