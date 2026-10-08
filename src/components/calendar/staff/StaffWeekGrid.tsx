@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { StaffDayCell } from "./StaffDayCell";
 import { getDisplayName } from "./utils";
 import type { DisplayShift, Profile, Property } from "./types";
+import { MobileStaffWeek } from "./MobileStaffWeek";
 
 export function StaffWeekGrid({
   weekDays,
@@ -48,7 +49,11 @@ export function StaffWeekGrid({
   onShiftDoubleClick: (shift: DisplayShift) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+    <>
+    <div className="md:hidden">
+      <MobileStaffWeek weekDays={weekDays} staffToShow={staffToShow} displayShifts={displayShifts} properties={properties} loading={loading} canEdit={canEdit} onCellClick={onCellClick} onOpenStaffScheduleManager={onOpenStaffScheduleManager} onShiftDoubleClick={onShiftDoubleClick} />
+    </div>
+    <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden">
       <div className="grid border-b border-border" style={{ gridTemplateColumns: "200px repeat(7, 1fr)" }}>
         <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-r border-border">Staff</div>
         {weekDays.map((day) => (
@@ -173,5 +178,6 @@ export function StaffWeekGrid({
         })
       )}
     </div>
+    </>
   );
 }
