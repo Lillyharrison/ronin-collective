@@ -19,7 +19,7 @@ describe("phone schedule editing access", () => {
   });
   it("full-access users can open the existing shift editor", () => {
     render(<MobileStaffWeek {...props} canEdit />);
-    fireEvent.click(screen.getByRole("button", { name: /Rockingham/ }));
+    fireEvent.click(screen.getByTitle("Rockingham 7:00am–4:00pm"));
     fireEvent.click(screen.getByRole("button", { name: "Edit shift" }));
     expect(props.onShiftDoubleClick).toHaveBeenCalledWith(props.displayShifts[0]);
   });
