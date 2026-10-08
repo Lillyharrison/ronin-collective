@@ -75,10 +75,13 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
                         const color = propColor(shift.property_id, properties);
                         const label = shiftLabel(shift, properties);
                         return (
-                          <Button key={shift.key} variant="outline" title={`${label} ${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`} onClick={() => setSelected(shift)} className={cn("w-full h-auto min-h-11 whitespace-normal font-normal", canEdit ? "px-0.5 py-1 flex-col gap-0 justify-center leading-tight text-xs" : "items-start text-left px-2 py-2 flex-col gap-1 text-base", shift.is_leave ? "bg-muted text-muted-foreground border-border" : `${color.bg} ${color.text}`)}>
+                          <Button key={shift.key} variant="outline" title={`${label} ${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`} onClick={() => setSelected(shift)} className={cn("w-full h-auto min-h-11 whitespace-normal font-normal", canEdit ? "px-0 py-1 flex-col gap-0 justify-center leading-tight text-[11px]" : "items-start text-left px-2 py-2 flex-col gap-1 text-base", shift.is_leave ? "bg-muted text-muted-foreground border-border" : `${color.bg} ${color.text}`)}>
                             {(!canEdit || shift.is_leave || !shift.property_id) && <span className="block truncate max-w-full font-medium">{label}</span>}
                             {shift.start_time && (canEdit
-                              ? <span className="whitespace-nowrap">{shortTime(shift.start_time)}{shift.end_time ? `–${shortTime(shift.end_time)}` : ""}</span>
+                              ? <>
+                                  <span className="whitespace-nowrap">{shortTime(shift.start_time)}</span>
+                                  {shift.end_time && <span className="whitespace-nowrap">{shortTime(shift.end_time)}</span>}
+                                </>
                               : <span>{formatTime(shift.start_time)}{shift.end_time ? `–${formatTime(shift.end_time)}` : ""}</span>)}
                             {shift.is_leave && shift.leave_status === "pending" && <span className="break-all">Pending</span>}
                             {!canEdit && shift.notes && <span className="break-words">{shift.notes}</span>}
