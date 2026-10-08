@@ -42,9 +42,6 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
 
   return (
     <div className="space-y-0">
-      {canEdit && <div className="flex flex-wrap gap-x-3 gap-y-1 pb-2 text-base text-muted-foreground">
-        {properties.filter(property => displayShifts.some(shift => shift.property_id === property.id)).map(property => <span key={property.id}><span className="font-semibold text-foreground">P{properties.indexOf(property) + 1}</span> · {property.name}</span>)}
-      </div>}
       {canEdit && (
         <div className="grid grid-cols-7 border-b border-border bg-card sticky top-0 z-10">
           {days.map(({ day, date }) => (
