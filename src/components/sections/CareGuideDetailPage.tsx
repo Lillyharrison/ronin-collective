@@ -21,7 +21,9 @@ import {
 import ReactDOM from "react-dom";
 
 /* ─── Types ─────────────────────────────────────────────────── */
-type CardImage = { url: string; side: "front" | "back" };
+type FrontPos = "left" | "right" | "basic" | "deep";
+type CardImage = { url: string; side: "front" | "back"; pos?: FrontPos };
+const FRONT_POS: { v: FrontPos; label: string }[] = [{ v: "left", label: "Left" }, { v: "basic", label: "Under Basic" }, { v: "deep", label: "Under Deep" }, { v: "right", label: "Right" }];
 
 interface CareGuideTemplate {
   id: string;
@@ -820,6 +822,9 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
       return html;
     };
 
+    const posOf = (i: CardImage): FrontPos => i.pos ?? "left";
+    const sideHtml = (p: FrontPos) => { const l = frontImages.filter(i => posOf(i) === p); return l.length ? `<div class="side">${l.map(i => `<img src="${i.url}" />`).join("")}</div>` : ""; };
+    const colImgs = (p: FrontPos) => { const l = frontImages.filter(i => posOf(i) === p); return l.length ? `<div class="col-imgs">${l.map(i => `<img src="${i.url}" />`).join("")}</div>` : ""; };
     const printWindow = window.open("", "_blank", "width=900,height=700");
     if (!printWindow) return;
 
@@ -858,8 +863,11 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
           .instr-text { font-size:12.5px; line-height:1.35; font-weight:400; color:#111; }
           .container-block { margin:6px 0; }
           .container-label { font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:3px; background:#f0f0f0; color:#222; border:1px solid #ccc; }
-          .back { display:flex; gap:6mm; align-items:center; justify-content:center; }
-          .back img { flex:1; min-width:0; height:100%; object-fit:contain; display:block; }
+          .col-imgs { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+          .col-imgs img { width:100%; max-height:48mm; object-fit:cover; border-radius:4px; border:1px solid #ddd; }
+          .back { display:flex; flex-direction:column; }
+          .back-imgs { flex:1; min-height:0; display:flex; gap:6mm; align-items:center; justify-content:center; }
+          .back-imgs img { flex:1; min-width:0; height:100%; max-height:100%; object-fit:contain; display:block; }
         </style>
       </head><body>
 
@@ -872,25 +880,26 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
           </div>
         </div>
         <div class="body">
-        ${frontImages.length ? `<div class="side">${frontImages.map(i => `<img src="${i.url}" />`).join("")}</div>` : ""}
+        ${sideHtml("left")}
         <div class="columns">
           <div class="col">
             <div class="col-title">Basic Clean</div>
             ${basicEquip.length > 0 ? `<div class="section-label">Equipment</div><div class="equip-grid">${basicEquip.map(renderEquipRow).join("")}</div>` : ""}
             ${basicInstr.length > 0 ? `<div class="section-label">Instructions</div>${renderInstrGroup(basicInstr, containersMap.basic)}` : ""}
-            ${basicEquip.length === 0 && basicInstr.length === 0 ? "" : ""}
+            ${colImgs("basic")}
           </div>
           <div class="col">
             <div class="col-title">Deep Clean</div>
             ${deepEquip.length > 0 ? `<div class="section-label">Equipment</div><div class="equip-grid">${deepEquip.map(renderEquipRow).join("")}</div>` : ""}
             ${deepInstr.length > 0 ? `<div class="section-label">Instructions</div>${renderInstrGroup(deepInstr, containersMap.deep)}` : ""}
-            ${deepEquip.length === 0 && deepInstr.length === 0 ? "" : ""}
+            ${colImgs("deep")}
           </div>
         </div>
+        ${sideHtml("right")}
         </div>
       </div>
 
-      ${backImages.length ? `<div class="page back">${backImages.map(i => `<img src="${i.url}" />`).join("")}</div>` : ""}
+      ${backImages.length ? `<div class="page back"><div class="front-header"><div><span class="guide-title">${template.title}</span>${(template as any).location ? `<div style="font-size:11px;font-weight:500;color:#444;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}</div></div><div class="back-imgs">${backImages.map(i => `<img src="${i.url}" />`).join("")}</div></div>` : ""}
 
       </body></html>
     `);
@@ -1060,6 +1069,13 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
                     <button aria-label="Remove image" onClick={() => saveCardImages(cardImages.filter((_, j) => j !== idx))}
                       className="min-h-11 w-11 flex items-center justify-center text-[hsl(var(--status-urgent))]"><X size={16} /></button>
                   </div>
+                  {img.side === "front" && (
+                    <select aria-label="Position on front" value={img.pos ?? "left"}
+                      onChange={e => saveCardImages(cardImages.map((c, j) => j === idx ? { ...c, pos: e.target.value as FrontPos } : c))}
+                      className="w-full min-h-11 text-base bg-background border-t border-border px-2">
+                      {FRONT_POS.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
+                    </select>
+                  )}
                 </div>
               ))}
             </div>
