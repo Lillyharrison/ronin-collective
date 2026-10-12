@@ -31,6 +31,8 @@ export function ManualsSection() {
   const [selectedPropId, setSelectedPropId] = useLocalStorage<string | null>("manuals.selectedPropId", null);
   const [showPropPicker, setShowPropPicker] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [guideFilter, setGuideFilter] = useLocalStorage<string>("manuals.guideFilter", "all");
+  const [guideSort, setGuideSort] = useLocalStorage<"name" | "property">("manuals.guideSort", "name");
 
 
   const TABS: { id: ManualTab; icon: React.ReactNode; label: string; labelEs: string }[] = [
@@ -74,6 +76,13 @@ export function ManualsSection() {
   const { rules, loading: rulesLoading, reload: reloadRules } = usePropertyRules(
     tab === "rules" ? selectedPropId : undefined
   );
+
+  const propName = (id: string | null) => (id ? properties.find(p => p.id === id)?.name ?? "Other property" : "Universal");
+  const visibleGuides = careTemplates
+    .filter(t => guideFilter === "all" ? true : guideFilter === "universal" ? !t.property_id : t.property_id === guideFilter)
+    .sort((a, b) => guideSort === "property"
+      ? (a.property_id ? 1 : 0) - (b.property_id ? 1 : 0) || propName(a.property_id).localeCompare(propName(b.property_id)) || a.title.localeCompare(b.title)
+      : a.title.localeCompare(b.title));
 
   if (careGuideDetailId) {
     const tpl = careTemplates.find(t => t.id === careGuideDetailId);
@@ -166,21 +175,36 @@ export function ManualsSection() {
                 ? "Guías universales de cuidado de superficies para todas las propiedades."
                 : "Universal surface care guides — tap any card to view full instructions."}
             </p>
+            <div className="flex gap-2">
+              <select aria-label="Filter care guides" value={guideFilter} onChange={e => setGuideFilter(e.target.value)}
+                className="flex-1 min-w-0 min-h-11 text-base bg-card border border-border rounded-xl px-3 text-foreground">
+                <option value="all">All guides</option>
+                <option value="universal">Universal only</option>
+                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <select aria-label="Sort care guides" value={guideSort} onChange={e => setGuideSort(e.target.value as "name" | "property")}
+                className="min-h-11 text-base bg-card border border-border rounded-xl px-3 text-foreground">
+                <option value="name">A–Z</option>
+                <option value="property">By property</option>
+              </select>
+            </div>
             {careLoading ? (
               <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-14 bg-card border border-border rounded-2xl animate-pulse" />)}</div>
-            ) : careTemplates.length === 0 ? (
+            ) : visibleGuides.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <BookOpen size={28} className="mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">{t("noCareGuides")}</p>
               </div>
             ) : (
-              careTemplates.map(tpl => (
+              visibleGuides.map(tpl => (
+                <div key={tpl.id}>
+                  <p className="text-xs text-muted-foreground px-1 mb-1">{propName(tpl.property_id)}</p>
                 <CareGuideCard
-                  key={tpl.id}
                   template={tpl}
                   onOpen={() => openCareGuideDetail(tpl.id)}
                   onChanged={reloadCare}
                 />
+                </div>
               ))
             )}
             {canManageManuals && (

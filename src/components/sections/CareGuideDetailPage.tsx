@@ -615,6 +615,11 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
   const [assignedRole, setAssignedRole] = useState(template.assigned_role ?? "");
   const [assignedDepartment, setAssignedDepartment] = useState(template.assigned_department ?? "");
   const [locationDraft, setLocationDraft] = useState((template as any).location ?? "");
+  const [propertyDraft, setPropertyDraft] = useState<string>((template as any).property_id ?? "");
+  const [propOptions, setPropOptions] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("properties").select("id, name").order("sort_order").limit(200).then(({ data }) => setPropOptions(data ?? []));
+  }, []);
   const [savingSettings, setSavingSettings] = useState(false);
   const [addingItem, setAddingItem] = useState<{ column: "basic" | "deep"; isEquipment: boolean; container?: string } | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -778,8 +783,10 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
       assigned_role: assignedRole || null,
       assigned_department: assignedDepartment || null,
       location: locationDraft.trim() || null,
+      property_id: propertyDraft || null,
+      is_universal: !propertyDraft,
     } as any).eq("id", template.id);
-    updateTemplate({ assigned_role: assignedRole || null, assigned_department: assignedDepartment || null, location: locationDraft.trim() || null });
+    updateTemplate({ assigned_role: assignedRole || null, assigned_department: assignedDepartment || null, location: locationDraft.trim() || null, property_id: propertyDraft || null, is_universal: !propertyDraft } as any);
     setSavingSettings(false);
   };
 
@@ -1015,6 +1022,17 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
                         : "border-[hsl(var(--status-done)/0.4)] text-[hsl(var(--status-done))] bg-[hsl(var(--status-done)/0.08)]")}>
               {isDraft ? <><Eye size={12} /> Publish</> : <><EyeOff size={12} /> Unpublish</>}
             </button>
+          </div>
+
+          {/* Property */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block font-medium">Property</label>
+            <select value={propertyDraft} onChange={e => setPropertyDraft(e.target.value)}
+              className="w-full min-h-11 text-base bg-muted border border-border rounded-lg px-2.5 outline-none focus:border-primary text-foreground">
+              <option value="">Universal — all properties</option>
+              {propOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">Only people with access to this property will see it.</p>
           </div>
 
           {/* Location */}

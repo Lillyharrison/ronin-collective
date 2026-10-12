@@ -22,6 +22,13 @@
       "when": 1791818469300,
       "tag": "0002_care_guide_card_images",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791833442577,
+      "tag": "0003_care_guide_property_visibility",
+      "breakpoints": true
     }
   ]
 }
