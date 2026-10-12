@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from "@/lib/utils";
 import { formatTime, getDisplayName, propColor } from "./utils";
 import { LEAVE_TYPE_CONFIG } from "./constants";
+import { getPublicHoliday } from "./publicHolidays";
 import type { DisplayShift, Profile, Property } from "./types";
 
 export interface MobileStaffWeekProps {
@@ -42,10 +43,17 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
 
   return (
     <div className="space-y-0">
+      {days.some(({ day }) => getPublicHoliday(day)) && (
+        <div className="py-2 space-y-0.5">
+          {days.filter(({ day }) => getPublicHoliday(day)).map(({ day, date }) => (
+            <p key={date} className="text-base text-amber-400">🎉 {format(day, "EEE d MMM")} · {getPublicHoliday(day)} — day off or day in lieu</p>
+          ))}
+        </div>
+      )}
       {canEdit && (
         <div className="grid grid-cols-7 border-b border-border bg-card sticky top-0 z-10">
           {days.map(({ day, date }) => (
-            <div key={date} className={cn("text-center py-2 min-w-0", isToday(day) && "bg-primary/10 text-primary")}>
+            <div key={date} className={cn("text-center py-2 min-w-0", isToday(day) && "bg-primary/10 text-primary", getPublicHoliday(day) && "text-amber-400")}>
               <p className="text-base">{format(day, "EEEEE")}</p>
               <p className="text-base font-semibold">{format(day, "d")}</p>
             </div>
