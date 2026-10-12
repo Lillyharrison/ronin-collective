@@ -839,7 +839,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
           .guide-title { font-size:19px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; line-height:1.15; }
           .body { flex:1; display:flex; gap:12px; min-height:0; }
           .side { width:42mm; display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
-          .side img { width:100%; flex:1; min-height:0; object-fit:cover; border-radius:4px; border:1px solid #ddd; }
+          .side img { width:100%; aspect-ratio:1/1; min-height:0; object-fit:cover; border-radius:4px; border:1px solid #ddd; }
           .columns { flex:1; display:flex; min-width:0; }
           .col { flex:1; padding:0 10px; min-width:0; }
           .col:first-child { padding-left:0; border-right:1px solid #ccc; }
