@@ -1,4 +1,5 @@
 import { format, eachDayOfInterval, endOfMonth, getDay, isToday, isWeekend } from "date-fns";
+import { getPublicHoliday, HOLIDAY_HINT } from "./publicHolidays";
 import { CalendarOff, Settings2, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,7 @@ export function StaffMonthGrid({
               )}>
                 {format(day, "d")}
               </p>
+              {getPublicHoliday(day) && <p className="text-[9px] leading-none" title={`${getPublicHoliday(day)} · ${HOLIDAY_HINT}`}>🎉</p>}
             </div>
           );
         })}

@@ -1,4 +1,5 @@
 import { format, isToday } from "date-fns";
+import { getPublicHoliday, HOLIDAY_HINT } from "./publicHolidays";
 import { Settings2, UserCheck, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,9 @@ export function StaffWeekGrid({
             )}>
               {format(day, "d")}
             </p>
+            {getPublicHoliday(day) && (
+              <p className="text-[10px] leading-tight text-amber-400 mt-0.5 px-0.5" title={HOLIDAY_HINT}>🎉 {getPublicHoliday(day)}</p>
+            )}
           </div>
         ))}
       </div>
