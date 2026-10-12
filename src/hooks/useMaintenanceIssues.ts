@@ -19,6 +19,7 @@ export interface MaintenanceIssue {
   reported_by: string;
   assigned_to: string | null;
   photo_url: string | null;
+  photo_urls?: string[];
   close_out_photo_url: string | null;
   scheduled_date: string | null;
   resolved_at: string | null;
@@ -84,7 +85,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     }
 
     // Named columns only; include description so edit dialogs never overwrite existing notes with blank local state.
-    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at";
+    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, photo_urls, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at";
 
     // Build query with server-side property + filter params
     let query = supabase
@@ -194,6 +195,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
       location_detail: patch.location_detail,
       assigned_to: patch.assigned_to,
       photo_url: patch.photo_url,
+      photo_urls: patch.photo_urls,
       close_out_photo_url: patch.close_out_photo_url,
       scheduled_date: patch.scheduled_date,
       resolved_at: patch.resolved_at,
