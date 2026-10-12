@@ -868,7 +868,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
           ${isUrl(template.icon) ? `<img src="${template.icon}" class="guide-icon-img" />` : `<span class="guide-icon">${template.icon}</span>`}
           <div>
             <span class="guide-title">${template.title}</span>
-            ${(template as any).location ? `<div style="font-size:9px;font-weight:500;color:#666;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}
+            ${(template as any).location ? `<div style="font-size:11px;font-weight:500;color:#444;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}
           </div>
         </div>
         <div class="body">
@@ -896,7 +896,10 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     `);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 600);
+    const imgs = Array.from(printWindow.document.images);
+    Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = img.onerror = r; }))).then(() => {
+      setTimeout(() => { printWindow.print(); printWindow.close(); }, 200);
+    });
   };
 
   /* ─── Derived ───────────────────────────────────────────────── */
