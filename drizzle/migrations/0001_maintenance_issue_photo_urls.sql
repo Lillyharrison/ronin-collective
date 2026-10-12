@@ -1,0 +1,2 @@
+ALTER TABLE public.maintenance_issues ADD COLUMN IF NOT EXISTS photo_urls text[] NOT NULL DEFAULT '{}';
+UPDATE public.maintenance_issues SET photo_urls = ARRAY[photo_url] WHERE photo_url IS NOT NULL AND photo_url <> '';
