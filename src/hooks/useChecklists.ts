@@ -29,6 +29,7 @@ export interface ChecklistTemplate {
   notify_on_day: boolean | null;
   only_when_occupied: boolean;
   cover_image_url: string | null;
+  card_images?: { url: string; side: "front" | "back" }[];
   manual_link_url: string | null;
   manual_link_label: string | null;
   products: ChecklistProduct[] | null;
@@ -84,7 +85,7 @@ export function useChecklistTemplates(
     // Narrow columns — list view doesn't need `products` JSONB blob (loaded in detail).
     let q = supabase
       .from("checklist_templates")
-      .select("id, title, category, subcategory, color, icon, cover_image_url, location, recurrence, recurrence_day, notify_on_day, only_when_occupied, is_published, is_universal, property_id, assigned_department, assigned_role, manual_link_label, manual_link_url, sort_order, sections, created_at, updated_at, created_by")
+      .select("id, title, category, subcategory, color, icon, cover_image_url, card_images, location, recurrence, recurrence_day, notify_on_day, only_when_occupied, is_published, is_universal, property_id, assigned_department, assigned_role, manual_link_label, manual_link_url, sort_order, sections, created_at, updated_at, created_by")
       .order("sort_order")
       .limit(500);
     if (category) q = q.eq("category", category);

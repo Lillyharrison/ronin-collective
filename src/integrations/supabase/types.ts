@@ -501,6 +501,7 @@ export type Database = {
         Row: {
           assigned_department: string | null
           assigned_role: string | null
+          card_images: Json
           category: string
           color: string
           cover_image_url: string | null
@@ -528,6 +529,7 @@ export type Database = {
         Insert: {
           assigned_department?: string | null
           assigned_role?: string | null
+          card_images?: Json
           category?: string
           color?: string
           cover_image_url?: string | null
@@ -555,6 +557,7 @@ export type Database = {
         Update: {
           assigned_department?: string | null
           assigned_role?: string | null
+          card_images?: Json
           category?: string
           color?: string
           cover_image_url?: string | null
