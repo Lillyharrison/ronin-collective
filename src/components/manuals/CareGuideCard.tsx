@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
-import { BookOpen, Eye, EyeOff, ChevronRight, Printer } from "lucide-react";
+import { toast } from "sonner";
+import { BookOpen, Eye, EyeOff, ChevronRight, Printer, Trash2 } from "lucide-react";
 
 interface CareGuideTemplate {
   id: string;
@@ -27,7 +28,19 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 export function CareGuideCard({ template, onOpen, onChanged }: Props) {
-  const { isMasterAdmin } = usePermissions();
+  const { isMasterAdmin, isAdmin } = usePermissions();
+  const canDelete = isMasterAdmin || isAdmin;
+  const isImg = template.icon.startsWith("http") || template.icon.startsWith("/");
+
+  const remove = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${template.title}"? This can't be undone.`)) return;
+    await supabase.from("checklist_items").delete().eq("template_id", template.id);
+    const { data, error } = await supabase.from("checklist_templates").delete().eq("id", template.id).select("id");
+    if (error || !data?.length) { toast.error("Couldn't delete this care guide"); return; }
+    toast.success("Care guide deleted");
+    onChanged?.();
+  };
   const colorCls = COLOR_MAP[template.color] ?? COLOR_MAP.gold;
   const isDraft = !template.is_published;
 
@@ -53,7 +66,7 @@ export function CareGuideCard({ template, onOpen, onChanged }: Props) {
           "w-10 h-10 rounded-xl border flex items-center justify-center text-xl flex-shrink-0",
           isDraft ? "bg-muted border-muted-foreground/20 text-muted-foreground" : colorCls
         )}>
-          {template.icon}
+          {isImg ? <img src={template.icon} alt="" className="w-full h-full object-cover rounded-xl" /> : template.icon}
         </span>
 
         <div className="flex-1 min-w-0">
@@ -87,6 +100,12 @@ export function CareGuideCard({ template, onOpen, onChanged }: Props) {
               )}
             >
               {isDraft ? <><Eye size={12} /> PUBLISH</> : <><EyeOff size={12} /> LIVE</>}
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={remove} title="Delete care guide" aria-label="Delete care guide"
+              className="w-11 h-11 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <Trash2 size={16} />
             </button>
           )}
           <ChevronRight size={14} className="text-muted-foreground/50" />
