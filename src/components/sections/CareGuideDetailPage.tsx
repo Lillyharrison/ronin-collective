@@ -4,6 +4,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useChecklistItems, ChecklistItem } from "@/hooks/useChecklists";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, DragEndEvent,
