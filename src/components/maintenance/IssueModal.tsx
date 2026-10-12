@@ -58,7 +58,7 @@ function ModalContent({
   );
   const [relatedIssueId, setRelated]  = useState(initial.related_issue_id ?? "");
   const [relatedSearch, setRelatedSch]= useState("");
-  const [photoUrl, setPhotoUrl]       = useState(initial.photo_url ?? "");
+  const [photos, setPhotos]           = useState<string[]>(initial.photo_urls?.length ? initial.photo_urls : (initial.photo_url ? [initial.photo_url] : []));
   const [closeOutUrl, setCloseOut]    = useState(initial.close_out_photo_url ?? "");
   const [uploading, setUploading]     = useState(false);
   const [closeUploading, setCloseUp]  = useState(false);
@@ -101,7 +101,7 @@ function ModalContent({
       const { data: urlData } = supabase.storage
         .from("maintenance")
         .getPublicUrl(data.path);
-      if (type === "main") setPhotoUrl(urlData.publicUrl);
+      if (type === "main") setPhotos(prev => [...prev, urlData.publicUrl]);
       else setCloseOut(urlData.publicUrl);
     }
     type === "main" ? setUploading(false) : setCloseUp(false);
@@ -133,7 +133,8 @@ function ModalContent({
       location_detail:     room || null,
       reported_by:         initial.reported_by ?? userId,
       assigned_to:         assignedTo || null,
-      photo_url:           photoUrl || null,
+      photo_url:           photos[0] ?? null,
+      photo_urls:          photos,
       close_out_photo_url: closeOutUrl || null,
       scheduled_date:      scheduledDate ? new Date(scheduledDate).toISOString() : null,
       related_issue_id:    relatedIssueId || null,
@@ -187,34 +188,39 @@ function ModalContent({
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
               {t("addPhotoRecommended")}
             </label>
-            {photoUrl ? (
-              <div className="relative rounded-xl overflow-hidden bg-black">
-                {isVideoUrl(photoUrl) ? (
-                  <video src={photoUrl} controls playsInline className="w-full h-48 object-contain bg-black" />
-                ) : (
-                  <img src={photoUrl} alt="Issue" className="w-full h-48 object-cover" />
-                )}
-                <button onClick={() => setPhotoUrl("")}
-                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80">
-                  <X size={14} />
-                </button>
+            {photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {photos.map((url, i) => (
+                  <div key={url} className="relative rounded-xl overflow-hidden bg-black aspect-square">
+                    {isVideoUrl(url) ? (
+                      <video src={url} controls playsInline className="w-full h-full object-contain bg-black" />
+                    ) : (
+                      <img src={url} alt={`Issue ${i + 1}`} className="w-full h-full object-cover" />
+                    )}
+                    <button type="button" aria-label="Remove photo" onClick={() => setPhotos(prev => prev.filter(u => u !== url))}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-2 hover:bg-black/80">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <button onClick={() => { pickerOpenRef.current = true; photoRef.current?.click(); }}
-                className="w-full h-40 rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 hover:bg-gold/5 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                {uploading ? (
-                  <div className="w-6 h-6 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Camera size={28} className="text-muted-foreground/50" />
-                    <span className="text-sm font-medium">{isL ? "Toca para añadir foto o vídeo" : "Tap to add photo or video"}</span>
-                    <span className="text-xs text-muted-foreground/60">{isL ? "JPEG, PNG, MP4, MOV hasta 50MB" : "JPEG, PNG, MP4, MOV up to 50MB"}</span>
-                  </>
-                )}
-              </button>
             )}
-            <input ref={photoRef} type="file" accept="image/*,video/*" className="hidden"
-              onChange={e => { pickerOpenRef.current = false; if (e.target.files?.[0]) uploadPhoto(e.target.files[0], "main"); }} />
+            <button type="button" onClick={() => { pickerOpenRef.current = true; photoRef.current?.click(); }}
+              className={`w-full ${photos.length ? "h-14" : "h-40"} rounded-xl border-2 border-dashed border-border hover:border-gold/40 bg-muted/30 hover:bg-gold/5 transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground`}>
+              {uploading ? (
+                <div className="w-6 h-6 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
+              ) : photos.length ? (
+                <span className="text-sm font-medium flex items-center gap-2"><Camera size={18} />{isL ? "Añadir otra foto" : "Add another photo"}</span>
+              ) : (
+                <>
+                  <Camera size={28} className="text-muted-foreground/50" />
+                  <span className="text-sm font-medium">{isL ? "Toca para añadir fotos o vídeos" : "Tap to add photos or videos"}</span>
+                  <span className="text-xs text-muted-foreground/60">{isL ? "JPEG, PNG, MP4, MOV hasta 50MB" : "JPEG, PNG, MP4, MOV up to 50MB"}</span>
+                </>
+              )}
+            </button>
+            <input ref={photoRef} type="file" accept="image/*,video/*" multiple className="hidden"
+              onChange={async e => { pickerOpenRef.current = false; const files = Array.from(e.target.files ?? []); e.target.value = ""; for (const f of files) await uploadPhoto(f, "main"); }} />
           </div>
 
           {/* Title */}

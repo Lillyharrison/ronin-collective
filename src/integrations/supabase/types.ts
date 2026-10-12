@@ -679,6 +679,7 @@ export type Database = {
           is_draft: boolean
           location_detail: string | null
           photo_url: string | null
+          photo_urls: string[]
           priority: string
           property_id: string | null
           related_issue_id: string | null
@@ -701,6 +702,7 @@ export type Database = {
           is_draft?: boolean
           location_detail?: string | null
           photo_url?: string | null
+          photo_urls?: string[]
           priority?: string
           property_id?: string | null
           related_issue_id?: string | null
@@ -723,6 +725,7 @@ export type Database = {
           is_draft?: boolean
           location_detail?: string | null
           photo_url?: string | null
+          photo_urls?: string[]
           priority?: string
           property_id?: string | null
           related_issue_id?: string | null

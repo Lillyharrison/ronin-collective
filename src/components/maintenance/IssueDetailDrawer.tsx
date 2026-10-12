@@ -95,15 +95,15 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
-          {issue.photo_url && (
-          <div className="rounded-xl overflow-hidden bg-muted/20">
-              {isVideoUrl(issue.photo_url) ? (
-                <video src={issue.photo_url} controls playsInline preload="metadata" className="w-full h-auto max-h-[60vh] bg-black" />
+          {(issue.photo_urls?.length ? issue.photo_urls : issue.photo_url ? [issue.photo_url] : []).map((url, i) => (
+            <div key={url} className="rounded-xl overflow-hidden bg-muted/20">
+              {isVideoUrl(url) ? (
+                <video src={url} controls playsInline preload="metadata" className="w-full h-auto max-h-[60vh] bg-black" />
               ) : (
-                <img src={imageUrl(issue.photo_url, 800)} alt={issue.title} loading="lazy" className="w-full h-auto object-contain" />
+                <img src={imageUrl(url, 800)} alt={`${issue.title} ${i + 1}`} loading="lazy" className="w-full h-auto object-contain" />
               )}
             </div>
-          )}
+          ))}
 
           {issue.description && (
             <p className="text-sm text-foreground/80 leading-relaxed">{issue.description}</p>
