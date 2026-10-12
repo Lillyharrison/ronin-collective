@@ -32,7 +32,7 @@ async function writeSectionPermissionRows(
 
 // ─── TOOL DEFINITIONS ─────────────────────────────────────────────────────────
 // Split into: OBSERVATION (auto-execute in loop), WRITE (require confirmation), SILENT (auto, no feedback)
-const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_vendors", "search_product", "search_library_item"];
+const OBSERVATION_TOOL_NAMES = ["search_tasks", "search_assets", "get_calendar_events", "search_maintenance_issues", "search_planned_maintenance", "search_vendors", "search_product", "search_library_item"];
 const WRITE_TOOL_NAMES = ["create_task", "update_task_status", "log_asset", "send_staff_message", "log_maintenance_issue", "log_vendor", "update_occupancy"];
 const SILENT_TOOL_NAMES = ["save_memory", "add_shopping_list_item"];
 
@@ -98,6 +98,21 @@ const RONIN_TOOLS = [
         properties: {
           keyword: { type: "string", description: "Search keyword matched against issue title or description" },
           status: { type: "string", enum: ["reported", "under_investigation", "approved", "scheduled", "in_progress", "resolved", "all"] },
+          property_name: { type: "string", description: "Filter by property name" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_planned_maintenance",
+      description: "Search planned/recurring maintenance (servicing schedules like HVAC, pool, generator). ALWAYS use this for questions about when something was last serviced or is next due — it holds last_service_date, next scheduled month/date, recurrence and vendor.",
+      parameters: {
+        type: "object",
+        properties: {
+          keyword: { type: "string", description: "Keyword matched against title or description, e.g. HVAC" },
           property_name: { type: "string", description: "Filter by property name" },
         },
         required: [],
@@ -497,6 +512,26 @@ async function executeObservationTool(
         category: i.category, created_at: i.created_at,
         description: i.description ?? "none",
         property: propNameMap[i.property_id] ?? "unassigned",
+      })),
+    };
+  }
+
+  if (name === "search_planned_maintenance") {
+    let q = adminClient.from("planned_maintenance")
+      .select("id, title, description, status, property_id, last_service_date, date_type, scheduled_date, scheduled_month, scheduled_year, recurrence_months, vendors(name)");
+    if (args.keyword) q = q.or(`title.ilike.%${args.keyword}%,description.ilike.%${args.keyword}%`);
+    const propId = resolvePropertyId(args.property_name);
+    if (propId) q = q.eq("property_id", propId);
+    const { data, error } = await q.order("updated_at", { ascending: false }).limit(25);
+    if (error) return { error: error.message };
+    return {
+      total: data?.length ?? 0,
+      items: data?.map((i: any) => ({
+        title: i.title, status: i.status, description: i.description ?? "none",
+        property: propNameMap[i.property_id] ?? "unassigned",
+        last_serviced: i.last_service_date ?? "no record",
+        next_due: i.scheduled_date ?? (i.scheduled_month ? `${i.scheduled_year}-${String(i.scheduled_month).padStart(2, "0")}` : "not set"),
+        repeats_every_months: i.recurrence_months, vendor: i.vendors?.name ?? "none",
       })),
     };
   }
