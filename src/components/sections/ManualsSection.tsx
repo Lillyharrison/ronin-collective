@@ -9,9 +9,10 @@ import { useChecklistTemplates } from "@/hooks/useChecklists";
 import { usePropertyRules } from "@/hooks/usePropertyRules";
 import { CareGuideCard } from "@/components/manuals/CareGuideCard";
 import { CareGuideDetailPage } from "@/components/sections/CareGuideDetailPage";
+import { CareGuideScanModal } from "@/components/manuals/CareGuideScanModal";
 import { RulesManager } from "@/components/manuals/RulesManager";
 import { cn } from "@/lib/utils";
-import { BookOpen, Shield, ChevronDown, Plus, MapPin, CheckCheck } from "lucide-react";
+import { BookOpen, Shield, ChevronDown, Plus, MapPin, CheckCheck, ScanLine } from "lucide-react";
 
 interface Property {
   id: string;
@@ -29,6 +30,7 @@ export function ManualsSection() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useLocalStorage<string | null>("manuals.selectedPropId", null);
   const [showPropPicker, setShowPropPicker] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
 
   const TABS: { id: ManualTab; icon: React.ReactNode; label: string; labelEs: string }[] = [
@@ -196,6 +198,12 @@ export function ManualsSection() {
                 >
                   <Plus size={14} /> {t("addCareGuide")}
                 </button>
+                <button
+                  onClick={() => setScanOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-3 border border-dashed border-border rounded-xl text-sm text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-foreground transition-all whitespace-nowrap"
+                >
+                  <ScanLine size={14} /> Scan sheet
+                </button>
                 {careTemplates.some(t => !t.is_published) && (
                   <button
                     onClick={async () => {
@@ -214,6 +222,8 @@ export function ManualsSection() {
             )}
           </>
         )}
+
+        <CareGuideScanModal open={scanOpen} onOpenChange={setScanOpen} onCreated={async (id) => { await reloadCare(); openCareGuideDetail(id); }} />
 
         {/* RULES */}
         {tab === "rules" && (
