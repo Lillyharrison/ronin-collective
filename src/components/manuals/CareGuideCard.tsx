@@ -28,8 +28,8 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 export function CareGuideCard({ template, onOpen, onChanged }: Props) {
-  const { isMasterAdmin, isAdmin, isManager, canEdit } = usePermissions();
-  const canDelete = isMasterAdmin || isAdmin || isManager || canEdit("manuals");
+  const { isMasterAdmin, isAdmin } = usePermissions();
+  const canDelete = isMasterAdmin || isAdmin;
   const isImg = template.icon.startsWith("http") || template.icon.startsWith("/");
 
   const remove = async (e: React.MouseEvent) => {
