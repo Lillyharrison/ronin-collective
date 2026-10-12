@@ -15,6 +15,13 @@
       "when": 1791816415913,
       "tag": "0001_maintenance_issue_photo_urls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791818469300,
+      "tag": "0002_care_guide_card_images",
+      "breakpoints": true
     }
   ]
 }
