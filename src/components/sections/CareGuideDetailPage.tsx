@@ -20,6 +20,8 @@ import {
 import ReactDOM from "react-dom";
 
 /* ─── Types ─────────────────────────────────────────────────── */
+type CardImage = { url: string; side: "front" | "back" };
+
 interface CareGuideTemplate {
   id: string;
   title: string;
@@ -27,6 +29,7 @@ interface CareGuideTemplate {
   color: string;
   is_published: boolean;
   cover_image_url: string | null;
+  card_images?: CardImage[];
   assigned_role: string | null;
   assigned_department: string | null;
   location: string | null;
@@ -596,9 +599,16 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
   const [iconAnchorEl, setIconAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(template.title);
-  const [backImageUrl, setBackImageUrl] = useState<string | null>(template.cover_image_url);
+  const [cardImages, setCardImagesState] = useState<CardImage[]>(
+    initialTemplate.card_images?.length ? initialTemplate.card_images
+      : initialTemplate.cover_image_url ? [{ url: initialTemplate.cover_image_url, side: "back" }] : []
+  );
+  const frontImages = cardImages.filter(i => i.side === "front");
+  const backImages = cardImages.filter(i => i.side === "back");
+  const backImageUrl = backImages[0]?.url ?? null;
   const [backUploading, setBackUploading] = useState(false);
   const backImgRef = useRef<HTMLInputElement>(null);
+  const pendingSideRef = useRef<"front" | "back">("back");
   const [assignedRole, setAssignedRole] = useState(template.assigned_role ?? "");
   const [assignedDepartment, setAssignedDepartment] = useState(template.assigned_department ?? "");
   const [locationDraft, setLocationDraft] = useState((template as any).location ?? "");
@@ -736,17 +746,26 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
     updateTemplate({ is_published: next });
   };
 
-  const handleBackImageUpload = async (file: File) => {
-    if (!file.type.startsWith("image/")) return;
+  const saveCardImages = async (next: CardImage[]) => {
+    const cover = next.find(i => i.side === "back")?.url ?? null;
+    const { error } = await supabase.from("checklist_templates").update({ card_images: next, cover_image_url: cover } as never).eq("id", template.id);
+    if (error) { toast.error("Images were not saved"); return; }
+    setCardImagesState(next);
+    updateTemplate({ card_images: next, cover_image_url: cover });
+  };
+
+  const handleCardImageUpload = async (files: File[], side: "front" | "back") => {
+    const imgs = files.filter(f => f.type.startsWith("image/"));
+    if (!imgs.length) return;
     setBackUploading(true);
-    const path = `care-guide-backs/${template.id}-${Date.now()}.${file.name.split(".").pop()}`;
-    const { error } = await supabase.storage.from("manuals").upload(path, file, { upsert: true });
-    if (!error) {
-      const { data } = supabase.storage.from("manuals").getPublicUrl(path);
-      await supabase.from("checklist_templates").update({ cover_image_url: data.publicUrl }).eq("id", template.id);
-      setBackImageUrl(data.publicUrl);
-      updateTemplate({ cover_image_url: data.publicUrl });
+    const added: CardImage[] = [];
+    for (const file of imgs) {
+      const path = `care-guide-images/${template.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${file.name.split(".").pop()}`;
+      const { error } = await supabase.storage.from("manuals").upload(path, file);
+      if (!error) added.push({ url: supabase.storage.from("manuals").getPublicUrl(path).data.publicUrl, side });
     }
+    if (added.length < imgs.length) toast.error("Some images failed to upload");
+    if (added.length) await saveCardImages([...cardImages, ...added]);
     setBackUploading(false);
   };
 
@@ -808,39 +827,38 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
         <title>${template.title} — Care Guide</title>
         <style>
           * { margin:0; padding:0; box-sizing:border-box; }
-          body { font-family:'Helvetica Neue',Arial,sans-serif; background:white; color:#1a1a1a; }
-          @page { size: A5 landscape; margin: 12mm 14mm; }
-          .page { width:100%; page-break-after:always; }
-          .page:last-child { page-break-after:auto; }
-          .front-header { display:flex; align-items:center; gap:10px; border-bottom:2px solid #1a1a1a; padding-bottom:10px; margin-bottom:12px; }
-          .guide-icon { font-size:24px; }
-          .guide-icon-img { width:28px; height:28px; object-fit:contain; }
-          .guide-title { font-size:16px; font-weight:800; letter-spacing:0.07em; text-transform:uppercase; }
-          .draft-badge { margin-left:auto; font-size:8px; font-weight:700; border:1px solid #999; padding:2px 5px; border-radius:3px; color:#999; }
-          .columns { display:flex; gap:0; }
-          .col { flex:1; padding:0 10px; }
-          .col:first-child { padding-left:0; border-right:1px dashed #ccc; }
+          html, body { background:white; color:#111; font-family:'Helvetica Neue',Arial,sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+          @page { size: A5 landscape; margin: 0; }
+          .page { width:210mm; height:148mm; padding:10mm 12mm; overflow:hidden; page-break-after:always; break-after:page; }
+          .page:last-child { page-break-after:auto; break-after:auto; }
+          .front { display:flex; flex-direction:column; }
+          .front-header { display:flex; align-items:center; gap:10px; border-bottom:2.5px solid #111; padding-bottom:8px; margin-bottom:10px; }
+          .guide-icon { font-size:26px; }
+          .guide-icon-img { width:30px; height:30px; object-fit:cover; border-radius:3px; }
+          .guide-title { font-size:19px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; line-height:1.15; }
+          .body { flex:1; display:flex; gap:12px; min-height:0; }
+          .side { width:42mm; display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+          .side img { width:100%; flex:1; min-height:0; object-fit:cover; border-radius:4px; border:1px solid #ddd; }
+          .columns { flex:1; display:flex; min-width:0; }
+          .col { flex:1; padding:0 10px; min-width:0; }
+          .col:first-child { padding-left:0; border-right:1px solid #ccc; }
           .col:last-child { padding-right:0; }
-          .col-title { font-size:11px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; border-bottom:1px solid #1a1a1a; padding-bottom:5px; margin-bottom:8px; }
-          .section-label { font-size:8px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#555; margin:8px 0 5px; border-bottom:1px dotted #ddd; padding-bottom:3px; }
+          .col-title { font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; border-bottom:1.5px solid #111; padding-bottom:4px; margin-bottom:6px; }
+          .section-label { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#333; margin:8px 0 4px; }
           .equip-grid { display:flex; flex-wrap:wrap; gap:6px 10px; margin-bottom:4px; }
-          .equip-item { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:36px; }
-          .eq-icon { font-size:20px; }
-          .eq-img { width:28px; height:28px; object-fit:contain; }
-          .eq-label { font-size:7px; text-align:center; color:#444; max-width:44px; line-height:1.2; }
-          .instr-row { display:flex; align-items:flex-start; gap:7px; padding:4px 0; border-bottom:1px dotted #e8e8e8; }
+          .equip-item { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:40px; }
+          .eq-icon { font-size:22px; }
+          .eq-img { width:30px; height:30px; object-fit:contain; }
+          .eq-label { font-size:9px; text-align:center; color:#222; max-width:52px; line-height:1.2; }
+          .instr-row { display:flex; align-items:flex-start; gap:7px; padding:4px 0; border-bottom:1px solid #eee; }
           .instr-row:last-child { border-bottom:none; }
-          .instr-icon { font-size:14px; flex-shrink:0; width:18px; text-align:center; margin-top:1px; }
+          .instr-icon { font-size:12px; flex-shrink:0; width:14px; text-align:center; margin-top:2px; }
           .instr-img { width:18px; height:18px; object-fit:contain; flex-shrink:0; margin-top:1px; }
-          .instr-text { font-size:9.5px; line-height:1.45; font-weight:300; }
+          .instr-text { font-size:12.5px; line-height:1.35; font-weight:400; color:#111; }
           .container-block { margin:6px 0; }
-          .container-label { font-size:8px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:3px 6px; border-radius:3px; display:inline-block; margin-bottom:4px; background:#f5f5f5; color:#444; border:1px solid #ddd; }
-          .front-footer { margin-top:12px; padding-top:8px; border-top:1px solid #e0e0e0; font-size:8px; color:#999; letter-spacing:0.05em; text-transform:uppercase; display:flex; justify-content:space-between; }
-          .back { display:flex; align-items:center; justify-content:center; min-height:100mm; }
-          .back-img { max-width:100%; max-height:100%; object-fit:contain; display:block; }
-          .back-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:80mm; }
-          .ph-icon { font-size:64px; }
-          .ph-title { font-size:20px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#888; }
+          .container-label { font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:3px; background:#f0f0f0; color:#222; border:1px solid #ccc; }
+          .back { display:flex; gap:6mm; align-items:center; justify-content:center; }
+          .back img { flex:1; min-width:0; height:100%; object-fit:contain; display:block; }
         </style>
       </head><body>
 
@@ -851,34 +869,27 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
             <span class="guide-title">${template.title}</span>
             ${(template as any).location ? `<div style="font-size:9px;font-weight:500;color:#666;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}
           </div>
-          ${!template.is_published ? '<span class="draft-badge">DRAFT</span>' : ""}
         </div>
+        <div class="body">
+        ${frontImages.length ? `<div class="side">${frontImages.map(i => `<img src="${i.url}" />`).join("")}</div>` : ""}
         <div class="columns">
           <div class="col">
             <div class="col-title">Basic Clean</div>
             ${basicEquip.length > 0 ? `<div class="section-label">Equipment</div><div class="equip-grid">${basicEquip.map(renderEquipRow).join("")}</div>` : ""}
             ${basicInstr.length > 0 ? `<div class="section-label">Instructions</div>${renderInstrGroup(basicInstr, containersMap.basic)}` : ""}
-            ${basicEquip.length === 0 && basicInstr.length === 0 ? '<p style="font-size:9px;color:#ccc;font-style:italic;">No items</p>' : ""}
+            ${basicEquip.length === 0 && basicInstr.length === 0 ? "" : ""}
           </div>
           <div class="col">
             <div class="col-title">Deep Clean</div>
             ${deepEquip.length > 0 ? `<div class="section-label">Equipment</div><div class="equip-grid">${deepEquip.map(renderEquipRow).join("")}</div>` : ""}
             ${deepInstr.length > 0 ? `<div class="section-label">Instructions</div>${renderInstrGroup(deepInstr, containersMap.deep)}` : ""}
-            ${deepEquip.length === 0 && deepInstr.length === 0 ? '<p style="font-size:9px;color:#ccc;font-style:italic;">No items</p>' : ""}
+            ${deepEquip.length === 0 && deepInstr.length === 0 ? "" : ""}
           </div>
         </div>
-        <div class="front-footer">
-          <span>Estate Care Guide</span>
-          <span>${new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long" })}</span>
         </div>
       </div>
 
-      <div class="page back">
-        ${backImageUrl
-          ? `<img src="${backImageUrl}" class="back-img" />`
-          : `<div class="back-placeholder">${isUrl(template.icon) ? `<img src="${template.icon}" class="guide-icon-img" style="width:80px;height:80px;" />` : `<span class="ph-icon">${template.icon}</span>`}<span class="ph-title">${template.title}</span></div>`
-        }
-      </div>
+      ${backImages.length ? `<div class="page back">${backImages.map(i => `<img src="${i.url}" />`).join("")}</div>` : ""}
 
       </body></html>
     `);
@@ -1028,33 +1039,38 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
             {savingSettings ? "Saving…" : <><Check size={14} /> Save Settings</>}
           </button>
 
-          {/* Back image */}
+          {/* Card images */}
           <div>
-            <p className="text-xs text-muted-foreground mb-2 font-medium">Back of card (prints as reverse side)</p>
-            {backImageUrl ? (
-              <div className="relative rounded-xl overflow-hidden border border-border group">
-                <img src={backImageUrl} alt="Back of card" className="w-full h-auto block" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button onClick={() => backImgRef.current?.click()}
-                    className="bg-card/90 rounded-xl px-3 py-1.5 text-xs font-medium text-foreground">Replace</button>
-                  <button onClick={async () => {
-                    await supabase.from("checklist_templates").update({ cover_image_url: null }).eq("id", template.id);
-                    setBackImageUrl(null); updateTemplate({ cover_image_url: null });
-                  }} className="bg-card/90 rounded-xl px-3 py-1.5 text-xs font-medium text-[hsl(var(--status-urgent))]">Remove</button>
+            <p className="text-xs text-muted-foreground mb-2 font-medium">Card images — choose Front (beside the instructions) or Back (reverse side)</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
+              {cardImages.map((img, idx) => (
+                <div key={img.url} className="rounded-xl border border-border overflow-hidden bg-muted/20">
+                  <img src={img.url} alt={`Card image ${idx + 1}`} className="w-full h-24 object-cover" />
+                  <div className="flex">
+                    {(["front", "back"] as const).map(side => (
+                      <button key={side} onClick={() => saveCardImages(cardImages.map((c, j) => j === idx ? { ...c, side } : c))}
+                        className={cn("flex-1 min-h-11 text-sm font-medium capitalize", img.side === side ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                        {side}
+                      </button>
+                    ))}
+                    <button aria-label="Remove image" onClick={() => saveCardImages(cardImages.filter((_, j) => j !== idx))}
+                      className="min-h-11 w-11 flex items-center justify-center text-[hsl(var(--status-urgent))]"><X size={16} /></button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <button onClick={() => backImgRef.current?.click()}
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleBackImageUpload(f); }}
-                className="w-full py-8 rounded-xl border-2 border-dashed border-border hover:border-primary flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-all">
-                {backUploading ? <div className="text-xs">Uploading…</div> : (
-                  <><ImageIcon size={20} /><p className="text-xs">Drag & drop or click to add back image</p><p className="text-[10px] text-muted-foreground/60">Prints on reverse side of the card</p></>
-                )}
-              </button>
-            )}
-            <input ref={backImgRef} type="file" accept="image/*" className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) handleBackImageUpload(f); }} />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(["front", "back"] as const).map(side => (
+                <button key={side} onClick={() => { pendingSideRef.current = side; backImgRef.current?.click(); }}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => { e.preventDefault(); handleCardImageUpload(Array.from(e.dataTransfer.files), side); }}
+                  className="py-5 rounded-xl border-2 border-dashed border-border hover:border-primary flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-all">
+                  {backUploading ? <span className="text-sm">Uploading…</span> : <><ImageIcon size={18} /><span className="text-sm">Add {side} image</span></>}
+                </button>
+              ))}
+            </div>
+            <input ref={backImgRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={e => { const f = Array.from(e.target.files ?? []); e.target.value = ""; handleCardImageUpload(f, pendingSideRef.current); }} />
           </div>
         </div>
       )}
@@ -1140,19 +1156,23 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
         )}
 
         {/* Back image preview */}
-        {backImageUrl && !showAdminPanel && (
-          <div className="mx-4 mt-4">
-            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">Material reference (back of card)</p>
-            <div className="rounded-2xl overflow-hidden border border-border">
-              <img src={backImageUrl} alt="Material" className="w-full h-auto block" />
-            </div>
+        {cardImages.length > 0 && !showAdminPanel && (
+          <div className="mx-4 mt-4 space-y-3">
+            {frontImages.length > 0 && <>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest">Front of card</p>
+              <div className="flex gap-2 flex-wrap">{frontImages.map(i => <img key={i.url} src={i.url} alt="Front" className="w-24 h-24 object-cover rounded-xl border border-border" />)}</div>
+            </>}
+            {backImages.length > 0 && <>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest">Back of card</p>
+              {backImages.map(i => <div key={i.url} className="rounded-2xl overflow-hidden border border-border"><img src={i.url} alt="Back" className="w-full h-auto block" /></div>)}
+            </>}
           </div>
         )}
 
         <div className="mx-4 mt-4 flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-2xl">
           <Printer size={14} className="text-muted-foreground flex-shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Prints as 2-sided A5 landscape card — Basic/Deep columns on front, material photo on back
+            Prints as 2-sided A5 landscape card — instructions and front images on the front, item photo on the back
           </p>
         </div>
       </div>

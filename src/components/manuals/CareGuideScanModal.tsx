@@ -78,15 +78,16 @@ export function CareGuideScanModal({ open, onOpenChange, onCreated }: { open: bo
     if (!draft?.title.trim()) { toast.error("Add a title"); return; }
     setSaving(true);
     try {
-      let icon = "🧵";
+      const icon = "🧵";
+      const card_images: { url: string; side: "front" }[] = [];
       if (swatch) {
         const path = `swatches/${Date.now()}.jpg`;
         const { error } = await supabase.storage.from("manuals").upload(path, swatch, { contentType: "image/jpeg" });
-        if (!error) icon = supabase.storage.from("manuals").getPublicUrl(path).data.publicUrl;
+        if (!error) card_images.push({ url: supabase.storage.from("manuals").getPublicUrl(path).data.publicUrl, side: "front" });
       }
       const titleFull = draft.fabric_code ? `${draft.title.trim()} — ${draft.fabric_code.trim()}` : draft.title.trim();
       const { data: tpl, error } = await supabase.from("checklist_templates").insert({
-        title: titleFull, category: "care_guide", icon, color: "gold", is_universal: true, is_published: false,
+        title: titleFull, category: "care_guide", icon, color: "gold", is_universal: true, is_published: false, card_images,
       }).select("id").single();
       if (error || !tpl) { toast.error("Care guide was not saved"); return; }
       let order = 0;
