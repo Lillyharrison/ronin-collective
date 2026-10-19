@@ -68,9 +68,10 @@ export function ManualsSection() {
 
   const selectedProp = properties.find(p => p.id === selectedPropId);
 
+  // undefined = no property filter; server-side RLS scopes guides to the user's properties.
   const { templates: careTemplates, loading: careLoading, reload: reloadCare } = useChecklistTemplates(
     "care_guide",
-    null
+    undefined
   );
 
   const { rules, loading: rulesLoading, reload: reloadRules } = usePropertyRules(
