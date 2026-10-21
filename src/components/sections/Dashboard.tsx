@@ -15,6 +15,7 @@ import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
 
 import { IssueModal } from "@/components/maintenance/IssueModal";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
 
 interface FeedEvent {
@@ -158,6 +159,7 @@ export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading, error: permError } = usePermissions();
+  const { properties: scopedProperties } = useScopedProperties();
   const { retry: retryPermissions } = usePermissionsControl();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
   const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
@@ -413,7 +415,7 @@ export function Dashboard() {
             await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
           }}
           categories={maintenanceCategories}
-          properties={[]}
+          properties={scopedProperties}
           profiles={[]}
           mode="create"
         />
