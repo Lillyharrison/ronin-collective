@@ -15,6 +15,7 @@ import { useActiveRulesForDashboard } from "@/hooks/usePropertyRules";
 import { cn } from "@/lib/utils";
 
 import { IssueModal } from "@/components/maintenance/IssueModal";
+import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
 
 interface FeedEvent {
@@ -413,7 +414,7 @@ export function Dashboard() {
             await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
           }}
           categories={maintenanceCategories}
-          properties={[]}
+          properties={scopedProperties}
           profiles={[]}
           mode="create"
         />
