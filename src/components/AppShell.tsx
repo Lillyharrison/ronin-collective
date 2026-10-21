@@ -39,6 +39,7 @@ const RulesSection       = lazy(() => import("@/components/sections/RulesSection
 const CarWashSection     = lazy(() => import("@/components/sections/CarWashSection").then(m => ({ default: m.CarWashSection })));
 const StaffSchedulingSection = lazy(() => import("@/components/sections/StaffSchedulingSection").then(m => ({ default: m.StaffSchedulingSection })));
 const TimelineSection    = lazy(() => import("@/components/sections/TimelineSection").then(m => ({ default: m.TimelineSection })));
+const OrderListDetailPage = lazy(() => import("@/components/checklists/OrderListDetailPage").then(m => ({ default: m.OrderListDetailPage })));
 const ChecklistDetailPage= lazy(() => import("@/components/sections/ChecklistDetailPage").then(m => ({ default: m.ChecklistDetailPage })));
 
 // ── Section loading skeleton ──────────────────────────────────────────────────
@@ -250,7 +251,9 @@ export function AppShell() {
         }}
       >
         <Suspense fallback={<SectionSkeleton />}>
-          {showDetail ? (
+          {showDetail && (detailTemplate as any).kind === "order_list" ? (
+            <OrderListDetailPage template={detailTemplate as any} propertyName={detailPropName} />
+          ) : showDetail ? (
             <ChecklistDetailPage
               template={detailTemplate!}
               propertyId={checklistDetailPropId}
