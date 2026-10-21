@@ -516,7 +516,15 @@ export function MaintenanceSection() {
 
     // Only sync to the calendar if the entry was created already-booked.
     // For future / to_be_booked entries the calendar stays clean until a date is set.
-    await syncCalendarForPlanned(entry.id, null, entry as PlannedMaintenanceEntry);
+    // Re-read: a database trigger may already have created and linked the calendar
+    // event after the insert; syncing with a stale null id created duplicate events.
+    const { data: fresh } = await supabase
+      .from("planned_maintenance")
+      .select(PLANNED_FULL_COLS)
+      .eq("id", entry.id)
+      .maybeSingle();
+    const current = (fresh ?? entry) as PlannedMaintenanceEntry;
+    await syncCalendarForPlanned(entry.id, current.calendar_event_id ?? null, current);
 
 
     // Notify section
