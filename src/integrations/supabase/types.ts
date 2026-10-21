@@ -511,11 +511,13 @@ export type Database = {
           id: string
           is_published: boolean
           is_universal: boolean
+          kind: string
           location: string | null
           manual_link_label: string | null
           manual_link_url: string | null
           notify_on_day: boolean | null
           only_when_occupied: boolean
+          order_recipient_ids: string[]
           products: Json | null
           property_id: string | null
           recurrence: string | null
@@ -539,11 +541,13 @@ export type Database = {
           id?: string
           is_published?: boolean
           is_universal?: boolean
+          kind?: string
           location?: string | null
           manual_link_label?: string | null
           manual_link_url?: string | null
           notify_on_day?: boolean | null
           only_when_occupied?: boolean
+          order_recipient_ids?: string[]
           products?: Json | null
           property_id?: string | null
           recurrence?: string | null
@@ -567,11 +571,13 @@ export type Database = {
           id?: string
           is_published?: boolean
           is_universal?: boolean
+          kind?: string
           location?: string | null
           manual_link_label?: string | null
           manual_link_url?: string | null
           notify_on_day?: boolean | null
           only_when_occupied?: boolean
+          order_recipient_ids?: string[]
           products?: Json | null
           property_id?: string | null
           recurrence?: string | null
@@ -1020,6 +1026,131 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: []
+      }
+      order_list_draft_lines: {
+        Row: {
+          comment: string | null
+          id: string
+          library_item_id: string
+          photo_url: string | null
+          quantity: string | null
+          template_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          comment?: string | null
+          id?: string
+          library_item_id: string
+          photo_url?: string | null
+          quantity?: string | null
+          template_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          comment?: string | null
+          id?: string
+          library_item_id?: string
+          photo_url?: string | null
+          quantity?: string | null
+          template_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_list_draft_lines_library_item_id_fkey"
+            columns: ["library_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_library_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_list_draft_lines_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_list_items: {
+        Row: {
+          created_at: string
+          id: string
+          library_item_id: string
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          library_item_id: string
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          library_item_id?: string
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_list_items_library_item_id_fkey"
+            columns: ["library_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_library_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_list_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_list_submissions: {
+        Row: {
+          created_at: string
+          id: string
+          lines: Json
+          order_id: string | null
+          property_id: string | null
+          submitted_by: string
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lines?: Json
+          order_id?: string | null
+          property_id?: string | null
+          submitted_by: string
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lines?: Json
+          order_id?: string | null
+          property_id?: string | null
+          submitted_by?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_list_submissions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       orders: {
         Row: {
