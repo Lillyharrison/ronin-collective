@@ -223,6 +223,7 @@ export function OrderListDetailPage({ template, propertyName }: Props) {
           currentIds={rows.map(r => r.library_item_id)}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); }}
+          onDeleted={closeChecklistDetail}
         />
       )}
     </div>
@@ -268,8 +269,8 @@ function LineEditor({ line, es, onSave, onPhoto }: { line: DraftLine; es: boolea
   );
 }
 
-function OrderListEditor({ template, currentIds, onClose, onSaved }: {
-  template: ChecklistTemplate & { order_recipient_ids?: string[] }; currentIds: string[]; onClose: () => void; onSaved: () => void;
+function OrderListEditor({ template, currentIds, onClose, onSaved, onDeleted }: {
+  template: ChecklistTemplate & { order_recipient_ids?: string[] }; currentIds: string[]; onClose: () => void; onSaved: () => void; onDeleted: () => void;
 }) {
   const [allLib, setAllLib] = useState<LibItem[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
@@ -321,11 +322,11 @@ function OrderListEditor({ template, currentIds, onClose, onSaved }: {
     if (!window.confirm(`Delete "${template.title}"? Past orders are kept.`)) return;
     const { data, error } = await supabase.from("checklist_templates").delete().eq("id", template.id).select("id");
     if (error || !data?.length) { toast.error(error?.message ?? "Could not delete"); return; }
-    window.location.reload();
+    onDeleted();
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-charcoal/70 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="bg-background w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="font-display text-lg">Edit order list</h2>
