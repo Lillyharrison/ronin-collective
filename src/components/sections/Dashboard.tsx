@@ -159,6 +159,7 @@ export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading, error: permError } = usePermissions();
+  const { properties: scopedProperties } = useScopedProperties();
   const { retry: retryPermissions } = usePermissionsControl();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
   const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
