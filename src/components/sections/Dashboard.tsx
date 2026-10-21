@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 import { IssueModal } from "@/components/maintenance/IssueModal";
 import { useScopedProperties } from "@/hooks/useScopedProperties";
+import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
 
 interface FeedEvent {
@@ -160,6 +161,7 @@ export function Dashboard() {
   const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading, error: permError } = usePermissions();
   const { properties: scopedProperties } = useScopedProperties();
+  const [issueAssignees, setIssueAssignees] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
   const { retry: retryPermissions } = usePermissionsControl();
   const activeRules = useActiveRulesForDashboard(assignedPropertyIds, isMasterAdmin);
   const { categories: maintenanceCategories, createIssue } = useMaintenanceIssues();
@@ -403,6 +405,16 @@ export function Dashboard() {
     setTaglineOverride(null);
   };
 
+  // Load assignable staff only when the quick "Report issue" form opens.
+  useEffect(() => {
+    if (!reportIssueOpen || issueAssignees.length > 0) return;
+    supabase.from("profiles").select("id, full_name, avatar_url, level").order("full_name").limit(500)
+      .then(({ data }) => setIssueAssignees(
+        filterAssignableStaff((data ?? []) as { id: string; full_name: string | null; avatar_url: string | null; level: string | null }[])
+          .map(p => ({ id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url })),
+      ));
+  }, [reportIssueOpen, issueAssignees.length]);
+
   return (
     <div className="animate-fade-in pb-4">
       {/* Quick-log Report Issue modal — triggered from dashboard quick action */}
@@ -416,7 +428,7 @@ export function Dashboard() {
           }}
           categories={maintenanceCategories}
           properties={scopedProperties}
-          profiles={[]}
+          profiles={issueAssignees}
           mode="create"
         />
       )}
