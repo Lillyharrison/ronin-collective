@@ -31,7 +31,7 @@ export function ChecklistsSection() {
   const { language, t } = useLanguage();
   const { isAdmin, isMasterAdmin, isManager, assignedPropertyIds, canEdit } = usePermissions();
   const canManageChecklists = isMasterAdmin || isAdmin || isManager || canEdit("checklists");
-  const canSeeAllProperties = isMasterAdmin || isAdmin || isManager;
+  const canSeeAllProperties = isMasterAdmin;
   const { openChecklistDetail, checklistsForPropertyId, setChecklistsForPropertyId } = useNavigation();
   const [tab, setTab] = useLocalStorage<Tab>("checklists.tab", "cleaning");
   const [properties, setProperties] = useState<Property[]>([]);

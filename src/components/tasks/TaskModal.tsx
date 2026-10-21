@@ -138,7 +138,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     ]).then(([p, pr, cl]) => {
       // Family members (principal / extended_family) are never assigned work — exclude from picker.
       setProfiles(filterAssignableStaff((p.data as Profile[]) ?? []));
-      const canSeeAllProps = isMasterAdmin || isAdmin || isManager;
+      const canSeeAllProps = isMasterAdmin;
       const allProps = sortProperties((pr.data as Property[]) ?? []);
       setProperties(canSeeAllProps ? allProps : allProps.filter(p => assignedPropertyIds.includes(p.id)));
       setChecklists((cl.data as ChecklistTemplate[]) ?? []);

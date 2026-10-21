@@ -1401,7 +1401,7 @@ export function CalendarSection() {
   useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
-    const canSeeAll = isMasterAdmin || isAdmin || isManager;
+    const canSeeAll = isMasterAdmin;
     supabase.from("properties").select("id, name").order("sort_order").then(({ data }) => {
       const all = (data as Property[]) ?? [];
       setProperties(canSeeAll ? all : all.filter(p => assignedPropertyIds.includes(p.id)));

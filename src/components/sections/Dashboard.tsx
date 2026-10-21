@@ -306,7 +306,7 @@ export function Dashboard() {
 
       // 6. Activity feed
       if (eventsData) {
-        const canSeeAllProps = isAdmin || isMasterAdmin;
+        const canSeeAllProps = isMasterAdmin;
         // Scope feed to events on properties the user has visibility into (events with no property stay visible).
         const scopedEvents = canSeeAllProps
           ? eventsData
