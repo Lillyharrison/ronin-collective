@@ -43,7 +43,7 @@ export interface UserPermissions {
 }
 
 // Fallback permission matrix: which sections each role can access
-const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
+export const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   dashboard:            ["master_admin", "admin", "manager", "staff", "principal"],
   property:             ["master_admin", "admin", "manager", "principal"],
   maintenance:          ["master_admin", "admin", "manager", "staff"],
@@ -56,7 +56,7 @@ const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
   contacts:             ["master_admin", "admin", "manager"],
   inventory:            ["master_admin", "admin", "manager"],
   laundry:              ["master_admin", "admin", "manager", "staff"],
-  orders:               ["master_admin", "admin", "manager"],
+  orders:               ["master_admin", "admin", "manager", "staff"],
   "meet-team":          ["master_admin", "admin", "manager", "principal"],
   travel:               ["master_admin", "admin", "principal"],
   calendar:             ["master_admin", "admin", "manager", "staff", "principal"],
