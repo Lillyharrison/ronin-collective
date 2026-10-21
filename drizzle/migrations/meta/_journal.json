@@ -36,6 +36,13 @@
       "when": 1792585955548,
       "tag": "0004_order_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792605575072,
+      "tag": "0005_scope_property_access_to_assignment",
+      "breakpoints": true
     }
   ]
 }

@@ -40,7 +40,7 @@ export function MaintenanceSection() {
   const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
   const [activeTab, setActiveTab] = useLocalStorage<MaintenanceTab>("maintenance_tab", "repairs");
   // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
-  const scopedPropertyIds = (isMasterAdmin || isAdmin || isManager) ? undefined : assignedPropertyIds;
+  const scopedPropertyIds = isMasterAdmin ? undefined : assignedPropertyIds;
 
   // Debounce search to avoid a DB query on every keystroke
   const [search,      setSearch]      = useState("");
@@ -102,7 +102,7 @@ export function MaintenanceSection() {
   const [profiles, setProfiles] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
   const [defaultPropApplied, setDefaultPropApplied] = useState(false);
 
-  const properties = (isMasterAdmin || isAdmin || isManager)
+  const properties = isMasterAdmin
     ? allProperties
     : allProperties.filter(p => assignedPropertyIds.includes(p.id));
   const issueById = useMemo(() => new Map(issues.map(issue => [issue.id, issue])), [issues]);

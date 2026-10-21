@@ -40,7 +40,7 @@ export function useScopedProperties() {
       });
   }, []);
 
-  const canSeeAll = isMasterAdmin || isAdmin || isManager;
+  const canSeeAll = isMasterAdmin;
 
   const properties: PropertyOption[] = canSeeAll
     ? allProperties
