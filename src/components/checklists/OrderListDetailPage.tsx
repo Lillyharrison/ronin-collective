@@ -12,6 +12,7 @@ import type { ChecklistTemplate } from "@/hooks/useChecklists";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, Check, Camera, Send, Settings, Search, Plus, X, Trash2, Loader2, ExternalLink,
 } from "lucide-react";
@@ -21,10 +22,11 @@ interface ListRow { id: string; library_item_id: string; sort_order: number }
 interface DraftLine { id: string; library_item_id: string; quantity: string | null; comment: string | null; photo_url: string | null }
 interface Person { id: string; full_name: string | null }
 
-interface Props { template: ChecklistTemplate & { order_recipient_ids?: string[] }; propertyName?: string }
+interface Props { template: ChecklistTemplate & { order_recipient_ids?: string[] }; propertyName?: string; onClose?: () => void; onSent?: (id: string) => void }
 
-export function OrderListDetailPage({ template, propertyName }: Props) {
-  const { closeChecklistDetail } = useNavigation();
+export function OrderListDetailPage({ template, propertyName, onClose, onSent }: Props) {
+  const { closeChecklistDetail, registerBackHandler } = useNavigation();
+  const close = onClose ?? closeChecklistDetail;
   const { isMasterAdmin, isAdmin, userId } = usePermissions();
   const { language } = useLanguage();
   const es = language === "es";
@@ -39,6 +41,12 @@ export function OrderListDetailPage({ template, propertyName }: Props) {
   const [note, setNote] = useState("");
   const [busyItem, setBusyItem] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!editing) return;
+    registerBackHandler(() => { setEditing(false); return true; });
+    return () => registerBackHandler(null);
+  }, [editing, registerBackHandler]);
+
   const load = useCallback(async () => {
     const [{ data: r }, { data: d }] = await Promise.all([
       supabase.from("order_list_items").select("id, library_item_id, sort_order").eq("template_id", template.id).order("sort_order").limit(500),
@@ -50,7 +58,7 @@ export function OrderListDetailPage({ template, propertyName }: Props) {
     const ids = listRows.map(x => x.library_item_id);
     if (ids.length) {
       const { data: li } = await supabase.from("order_library_items")
-        .select("id, name, category, image_url, size, default_quantity, website_url, status").in("id", ids);
+        .select("id, name, category, image_url, size, default_quantity, website_url, status").in("id", ids).limit(500);
       setLib(new Map(((li ?? []) as LibItem[]).map(x => [x.id, x])));
     } else setLib(new Map());
     setLoading(false);
@@ -71,8 +79,9 @@ export function OrderListDetailPage({ template, propertyName }: Props) {
       const item = lib.get(row.library_item_id);
       if (!item) return;
       const k = item.category || "Other";
-      if (!g.has(k)) g.set(k, []);
-      g.get(k)!.push({ row, item });
+      const entries = g.get(k) ?? [];
+      entries.push({ row, item });
+      g.set(k, entries);
     });
     return Array.from(g.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [rows, lib]);
@@ -125,7 +134,8 @@ export function OrderListDetailPage({ template, propertyName }: Props) {
     }
     toast.success(es ? "Pedido enviado" : `Order request sent (${data.count} items)`);
     setNote("");
-    load();
+    await load();
+    if (typeof data.order_id === "string") onSent?.(data.order_id);
   };
 
   const recipients = template.order_recipient_ids ?? [];
@@ -133,9 +143,9 @@ export function OrderListDetailPage({ template, propertyName }: Props) {
   return (
     <div className="animate-fade-in pb-40">
       <div className="bg-charcoal px-4 pt-4 pb-4 border-b border-charcoal-light">
-        <button onClick={closeChecklistDetail} className="flex items-center gap-1 text-cream/60 text-sm mb-2 min-h-[44px]">
+        <Button variant="ghost" onClick={close} className="flex items-center gap-1 text-cream/60 text-sm mb-2 min-h-[44px]">
           <ArrowLeft size={16} /> {es ? "Volver" : "Back"}
-        </button>
+        </Button>
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-2xl text-cream leading-tight">{template.title}</h1>
@@ -223,7 +233,7 @@ export function OrderListDetailPage({ template, propertyName }: Props) {
           currentIds={rows.map(r => r.library_item_id)}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); }}
-          onDeleted={closeChecklistDetail}
+          onDeleted={close}
         />
       )}
     </div>

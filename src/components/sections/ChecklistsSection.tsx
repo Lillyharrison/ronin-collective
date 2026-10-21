@@ -199,24 +199,6 @@ export function ChecklistsSection() {
                 >
                   <Plus size={14} /> {t("addChecklist")}
                 </button>
-                {(isMasterAdmin || isAdmin) && (
-                  <button
-                    onClick={async () => {
-                      const title = window.prompt(language === "es" ? "Título de la lista de pedido:" : "Order list title (e.g. Pre-arrival order):");
-                      if (!title?.trim() || !selectedPropId) return;
-                      const { error } = await supabase.from("checklist_templates").insert({
-                        title: title.trim(), category: "cleaning", subcategory: "stocking", icon: "🛒", color: "gold",
-                        property_id: selectedPropId, kind: "order_list", is_published: true,
-                      });
-                      if (error) { window.alert(error.message); return; }
-                      reloadCleaning();
-                    }}
-                    disabled={!selectedPropId}
-                    className="col-span-2 flex items-center justify-center gap-2 py-3 border border-dashed border-gold/40 rounded-xl text-sm text-gold hover:bg-gold/5 transition-all disabled:opacity-40"
-                  >
-                    <Plus size={14} /> {language === "es" ? "Nueva lista de pedido" : "New order list (from library)"}
-                  </button>
-                )}
                 <button
                   onClick={() => setImportOpen(true)}
                   disabled={!selectedPropId}

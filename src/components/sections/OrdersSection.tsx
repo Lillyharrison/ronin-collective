@@ -9,10 +9,12 @@ import {
   MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle, Plus, UserCircle2,
 } from "lucide-react";
 import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
-import { ShoppingList } from "@/components/orders/ShoppingList";
 import { NewOrderModal } from "@/components/orders/NewOrderModal";
 import { OrderLibraryTab } from "@/components/orders/library/OrderLibraryTab";
 import { BookOpen } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useNavigation } from "@/contexts/NavigationContext";
+import { PropertyShoppingLists } from "@/components/orders/PropertyShoppingLists";
 
 type MainTab = "pending" | "delivered" | "shopping" | "library";
 
@@ -475,6 +477,42 @@ export function OrdersSection() {
   const [modalOrder, setModalOrder] = useState<Order | null>(null);
   const [creating, setCreating]     = useState(false);
   const [activeTab, setActiveTab]   = useLocalStorage<MainTab>("orders-active-tab", "pending");
+  const [params, setParams] = useSearchParams();
+  const { registerBackHandler, activePropertyId } = useNavigation();
+  const closeOrder = () => {
+    setModalOrder(null);
+    const next = new URLSearchParams(params); next.delete("order"); setParams(next, { replace: true });
+  };
+
+  useEffect(() => {
+    if (params.get("list")) setActiveTab("shopping");
+    const id = params.get("order");
+    if (!id) return;
+    let cancelled = false;
+    supabase.from("orders")
+      .select("id, title, description, property_id, status, expected_delivery, delivered_at, carrier, tracking_number, tracking_url, packing_list, notes, created_at, assigned_to, property:properties(name), assignee:profiles!orders_assigned_to_fkey(full_name)")
+      .eq("id", id).maybeSingle().then(({ data }) => {
+        if (cancelled || !data) return;
+        setActiveTab(data.status === "delivered" ? "delivered" : "pending");
+        setModalOrder(data as unknown as Order);
+      });
+    return () => { cancelled = true; };
+  }, [params.get("order"), params.get("list")]);
+
+  useEffect(() => {
+    registerBackHandler(() => {
+      if (modalOrder) { closeOrder(); return true; }
+      if (creating) { setCreating(false); return true; }
+      if (params.get("list")) { const next = new URLSearchParams(params); next.delete("list"); setParams(next); return true; }
+      return false;
+    });
+    return () => registerBackHandler(null);
+  }, [modalOrder, creating, params, registerBackHandler]);
+
+  const selectTab = (tab: MainTab) => {
+    const next = new URLSearchParams(params); next.delete("list"); next.delete("order"); setParams(next);
+    setModalOrder(null); setActiveTab(tab);
+  };
 
   const fetchOrders = async (pageIndex = 0) => {
     setLoading(true);
@@ -507,8 +545,9 @@ export function OrdersSection() {
   }, []);
 
   // pending = not_placed + placed + pending_delivery (legacy)
-  const pending   = orders.filter(o => o.status !== "delivered");
-  const delivered = orders.filter(o => o.status === "delivered");
+  const scopedOrders = orders.filter(o => !activePropertyId || o.property_id === activePropertyId);
+  const pending   = scopedOrders.filter(o => o.status !== "delivered");
+  const delivered = scopedOrders.filter(o => o.status === "delivered");
 
   // Count breakdown for badge
   const notPlacedCount = pending.filter(o => o.status === "not_placed").length;
@@ -553,7 +592,7 @@ export function OrdersSection() {
       {/* Tabs */}
       <div className="flex gap-1 px-4 py-3 border-b border-border">
         <button
-          onClick={() => setActiveTab("pending")}
+          onClick={() => selectTab("pending")}
           className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
             activeTab === "pending" ? "bg-[hsl(var(--gold))] text-charcoal" : "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
@@ -573,7 +612,7 @@ export function OrdersSection() {
           )}
         </button>
         <button
-          onClick={() => setActiveTab("delivered")}
+          onClick={() => selectTab("delivered")}
           className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
             activeTab === "delivered" ? "bg-[hsl(var(--status-done))] text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
@@ -582,7 +621,7 @@ export function OrdersSection() {
           {isL ? "Entregados" : "Delivered"} {delivered.length > 0 && `(${delivered.length})`}
         </button>
         <button
-          onClick={() => setActiveTab("shopping")}
+          onClick={() => selectTab("shopping")}
           className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
             activeTab === "shopping" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
@@ -591,7 +630,7 @@ export function OrdersSection() {
           {isL ? "Lista de compras" : "Shopping List"}
         </button>
         <button
-          onClick={() => setActiveTab("library")}
+          onClick={() => selectTab("library")}
           className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
             activeTab === "library" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
@@ -602,7 +641,10 @@ export function OrdersSection() {
       </div>
 
       {/* Shopping list */}
-      {activeTab === "shopping" && <ShoppingList />}
+      {activeTab === "shopping" && <PropertyShoppingLists onSent={id => {
+        const next = new URLSearchParams(params); next.delete("list"); next.set("order", id); setParams(next);
+        setActiveTab("pending"); fetchOrders(0);
+      }} />}
 
       {/* Library */}
       {activeTab === "library" && <OrderLibraryTab />}
@@ -705,7 +747,7 @@ export function OrdersSection() {
       {modalOrder && (
         <OrderDetailModal
           order={modalOrder}
-          onClose={() => setModalOrder(null)}
+          onClose={closeOrder}
           onSaved={fetchOrders}
         />
       )}

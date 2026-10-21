@@ -6,6 +6,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { X, Bell, CheckCheck, Trash2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveSection } from "@/contexts/NavigationContext";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export function NotificationsPanel({ open, onClose }: Props) {
+  const navigate = useNavigate();
   const { userId, isMasterAdmin } = usePermissions();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -138,6 +140,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
 
     if (targetSection) {
       setActiveSection(targetSection);
+      if (n.entity_type === "order" && n.entity_id) navigate(`/orders?order=${encodeURIComponent(n.entity_id)}`);
     }
   };
 
