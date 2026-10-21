@@ -244,7 +244,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     // Clear any registered local back handler when navigating to a new section
     localBackHandlerRef.current = null;
     // Preserve activePropertyId for sections that use it as a deep-link filter
-    const PROPERTY_FILTERED_SECTIONS: ActiveSection[] = ["maintenance", "tasks", "manuals", "checklists", "calendar"];
+    const PROPERTY_FILTERED_SECTIONS: ActiveSection[] = ["maintenance", "tasks", "manuals", "checklists", "calendar", "orders"];
     if (section !== "property" && !PROPERTY_FILTERED_SECTIONS.includes(section)) {
       setActivePropertyId(null);
     }

@@ -108,11 +108,11 @@ Deno.serve(async (req) => {
     const notifBody = `${senderName} ticked ${snapshot.length} item${snapshot.length === 1 ? "" : "s"} to order.`;
     await admin.from("notifications").insert(tasks.map((t) => ({
       user_id: t.assigned_to, title: notifTitle, body: notifBody, type: "info",
-      action_url: "tasks", entity_id: t.id, entity_type: "task", property_id: tpl.property_id,
+       action_url: "orders", entity_id: order.id, entity_type: "order", property_id: tpl.property_id,
     })));
     try {
       await admin.functions.invoke("send-push-notification", {
-        body: { recipientUserIds: recipients, title: notifTitle, body: notifBody, url: "tasks" },
+        body: { recipientUserIds: recipients, title: notifTitle, body: notifBody, url: `/orders?order=${order.id}` },
       });
     } catch (e) { console.error("[order-list-submit] push failed", e); }
 

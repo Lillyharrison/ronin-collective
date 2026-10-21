@@ -4,6 +4,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { cn } from "@/lib/utils";
+import { orderStage } from "@/lib/orderLifecycle";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   X, Truck, Link as LinkIcon, FileText, Check, Calendar,
   MapPin, ExternalLink, Trash2, Save, UserCircle2,
@@ -62,7 +65,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase.from("orders").update({
+    const { data, error } = await supabase.from("orders").update({
       carrier:          carrier || null,
       tracking_number:  trackingNumber || null,
       tracking_url:     trackingUrl || null,
@@ -70,15 +73,16 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
       notes:            notes || null,
       expected_delivery: expectedDelivery || null,
       assigned_to:      assignedTo || null,
-    } as any).eq("id", order.id);
+    } as any).eq("id", order.id).select("id");
     setSaving(false);
+    if (error || !data?.length) { toast.error(error?.message ?? "Could not save order"); return; }
     onSaved();
     onClose();
   };
 
   const handleMarkDelivered = async () => {
     setDelivering(true);
-    await supabase.from("orders").update({
+    const { data, error } = await supabase.from("orders").update({
       status:       "delivered",
       delivered_at: new Date().toISOString(),
       carrier:      carrier || null,
@@ -86,8 +90,9 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
       tracking_url:    trackingUrl || null,
       packing_list:    packingList || null,
       notes:           notes || null,
-    } as any).eq("id", order.id);
+    } as any).eq("id", order.id).select("id");
     setDelivering(false);
+    if (error || !data?.length) { toast.error(error?.message ?? "Could not confirm delivery"); return; }
     onSaved();
     onClose();
   };
@@ -99,7 +104,15 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
     onClose();
   };
 
-  const isPending = order.status === "pending_delivery";
+  const stage = orderStage(order.status);
+  const isPending = stage === "placed";
+  const handleMarkPlaced = async () => {
+    setSaving(true);
+    const { data, error } = await supabase.from("orders").update({ status: "placed" }).eq("id", order.id).select("id");
+    setSaving(false);
+    if (error || !data?.length) { toast.error(error?.message ?? "Could not mark order as placed"); return; }
+    onSaved(); onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -114,7 +127,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                 ? "bg-[hsl(var(--gold)/0.12)] text-[hsl(var(--gold))] border-[hsl(var(--gold)/0.3)]"
                 : "bg-[hsl(var(--status-done)/0.12)] text-status-done border-[hsl(var(--status-done)/0.3)]"
             )}>
-              {isPending ? (isL ? "PENDIENTE" : "PENDING DELIVERY") : (isL ? "ENTREGADO" : "DELIVERED")}
+              {stage === "not_placed" ? (isL ? "NO COLOCADO" : "NOT PLACED") : isPending ? (isL ? "PENDIENTE" : "PENDING DELIVERY") : (isL ? "ENTREGADO" : "DELIVERED")}
             </span>
             <h2 className="font-display text-base font-semibold text-foreground truncate">{order.title}</h2>
           </div>
@@ -262,6 +275,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
 
         {/* Footer */}
         <div className="border-t border-border px-5 py-4 flex-shrink-0 space-y-2">
+          {stage === "not_placed" && canEdit && <Button className="w-full min-h-11" disabled={saving} onClick={handleMarkPlaced}><Check />{isL ? "Marcar como colocado" : "Mark as placed"}</Button>}
           {/* Mark as delivered — prominent button when pending */}
           {isPending && canEdit && (
             <button

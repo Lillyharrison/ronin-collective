@@ -87,6 +87,7 @@ export function useChecklistTemplates(
       .from("checklist_templates")
       .select("id, title, category, subcategory, color, icon, cover_image_url, card_images, location, recurrence, recurrence_day, notify_on_day, only_when_occupied, is_published, is_universal, property_id, assigned_department, assigned_role, manual_link_label, manual_link_url, sort_order, sections, created_at, updated_at, created_by")
       .order("sort_order")
+      .eq("kind", "standard")
       .limit(500);
     if (category) q = q.eq("category", category);
     if (!isMasterAdmin) q = q.eq("is_published", true);
