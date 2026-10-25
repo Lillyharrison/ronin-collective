@@ -11,6 +11,9 @@ import { CalendarIcon, X, Check, ChevronsUpDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useAssignableProfileIds } from "@/hooks/useAssignableProfileIds";
+import { selectAssignableProfiles, assigneeAccessNote, assigneeAccessHint } from "@/lib/assignableProfiles";
 
 interface Vendor { id: string; name: string; company?: string | null; property_ids?: string[]; }
 interface Property { id: string; name: string; }
@@ -43,6 +46,10 @@ const RECURRENCE_OPTIONS = [
 ];
 
 export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendors, properties, profiles, userId }: Props) {
+  const { language } = useLanguage();
+  const isL = language === "es";
+  const allowedAssigneeIds = useAssignableProfileIds(["maintenance", "tasks"]);
+  const assignees = selectAssignableProfiles(profiles, allowedAssigneeIds, initial?.assigned_to);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [vendorId, setVendorId] = useState("");
@@ -283,8 +290,10 @@ export function PlannedMaintenanceModal({ open, onClose, onSave, initial, vendor
             <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)}
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
               <option value="">— Select staff —</option>
-              {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {assignees.missingCurrent && initial?.assigned_to && <option value={initial.assigned_to}>{initial.assignee_name || (isL ? "Persona asignada actualmente" : "Current assignee")}{assignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>}
+              {assignees.profiles.map(p => <option key={p.id} value={p.id}>{p.name}{p.id === initial?.assigned_to && assignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>)}
             </select>
+            {assignees.filteredOut && <p className="text-xs text-muted-foreground">{assigneeAccessHint(["maintenance", "tasks"], isL)}</p>}
           </div>
 
           {/* Last Service Date */}
