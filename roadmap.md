@@ -1,7 +1,7 @@
 # Notification details
 
-- [ ] Share swipe actions and record-detail control between dashboard and bell; preserve dismissal versus deletion.
-- [ ] Test dashboard viewing/dismissal/swiping and audit other notification surfaces.
+- [x] Share swipe actions and record-detail control between dashboard and bell; preserve dismissal versus deletion.
+- [x] Test dashboard viewing/dismissal/swiping and audit other notification surfaces (35 tests and controlled phone/desktop checks passed; header delegates to bell, system push clicks stay separate).
 
 - [x] Add phone swipe-to-reveal deletion, preserve desktop and notification opening, and verify gestures/deletion tests (24 tests and controlled phone/desktop browser checks passed).
 
