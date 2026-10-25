@@ -1,5 +1,11 @@
 # Staff schedule phone layout
 
+# Notification details
+
+- [ ] Open repair, planned maintenance, task, calendar event and birthday details above the notification list.
+- [ ] Reuse repair detail loading without changing Maintenance behaviour; preserve other notification links and permissions.
+- [ ] Verify loading, inaccessible records, close-to-list, and mobile stacking.
+
 - [x] Add staff-by-staff weekly agenda for read-only users.
 - [x] Add compact seven-day grid and tap-to-open shift details for editors.
 - [x] Preserve desktop layout and existing schedule visibility/edit permissions.
