@@ -2490,6 +2490,10 @@ export type Database = {
         Args: { _section: string; _user_id: string }
         Returns: boolean
       }
+      can_see_staff_member: {
+        Args: { _staff: string; _viewer: string }
+        Returns: boolean
+      }
       can_user_see_checklist: {
         Args: {
           _template_assigned_dept: string
@@ -2539,6 +2543,7 @@ export type Database = {
         Args: { _property_id: string; _user_id: string }
         Returns: boolean
       }
+      visible_staff_ids: { Args: never; Returns: string[] }
     }
     Enums: {
       app_role: "master_admin" | "admin" | "manager" | "staff" | "principal"
