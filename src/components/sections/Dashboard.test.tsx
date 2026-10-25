@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   section: vi.fn(), planned: vi.fn(), repair: vi.fn(), navigate: vi.fn(), rpc: vi.fn(),
   deleted: vi.fn(), updated: vi.fn(), rpcError: null as unknown,
-  notifications: [] as Record<string, unknown>[], language: "en",
+  notifications: [] as Record<string, unknown>[], language: "en", assignedPropertyIds: [] as string[],
 }));
 vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ language: mocks.language, t: (key: string) => key }) }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
@@ -14,7 +14,7 @@ vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
 }) }));
 vi.mock("@/hooks/usePermissions", () => ({
   usePermissions: () => ({ userId: "tester", fullName: "Tester", isAdmin: false, isMasterAdmin: false,
-    assignedPropertyIds: [], canSee: () => false, loading: false, error: null }),
+    assignedPropertyIds: mocks.assignedPropertyIds, canSee: () => false, loading: false, error: null }),
   usePermissionsControl: () => ({ retry: vi.fn() }),
 }));
 vi.mock("@/hooks/useScopedProperties", () => ({ useScopedProperties: () => ({ properties: [] }) }));
