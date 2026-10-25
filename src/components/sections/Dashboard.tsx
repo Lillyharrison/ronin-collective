@@ -359,15 +359,15 @@ export function Dashboard() {
     if (dismissingIds.current.has(id)) return false;
     dismissingIds.current.add(id);
     try {
-    const { error } = await supabase.rpc("acknowledge_notification", { _notif_id: id });
-    if (error) throw error;
-    if (notifUserId === userId) {
-      const { error: readError } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
-      if (readError) throw readError;
-    }
-    closeRevealed();
-    setDashNotifs(prev => prev.filter(n => n.id !== id));
-    return true;
+      const { error } = await supabase.rpc("acknowledge_notification", { _notif_id: id });
+      if (error) throw error;
+      if (notifUserId === userId) {
+        const { error: readError } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+        if (readError) throw readError;
+      }
+      closeRevealed();
+      setDashNotifs(prev => prev.filter(n => n.id !== id));
+      return true;
     } catch (error) {
       console.error("Notification dismissal failed", error);
       return false;
