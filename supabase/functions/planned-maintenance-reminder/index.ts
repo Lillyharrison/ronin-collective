@@ -1,18 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { eligibleNotificationRecipients, reminderCandidates } from "../_shared/notificationAudience.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) return new Response(JSON.stringify({ error: "Missing configuration" }), { status: 500, headers: corsHeaders });
+  const supabase = createClient(url, serviceKey);
 
+  try {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
@@ -21,8 +20,9 @@ Deno.serve(async (req) => {
 
   const { data: candidateEntries } = await supabase
     .from("planned_maintenance")
-    .select("*")
-    .or("status.eq.future,and(status.eq.completed,recurrence_months.not.is.null)");
+    .select("id, title, assigned_to, property_id, date_type, scheduled_date, scheduled_month, scheduled_year, reminder_days, recurrence_months, status")
+    .or("status.eq.future,and(status.eq.completed,recurrence_months.not.is.null)")
+    .limit(1000);
 
   for (const entry of candidateEntries ?? []) {
     let targetDate: Date | null = null;
@@ -48,8 +48,9 @@ Deno.serve(async (req) => {
   // ── Phase 2: Send reminders for upcoming entries ──
   const { data: entries, error } = await supabase
     .from("planned_maintenance")
-    .select("*")
-    .in("status", ["to_be_booked", "booked", "initiated_by_vendor"]);
+    .select("id, title, assigned_to, property_id, date_type, scheduled_date, scheduled_month, scheduled_year, reminder_days, recurrence_months, status")
+    .in("status", ["to_be_booked", "booked", "initiated_by_vendor"])
+    .limit(1000);
 
   if (error) {
     console.error("Error fetching planned maintenance:", error);
@@ -99,65 +100,39 @@ Deno.serve(async (req) => {
       ? `Property: ${propertyName}. ${notifBody}`
       : notifBody;
 
-    // Fan-out in-app notifications to users with maintenance alerts
-    const { data: usersWithAlerts } = await supabase
-      .from("user_section_permissions")
-      .select("user_id")
-      .eq("section", "maintenance-planned")
-      .eq("notifications", true);
+    // A window reminder belongs to the responsible person, not the alert audience.
+    const { data: masterAdmins, error: roleError } = await supabase
+      .from("user_roles").select("user_id").eq("role", "master_admin").limit(1000);
+    if (roleError) throw roleError;
+    const masterIds = (masterAdmins ?? []).map(u => u.user_id);
+    const candidates = [...new Set([...masterIds, ...(entry.assigned_to ? [entry.assigned_to] : [])])];
+    const { data: loginIds, error: loginError } = await supabase.rpc("ids_with_login", { _ids: candidates });
+    if (loginError) throw loginError;
+    const recipients = eligibleNotificationRecipients(
+      reminderCandidates(entry.assigned_to, loginIds ?? [], masterIds), loginIds ?? [],
+    );
 
-    const { data: masterAdmins } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "master_admin");
-
-    const recipientIds = [
-      ...new Set([
-        ...(usersWithAlerts ?? []).map((u: any) => u.user_id),
-        ...(masterAdmins ?? []).map((u: any) => u.user_id),
-      ])
-    ];
-
-    // Apply property scoping
-    const filteredRecipients = entry.property_id
-      ? await (async () => {
-          const filtered: string[] = [];
-          for (const uid of recipientIds) {
-            const isMaster = (masterAdmins ?? []).some((u: any) => u.user_id === uid);
-            if (isMaster) { filtered.push(uid); continue; }
-            const { data: prof } = await supabase
-              .from("profiles")
-              .select("assigned_property_ids")
-              .eq("id", uid)
-              .single();
-            if (prof?.assigned_property_ids?.includes(entry.property_id)) {
-              filtered.push(uid);
-            }
-          }
-          return filtered;
-        })()
-      : recipientIds;
-
-    // Insert in-app notifications
-    for (const uid of filteredRecipients) {
-      await supabase.from("notifications").insert({
-        user_id: uid,
-        title: notifTitle,
-        body: notifBody,
-        type: "maintenance_reminder",
-        action_url: "maintenance",
-        entity_id: entry.id,
-        entity_type: "planned_maintenance",
-        property_id: entry.property_id ?? null,
-      });
-    }
+    // Persistent day/event dedup: a retry must not create another row or push.
+    const { data: existing, error: dedupError } = await supabase.from("notifications")
+      .select("user_id").eq("entity_id", entry.id).eq("entity_type", "planned_maintenance")
+      .eq("type", "maintenance_reminder").eq("title", notifTitle)
+      .gte("created_at", `${todayStr}T00:00:00Z`).lt("created_at", `${todayStr}T23:59:59.999Z`).limit(1000);
+    if (dedupError) throw dedupError;
+    const alreadyNotified = new Set((existing ?? []).map(n => n.user_id));
+    const filteredRecipients = recipients.filter(id => !alreadyNotified.has(id));
+    if (!filteredRecipients.length) continue;
+    const { error: insertError } = await supabase.from("notifications").insert(filteredRecipients.map(uid => ({
+      user_id: uid, title: notifTitle, body: notifBody, type: "maintenance_reminder",
+      action_url: "maintenance", entity_id: entry.id, entity_type: "planned_maintenance",
+      property_id: entry.property_id ?? null,
+    })));
+    if (insertError) throw insertError;
 
     // Send push notifications
     if (filteredRecipients.length > 0) {
-      const projectId = Deno.env.get("SUPABASE_URL")?.match(/https:\/\/([^.]+)/)?.[1];
-      await fetch(`https://${projectId}.supabase.co/functions/v1/send-push-notification`, {
+      const response = await fetch(`${url}/functions/v1/send-push-notification`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
         body: JSON.stringify({
           recipientUserIds: filteredRecipients,
           title: notifTitle,
@@ -165,6 +140,7 @@ Deno.serve(async (req) => {
           url: "/maintenance",
         }),
       });
+      await response.text();
     }
 
     remindersTriggered++;
@@ -174,4 +150,8 @@ Deno.serve(async (req) => {
     JSON.stringify({ ok: true, autoFlipped, remindersTriggered }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
+  } catch (error) {
+    console.error("Planned reminder failed:", error);
+    return new Response(JSON.stringify({ error: "Reminder processing failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 });
