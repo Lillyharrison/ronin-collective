@@ -58,7 +58,7 @@ export function SwipeableNotificationRow({ revealed, resetEpoch, removing, onRev
           onKeyDownCapture={e => {
             if (revealed && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); onClose(); }
           }}
-        ><div className="group flex items-start">
+        ><div className={cn("group flex items-start", !destructive && "min-h-16 items-center")}>
           {children}
           <Button variant="ghost" size="icon" aria-label={ariaLabel} title={actionLabel} disabled={removing}
             onClick={e => { e.stopPropagation(); onAction(); }}
