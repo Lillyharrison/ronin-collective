@@ -61,6 +61,10 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ type: NotificationDetailType; id: string | null } | null>(null);
 
+  useEffect(() => {
+    if (!open) setDetailTarget(null);
+  }, [open]);
+
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
