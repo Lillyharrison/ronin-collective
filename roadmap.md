@@ -1,6 +1,6 @@
 # Notification details
 
-- [ ] Add phone swipe-to-reveal deletion, preserve desktop and notification opening, and verify gestures/deletion tests.
+- [x] Add phone swipe-to-reveal deletion, preserve desktop and notification opening, and verify gestures/deletion tests (24 tests and controlled phone/desktop browser checks passed).
 
 - [x] Open repair, planned maintenance, task, calendar event and birthday details above the notification list.
 - [x] Reuse repair detail loading without changing Maintenance behaviour; preserve other notification links and permissions.
