@@ -29,8 +29,8 @@ export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
     : data?.record.title || (es ? "Detalles" : "Details");
   const closeLabel = es ? "Cerrar" : "Close";
   const statuses: Record<string, string> = es
-    ? { pending: "Pendiente", in_progress: "En progreso", completed: "Completado" }
-    : { pending: "Pending", in_progress: "In progress", completed: "Completed" };
+    ? { pending: "Pendiente", in_progress: "En progreso", completed: "Completado", urgent: "Urgente" }
+    : { pending: "Pending", in_progress: "In progress", completed: "Completed", urgent: "Urgent" };
 
   return <DialogPrimitive.Root open onOpenChange={open => { if (!open) onClose(); }}>
     <DialogPrimitive.Portal>

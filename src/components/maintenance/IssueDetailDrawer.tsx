@@ -90,7 +90,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
                 <Pencil size={16} />
               </button>
             )}
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+            <button onClick={onClose} aria-label={isL ? "Cerrar" : "Close"} className="p-2 min-h-11 min-w-11 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
               <X size={16} />
             </button>
           </div>

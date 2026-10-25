@@ -26,7 +26,7 @@ it.each(["missing", "denied"])("shows the same closable missing-record state for
   if (state === "missing") mocks.fetch.mockResolvedValue(null); else mocks.fetch.mockRejectedValue(new Error("Access denied"));
   const { close } = open();
   expect(await screen.findByText("This item no longer exists, or you no longer have access to it.")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Close", exact: true }).closest("div")?.parentElement?.querySelector("button") ?? screen.getAllByRole("button", { name: "Close" })[0]);
+  fireEvent.click(screen.getAllByRole("button", { name: "Close", exact: true })[0]);
   expect(close).toHaveBeenCalled();
 });
 it("renders a compact read-only task with sender and assignee", async () => {
