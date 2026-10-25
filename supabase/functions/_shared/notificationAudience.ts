@@ -10,3 +10,8 @@ export function eligibleNotificationRecipients(
 export function reminderCandidates(assignedTo: string | null, loginIds: string[], masterAdminIds: string[]): string[] {
   return assignedTo && loginIds.includes(assignedTo) ? [assignedTo] : masterAdminIds;
 }
+
+export function pendingReminderRecipients(recipients: string[], alreadyNotifiedIds: string[]): string[] {
+  const notified = new Set(alreadyNotifiedIds);
+  return recipients.filter(id => !notified.has(id));
+}

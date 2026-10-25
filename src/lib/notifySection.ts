@@ -1,6 +1,7 @@
 /**
  * Fan-out an in-app notification to all master_admin/admin users, plus any
- * user with section_permissions[section].notifications === true.
+ * user with section_permissions[section].notifications === true, excluding
+ * specified recipients and profiles without login accounts.
  *
  * Routes through the `notify-section` edge function (service role) so it works
  * even when the caller is a staff/family member who cannot read user_roles via RLS.

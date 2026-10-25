@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { eligibleNotificationRecipients, reminderCandidates } from "../_shared/notificationAudience.ts";
+import { eligibleNotificationRecipients, reminderCandidates, pendingReminderRecipients } from "../_shared/notificationAudience.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -118,8 +118,7 @@ Deno.serve(async (req) => {
       .eq("type", "maintenance_reminder").eq("title", notifTitle)
       .gte("created_at", `${todayStr}T00:00:00Z`).lt("created_at", `${todayStr}T23:59:59.999Z`).limit(1000);
     if (dedupError) throw dedupError;
-    const alreadyNotified = new Set((existing ?? []).map(n => n.user_id));
-    const filteredRecipients = recipients.filter(id => !alreadyNotified.has(id));
+    const filteredRecipients = pendingReminderRecipients(recipients, (existing ?? []).map(n => n.user_id));
     if (!filteredRecipients.length) continue;
     const { error: insertError } = await supabase.from("notifications").insert(filteredRecipients.map(uid => ({
       user_id: uid, title: notifTitle, body: notifBody, type: "maintenance_reminder",

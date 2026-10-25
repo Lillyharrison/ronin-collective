@@ -1,9 +1,10 @@
 # Notification audience rules
 
-- [ ] Apply login filtering and multi-recipient exclusions in notify-section.
-- [ ] Prevent repair duplicates and centralize exact-date planned booking/assignment alerts across mutation paths.
-- [ ] Limit reminders to logged-in assignee or master admins, preserve status flips and deduplicate.
-- [ ] Test notification rules and verify changed edge functions.
+- [x] Apply login filtering and multi-recipient exclusions in notify-section.
+- [x] Prevent repair duplicates and centralize exact-date planned booking/assignment alerts across mutation paths.
+- [x] Limit reminders to logged-in assignee or master admins, preserve status flips and deduplicate.
+- [x] Test notification rules and deploy notify-section / planned-maintenance-reminder; unauthenticated notify-section rejects requests.
+- [ ] Verify a real signed-in create/book/recipient readback; blocked because no preview session is available and session minting finds no account for the requesting user's email.
 
 # Assignment picker eligibility
 
