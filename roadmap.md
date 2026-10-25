@@ -1,3 +1,10 @@
+# Notification audience rules
+
+- [ ] Apply login filtering and multi-recipient exclusions in notify-section.
+- [ ] Prevent repair duplicates and centralize exact-date planned booking/assignment alerts across mutation paths.
+- [ ] Limit reminders to logged-in assignee or master admins, preserve status flips and deduplicate.
+- [ ] Test notification rules and verify changed edge functions.
+
 # Assignment picker eligibility
 
 - [x] Add cached screen-access lookup and apply to task, family task, planned-maintenance and repair pickers (including Dashboard via shared IssueModal).
