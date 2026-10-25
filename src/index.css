@@ -109,12 +109,11 @@
 
 /* Notification deletion: touch gets a deliberate reveal, mouse gets inline tools. */
 .text-notification-delete-foreground { color: hsl(var(--notification-delete-foreground)); }
-.notification-desktop-delete { display: none; }
+.notification-desktop-delete { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
 /* Keyboard users can reveal the inline control without needing a swipe. */
-.notification-desktop-delete:focus-visible { display: inline-flex; }
-.notification-swipe-row:focus-within .notification-desktop-delete { display: inline-flex; }
+.notification-desktop-delete:focus-visible { position: static; width: 44px; height: 44px; clip-path: none; overflow: visible; }
 @media (hover: hover) and (pointer: fine) {
-  .notification-desktop-delete { display: inline-flex; }
+  .notification-desktop-delete { position: static; width: 44px; height: 44px; clip-path: none; overflow: visible; }
   .notification-touch-delete { display: none; }
   .notification-swipe-content { transform: none !important; }
 }
