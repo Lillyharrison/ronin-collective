@@ -7,6 +7,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useStaffSchedules } from "@/hooks/useStaffSchedules";
+import { useVisibleStaffIds } from "@/hooks/useVisibleStaffIds";
+import { rosterVisibleIds } from "@/lib/visibleStaff";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSchedulePublications } from "@/hooks/useSchedulePublications";
 
@@ -115,7 +117,8 @@ export function StaffCalendarTab({
   };
   // Backwards-compat alias for code that still references monthStart (week-view nav, etc.)
   const monthStart = rangeStart;
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [rawProfiles, setProfiles] = useState<Profile[]>([]);
+  const allowedStaffIds = useVisibleStaffIds();
   const [properties, setProperties] = useState<Property[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(true);
 
@@ -196,7 +199,7 @@ export function StaffCalendarTab({
   const monthRangeEnd = rangeEnd;
 
   const {
-    schedules, shifts, leaveRequests, loading, refetch,
+    schedules: rawSchedules, shifts: rawShifts, leaveRequests: rawLeaveRequests, loading, refetch,
     createSchedule, editSchedule, updateSchedule, deactivateSchedule,
     createShift, updateShift, deleteShift,
     submitLeaveRequest, updateLeaveRequest, reviewLeaveRequest, deleteLeaveRequest,
@@ -206,6 +209,14 @@ export function StaffCalendarTab({
     canEdit,
     calView === "month" ? monthRangeEnd : undefined
   );
+
+  // One filtered feed serves every grid, picker, leave panel and export below.
+  // Only RLS-returned shifts/patterns can establish visibility during lookup failure.
+  const visibleStaffIds = rosterVisibleIds(allowedStaffIds, userId, rawShifts, rawSchedules);
+  const profiles = rawProfiles.filter(person => visibleStaffIds.has(person.id));
+  const schedules = rawSchedules.filter(row => visibleStaffIds.has(row.staff_id));
+  const shifts = rawShifts.filter(row => visibleStaffIds.has(row.staff_id));
+  const leaveRequests = rawLeaveRequests.filter(row => visibleStaffIds.has(row.staff_id));
 
   useEffect(() => {
     setProfilesLoading(true);
@@ -276,6 +287,7 @@ export function StaffCalendarTab({
         const activeStaffIds = Array.from(
           new Set([
             ...displayShifts.map((s) => s.staff_id),
+            ...(userId ? [userId] : []),
           ])
         );
         let allStaff = profiles.filter((p) =>

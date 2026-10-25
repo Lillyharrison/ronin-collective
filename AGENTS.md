@@ -1,5 +1,7 @@
 # Architecture rules
 
+- StaffCalendarTab filters its single profile/schedule/shift/leave feed through cached user-keyed visible_staff_ids before passing data to grids, pickers and exports; fallback evidence comes only from RLS-returned shifts/patterns, never profiles or leave.
+
 - MaintenanceSection and Dashboard share repair-create notices; usePlannedMaintenance owns planned save notifications based on persisted before/after dates so modal, copy and list mutations cannot create independent broadcasts.
 - Edge notification audiences use service-role ids_with_login before inserting rows or dispatching push; shared pure recipient rules keep reminder fallback and exclusions testable without exposing login lookups to clients.
 
