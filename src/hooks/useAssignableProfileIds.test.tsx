@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ rpc: vi.fn() }));
@@ -24,8 +24,12 @@ describe("assignee eligibility lookup", () => {
   });
   it("returns null on lookup failure rather than emptying the picker", async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { message: "Unavailable" } });
-    const { result } = renderHook(() => useAssignableProfileIds(["maintenance"]), { wrapper: setup() });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const { result } = renderHook(() => useAssignableProfileIds(["maintenance"]), { wrapper });
     await waitFor(() => expect(mocks.rpc).toHaveBeenCalledOnce());
+    await act(async () => { await client.refetchQueries({ queryKey: ["assignable-profile-ids"] }); });
+    await waitFor(() => expect(client.getQueryState(["assignable-profile-ids", "tester", ["maintenance"]])?.status).toBe("error"));
     expect(result.current).toBeNull();
     expect(selectAssignableProfiles([{ id: "staff-a" }], result.current).profiles).toEqual([{ id: "staff-a" }]);
   });
