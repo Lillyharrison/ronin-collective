@@ -19,10 +19,15 @@ export interface NotifyPayload {
   property_id?: string;
 }
 
+export interface NotifyOptions {
+  excludeUserIds?: string[];
+}
+
 export async function notifySection(
   section: string | string[],
   payload: NotifyPayload,
   excludeUserId?: string | null,
+  options?: NotifyOptions,
 ): Promise<void> {
   try {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -37,7 +42,7 @@ export async function notifySection(
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ section, payload, excludeUserId }),
+      body: JSON.stringify({ section, payload, excludeUserId, excludeUserIds: options?.excludeUserIds }),
     });
 
     if (!res.ok) {
@@ -58,6 +63,7 @@ export async function notifyUsers(
   userIds: string[],
   payload: NotifyPayload,
   excludeUserId?: string | null,
+  options?: NotifyOptions,
 ): Promise<void> {
   try {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -72,7 +78,7 @@ export async function notifyUsers(
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ userIds, payload, excludeUserId }),
+      body: JSON.stringify({ userIds, payload, excludeUserId, excludeUserIds: options?.excludeUserIds }),
     });
 
     if (!res.ok) {
