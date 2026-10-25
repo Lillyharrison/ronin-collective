@@ -18,6 +18,11 @@ import { IssueModal } from "@/components/maintenance/IssueModal";
 import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
+import { SwipeableNotificationRow } from "@/components/notifications/SwipeableNotificationRow";
+import { useNotificationDetails } from "@/components/notifications/useNotificationDetails";
+import { useNotificationSwipe } from "@/components/notifications/useNotificationSwipe";
+import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
+import { isNotificationDetailType } from "@/lib/notificationDetail";
 
 interface FeedEvent {
   id: string;
@@ -176,6 +181,9 @@ export function Dashboard() {
 
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
+  const { detailTarget, openDetails, closeDetails, editPlanned } = useNotificationDetails();
+  const { revealedId, resetEpoch, closeRevealed, reveal } = useNotificationSwipe(detailTarget);
+  const dismissingIds = useRef(new Set<string>());
 
   // Smart tagline — loaded from DB (shared across all users)
   const [taglineOverride, setTaglineOverride] = useState<TaglineOverride | null>(null);
@@ -348,15 +356,27 @@ export function Dashboard() {
   const smartTagline = taglineOverride ? taglineOverride.text : getSmartTagline(language);
 
   const dismissNotif = async (id: string, notifUserId?: string) => {
-    await supabase.rpc("acknowledge_notification", { _notif_id: id });
+    if (dismissingIds.current.has(id)) return false;
+    dismissingIds.current.add(id);
+    try {
+    const { error } = await supabase.rpc("acknowledge_notification", { _notif_id: id });
+    if (error) throw error;
     if (notifUserId === userId) {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      const { error: readError } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      if (readError) throw readError;
     }
+    closeRevealed();
     setDashNotifs(prev => prev.filter(n => n.id !== id));
+    return true;
+    } catch (error) {
+      console.error("Notification dismissal failed", error);
+      return false;
+    } finally { dismissingIds.current.delete(id); }
   };
 
   const handleNotifClick = async (n: DashNotification) => {
-    await dismissNotif(n.id, n.user_id);
+    if (!await dismissNotif(n.id, n.user_id)) return;
+    if (openDetails(n)) return;
     const targetSection: ActiveSection | undefined =
       (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
       (n.action_url as ActiveSection | undefined);
@@ -635,14 +655,19 @@ export function Dashboard() {
           <div className="divide-y divide-border">
             {dashNotifs.map(n => {
               const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
-              const isClickable = !!(n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
+              const isClickable = !!(isNotificationDetailType(n.entity_type) || n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
               return (
+                <SwipeableNotificationRow key={n.id} revealed={revealedId === n.id} resetEpoch={resetEpoch}
+                  removing={false} onReveal={() => reveal(n.id)} onClose={closeRevealed}
+                  onAction={() => dismissNotif(n.id, n.user_id)} actionIcon={X}
+                  actionLabel={language === "es" ? "Descartar" : "Dismiss"}>
                 <div
-                  key={n.id}
                   onClick={isClickable ? () => handleNotifClick(n) : undefined}
                   role={isClickable ? "button" : undefined}
+                  tabIndex={isClickable ? 0 : undefined}
+                  onKeyDown={isClickable ? e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleNotifClick(n); } } : undefined}
                   className={cn(
-                    "flex items-center gap-2.5 px-4 py-2 border-l-2 group",
+                    "min-w-0 flex-1 flex items-center gap-2.5 px-4 py-2 border-l-2",
                     styles.border,
                     isClickable ? "cursor-pointer hover:bg-muted/40 active:scale-[0.99] transition-colors" : ""
                   )}
@@ -659,19 +684,15 @@ export function Dashboard() {
                       {n.body ? `${n.body} · ` : ""}Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); dismissNotif(n.id, n.user_id); }}
-                    className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100 p-0.5"
-                    aria-label="Dismiss"
-                  >
-                    <X size={12} />
-                  </button>
                 </div>
+                </SwipeableNotificationRow>
               );
             })}
           </div>
         )}
       </div>
+
+      {detailTarget && <NotificationRecordDialog target={detailTarget} onClose={closeDetails} onEditPlanned={editPlanned} />}
 
       {/* Quick Actions */}
       <div className="px-4 mt-5">
