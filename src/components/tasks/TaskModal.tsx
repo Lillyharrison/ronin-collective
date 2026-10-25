@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useContext } from "react";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
+import { useAssignableProfileIds } from "@/hooks/useAssignableProfileIds";
+import { selectAssignableProfiles, assigneeAccessNote, assigneeAccessHint } from "@/lib/assignableProfiles";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -127,12 +129,14 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const [expectedDelivery, setExpectedDelivery] = useState("");
 
   const [profiles, setProfiles]         = useState<Profile[]>([]);
+  const allowedAssigneeIds = useAssignableProfileIds(["tasks"]);
+  const assignees = selectAssignableProfiles(profiles, allowedAssigneeIds, task?.assigned_to);
   const [properties, setProperties]     = useState<Property[]>([]);
   const [checklists, setChecklists]     = useState<ChecklistTemplate[]>([]);
 
   useEffect(() => {
     Promise.all([
-      supabase.from("profiles").select("id, full_name, job_title, level").order("full_name"),
+      supabase.from("profiles").select("id, full_name, job_title, level").order("full_name").limit(500),
       supabase.from("properties").select("id, name, is_primary"),
       supabase.from("checklist_templates").select("id, title, icon").eq("is_published", true).order("sort_order"),
     ]).then(([p, pr, cl]) => {
@@ -754,8 +758,10 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
               className="w-full text-sm bg-muted border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary text-foreground"
             >
               <option value="">{isL ? "Persona específica…" : "Specific person…"}</option>
-              {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name ?? "Unknown"}{p.job_title ? ` — ${p.job_title}` : ""}</option>)}
+              {assignees.missingCurrent && task?.assigned_to && <option value={task.assigned_to}>{isL ? "Persona asignada actualmente" : "Current assignee"}{assignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>}
+              {assignees.profiles.map(p => <option key={p.id} value={p.id}>{p.full_name ?? "Unknown"}{p.job_title ? ` — ${p.job_title}` : ""}{p.id === task?.assigned_to && assignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>)}
             </select>
+            {assignees.filteredOut && <p className="text-xs text-muted-foreground">{assigneeAccessHint(["tasks"], isL)}</p>}
             {!assignedTo && (
               <div className="grid grid-cols-2 gap-2">
                 <select

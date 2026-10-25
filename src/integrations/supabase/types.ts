@@ -2486,6 +2486,10 @@ export type Database = {
       can_edit_maintenance: { Args: { _user_id: string }; Returns: boolean }
       can_edit_orders: { Args: { _user_id: string }; Returns: boolean }
       can_edit_properties: { Args: { _user_id: string }; Returns: boolean }
+      can_see_section: {
+        Args: { _section: string; _user_id: string }
+        Returns: boolean
+      }
       can_user_see_checklist: {
         Args: {
           _template_assigned_dept: string
@@ -2522,6 +2526,10 @@ export type Database = {
       }
       notify_ronin_overdue_tasks: { Args: never; Returns: undefined }
       notify_todays_birthdays: { Args: never; Returns: number }
+      profile_ids_who_can_see: {
+        Args: { _sections: string[] }
+        Returns: string[]
+      }
       prune_old_notifications: { Args: never; Returns: undefined }
       prune_old_system_events: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }

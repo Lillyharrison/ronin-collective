@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Work assignee pickers use the cached profile_ids_who_can_see RPC through useAssignableProfileIds and shared option filtering; filter inside each work modal so all profile feeds retain fallback and existing-assignee data.
+
 - Notification record viewing uses an RLS-scoped, user-keyed detail query and a higher-layer portal above the notification list; repair details share fetchIssueForDetail with Maintenance to keep joins consistent.
 - Notification surfaces share SwipeableNotificationRow, useNotificationSwipe and useNotificationDetails; surface-owned actions preserve dashboard acknowledgment versus bell deletion, while direction locking isolates gestures from navigation.
 

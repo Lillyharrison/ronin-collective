@@ -7,6 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import type { MaintenanceIssue, MaintenanceCategory, IssuePriority, IssueStatus } from "@/hooks/useMaintenanceIssues";
 import { IssueStatusBadge } from "./IssueStatusBadge";
 import { isVideoUrl } from "@/lib/imageUrl";
+import { useAssignableProfileIds } from "@/hooks/useAssignableProfileIds";
+import { selectAssignableProfiles, assigneeAccessNote, assigneeAccessHint } from "@/lib/assignableProfiles";
 
 interface Props {
   open: boolean;
@@ -28,6 +30,8 @@ function ModalContent({
   const { userId, isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
   const { t, language } = useLanguage();
   const isL = language === "es";
+  const allowedAssigneeIds = useAssignableProfileIds(["maintenance"]);
+  const assignees = selectAssignableProfiles(profiles, allowedAssigneeIds, initial.assigned_to);
   const canManageCategories = isMasterAdmin || isAdmin || isManager;
 
   const PRIORITIES: { value: IssuePriority; label: string; labelEs: string; color: string }[] = [
@@ -369,7 +373,7 @@ function ModalContent({
           </div>
 
           {/* Assign to — always shown so reporters can suggest an assignee from step one */}
-          {profiles.length > 0 && (
+          {(profiles.length > 0 || initial.assigned_to) && (
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                 {t("assignTo")}
@@ -378,8 +382,10 @@ function ModalContent({
                 style={{ fontSize: "16px" }}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]">
                 <option value="">{isL ? "Sin asignar" : "Unassigned"}</option>
-                {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {assignees.missingCurrent && initial.assigned_to && <option value={initial.assigned_to}>{initial.assignee_name || (isL ? "Persona asignada actualmente" : "Current assignee")}{assignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>}
+                {assignees.profiles.map(p => <option key={p.id} value={p.id}>{p.name}{p.id === initial.assigned_to && assignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>)}
               </select>
+              {assignees.filteredOut && <p className="text-xs text-muted-foreground mt-1">{assigneeAccessHint(["maintenance"], isL)}</p>}
             </div>
           )}
 

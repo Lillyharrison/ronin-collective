@@ -4,6 +4,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
+import { useAssignableProfileIds } from "@/hooks/useAssignableProfileIds";
+import { selectAssignableProfiles, assigneeAccessNote, assigneeAccessHint } from "@/lib/assignableProfiles";
 import { notifyUsers } from "@/lib/notifySection";
 import { cn } from "@/lib/utils";
 import { Send, User, MapPin, Clock, X } from "lucide-react";
@@ -51,6 +53,9 @@ export function FamilyTasksView() {
   const [editPropertyId, setEditPropertyId] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const allowedAssigneeIds = useAssignableProfileIds(["tasks"]);
+  const newAssignees = selectAssignableProfiles(staff, allowedAssigneeIds);
+  const editAssignees = selectAssignableProfiles(staff, allowedAssigneeIds, editingTask?.assigned_to);
 
   const openEdit = (t: SimpleTask) => {
     setEditingTask(t);
@@ -126,7 +131,7 @@ export function FamilyTasksView() {
   useEffect(() => {
     (async () => {
       const [{ data: profiles }, { data: props }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, level").order("full_name"),
+        supabase.from("profiles").select("id, full_name, level").order("full_name").limit(500),
         supabase.from("properties").select("id, name").order("sort_order").limit(50),
       ]);
       setStaff(filterAssignableStaff((profiles ?? []) as { id: string; full_name: string | null; level?: string | null }[]));
@@ -201,8 +206,9 @@ export function FamilyTasksView() {
           <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Para" : "To"}</label>
           <select className={inputCls} value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
             <option value="">{isL ? "Elegir persona" : "Choose a person"}</option>
-            {staff.map(s => <option key={s.id} value={s.id}>{s.full_name ?? "—"}</option>)}
+            {newAssignees.profiles.map(s => <option key={s.id} value={s.id}>{s.full_name ?? "—"}</option>)}
           </select>
+          {newAssignees.filteredOut && <p className="text-xs text-muted-foreground mt-1">{assigneeAccessHint(["tasks"], isL)}</p>}
         </div>
 
         <div>
@@ -315,8 +321,10 @@ export function FamilyTasksView() {
                 <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Para" : "To"}</label>
                 <select className={inputCls} value={editAssignedTo} onChange={e => setEditAssignedTo(e.target.value)}>
                   <option value="">{isL ? "Elegir persona" : "Choose a person"}</option>
-                  {staff.map(s => <option key={s.id} value={s.id}>{s.full_name ?? "—"}</option>)}
+                  {editAssignees.missingCurrent && editingTask.assigned_to && <option value={editingTask.assigned_to}>{isL ? "Persona asignada actualmente" : "Current assignee"}{editAssignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>}
+                  {editAssignees.profiles.map(s => <option key={s.id} value={s.id}>{s.full_name ?? "—"}{s.id === editingTask.assigned_to && editAssignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>)}
                 </select>
+                {editAssignees.filteredOut && <p className="text-xs text-muted-foreground mt-1">{assigneeAccessHint(["tasks"], isL)}</p>}
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Qué" : "What"}</label>
