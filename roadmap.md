@@ -1,3 +1,8 @@
+# Assignment picker eligibility
+
+- [ ] Add cached screen-access lookup and apply to task, family task, planned-maintenance and repair pickers.
+- [ ] Preserve fallback lists/current assignees, add localized hints, and test eligibility behavior.
+
 # Notification details
 
 - [x] Share swipe actions and record-detail control between dashboard and bell; preserve dismissal versus deletion.
