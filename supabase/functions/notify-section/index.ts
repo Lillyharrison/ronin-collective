@@ -50,29 +50,6 @@ serve(async (req) => {
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return new Response(JSON.stringify({ error: parsed.error.flatten() }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { section, userIds, payload, excludeUserId, excludeUserIds } = parsed.data;
-    /* Request shape:
-    {
-      section?: string | string[];
-      /** Direct recipient targeting — bypasses the section/role lookup entirely. */
-      userIds?: string[];
-      payload: {
-        title: string;
-        body?: string;
-        type?: string;
-        action_url?: string;
-        entity_id?: string;
-        entity_type?: string;
-        property_id?: string;
-      };
-      excludeUserId?: string | null;
-      /**
-       * Optional dedup key (e.g. `maintenance-create-{issueId}`).
-       * If provided and a notification with this entity_id + entity_type + property_id
-       * was already inserted within the last 10 seconds, we skip to avoid duplicates.
-       */
-      idempotencyKey?: string | null;
-    }; */
-
     const sections = Array.isArray(section)
       ? section.filter(Boolean)
       : section
