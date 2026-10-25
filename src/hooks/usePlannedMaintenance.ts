@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { notifyPlannedSaved } from "@/lib/maintenanceNotifications";
 import { enqueue } from "@/lib/offlineDB";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
@@ -118,6 +119,12 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       .select()
       .single();
     if (error) { toast.error("Failed to create planned maintenance entry"); return null; }
+    if (data && user) {
+      const { data: property } = data.property_id
+        ? await supabase.from("properties").select("name").eq("id", data.property_id).maybeSingle()
+        : { data: null };
+      await notifyPlannedSaved(null, data, user.id, property?.name);
+    }
     toast.success("Planned maintenance entry added");
     await fetch();
     return data;
@@ -192,8 +199,20 @@ export function usePlannedMaintenance(scopedPropertyIds?: string[]) {
       return true;
     }
 
-    const { error } = await supabase.from("planned_maintenance").update(allowedPatch).eq("id", id);
-    if (error) { toast.error("Failed to update entry"); return false; }
+    // Read the persisted date before writing so every caller (including list status changes)
+    // uses the same booking transition, rather than a potentially stale component snapshot.
+    const { data: previous, error: readError } = await supabase.from("planned_maintenance")
+      .select("id, title, assigned_to, property_id, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year")
+      .eq("id", id).single();
+    if (readError || !previous) { toast.error("Failed to load entry"); return false; }
+    const { data: saved, error } = await supabase.from("planned_maintenance").update(allowedPatch).eq("id", id).select().single();
+    if (error || !saved) { toast.error("Failed to update entry"); return false; }
+    if (user) {
+      const { data: property } = saved.property_id
+        ? await supabase.from("properties").select("name").eq("id", saved.property_id).maybeSingle()
+        : { data: null };
+      await notifyPlannedSaved(previous, saved, user.id, property?.name);
+    }
     toast.success("Entry updated");
     await fetch();
     return true;

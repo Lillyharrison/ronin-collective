@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "npm:zod@3";
+import { eligibleNotificationRecipients } from "../_shared/notificationAudience.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,10 +10,11 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const url = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!url || !serviceKey || !anonKey) throw new Error("Missing notification configuration");
+    const supabaseAdmin = createClient(url, serviceKey);
 
     // Verify the caller is authenticated
     const authHeader = req.headers.get("Authorization");
@@ -28,8 +26,8 @@ serve(async (req) => {
     }
 
     const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      url,
+      anonKey,
       { global: { headers: { Authorization: authHeader } } },
     );
 
@@ -41,29 +39,17 @@ serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { section, userIds, payload, excludeUserId, idempotencyKey } = body as {
-      section?: string | string[];
-      /** Direct recipient targeting — bypasses the section/role lookup entirely. */
-      userIds?: string[];
-      payload: {
-        title: string;
-        body?: string;
-        type?: string;
-        action_url?: string;
-        entity_id?: string;
-        entity_type?: string;
-        property_id?: string;
-      };
-      excludeUserId?: string | null;
-      /**
-       * Optional dedup key (e.g. `maintenance-create-{issueId}`).
-       * If provided and a notification with this entity_id + entity_type + property_id
-       * was already inserted within the last 10 seconds, we skip to avoid duplicates.
-       */
-      idempotencyKey?: string | null;
-    };
-
+    const schema = z.object({
+      section: z.union([z.string().min(1).max(100), z.array(z.string().min(1).max(100)).max(100)]).optional(),
+      userIds: z.array(z.string().uuid()).max(1000).optional(),
+      excludeUserId: z.string().uuid().nullable().optional(),
+      excludeUserIds: z.array(z.string().uuid()).max(1000).optional(),
+      idempotencyKey: z.string().nullable().optional(),
+      payload: z.object({ title: z.string().min(1).max(1000), body: z.string().max(10000).optional(), type: z.string().max(100).optional(), action_url: z.string().max(2000).optional(), entity_id: z.string().uuid().optional(), entity_type: z.string().max(100).optional(), property_id: z.string().uuid().optional() }),
+    });
+    const parsed = schema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) return new Response(JSON.stringify({ error: parsed.error.flatten() }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { section, userIds, payload, excludeUserId, excludeUserIds } = parsed.data;
     const sections = Array.isArray(section)
       ? section.filter(Boolean)
       : section
@@ -154,6 +140,10 @@ serve(async (req) => {
       if (excludeUserId) recipientSet.delete(excludeUserId);
       recipients = [...recipientSet];
     }
+
+    const { data: loginIds, error: loginError } = await supabaseAdmin.rpc("ids_with_login", { _ids: recipients });
+    if (loginError) throw loginError;
+    recipients = eligibleNotificationRecipients(recipients, loginIds ?? [], excludeUserId, excludeUserIds);
 
     if (!recipients.length) {
       return new Response(JSON.stringify({ inserted: 0, message: "No recipients found" }), {

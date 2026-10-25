@@ -2524,6 +2524,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      ids_with_login: { Args: { _ids: string[] }; Returns: string[] }
       notify_ronin_overdue_tasks: { Args: never; Returns: undefined }
       notify_todays_birthdays: { Args: never; Returns: number }
       profile_ids_who_can_see: {

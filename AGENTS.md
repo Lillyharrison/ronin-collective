@@ -1,5 +1,8 @@
 # Architecture rules
 
+- MaintenanceSection and Dashboard share repair-create notices; usePlannedMaintenance owns planned save notifications based on persisted before/after dates so modal, copy and list mutations cannot create independent broadcasts.
+- Edge notification audiences use service-role ids_with_login before inserting rows or dispatching push; shared pure recipient rules keep reminder fallback and exclusions testable without exposing login lookups to clients.
+
 - Work assignee pickers use the cached profile_ids_who_can_see RPC through useAssignableProfileIds and shared option filtering; filter inside each work modal so all profile feeds retain fallback and existing-assignee data.
 
 - Notification record viewing uses an RLS-scoped, user-keyed detail query and a higher-layer portal above the notification list; repair details share fetchIssueForDetail with Maintenance to keep joins consistent.

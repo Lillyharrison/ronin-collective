@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { IssueModal } from "@/components/maintenance/IssueModal";
 import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
+import { notifyRepairCreated } from "@/lib/maintenanceNotifications";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
 import { SwipeableNotificationRow } from "@/components/notifications/SwipeableNotificationRow";
 import { useNotificationDetails } from "@/components/notifications/useNotificationDetails";
@@ -444,7 +445,10 @@ export function Dashboard() {
           onClose={() => setReportIssueOpen(false)}
           onSave={async (payload) => {
             if (!userId) return;
-            await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+            const { data: issue, error } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
+            if (error || !issue) return false;
+            if (navigator.onLine) await notifyRepairCreated(issue, userId);
+            return true;
           }}
           categories={maintenanceCategories}
           properties={scopedProperties}
