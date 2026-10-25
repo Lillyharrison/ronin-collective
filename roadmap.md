@@ -1,3 +1,10 @@
+# House-protected roster
+
+- [x] Add cached visible_staff_ids lookup and restrictive fallback.
+- [x] Filter roster rows, pickers, leave views, exports and signed-in shared views without changing existing scope or anonymous sharing.
+- [x] Test hidden staff, own row and failed lookup behavior (11 tests passed); changed StaffCalendarTab and SharedStaffSchedule, downstream pickers/leave inherit filtered props.
+- [ ] Verify real signed-in house access; blocked because the preview has no session and the requesting user's email has no matching app account.
+
 # Notification audience rules
 
 - [x] Apply login filtering and multi-recipient exclusions in notify-section.

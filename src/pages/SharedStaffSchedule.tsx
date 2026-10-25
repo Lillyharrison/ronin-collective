@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { addDays, format, isToday, parseISO, isSameMonth, isSameYear } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useVisibleStaffIds } from "@/hooks/useVisibleStaffIds";
+import { rosterVisibleIds } from "@/lib/visibleStaff";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,11 +41,40 @@ interface EditingState {
 
 export default function SharedStaffSchedule() {
   const { token } = useParams<{ token: string }>();
+  const { userId } = usePermissions();
+  const allowedStaffIds = useVisibleStaffIds();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SharePayload | null>(null);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [viewWeekStart, setViewWeekStart] = useState<string | null>(null);
+
+  // Share payloads are token-authorized, not RLS evidence. For a signed-in
+  // viewer's fallback, query their own RLS-filtered shift/pattern rows instead.
+  const { data: fallbackRows } = useQuery({
+    queryKey: ["shared-roster-visible-evidence", userId, data?.week_start, data?.week_end],
+    enabled: Boolean(userId && data && allowedStaffIds === null),
+    staleTime: 2 * 60 * 1000,
+    retry: false,
+    queryFn: async () => {
+      if (!data) return [];
+      const [shifts, schedules] = await Promise.all([
+        supabase.from("staff_shifts").select("staff_id").gte("shift_date", data.week_start).lte("shift_date", data.week_end).limit(500),
+        supabase.from("staff_schedules").select("staff_id").eq("is_active", true).lte("effective_from", data.week_end)
+          .or(`effective_to.is.null,effective_to.gte.${data.week_start}`).limit(500),
+      ]);
+      return [...(shifts.error ? [] : shifts.data ?? []), ...(schedules.error ? [] : schedules.data ?? [])];
+    },
+  });
+  const visibleIds = rosterVisibleIds(allowedStaffIds, userId, fallbackRows ?? [], []);
+  // Anonymous share links keep their existing token-authorized behavior.
+  const rosterData = data && userId ? {
+    ...data,
+    staff: data.staff.filter(p => visibleIds.has(p.id)),
+    shifts: data.shifts.filter(s => visibleIds.has(s.staff_id)),
+    schedules: data.schedules.filter(s => visibleIds.has(s.staff_id)),
+    leave_requests: data.leave_requests.filter(s => visibleIds.has(s.staff_id)),
+  } : data;
 
   const fetchData = async (weekStart?: string) => {
     if (!token) return;
@@ -85,15 +118,15 @@ export default function SharedStaffSchedule() {
   }, [data]);
 
   const displayShifts = useMemo(() => {
-    if (!data) return [] as DisplayShift[];
-    return buildDisplayShifts(weekDays, data.schedules, data.shifts, data.leave_requests, data.staff);
-  }, [data, weekDays]);
+    if (!rosterData) return [] as DisplayShift[];
+    return buildDisplayShifts(weekDays, rosterData.schedules, rosterData.shifts, rosterData.leave_requests, rosterData.staff);
+  }, [rosterData, weekDays]);
 
   const staffToShow = useMemo(() => {
-    if (!data) return [] as Profile[];
+    if (!rosterData) return [] as Profile[];
     const ids = new Set(displayShifts.map((s) => s.staff_id));
-    return data.staff.filter((p) => ids.has(p.id));
-  }, [data, displayShifts]);
+    return rosterData.staff.filter((p) => ids.has(p.id) || p.id === userId);
+  }, [rosterData, displayShifts, userId]);
 
   // Snap the staff column to the widest name/job-title in view (avatar 24 + gap 6 + text + padding).
   const staffColWidth = useMemo(() => {
@@ -252,12 +285,12 @@ export default function SharedStaffSchedule() {
         )}
       </div>
 
-      {editing && (
+      {editing && (!userId || visibleIds.has(editing.staff_id)) && (
         <ShiftEditDialog
           token={token}
           editing={editing}
           properties={data.properties}
-          staffName={getDisplayName(data.staff.find((s) => s.id === editing.staff_id))}
+          staffName={getDisplayName(rosterData?.staff.find((s) => s.id === editing.staff_id))}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); fetchData(); }}
         />
