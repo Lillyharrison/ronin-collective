@@ -7,6 +7,8 @@ import { X, Bell, CheckCheck, Trash2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveSection } from "@/contexts/NavigationContext";
 import { useNavigate } from "react-router-dom";
+import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
+import { isNotificationDetailType, type NotificationDetailType } from "@/lib/notificationDetail";
 
 interface Notification {
   id: string;
@@ -57,6 +59,11 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<{ type: NotificationDetailType; id: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!open) setDetailTarget(null);
+  }, [open]);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -120,6 +127,11 @@ export function NotificationsPanel({ open, onClose }: Props) {
   };
 
   const handleNotificationClick = async (n: Notification) => {
+    if (isNotificationDetailType(n.entity_type)) {
+      if (!n.is_read) markRead(n.id);
+      setDetailTarget({ type: n.entity_type, id: n.entity_id });
+      return;
+    }
     const targetSection: ActiveSection | undefined =
       (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
       (n.action_url as ActiveSection | undefined);
@@ -145,7 +157,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
   };
 
   const isClickable = (n: Notification) =>
-    !!(n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
+    !!(isNotificationDetailType(n.entity_type) || n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -277,6 +289,16 @@ export function NotificationsPanel({ open, onClose }: Props) {
           )}
         </div>
       </div>
+      {detailTarget && <NotificationRecordDialog
+        target={detailTarget}
+        onClose={() => setDetailTarget(null)}
+        onEditPlanned={id => {
+          setDetailTarget(null);
+          setPendingPlannedMaintenanceEntryId(id);
+          onClose();
+          setActiveSection("maintenance");
+        }}
+      />}
     </>
   );
 }

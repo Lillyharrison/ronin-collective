@@ -19,6 +19,7 @@ import { IssueCard } from "@/components/maintenance/IssueCard";
 import { IssueModal } from "@/components/maintenance/IssueModal";
 import { IssueStatusBadge, IssuePriorityBadge } from "@/components/maintenance/IssueStatusBadge";
 import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
+import { fetchIssueForDetail } from "@/lib/fetchIssueForDetail";
 import { cn } from "@/lib/utils";
 import { notifySection, notifyUsers } from "@/lib/notifySection";
 import { useNavigation } from "@/contexts/NavigationContext";
@@ -178,31 +179,10 @@ export function MaintenanceSection() {
     }
 
     (async () => {
-      const { data } = await supabase
-        .from("maintenance_issues")
-        .select("id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, created_at, updated_at")
-        .eq("id", pendingId)
-        .maybeSingle();
+      const data = await fetchIssueForDetail(pendingId);
       if (cancelled) return;
       if (!data) { setPendingMaintenanceIssueId(null); return; }
-
-      const profileIds = [data.reported_by, data.assigned_to].filter(Boolean) as string[];
-      const [propsRes, profilesRes, relatedRes] = await Promise.all([
-        data.property_id ? supabase.from("properties").select("id, name").eq("id", data.property_id).maybeSingle() : Promise.resolve({ data: null }),
-        profileIds.length ? supabase.from("profiles").select("id, full_name, avatar_url").in("id", profileIds) : Promise.resolve({ data: [] }),
-        data.related_issue_id ? supabase.from("maintenance_issues").select("id, title").eq("id", data.related_issue_id).maybeSingle() : Promise.resolve({ data: null }),
-      ]);
-      if (cancelled) return;
-
-      const profileMap = new Map(((profilesRes.data ?? []) as StaffProfileRow[]).map((p) => [p.id, p]));
-      setDetailIssue({
-        ...(data as MaintenanceIssue),
-        property_name: propsRes.data?.name,
-        reporter_name: profileMap.get(data.reported_by)?.full_name ?? undefined,
-        assignee_name: data.assigned_to ? profileMap.get(data.assigned_to)?.full_name ?? undefined : undefined,
-        assignee_avatar: data.assigned_to ? profileMap.get(data.assigned_to)?.avatar_url ?? undefined : undefined,
-        related_issue_title: relatedRes.data?.title,
-      });
+      setDetailIssue(data);
       setActiveTab("repairs");
       setPendingMaintenanceIssueId(null);
     })();

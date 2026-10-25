@@ -1,3 +1,10 @@
+# Notification details
+
+- [x] Open repair, planned maintenance, task, calendar event and birthday details above the notification list.
+- [x] Reuse repair detail loading without changing Maintenance behaviour; preserve other notification links and permissions.
+- [x] Verify loading, inaccessible records, close-to-list, and mobile stacking with automated tests and controlled browser records.
+- [ ] Verify real signed-in notification records; blocked because the requesting user's email has no matching auth account and no session is available.
+
 # Staff schedule phone layout
 
 - [x] Add staff-by-staff weekly agenda for read-only users.

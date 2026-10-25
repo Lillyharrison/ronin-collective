@@ -2521,6 +2521,7 @@ export type Database = {
         Returns: boolean
       }
       notify_ronin_overdue_tasks: { Args: never; Returns: undefined }
+      notify_todays_birthdays: { Args: never; Returns: number }
       prune_old_notifications: { Args: never; Returns: undefined }
       prune_old_system_events: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }

@@ -17,6 +17,8 @@ interface Props {
   onArchiveToggle?: (issue: MaintenanceIssue, archived: boolean) => void | Promise<void>;
   onDelete?: (id: string) => void;
   categories: MaintenanceCategory[];
+  /** Render within an existing accessible dialog rather than creating another backdrop. */
+  embedded?: boolean;
 }
 
 const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
@@ -27,7 +29,7 @@ const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
   { value: "resolved",            label: "Resolved",              labelEs: "Resuelto" },
 ];
 
-export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onArchiveToggle, onDelete, categories: _cats }: Props) {
+export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onArchiveToggle, onDelete, categories: _cats, embedded = false }: Props) {
   const { t, language } = useLanguage();
   const isL = language === "es";
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -56,7 +58,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/70"
+    <div className={embedded ? "contents" : "fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/70"}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="w-full sm:max-w-lg bg-background rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden h-[90dvh] sm:h-auto sm:max-h-[90dvh]">
         {/* Header */}
@@ -88,7 +90,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
                 <Pencil size={16} />
               </button>
             )}
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+            <button onClick={onClose} aria-label={isL ? "Cerrar" : "Close"} className="p-2 min-h-11 min-w-11 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
               <X size={16} />
             </button>
           </div>
