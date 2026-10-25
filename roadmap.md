@@ -1,3 +1,9 @@
+# House-protected roster
+
+- [ ] Add cached visible_staff_ids lookup and restrictive fallback.
+- [ ] Filter roster rows, pickers, leave views, exports and shared views without changing existing scope.
+- [ ] Test hidden staff, own row and failed lookup behavior; report affected components.
+
 # Notification audience rules
 
 - [x] Apply login filtering and multi-recipient exclusions in notify-section.
