@@ -1,7 +1,8 @@
 # Assignment picker eligibility
 
-- [ ] Add cached screen-access lookup and apply to task, family task, planned-maintenance and repair pickers.
-- [ ] Preserve fallback lists/current assignees, add localized hints, and test eligibility behavior.
+- [x] Add cached screen-access lookup and apply to task, family task, planned-maintenance and repair pickers (including Dashboard via shared IssueModal).
+- [x] Preserve fallback lists/current assignees, add localized hints, and test eligibility behavior (10 eligibility tests, 11 dashboard regression tests and controlled phone/desktop checks passed).
+- [ ] Verify eligibility against real signed-in accounts; blocked because the requesting user's email has no matching auth account and no session is available.
 
 # Notification details
 
