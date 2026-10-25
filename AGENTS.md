@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Notification record viewing uses an RLS-scoped, user-keyed detail query and a higher-layer portal above the notification list; repair details share fetchIssueForDetail with Maintenance to keep joins consistent.
+- Notification swipe state is panel-controlled, with row-local direction locking; confirmed deletes collapse rows, keeping gestures isolated from record navigation.
 
 - Keep phone-specific weekly staff schedule rendering in MobileStaffWeek, reusing the existing schedule data and edit callbacks; this preserves desktop rendering and existing visibility permissions.
 - Reusable property shopping lists live in Orders & Deliveries, but retain checklist_templates with kind='order_list' and order_list_items as their single data source; standard checklist queries exclude that kind to avoid duplicate workflows.
