@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(), section: vi.fn(), repair: vi.fn(), planned: vi.fn(), task: vi.fn(),
-  update: vi.fn(), notifications: [] as Record<string, unknown>[],
+  update: vi.fn(), deleted: vi.fn(), deleteError: null as unknown, notifications: [] as Record<string, unknown>[],
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
 vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isMasterAdmin: true }) }));
@@ -16,8 +16,8 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
     const chain = {
       select: () => chain, eq: () => chain, gte: () => chain, lt: () => chain,
       order: () => chain, limit: () => Promise.resolve({ data: mocks.notifications }),
-      delete: () => chain, update: (patch: unknown) => { mocks.update(patch); return chain; },
-      then: (resolve: (value: unknown) => void) => Promise.resolve({ error: null }).then(resolve),
+      delete: () => { mocks.deleted(); return chain; }, update: (patch: unknown) => { mocks.update(patch); return chain; },
+      then: (resolve: (value: unknown) => void) => Promise.resolve({ error: mocks.deleteError }).then(resolve),
     };
     return chain;
   },
@@ -30,7 +30,7 @@ vi.mock("@/components/NotificationRecordDialog", () => ({
 }));
 import { NotificationsPanel } from "./NotificationsPanel";
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); mocks.deleteError = null; });
 afterEach(cleanup);
 function notification(type: string, id: string | null = "record-id") {
   mocks.notifications = [{ id: "notice-id", title: "Test notice", body: null, type: "info", is_read: false,
@@ -83,5 +83,90 @@ describe("notification detail routing", () => {
     expect(mocks.planned).toHaveBeenCalledWith("record-id");
     expect(mocks.section).toHaveBeenCalledWith("maintenance");
     expect(close).toHaveBeenCalledOnce();
+  });
+});
+
+function swipe(title: string, dx: number, dy = 0) {
+  const row = screen.getByText(title).closest(".notification-swipe-content");
+  if (!row) throw new Error("Missing notification row");
+  fireEvent.touchStart(row, { touches: [{ clientX: 200, clientY: 100 }] });
+  fireEvent.touchMove(row, { touches: [{ clientX: 200 + dx, clientY: 100 + dy }] });
+  fireEvent.touchEnd(row, { changedTouches: [{ clientX: 200 + dx, clientY: 100 + dy }] });
+  return row;
+}
+
+describe("notification swipe deletion", () => {
+  it("reveals after a 40px left swipe, never deletes on a full swipe", async () => {
+    notification("task");
+    render(<NotificationsPanel open onClose={vi.fn()} />);
+    await screen.findByText("Test notice");
+    const before = mocks.deleted.mock.calls.length;
+    const row = swipe("Test notice", -40);
+    expect(row.parentElement).toHaveAttribute("data-revealed", "true");
+    expect(screen.getAllByRole("button", { name: "Delete notification" })[0]).not.toHaveAttribute("aria-hidden", "true");
+    swipe("Test notice", -200);
+    expect(mocks.deleted).toHaveBeenCalledTimes(before);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+  it("tapping a revealed row closes it without reading or opening details", async () => {
+    notification("task");
+    render(<NotificationsPanel open onClose={vi.fn()} />);
+    await screen.findByText("Test notice");
+    const row = swipe("Test notice", -60);
+    fireEvent.click(screen.getByText("Test notice"));
+    expect(row.parentElement).toHaveAttribute("data-revealed", "false");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mocks.update).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("Test notice"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+  it("deletes using the revealed button and refreshes the badge", async () => {
+    notification("task");
+    const changed = vi.fn();
+    window.addEventListener("ronin:notifications-changed", changed);
+    render(<NotificationsPanel open onClose={vi.fn()} />);
+    await screen.findByText("Test notice");
+    const before = mocks.deleted.mock.calls.length;
+    swipe("Test notice", -60);
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete notification" })[0]);
+    await waitFor(() => expect(screen.queryByText("Test notice")).not.toBeInTheDocument());
+    expect(mocks.deleted).toHaveBeenCalledTimes(before + 1);
+    expect(changed).toHaveBeenCalledOnce();
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    window.removeEventListener("ronin:notifications-changed", changed);
+  });
+  it("does not reveal for short or predominantly vertical gestures", async () => {
+    notification("task");
+    render(<NotificationsPanel open onClose={vi.fn()} />);
+    await screen.findByText("Test notice");
+    expect(swipe("Test notice", -39).parentElement).toHaveAttribute("data-revealed", "false");
+    expect(swipe("Test notice", -60, 100).parentElement).toHaveAttribute("data-revealed", "false");
+  });
+  it("closes the previous row when another opens and closes on scroll", async () => {
+    notification("task");
+    mocks.notifications.push({ ...mocks.notifications[0], id: "second-id", title: "Second notice" });
+    render(<NotificationsPanel open onClose={vi.fn()} />);
+    await screen.findByText("Test notice");
+    const first = swipe("Test notice", -60);
+    const second = swipe("Second notice", -60);
+    expect(first.parentElement).toHaveAttribute("data-revealed", "false");
+    expect(second.parentElement).toHaveAttribute("data-revealed", "true");
+    const list = second.closest(".overflow-y-auto");
+    if (!list) throw new Error("Missing notification list");
+    fireEvent.scroll(list);
+    expect(second.parentElement).toHaveAttribute("data-revealed", "false");
+  });
+  it("keeps a notification if its delete request fails", async () => {
+    notification("task");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<NotificationsPanel open onClose={vi.fn()} />);
+    await screen.findByText("Test notice");
+    mocks.deleteError = { message: "Denied" };
+    swipe("Test notice", -60);
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete notification" })[0]);
+    await waitFor(() => expect(log).toHaveBeenCalled());
+    expect(screen.getByText("Test notice")).toBeInTheDocument();
+    log.mockRestore();
   });
 });
