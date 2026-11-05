@@ -928,8 +928,20 @@ serve(async (req) => {
           // Copy profile to the new auth uid and delete the old orphan profile
           const { data: oldProfile } = await adminClient.from("profiles").select("*").eq("id", profile_id).maybeSingle();
           if (oldProfile) {
-            await adminClient.from("profiles").insert({ ...oldProfile, id: inviteData.user.id, is_draft: false });
-            await adminClient.from("user_roles").update({ user_id: inviteData.user.id }).eq("user_id", profile_id);
+            const newUid = inviteData.user.id;
+            // The signup trigger already created a blank profile + default role for newUid,
+            // so upsert (overwrite) instead of insert, and abort before deleting on failure.
+            const { created_at: _c, updated_at: _u, ...rest } = oldProfile as Record<string, unknown>;
+            const { error: copyErr } = await adminClient.from("profiles").upsert({ ...rest, id: newUid, is_draft: false }, { onConflict: "id" });
+            if (copyErr) return new Response(JSON.stringify({ error: `Invite sent but profile copy failed: ${copyErr.message}` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            const finalRole = role || (await adminClient.from("user_roles").select("role").eq("user_id", profile_id).maybeSingle()).data?.role;
+            await adminClient.from("user_roles").delete().eq("user_id", newUid);
+            await adminClient.from("user_roles").delete().eq("user_id", profile_id);
+            if (finalRole) await adminClient.from("user_roles").insert({ user_id: newUid, role: finalRole });
+            for (const t of ["staff_shifts", "staff_schedules", "staff_leave_requests"]) {
+              await adminClient.from(t).update({ staff_id: newUid }).eq("staff_id", profile_id);
+            }
+            await adminClient.from("user_section_permissions").delete().eq("user_id", profile_id);
             await adminClient.from("profiles").delete().eq("id", profile_id);
             // Now that the auth user exists, write permissions to the new uid
             await writeSectionPermissionRows(adminClient, inviteData.user.id, section_permissions_rows);
