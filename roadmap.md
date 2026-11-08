@@ -1,5 +1,11 @@
 # House-protected roster
 
+# Casual staff time tracking
+
+- [ ] Add bilingual dashboard clock, local-time corrections and durable per-user offline queue.
+- [ ] Add visits/month reminder function and notification destinations without database changes.
+- [ ] Test clock states, queue ordering/retries and reminder rules; verify and report deployment.
+
 - [x] Add cached visible_staff_ids lookup and restrictive fallback.
 - [x] Filter roster rows, pickers, leave views, exports and signed-in shared views without changing existing scope or anonymous sharing.
 - [x] Test hidden staff, own row and failed lookup behavior (11 tests passed); changed StaffCalendarTab and SharedStaffSchedule, downstream pickers/leave inherit filtered props.

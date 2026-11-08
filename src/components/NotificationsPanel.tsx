@@ -42,6 +42,8 @@ const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
 
 /** Sections that can be deep-linked by entity_id stored in NavigationContext */
 const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
+  clock_reminder:       "dashboard",
+  timesheet:            "staff-schedule",
   maintenance_issue:   "maintenance",
   planned_maintenance: "maintenance",
   task:                "tasks",

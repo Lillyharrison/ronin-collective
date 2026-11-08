@@ -21,6 +21,7 @@ vi.mock("@/hooks/useScopedProperties", () => ({ useScopedProperties: () => ({ pr
 vi.mock("@/hooks/usePropertyRules", () => ({ useActiveRulesForDashboard: () => [] }));
 vi.mock("@/hooks/useMaintenanceIssues", () => ({ useMaintenanceIssues: () => ({ categories: [], createIssue: vi.fn() }) }));
 vi.mock("@/components/maintenance/IssueModal", () => ({ IssueModal: () => null }));
+vi.mock("@/components/clock/ClockCard", () => ({ ClockCard: () => null }));
 vi.mock("@/components/NotificationRecordDialog", () => ({
   NotificationRecordDialog: ({ target, onClose, onEditPlanned }: { target: { type: string; id: string | null }; onClose: () => void; onEditPlanned: (id: string) => void }) =>
     <div role="dialog">{target.type}:{target.id}<button onClick={onClose}>Close details</button><button onClick={() => onEditPlanned(target.id ?? "")}>Edit planned</button></div>,
@@ -64,6 +65,12 @@ function swipe(title = "Test notice") {
 }
 
 describe("dashboard notifications", () => {
+  it.each([['clock_reminder','dashboard'],['timesheet','staff-schedule']])('routes %s without opening details', async (type,section) => {
+    notice(type,type==='clock_reminder'?'home':'staff-schedule');render(<Dashboard />);
+    fireEvent.click(await screen.findByText('Test notice'));
+    await waitFor(()=>expect(mocks.section).toHaveBeenCalledWith(section));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
   it.each(["maintenance_issue", "planned_maintenance", "task", "calendar_event", "birthday"])("acknowledges and opens %s details without navigating", async type => {
     notice(type, type === "birthday" ? "home" : null);
     render(<Dashboard />);

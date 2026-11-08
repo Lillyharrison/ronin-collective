@@ -24,6 +24,7 @@ import { useNotificationDetails } from "@/components/notifications/useNotificati
 import { useNotificationSwipe } from "@/components/notifications/useNotificationSwipe";
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
+import { ClockCard } from "@/components/clock/ClockCard";
 
 interface FeedEvent {
   id: string;
@@ -55,6 +56,8 @@ interface PrincipalLocation {
 }
 
 const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
+  clock_reminder: "dashboard",
+  timesheet: "staff-schedule",
   maintenance_issue: "maintenance",
   task:              "tasks",
   order:             "orders",
@@ -438,6 +441,7 @@ export function Dashboard() {
 
   return (
     <div className="animate-fade-in pb-4">
+      <ClockCard />
       {/* Quick-log Report Issue modal — triggered from dashboard quick action */}
       {reportIssueOpen && (
         <IssueModal

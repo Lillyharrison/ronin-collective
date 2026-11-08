@@ -1,0 +1,10 @@
+import {it,expect} from 'vitest';
+import {startWindow,endDue,keys,localNow,previousMonth,visitWords,monthWords} from '../../../supabase/functions/time-tracking-reminders/logic';
+it('start window includes -15 and +30, excludes outside',()=>{expect(startWindow(465,480)).toBe(true);expect(startWindow(510,480)).toBe(true);expect(startWindow(464,480)).toBe(false);expect(startWindow(511,480)).toBe(false);});
+it('end starts 15 minutes after scheduled end',()=>{expect(endDue(new Date('2026-11-08T16:14Z'),'UTC','2026-11-08','16:00')).toBe(false);expect(endDue(new Date('2026-11-08T16:15Z'),'UTC','2026-11-08','16:00')).toBe(true);});
+it('end handles overnight visits',()=>{expect(endDue(new Date('2026-11-09T00:15Z'),'UTC','2026-11-08','00:00','20:00')).toBe(true);expect(endDue(new Date('2026-11-08T23:00Z'),'UTC','2026-11-08','00:00','20:00')).toBe(false);});
+it('invalid timezones use UTC',()=>expect(localNow(new Date('2026-11-08T12:00Z'),'invalid')).toEqual({date:'2026-11-08',minutes:720}));
+it('property local date can differ from UTC',()=>expect(localNow(new Date('2026-11-09T01:00Z'),'America/New_York').date).toBe('2026-11-08'));
+it('previous month handles January',()=>expect(previousMonth(new Date('2027-01-04T12:00Z'))).toBe('2026-12-01'));
+it('keys are visit, entry and recipient specific',()=>{expect(keys.start('s','2026-11-08','p')).toBe('start:s:2026-11-08:p');expect(keys.end('e')).toBe('end:e');expect(keys.month(false,'s','2026-10-01','r')).toBe('month_ready:s:2026-10-01:r');expect(keys.month(true,'s','2026-10-01','r')).toBe('month_nudge:s:2026-10-01:r');});
+it('Spanish and English reminder wording',()=>{expect(visitWords('start',true,'502 Park','08:00').body).toBe('A las 8:00 am. Toca para empezar.');expect(visitWords('end',false,'502 Park','16:00').title).toBe('Finished for today?');expect(monthWords(false,false,'Mercy','2026-10-01',8.25,0).body).toBe('8.25 h, everything looks clear');expect(monthWords(true,true,'Mercy','2026-10-01',8.25,2).body).toBe('8.25 h, 2 necesitan atención');});

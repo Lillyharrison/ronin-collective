@@ -38,6 +38,12 @@ function notification(type: string, id: string | null = "record-id") {
 }
 
 describe("notification detail routing", () => {
+  it.each([['clock_reminder','dashboard'],['timesheet','staff-schedule']])('routes %s directly', async (type,section) => {
+    notification(type);const close=vi.fn();render(<NotificationsPanel open onClose={close}/>);
+    fireEvent.click(await screen.findByText('Test notice'));
+    expect(mocks.section).toHaveBeenCalledWith(section);expect(close).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
   it.each(["maintenance_issue", "planned_maintenance", "task", "calendar_event", "birthday"])("opens %s over the list without navigating", async type => {
     notification(type);
     const close = vi.fn();
