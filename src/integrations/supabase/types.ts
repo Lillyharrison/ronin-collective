@@ -1314,6 +1314,9 @@ export type Database = {
       profiles: {
         Row: {
           annual_leave_days: number | null
+          archive_note: string | null
+          archived_at: string | null
+          archived_by: string | null
           assigned_property_ids: string[] | null
           avatar_url: string | null
           birthday: string | null
@@ -1323,9 +1326,12 @@ export type Database = {
           department: string | null
           full_name: string | null
           id: string
+          is_archived: boolean
           is_draft: boolean
           job_title: string | null
+          keep_until: string | null
           language_pref: Database["public"]["Enums"]["language_pref"]
+          left_on: string | null
           level: string | null
           notes: string | null
           phone: string | null
@@ -1336,6 +1342,9 @@ export type Database = {
         }
         Insert: {
           annual_leave_days?: number | null
+          archive_note?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_property_ids?: string[] | null
           avatar_url?: string | null
           birthday?: string | null
@@ -1345,9 +1354,12 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id: string
+          is_archived?: boolean
           is_draft?: boolean
           job_title?: string | null
+          keep_until?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
+          left_on?: string | null
           level?: string | null
           notes?: string | null
           phone?: string | null
@@ -1358,6 +1370,9 @@ export type Database = {
         }
         Update: {
           annual_leave_days?: number | null
+          archive_note?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_property_ids?: string[] | null
           avatar_url?: string | null
           birthday?: string | null
@@ -1367,9 +1382,12 @@ export type Database = {
           department?: string | null
           full_name?: string | null
           id?: string
+          is_archived?: boolean
           is_draft?: boolean
           job_title?: string | null
+          keep_until?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
+          left_on?: string | null
           level?: string | null
           notes?: string | null
           phone?: string | null
@@ -2482,6 +2500,26 @@ export type Database = {
         Args: { _draft_id: string; _new_id: string }
         Returns: Json
       }
+      archive_blockers: { Args: { _profile_id: string }; Returns: Json }
+      archive_profile: {
+        Args: {
+          _keep_until?: string
+          _left_on: string
+          _note?: string
+          _profile_id: string
+        }
+        Returns: Json
+      }
+      archive_profile_core: {
+        Args: {
+          _actor: string
+          _keep_until: string
+          _left_on: string
+          _note: string
+          _profile_id: string
+        }
+        Returns: Json
+      }
       batch_mark_messages_seen: {
         Args: { _message_ids: string[]; _user_id: string }
         Returns: undefined
@@ -2543,6 +2581,7 @@ export type Database = {
       prune_old_system_events: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      unarchive_profile: { Args: { _profile_id: string }; Returns: undefined }
       user_can_access_property: {
         Args: { _property_id: string; _user_id: string }
         Returns: boolean
