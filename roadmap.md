@@ -49,3 +49,9 @@
 - [x] Atomic activate_draft_profile function (service role only), verified in a rolled-back transaction.
 - [x] ronin-ai calls it, checks result, removes new login on failure; drawer uses new id.
 - [ ] Live invite of a real draft not exercised (would send a real email).
+
+# Archive people who leave
+
+- [x] Archive dialog with open-work check, Archived view with history and restore (admins only).
+- [x] Hide archived people from team list, assignee pickers, chat pickers and birthdays; history names untouched.
+- [ ] Click-through as a signed-in admin not done (no preview session).

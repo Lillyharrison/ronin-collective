@@ -124,7 +124,7 @@ export function MaintenanceSection() {
     supabase.from("properties").select("id, name, is_primary")
       .then(({ data }) => setAllProperties(sortProperties((data ?? []) as { id: string; name: string; is_primary?: boolean }[])));
     // Family members (principal / extended_family) are never assigned maintenance work — exclude from picker.
-    supabase.from("profiles").select("id, full_name, avatar_url, level").order("full_name").limit(500)
+    supabase.from("profiles").select("id, full_name, avatar_url, level, is_archived").order("full_name").limit(500)
       .then(({ data }) => setProfiles(filterAssignableStaff((data ?? []) as StaffProfileRow[]).map((p) => ({
         id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url,
       }))));

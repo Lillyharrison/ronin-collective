@@ -136,7 +136,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
   useEffect(() => {
     Promise.all([
-      supabase.from("profiles").select("id, full_name, job_title, level").order("full_name").limit(500),
+      supabase.from("profiles").select("id, full_name, job_title, level, is_archived").order("full_name").limit(500),
       supabase.from("properties").select("id, name, is_primary"),
       supabase.from("checklist_templates").select("id, title, icon").eq("is_published", true).order("sort_order"),
     ]).then(([p, pr, cl]) => {

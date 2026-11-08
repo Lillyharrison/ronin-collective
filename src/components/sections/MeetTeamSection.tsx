@@ -23,6 +23,7 @@ import {
   PropertyToggles, QuickActionToggles, FieldLabel,
 } from "@/components/team/teamSharedComponents";
 import { MemberEditDrawer } from "@/components/team/MemberEditDrawer";
+import { ArchiveMemberDialog, ArchivedMembersList, fetchArchivedMembers, type ArchivedMember } from "@/components/team/ArchiveMember";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,14 @@ export function MeetTeamSection() {
     "meet-team:collapsed-groups",
     { master_admin: true, admin: true, principal: true, extended_family: true, manager: true, staff: true }
   );
+  const [showArchived, setShowArchived] = useState(false);
+  const [archived, setArchived] = useState<ArchivedMember[]>([]);
+  const [archiveTarget, setArchiveTarget] = useState<TeamMember | null>(null);
+  const canArchive = isMasterAdmin || isAdmin;
+  async function loadArchived() {
+    try { setArchived(await fetchArchivedMembers()); } catch (e) { console.error("load archived", e); }
+  }
+  useEffect(() => { if (canArchive) void loadArchived(); }, [canArchive]);
   const toggleGroup = (key: string) => setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }));
 
   const [form, setForm] = useState<AddUserForm>({
@@ -76,6 +85,7 @@ export function MeetTeamSection() {
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days")
+      .eq("is_archived", false)
       .order("full_name");
 
     if (!profiles) return;
@@ -243,8 +253,27 @@ export function MeetTeamSection() {
         ))}
       </div>
 
+      {canArchive && (
+        <div className="px-4 pb-3">
+          <button
+            type="button"
+            onClick={() => setShowArchived(v => !v)}
+            aria-pressed={showArchived}
+            className={`text-[11px] font-semibold ${showArchived ? "text-gold" : "text-muted-foreground"}`}
+          >
+            {showArchived ? (isEN ? "← Back to team" : "← Volver al equipo") : `${isEN ? "Archived" : "Archivados"} (${archived.length})`}
+          </button>
+        </div>
+      )}
+
+      {canArchive && showArchived && (
+        <div className="px-4">
+          <ArchivedMembersList members={archived} isEN={isEN} onRestored={() => { void loadArchived(); void loadMembers(); }} />
+        </div>
+      )}
+
       {/* Team list grouped by level */}
-      <div className="px-4 space-y-5">
+      <div className={`px-4 space-y-5 ${canArchive && showArchived ? "hidden" : ""}`}>
         {levelOrder.map(lvl => {
           const group = groups[lvl];
           if (!group?.length) return null;
@@ -318,6 +347,20 @@ export function MeetTeamSection() {
         )}
       </div>
 
+      {archiveTarget && (
+        <ArchiveMemberDialog
+          member={archiveTarget}
+          isEN={isEN}
+          open={!!archiveTarget}
+          onOpenChange={o => { if (!o) setArchiveTarget(null); }}
+          onArchived={id => {
+            setMembers(prev => prev.filter(m => m.id !== id));
+            setSelectedMember(null);
+            void loadArchived();
+          }}
+        />
+      )}
+
       {/* ── Add User Modal ─────────────────────────────────────────────────── */}
       {showAdd && (
         <AddUserModal
@@ -339,6 +382,7 @@ export function MeetTeamSection() {
           isMasterAdmin={isMasterAdmin}
           onClose={() => setSelectedMember(null)}
           onDeleted={async () => { await loadMembers(); setSelectedMember(null); }}
+          onArchive={canArchive && selectedMember.role !== "master_admin" ? () => setArchiveTarget(selectedMember) : undefined}
           onSaved={async (updated) => {
             await loadMembers();
             setSelectedMember(null);

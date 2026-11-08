@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  X, Check, Eye, Pencil, Bell, Save, Loader2, Trash2, Mail,
+  X, Check, Eye, Pencil, Bell, Save, Loader2, Trash2, Mail, Archive,
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
   PropertyToggles, QuickActionToggles, FieldLabel, EditField,
 } from "./teamSharedComponents";
 
-export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted }: {
+export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted, onArchive }: {
   member: TeamMember;
   properties: Property[];
   isEN: boolean;
@@ -28,6 +28,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   onClose: () => void;
   onSaved: (updated: TeamMember) => void;
   onDeleted: () => void;
+  onArchive?: () => void;
 }) {
   const [tab, setTab] = useState<"details" | "access" | "quickactions">("details");
   const [saving, setSaving] = useState(false);
@@ -786,6 +787,12 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
               {saving ? (isEN ? "Saving…" : "Guardando…") : (isDraft ? (isEN ? "Save Draft" : "Guardar Borrador") : (isEN ? "Save Changes" : "Guardar Cambios"))}
             </Button>
+            {onArchive && !deleteDialogOpen && (
+              <Button type="button" variant="outline" disabled={deleting || saving} onClick={onArchive} className="w-full">
+                <Archive size={16} className="mr-2" />
+                {isEN ? "Archive (left)" : "Archivar (salió)"}
+              </Button>
+            )}
             {isMasterAdmin && !deleteDialogOpen && (
               <Button
                 type="button"

@@ -68,6 +68,7 @@ export function ChatInfoPanel({
     supabase
       .from("profiles")
       .select("id, full_name, avatar_url")
+      .eq("is_archived", false)
       .order("full_name")
       .limit(500)
       .then(({ data }) => setAllProfiles(data ?? []));

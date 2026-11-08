@@ -429,7 +429,7 @@ export function Dashboard() {
   // Load assignable staff only when the quick "Report issue" form opens.
   useEffect(() => {
     if (!reportIssueOpen || issueAssignees.length > 0) return;
-    supabase.from("profiles").select("id, full_name, avatar_url, level").order("full_name").limit(500)
+    supabase.from("profiles").select("id, full_name, avatar_url, level, is_archived").order("full_name").limit(500)
       .then(({ data }) => setIssueAssignees(
         filterAssignableStaff((data ?? []) as { id: string; full_name: string | null; avatar_url: string | null; level: string | null }[])
           .map(p => ({ id: p.id, name: p.full_name ?? "Unknown", avatar: p.avatar_url })),

@@ -1263,7 +1263,7 @@ export function CalendarSection() {
         .lte("start_date", monthEnd.toISOString())
         .order("start_date")
         .limit(500),
-      supabase.from("profiles").select("id, full_name, birthday, avatar_url, job_title"),
+      supabase.from("profiles").select("id, full_name, birthday, avatar_url, job_title, is_archived"),
       supabase.from("maintenance_issues").select("id, title, scheduled_date, status, priority, property_id")
         .not("scheduled_date", "is", null)
         .gte("scheduled_date", monthStart.toISOString())
@@ -1317,7 +1317,7 @@ export function CalendarSection() {
     }
 
     for (const p of profiles ?? []) {
-      if (!p.birthday || !p.full_name) continue;
+      if (!p.birthday || !p.full_name || p.is_archived) continue;
       try {
         const bDay = parseISO(p.birthday);
         const thisYearBday = new Date(getYear(currentMonth), getMonth(bDay), getDate(bDay));

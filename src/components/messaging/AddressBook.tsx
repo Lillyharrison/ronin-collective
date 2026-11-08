@@ -40,6 +40,7 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
           .from("profiles")
           .select("id, full_name, avatar_url, level, job_title, department")
           .neq("id", currentUserId)
+          .eq("is_archived", false)
           .order("full_name"),
         supabase
           .from("chat_threads")

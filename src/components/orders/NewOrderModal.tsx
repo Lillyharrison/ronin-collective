@@ -46,7 +46,7 @@ export function NewOrderModal({ open, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    supabase.from("profiles").select("id, full_name, level").order("full_name").then(({ data }) => {
+    supabase.from("profiles").select("id, full_name, level, is_archived").order("full_name").then(({ data }) => {
       setStaff(filterAssignableStaff((data as any[]) ?? []) as any);
     });
   }, [open]);

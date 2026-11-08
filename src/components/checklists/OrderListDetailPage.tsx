@@ -299,7 +299,7 @@ function OrderListEditor({ template, currentIds, onClose, onSaved, onDeleted }: 
         .in("role", ["master_admin", "admin", "manager"]).limit(200);
       const ids = Array.from(new Set((roles ?? []).map(r => r.user_id)));
       if (!ids.length) return;
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, level").in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, level, is_archived").in("id", ids);
       setPeople(filterAssignableStaff((profs ?? []) as any[]).sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "")));
     })();
   }, []);

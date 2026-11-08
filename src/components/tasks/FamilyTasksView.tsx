@@ -131,7 +131,7 @@ export function FamilyTasksView() {
   useEffect(() => {
     (async () => {
       const [{ data: profiles }, { data: props }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, level").order("full_name").limit(500),
+        supabase.from("profiles").select("id, full_name, level, is_archived").order("full_name").limit(500),
         supabase.from("properties").select("id, name").order("sort_order").limit(50),
       ]);
       setStaff(filterAssignableStaff((profiles ?? []) as { id: string; full_name: string | null; level?: string | null }[]));
