@@ -1404,9 +1404,12 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          geofence_radius_m: number
           id: string
           image_url: string | null
           is_primary: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
           occupied_by: string | null
           occupied_by_profile_id: string | null
@@ -1421,9 +1424,12 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          geofence_radius_m?: number
           id?: string
           image_url?: string | null
           is_primary?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
           occupied_by?: string | null
           occupied_by_profile_id?: string | null
@@ -1438,9 +1444,12 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          geofence_radius_m?: number
           id?: string
           image_url?: string | null
           is_primary?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           occupied_by?: string | null
           occupied_by_profile_id?: string | null
@@ -1952,6 +1961,39 @@ export type Database = {
           },
         ]
       }
+      staff_time_settings: {
+        Row: {
+          created_at: string
+          currency: string
+          hourly_rate: number | null
+          payee_name: string | null
+          rounding_minutes: number
+          staff_id: string
+          time_tracking: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          hourly_rate?: number | null
+          payee_name?: string | null
+          rounding_minutes?: number
+          staff_id: string
+          time_tracking?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          hourly_rate?: number | null
+          payee_name?: string | null
+          rounding_minutes?: number
+          staff_id?: string
+          time_tracking?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_events: {
         Row: {
           ai_response: string | null
@@ -2132,6 +2174,302 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entries: {
+        Row: {
+          adj_in: string | null
+          adj_out: string | null
+          adj_reason: string | null
+          approved_at: string | null
+          approved_by: string | null
+          clock_in: string
+          clock_out: string | null
+          created_at: string
+          created_by: string | null
+          flags: string[]
+          id: string
+          in_distance_m: number | null
+          in_status: string | null
+          note: string | null
+          out_distance_m: number | null
+          out_status: string | null
+          property_id: string
+          reason: string | null
+          rounded_hours: number | null
+          schedule_id: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          shift_id: string | null
+          source: string
+          staff_id: string
+          status: string
+          timesheet_id: string | null
+          updated_at: string
+          visit_date: string
+        }
+        Insert: {
+          adj_in?: string | null
+          adj_out?: string | null
+          adj_reason?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          clock_in: string
+          clock_out?: string | null
+          created_at?: string
+          created_by?: string | null
+          flags?: string[]
+          id?: string
+          in_distance_m?: number | null
+          in_status?: string | null
+          note?: string | null
+          out_distance_m?: number | null
+          out_status?: string | null
+          property_id: string
+          reason?: string | null
+          rounded_hours?: number | null
+          schedule_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          shift_id?: string | null
+          source?: string
+          staff_id: string
+          status?: string
+          timesheet_id?: string | null
+          updated_at?: string
+          visit_date: string
+        }
+        Update: {
+          adj_in?: string | null
+          adj_out?: string | null
+          adj_reason?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          created_by?: string | null
+          flags?: string[]
+          id?: string
+          in_distance_m?: number | null
+          in_status?: string | null
+          note?: string | null
+          out_distance_m?: number | null
+          out_status?: string | null
+          property_id?: string
+          reason?: string | null
+          rounded_hours?: number | null
+          schedule_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          shift_id?: string | null
+          source?: string
+          staff_id?: string
+          status?: string
+          timesheet_id?: string | null
+          updated_at?: string
+          visit_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "staff_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entry_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          entry_id: string | null
+          id: string
+          staff_id: string | null
+          timesheet_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          entry_id?: string | null
+          id?: string
+          staff_id?: string | null
+          timesheet_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          entry_id?: string | null
+          id?: string
+          staff_id?: string | null
+          timesheet_id?: string | null
+        }
+        Relationships: []
+      }
+      time_reminders_sent: {
+        Row: {
+          dedupe_key: string
+          id: string
+          kind: string
+          sent_at: string
+          staff_id: string | null
+        }
+        Insert: {
+          dedupe_key: string
+          id?: string
+          kind: string
+          sent_at?: string
+          staff_id?: string | null
+        }
+        Update: {
+          dedupe_key?: string
+          id?: string
+          kind?: string
+          sent_at?: string
+          staff_id?: string | null
+        }
+        Relationships: []
+      }
+      timesheet_adjustments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          kind: string
+          occurred_on: string | null
+          period_start: string
+          staff_id: string
+          timesheet_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          kind: string
+          occurred_on?: string | null
+          period_start: string
+          staff_id: string
+          timesheet_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          kind?: string
+          occurred_on?: string | null
+          period_start?: string
+          staff_id?: string
+          timesheet_id?: string | null
+        }
+        Relationships: []
+      }
+      timesheets: {
+        Row: {
+          adjustments_amount: number
+          currency: string
+          file_path: string | null
+          hourly_rate: number
+          hours_amount: number
+          id: string
+          issued_at: string
+          issued_by: string | null
+          lines: Json
+          paid_marked_at: string | null
+          paid_marked_by: string | null
+          paid_on: string | null
+          payee_name: string | null
+          period_end: string
+          period_start: string
+          reopen_reason: string | null
+          rounding_minutes: number
+          staff_id: string
+          status: string
+          superseded_at: string | null
+          supersedes_id: string | null
+          total_amount: number
+          total_hours: number
+          version: number
+        }
+        Insert: {
+          adjustments_amount?: number
+          currency: string
+          file_path?: string | null
+          hourly_rate: number
+          hours_amount: number
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          lines: Json
+          paid_marked_at?: string | null
+          paid_marked_by?: string | null
+          paid_on?: string | null
+          payee_name?: string | null
+          period_end: string
+          period_start: string
+          reopen_reason?: string | null
+          rounding_minutes: number
+          staff_id: string
+          status?: string
+          superseded_at?: string | null
+          supersedes_id?: string | null
+          total_amount: number
+          total_hours: number
+          version?: number
+        }
+        Update: {
+          adjustments_amount?: number
+          currency?: string
+          file_path?: string | null
+          hourly_rate?: number
+          hours_amount?: number
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          lines?: Json
+          paid_marked_at?: string | null
+          paid_marked_by?: string | null
+          paid_on?: string | null
+          payee_name?: string | null
+          period_end?: string
+          period_start?: string
+          reopen_reason?: string | null
+          rounding_minutes?: number
+          staff_id?: string
+          status?: string
+          superseded_at?: string | null
+          supersedes_id?: string | null
+          total_amount?: number
+          total_hours?: number
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheets_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "timesheets"
             referencedColumns: ["id"]
           },
         ]
@@ -2500,6 +2838,19 @@ export type Database = {
         Args: { _draft_id: string; _new_id: string }
         Returns: Json
       }
+      add_manual_time_entry: {
+        Args: {
+          _in: string
+          _note: string
+          _out: string
+          _property: string
+          _staff: string
+          _visit_reason: string
+          _why: string
+        }
+        Returns: string
+      }
+      approve_time_entries: { Args: { _ids: string[] }; Returns: number }
       archive_blockers: { Args: { _profile_id: string }; Returns: Json }
       archive_profile: {
         Args: {
@@ -2543,9 +2894,60 @@ export type Database = {
         }
         Returns: boolean
       }
+      clock_in: {
+        Args: {
+          _accuracy_m?: number
+          _client_time?: string
+          _lat?: number
+          _lng?: number
+          _manual_time?: boolean
+          _property_id?: string
+        }
+        Returns: Json
+      }
+      clock_out: {
+        Args: {
+          _accuracy_m?: number
+          _client_time?: string
+          _lat?: number
+          _lng?: number
+          _manual_time?: boolean
+          _reason?: string
+        }
+        Returns: Json
+      }
       create_checklist_tasks_for_todays_shifts: {
         Args: never
         Returns: undefined
+      }
+      distance_m: {
+        Args: { _lat1: number; _lat2: number; _lng1: number; _lng2: number }
+        Returns: number
+      }
+      edit_time_entry: {
+        Args: {
+          _adj_in: string
+          _adj_out: string
+          _id: string
+          _note?: string
+          _visit_reason?: string
+          _why: string
+        }
+        Returns: undefined
+      }
+      effective_visits: {
+        Args: { _from: string; _staff: string; _to: string }
+        Returns: {
+          end_time: string
+          notes: string
+          property_id: string
+          property_name: string
+          schedule_id: string
+          shift_id: string
+          source: string
+          start_time: string
+          visit_date: string
+        }[]
       }
       get_staff_schedule_profiles: {
         Args: never
@@ -2571,6 +2973,20 @@ export type Database = {
         Returns: boolean
       }
       ids_with_login: { Args: { _ids: string[] }; Returns: string[] }
+      is_admin_user: { Args: { _uid: string }; Returns: boolean }
+      issue_timesheet: {
+        Args: { _period_start: string; _staff_id: string }
+        Returns: string
+      }
+      mark_time_entry_not_worked: {
+        Args: { _id: string; _why: string }
+        Returns: undefined
+      }
+      mark_timesheet_paid: {
+        Args: { _paid_on?: string; _timesheet_id: string }
+        Returns: undefined
+      }
+      my_clock_status: { Args: never; Returns: Json }
       notify_ronin_overdue_tasks: { Args: never; Returns: undefined }
       notify_todays_birthdays: { Args: never; Returns: number }
       profile_ids_who_can_see: {
@@ -2579,14 +2995,56 @@ export type Database = {
       }
       prune_old_notifications: { Args: never; Returns: undefined }
       prune_old_system_events: { Args: never; Returns: undefined }
+      reopen_timesheet: {
+        Args: { _reason: string; _timesheet_id: string }
+        Returns: undefined
+      }
+      round_work_hours: {
+        Args: { _minutes: number; _step?: number }
+        Returns: number
+      }
+      safe_tz: { Args: { _tz: string }; Returns: string }
+      set_property_location: {
+        Args: {
+          _lat: number
+          _lng: number
+          _property_id: string
+          _radius_m?: number
+        }
+        Returns: undefined
+      }
+      set_timesheet_file: {
+        Args: { _path: string; _timesheet_id: string }
+        Returns: undefined
+      }
+      set_visit_reason: {
+        Args: { _entry_id: string; _reason: string }
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      timesheet_overview: {
+        Args: { _period_start: string }
+        Returns: {
+          attention_count: number
+          full_name: string
+          payee_name: string
+          pending_count: number
+          staff_id: string
+          timesheet_id: string
+          timesheet_status: string
+          timesheet_version: number
+          total_hours: number
+          visits: number
+        }[]
+      }
       unarchive_profile: { Args: { _profile_id: string }; Returns: undefined }
       user_can_access_property: {
         Args: { _property_id: string; _user_id: string }
         Returns: boolean
       }
       visible_staff_ids: { Args: never; Returns: string[] }
+      visit_reason_label: { Args: { _c: string }; Returns: string }
     }
     Enums: {
       app_role: "master_admin" | "admin" | "manager" | "staff" | "principal"
