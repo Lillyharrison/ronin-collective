@@ -900,9 +900,10 @@ serve(async (req) => {
         phone: phone || null,
         assigned_property_ids: assigned_property_ids || [],
         quick_actions: Array.isArray(quick_actions) ? quick_actions : [],
-        contracted_days_per_week: contracted_days_per_week ?? null,
-        contracted_hours_per_week: contracted_hours_per_week ?? null,
-        annual_leave_days: annual_leave_days ?? null,
+        // Fields omitted from the request keep their saved values (the invite form doesn't send them)
+        ...("contracted_days_per_week" in body ? { contracted_days_per_week: contracted_days_per_week ?? null } : {}),
+        ...("contracted_hours_per_week" in body ? { contracted_hours_per_week: contracted_hours_per_week ?? null } : {}),
+        ...("annual_leave_days" in body ? { annual_leave_days: annual_leave_days ?? null } : {}),
         // Only promote out of draft when sending invitation
         is_draft: send_invitation ? false : true,
       }).eq("id", profile_id);
@@ -925,27 +926,21 @@ serve(async (req) => {
         if (inviteErr) return new Response(JSON.stringify({ error: inviteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         // Link the auth account to this existing profile
         if (inviteData?.user?.id && inviteData.user.id !== profile_id) {
-          // Copy profile to the new auth uid and delete the old orphan profile
-          const { data: oldProfile } = await adminClient.from("profiles").select("*").eq("id", profile_id).maybeSingle();
-          if (oldProfile) {
-            const newUid = inviteData.user.id;
-            // The signup trigger already created a blank profile + default role for newUid,
-            // so upsert (overwrite) instead of insert, and abort before deleting on failure.
-            const { created_at: _c, updated_at: _u, ...rest } = oldProfile as Record<string, unknown>;
-            const { error: copyErr } = await adminClient.from("profiles").upsert({ ...rest, id: newUid, is_draft: false }, { onConflict: "id" });
-            if (copyErr) return new Response(JSON.stringify({ error: `Invite sent but profile copy failed: ${copyErr.message}` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-            const finalRole = role || (await adminClient.from("user_roles").select("role").eq("user_id", profile_id).maybeSingle()).data?.role;
-            await adminClient.from("user_roles").delete().eq("user_id", newUid);
-            await adminClient.from("user_roles").delete().eq("user_id", profile_id);
-            if (finalRole) await adminClient.from("user_roles").insert({ user_id: newUid, role: finalRole });
-            for (const t of ["staff_shifts", "staff_schedules", "staff_leave_requests"]) {
-              await adminClient.from(t).update({ staff_id: newUid }).eq("staff_id", profile_id);
+          // Atomically move the draft (profile, role, permissions and every reference) onto the new login.
+          const newUid = inviteData.user.id;
+          const { data: moved, error: activateErr } = await adminClient.rpc("activate_draft_profile", { _draft_id: profile_id, _new_id: newUid });
+          if (activateErr) {
+            console.error("activate_draft_profile failed", activateErr);
+            // Roll back the new login so a retry starts clean; the draft is untouched.
+            for (const t of ["user_section_permissions", "user_roles", "user_stats", "user_presence"]) {
+              await adminClient.from(t).delete().eq("user_id", newUid);
             }
-            await adminClient.from("user_section_permissions").delete().eq("user_id", profile_id);
-            await adminClient.from("profiles").delete().eq("id", profile_id);
-            // Now that the auth user exists, write permissions to the new uid
-            await writeSectionPermissionRows(adminClient, inviteData.user.id, section_permissions_rows);
+            await adminClient.from("profiles").delete().eq("id", newUid);
+            const { error: delErr } = await adminClient.auth.admin.deleteUser(newUid);
+            if (delErr) console.error("cleanup deleteUser failed", delErr);
+            return new Response(JSON.stringify({ error: `Activation failed and nothing was lost — the draft profile is unchanged. Please try again. (${activateErr.message})` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
+          console.log("activate_draft_profile moved", JSON.stringify(moved));
           return new Response(JSON.stringify({ success: true, user_id: inviteData.user.id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         return new Response(JSON.stringify({ success: true, user_id: profile_id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

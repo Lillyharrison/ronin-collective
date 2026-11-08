@@ -281,7 +281,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
             scope: p.scope ?? null,
           };
         });
-      const { error } = await supabase.functions.invoke("ronin-ai", {
+      const { data: inviteRes, error } = await supabase.functions.invoke("ronin-ai", {
         body: {
           action: "save_draft_user",
           profile_id: member.id,
@@ -301,12 +301,18 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
           send_invitation: true,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Show the server's explanation (e.g. "Activation failed and nothing was lost…")
+        let serverMsg: string | undefined;
+        try { serverMsg = (await (error as { context?: Response }).context?.json())?.error; } catch { /* ignore */ }
+        throw new Error(serverMsg || error.message);
+      }
       setIsDraft(false);
       toast.success(isEN ? "Invitation sent!" : "¡Invitación enviada!", {
         description: isEN ? `A login invite has been sent to ${draftEmail}` : `Se envió un enlace de invitación a ${draftEmail}`,
       });
-      onSaved({ ...member, full_name: fullName, is_draft: false });
+      const newId = (inviteRes as { user_id?: string } | null)?.user_id || member.id;
+      onSaved({ ...member, id: newId, full_name: fullName, is_draft: false });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send invitation.";
       toast.error(msg);

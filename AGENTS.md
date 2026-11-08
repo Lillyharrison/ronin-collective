@@ -15,3 +15,4 @@
 - Reusable property shopping lists live in Orders & Deliveries, but retain checklist_templates with kind='order_list' and order_list_items as their single data source; standard checklist queries exclude that kind to avoid duplicate workflows.
 - Sending property shopping lists goes through order-list-submit to create Orders, recipient tasks and notifications server-side; Orders uses same-origin query parameters for list and order deep links so requests survive refresh and notification navigation.
 - Property visibility is by assignment for every role except master_admin (client `isMasterAdmin` checks + `user_can_access_property`); rank never grants extra properties.
+- Draft-to-live activation goes only through the service-role activate_draft_profile DB function (one transaction, re-points every profile reference, deletes draft last); new profile-id columns must be added to its list.

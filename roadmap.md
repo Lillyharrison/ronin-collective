@@ -44,3 +44,8 @@
 - [x] Move reusable property order lists into Orders & Deliveries → Shopping List; preserve existing ad-hoc shopping list and normal checklists.
 - [x] Open submitted requests in Orders and preserve existing property-scoped read access through delivery.
 - [x] Verify list editing, saved selections after reload, sending, placement and delivery as the signed-in tester; temporary test data removed.
+# Draft-to-live activation
+
+- [x] Atomic activate_draft_profile function (service role only), verified in a rolled-back transaction.
+- [x] ronin-ai calls it, checks result, removes new login on failure; drawer uses new id.
+- [ ] Live invite of a real draft not exercised (would send a real email).

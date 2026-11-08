@@ -2478,6 +2478,10 @@ export type Database = {
         Args: { _notif_id: string }
         Returns: undefined
       }
+      activate_draft_profile: {
+        Args: { _draft_id: string; _new_id: string }
+        Returns: Json
+      }
       batch_mark_messages_seen: {
         Args: { _message_ids: string[]; _user_id: string }
         Returns: undefined
