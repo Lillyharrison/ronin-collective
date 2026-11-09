@@ -64,7 +64,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const { language } = useLanguage();
   const navigate = useNavigate();
   const { userId, isMasterAdmin } = usePermissions();
-  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId, setPendingTimesheetStaffId } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const { detailTarget, openDetails, closeDetails, editPlanned } = useNotificationDetails(onClose);
@@ -167,6 +167,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
       setPendingTaskId(n.entity_id);
     }
 
+    if (n.entity_type === "timesheet" && n.entity_id) setPendingTimesheetStaffId(n.entity_id);
     onClose();
 
     if (targetSection) {

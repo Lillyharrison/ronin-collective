@@ -1,0 +1,4 @@
+CREATE POLICY "Admins read timesheets files" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'timesheets' AND public.is_admin_user(auth.uid()));
+CREATE POLICY "Admins upload timesheets files" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'timesheets' AND public.is_admin_user(auth.uid()));
+CREATE POLICY "Admins update timesheets files" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'timesheets' AND public.is_admin_user(auth.uid())) WITH CHECK (bucket_id = 'timesheets' AND public.is_admin_user(auth.uid()));
+CREATE POLICY "Admins delete timesheets files" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'timesheets' AND public.is_admin_user(auth.uid()));

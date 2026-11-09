@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { StaffCalendarTab } from "@/components/calendar/StaffCalendarTab";
 import { usePermissions } from "@/hooks/usePermissions";
+import { TimesheetsTab } from "@/components/timesheets/TimesheetsTab";
+import { useNavigation } from "@/contexts/NavigationContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -17,6 +21,10 @@ import { supabase } from "@/integrations/supabase/client";
 export function StaffSchedulingSection() {
   const { userId, role, isMasterAdmin, isAdmin, isManager, department, sectionPermissions, canEdit: permCanEdit } = usePermissions();
 
+  const { pendingTimesheetStaffId } = useNavigation();
+  const { language } = useLanguage();
+  const [tab, setTab] = useState("roster");
+  useEffect(() => { if (pendingTimesheetStaffId && (isAdmin || isMasterAdmin)) setTab("timesheets"); }, [pendingTimesheetStaffId, isAdmin, isMasterAdmin]);
   const isPrincipal = role === "principal";
   const canEdit = isMasterAdmin || isAdmin || isManager || permCanEdit("staff-schedule");
   // Principals are family/owners → see all staff schedules like managers/admins.
@@ -64,7 +72,8 @@ export function StaffSchedulingSection() {
 
   return (
     <div className="px-2 py-2">
-      <StaffCalendarTab canEdit={canEdit} userId={userId} scopeFilterIds={scopeIds} />
+      {(isAdmin || isMasterAdmin) && <Tabs value={tab} onValueChange={setTab}><TabsList><TabsTrigger value="roster">{language === "es" ? "Horario" : "Roster"}</TabsTrigger><TabsTrigger value="timesheets">{language === "es" ? "Hojas de horas" : "Timesheets"}</TabsTrigger></TabsList></Tabs>}
+      {(isAdmin || isMasterAdmin) && tab === "timesheets" ? <TimesheetsTab /> : <StaffCalendarTab canEdit={canEdit} userId={userId} scopeFilterIds={scopeIds} />}
     </div>
   );
 }

@@ -2,14 +2,14 @@ import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  navigate: vi.fn(), section: vi.fn(), repair: vi.fn(), planned: vi.fn(), task: vi.fn(),
+  navigate: vi.fn(), section: vi.fn(), timesheet: vi.fn(), repair: vi.fn(), planned: vi.fn(), task: vi.fn(),
   update: vi.fn(), deleted: vi.fn(), deleteError: null as unknown, notifications: [] as Record<string, unknown>[],
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
 vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isMasterAdmin: true }) }));
 vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
   setActiveSection: mocks.section, setPendingMaintenanceIssueId: mocks.repair,
-  setPendingPlannedMaintenanceEntryId: mocks.planned, setPendingTaskId: mocks.task,
+  setPendingPlannedMaintenanceEntryId: mocks.planned, setPendingTaskId: mocks.task, setPendingTimesheetStaffId: mocks.timesheet,
 }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: () => {
@@ -42,6 +42,7 @@ describe("notification detail routing", () => {
     notification(type);const close=vi.fn();render(<NotificationsPanel open onClose={close}/>);
     fireEvent.click(await screen.findByText('Test notice'));
     expect(mocks.section).toHaveBeenCalledWith(section);expect(close).toHaveBeenCalledOnce();
+    if(type==='timesheet') expect(mocks.timesheet).toHaveBeenCalledWith('record-id');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it.each(["maintenance_issue", "planned_maintenance", "task", "calendar_event", "birthday"])("opens %s over the list without navigating", async type => {

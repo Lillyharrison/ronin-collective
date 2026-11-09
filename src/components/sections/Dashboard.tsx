@@ -167,7 +167,7 @@ function eventDotColor(eventType: string): string {
 
 export function Dashboard() {
   const { language, t } = useLanguage();
-  const { setActiveSection, setPendingMaintenanceIssueId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingTimesheetStaffId } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading, error: permError } = usePermissions();
   const { properties: scopedProperties } = useScopedProperties();
   const [issueAssignees, setIssueAssignees] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
@@ -387,6 +387,7 @@ export function Dashboard() {
     if (n.entity_type === "maintenance_issue" && n.entity_id) {
       setPendingMaintenanceIssueId(n.entity_id);
     }
+    if (n.entity_type === "timesheet" && n.entity_id) setPendingTimesheetStaffId(n.entity_id);
     if (targetSection) setActiveSection(targetSection);
   };
 

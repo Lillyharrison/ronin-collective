@@ -7,14 +7,15 @@ Deno.serve(async req=> {
   if(req.method==='OPTIONS')return response({ok:true});
   if(req.method!=='POST')return response({error:'POST required'},405);
   const url=Deno.env.get('SUPABASE_URL'),service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const token=Deno.env.get('TIME_TRACKING_CRON_TOKEN');
-  // Scheduled-only endpoint: never inherit the legacy reminder's unauthenticated exposure.
-  if(!token)return response({error:'Cron authentication is not configured'},503);
-  if(req.headers.get('Authorization')!==`Bearer ${token}`)return response({error:'Unauthorized'},401);
   if(!url||!service)return response({error:'Missing configuration'},500);
+  const db=createClient(url,service,{auth:{persistSession:false}});
+  const {data:config,error:configError}=await db.from('private_config').select('value').eq('key','time_tracking_cron_token').maybeSingle();
+  if(configError)return response({error:'Could not verify cron authentication'},500);
+  if(!config)return response({error:'Cron authentication is not configured'},503);
+  if(!config.value || req.headers.get('Authorization')!==`Bearer ${config.value}`)return response({error:'Unauthorized'},401);
   const parsed=z.object({mode:z.enum(['visits','month'])}).strict().safeParse(await req.json().catch(()=>null));
   if(!parsed.success)return response({error:'Expected mode visits or month'},400);
-  const db=createClient(url,service,{auth:{persistSession:false}}); const now=new Date(); let sent=0;
+  const now=new Date(); let sent=0;
   const check=<T,>(r:{data:T;error:unknown})=>{if(r.error)throw r.error;return r.data;};
   async function pages(table:string,columns:string,filter:(q:any)=>any) {const all:any[]=[];for(let from=0;;from+=500){const rows=check(await filter(db.from(table).select(columns)).range(from,from+499)) as any[];all.push(...rows);if(rows.length<500)break;}return all;}
   async function send(key:string,staff:string,kind:string,recipient:string,words:{title:string;body:string},entityType:string,entityId:string|null,property:string|null=null) {

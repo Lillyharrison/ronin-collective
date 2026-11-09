@@ -2,10 +2,16 @@
 
 # Casual staff time tracking
 
+- [x] Switch reminder authorization to private_config and redeploy; invalid Bearer returns 401.
+- [x] Add admin Timesheets review, edit, issue, Excel, payment, corrected versions and audit/history.
+- [x] Add admin time/pay and property clock-location settings; private admin-only file storage; deploy authenticated time-tracking-staff login lookup.
+- [x] Add person-targeted notification routing; 86 focused tests passed and signed-in admin month list checked on desktop/phone without overflow.
+- [ ] Verify real visit edit, issue, file upload, payment and corrected-version round trip: requires a designated test person/month and a renewed admin preview session; no actual pay records changed.
+
 - [x] Add bilingual dashboard clock, local-time corrections and durable per-user offline queue.
 - [x] Deploy visits/month reminder function and notification destinations without database changes.
 - [x] Test clock states, queue ordering/retries and reminder rules (66 tests); Spanish phone flow checked with controlled responses, disabled clock checked with real signed-in session.
-- [ ] Enable scheduled reminder sends: user must set TIME_TRACKING_CRON_TOKEN and use its Bearer authorization in their cron callbacks. Deployed endpoint safely returns 503 until configured.
+- [ ] Owner will configure cron schedules using the Bearer token already stored in private_config (time_tracking_cron_token); no environment secret required.
 - [ ] Verify Mercy’s real clock-in/out readback; not exercised because it would record actual working hours.
 
 - [x] Add cached visible_staff_ids lookup and restrictive fallback.

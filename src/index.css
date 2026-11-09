@@ -23,6 +23,7 @@
     --gold-muted:      42  30% 40%;   /* #7A6A38 */
 
     /* Status Colors */
+    --timesheet-issued: 210 75% 55%;
     --status-done:     142 52% 42%;   /* Green  */
     --status-progress: 38  90% 52%;   /* Amber  */
     --status-urgent:   0   72% 54%;   /* Red    */

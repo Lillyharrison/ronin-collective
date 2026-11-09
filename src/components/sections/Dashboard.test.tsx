@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  section: vi.fn(), planned: vi.fn(), repair: vi.fn(), navigate: vi.fn(), rpc: vi.fn(),
+  section: vi.fn(), timesheet: vi.fn(), planned: vi.fn(), repair: vi.fn(), navigate: vi.fn(), rpc: vi.fn(),
   deleted: vi.fn(), updated: vi.fn(), rpcError: null as unknown,
   notifications: [] as Record<string, unknown>[], language: "en", assignedPropertyIds: [] as string[],
 }));
@@ -10,7 +10,7 @@ vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ language: m
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
 vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
   setActiveSection: mocks.section, setPendingPlannedMaintenanceEntryId: mocks.planned,
-  setPendingMaintenanceIssueId: mocks.repair, setPendingTaskId: vi.fn(),
+  setPendingMaintenanceIssueId: mocks.repair, setPendingTaskId: vi.fn(), setPendingTimesheetStaffId: mocks.timesheet,
 }) }));
 vi.mock("@/hooks/usePermissions", () => ({
   usePermissions: () => ({ userId: "tester", fullName: "Tester", isAdmin: false, isMasterAdmin: false,
@@ -69,6 +69,7 @@ describe("dashboard notifications", () => {
     notice(type,type==='clock_reminder'?'home':'staff-schedule');render(<Dashboard />);
     fireEvent.click(await screen.findByText('Test notice'));
     await waitFor(()=>expect(mocks.section).toHaveBeenCalledWith(section));
+    if(type==='timesheet') expect(mocks.timesheet).toHaveBeenCalledWith('record-id');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it.each(["maintenance_issue", "planned_maintenance", "task", "calendar_event", "birthday"])("acknowledges and opens %s details without navigating", async type => {

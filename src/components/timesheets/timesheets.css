@@ -1,0 +1,57 @@
+.timesheet-input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid hsl(var(--input));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 16px;
+  margin-top: 4px;
+}
+.timesheet-green {
+  color: hsl(var(--status-done));
+}
+.timesheet-attention {
+  color: hsl(var(--status-progress));
+}
+.timesheet-issued {
+  color: hsl(var(--timesheet-issued));
+}
+.timesheet-line.timesheet-green {
+  border-left: 3px solid hsl(var(--status-done));
+  padding-left: 12px;
+  color: hsl(var(--foreground));
+}
+.timesheet-line.timesheet-attention {
+  border-left: 3px solid hsl(var(--status-progress));
+  padding-left: 12px;
+  color: hsl(var(--foreground));
+}
+.timesheet-not_worked {
+  text-decoration: line-through;
+  color: hsl(var(--muted-foreground));
+}
+.timesheet-flag {
+  display: inline-block;
+  font-size: 14px;
+  border: 1px solid hsl(var(--border));
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin: 2px;
+}
+@media (min-width: 1024px) {
+  .timesheet-grid {
+    grid-template-columns: 140px 130px 230px 120px minmax(180px, 1fr) 170px;
+    gap: 12px;
+    min-width: 1040px;
+  }
+}
+
+.timesheet-status {
+  display: inline-block;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 3px 7px;
+}

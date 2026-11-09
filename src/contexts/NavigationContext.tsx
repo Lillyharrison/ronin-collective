@@ -104,6 +104,9 @@ interface NavigationContextType {
   pendingPlannedMaintenanceEntryId: string | null;
   setPendingPlannedMaintenanceEntryId: (id: string | null) => void;
   pendingPlannedMaintenanceEntryIdRef: React.MutableRefObject<string | null>;
+  pendingTimesheetStaffId: string | null;
+  setPendingTimesheetStaffId: (id: string | null) => void;
+  pendingTimesheetStaffIdRef: React.MutableRefObject<string | null>;
   pendingTaskId: string | null;
   setPendingTaskId: (id: string | null) => void;
   pendingTaskIdRef: React.MutableRefObject<string | null>;
@@ -152,6 +155,9 @@ const NavigationContext = createContext<NavigationContextType>({
   pendingPlannedMaintenanceEntryId: null,
   setPendingPlannedMaintenanceEntryId: () => {},
   pendingPlannedMaintenanceEntryIdRef: { current: null },
+  pendingTimesheetStaffId: null,
+  setPendingTimesheetStaffId: () => {},
+  pendingTimesheetStaffIdRef: { current: null },
   pendingTaskId: null,
   setPendingTaskId: () => {},
   pendingTaskIdRef: { current: null },
@@ -206,6 +212,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pendingMaintenanceIssueIdRef = useRef<string | null>(null);
   const [pendingPlannedMaintenanceEntryId, setPendingPlannedMaintenanceEntryIdState] = useState<string | null>(null);
   const pendingPlannedMaintenanceEntryIdRef = useRef<string | null>(null);
+  const [pendingTimesheetStaffId, setPendingTimesheetStaffIdState] = useState<string | null>(null);
+  const pendingTimesheetStaffIdRef = useRef<string | null>(null);
+  const setPendingTimesheetStaffId = useCallback((id: string | null) => { pendingTimesheetStaffIdRef.current = id; setPendingTimesheetStaffIdState(id); }, []);
   const [pendingTaskId, setPendingTaskIdState] = useState<string | null>(null);
   const pendingTaskIdRef = useRef<string | null>(null);
   const [maintenanceReturnSection, setMaintenanceReturnSection] = useState<ActiveSection | null>(null);
@@ -344,6 +353,9 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         pendingPlannedMaintenanceEntryId,
         setPendingPlannedMaintenanceEntryId,
         pendingPlannedMaintenanceEntryIdRef,
+        pendingTimesheetStaffId,
+        setPendingTimesheetStaffId,
+        pendingTimesheetStaffIdRef,
         pendingTaskId,
         setPendingTaskId,
         pendingTaskIdRef,
