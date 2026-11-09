@@ -7,7 +7,7 @@ import { useNavigation } from '@/contexts/NavigationContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { clockState, duration, manualTime, nearestVisits, safeTimezone, reasons, type ClockStatus } from './clockLogic';
+import { clockState, duration, localParts, manualTime, nearestVisits, safeTimezone, reasons, type ClockStatus } from './clockLogic';
 import { enqueue, flushQueue, getLocation, readQueue, remove, type ClockAction, type RpcResult } from './clockQueue';
 const invoke = async (name:string,args:Record<string,unknown>):Promise<RpcResult> => {
   // All RPCs are owner-deployed; generated database types may lag their contract.
@@ -36,7 +36,7 @@ export function ClockCard() {
   const queuedStart=queued.find(a=>a.rpc==='clock_in');
   const queuedEnd=queued.find(a=>a.rpc==='clock_out');
   const persisted=status.data;
-  const queuedProperty=persisted?.properties.find(p=>p.id===queuedStart?.args._property_id);
+  const queuedProperty=persisted?.properties?.find(p=>p.id===queuedStart?.args._property_id);
   const s=persisted&&queuedStart&&!persisted.open&&!queuedEnd?{...persisted,open:{entry_id:queuedStart.id,clock_in:String(queuedStart.args._client_time),property_id:queuedProperty?.id||'',property_name:queuedProperty?.name||'',visit_date:String(queuedStart.args._client_time).slice(0,10)}}:persisted;
   const timezone=zones.data?.[s?.open?.property_id||last?.action.propertyId||String(last?.action.args._property_id)||'']||'UTC';
   const totals=useQuery({queryKey:['clock-completed',userId,s?.now],enabled:!!userId&&!!s?.enabled&&!s.open,queryFn:async()=> {
@@ -69,7 +69,10 @@ export function ClockCard() {
       const waiting=readQueue(userId).find(a=>a.rpc===p.rpc);
       action=waiting||{id:crypto.randomUUID(),rpc:p.rpc,args:{_lat:null,_lng:null,_accuracy_m:null,_client_time:p.at,_manual_time:p.manual,...(p.rpc==='clock_in'?{_property_id:p.property}:{_reason:null})},expectedEntry:persisted?.open?.entry_id,propertyId:p.property||s?.open?.property_id};
       enqueue(userId,action);
-      const location=await getLocation();
+      const locationRequest=getLocation();
+      // Ending is submitted at the tap, without an eight-second GPS wait. A cached
+      // immediate location can be included; otherwise location remains unavailable.
+      const location=p.rpc==='clock_out'?await Promise.race([locationRequest,Promise.resolve({_lat:null,_lng:null,_accuracy_m:null})]):await locationRequest;
       // Update the existing durable action with the optional coordinates.
       const q=readQueue(userId).map(a=>a.id===action?.id?{...a,args:{...a.args,...location}}:a);
       localStorage.setItem(`ronin.clock.queue.${userId}`,JSON.stringify(q));
@@ -89,7 +92,7 @@ export function ClockCard() {
   };
   if(!s?.enabled)return null;
   const state=clockState(s); const visits=nearestVisits(s.visits,zones.data||{},new Date());
-  const lastEnd=last?.action.rpc==='clock_out'?last:null;
+  const lastEnd=last?.action.rpc==='clock_out'&&localParts(new Date(String(last.data.clock_out)),timezone).date===localParts(new Date(s.now),timezone).date?last:null;
   const summary=lastEnd?text(`Terminaste a las ${format(String(lastEnd.data.clock_out))}, ${duration(Number(lastEnd.data.minutes))}`,`You finished at ${format(String(lastEnd.data.clock_out))}, ${duration(Number(lastEnd.data.minutes))}`):'';
   const buttonClass='w-full min-h-[72px] h-auto whitespace-normal text-xl px-4 py-4';
   const extra=()=>{pending.current=null;if(s.properties.length===1)begin('clock_in',s.properties[0].id);else setSheet('houses');};

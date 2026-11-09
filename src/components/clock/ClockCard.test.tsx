@@ -13,6 +13,7 @@ beforeEach(()=>{localStorage.clear();localStorage.setItem('ronin.clock.location.
 afterEach(cleanup);
 const show=()=>render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><ClockCard/></QueryClientProvider>);
 it('disabled staff see nothing',async()=>{mocks.status.enabled=false;const view=show();await waitFor(()=>expect(mocks.rpc).toHaveBeenCalled());expect(view.container).toBeEmptyDOMElement();});
+it('disabled response without visits or properties stays hidden',async()=>{mocks.status={enabled:false};const view=show();await waitFor(()=>expect(mocks.rpc).toHaveBeenCalled());expect(view.container).toBeEmptyDOMElement();});
 it('rostered staff get Start',async()=>{mocks.status.visits=[visit];show();expect(await screen.findByRole('button',{name:'Empezar'})).toBeEnabled();});
 it('open staff get End',async()=>{mocks.status.open=open;show();expect(await screen.findByRole('button',{name:'Terminar'})).toBeEnabled();});
 it('completed visit shows done',async()=>{mocks.status.visits=[{...visit,done:true}];show();expect(await screen.findByText('Listo por hoy')).toBeInTheDocument();});

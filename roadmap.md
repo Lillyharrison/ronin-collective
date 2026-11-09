@@ -2,9 +2,11 @@
 
 # Casual staff time tracking
 
-- [ ] Add bilingual dashboard clock, local-time corrections and durable per-user offline queue.
-- [ ] Add visits/month reminder function and notification destinations without database changes.
-- [ ] Test clock states, queue ordering/retries and reminder rules; verify and report deployment.
+- [x] Add bilingual dashboard clock, local-time corrections and durable per-user offline queue.
+- [x] Deploy visits/month reminder function and notification destinations without database changes.
+- [x] Test clock states, queue ordering/retries and reminder rules (66 tests); Spanish phone flow checked with controlled responses, disabled clock checked with real signed-in session.
+- [ ] Enable scheduled reminder sends: user must set TIME_TRACKING_CRON_TOKEN and use its Bearer authorization in their cron callbacks. Deployed endpoint safely returns 503 until configured.
+- [ ] Verify Mercy’s real clock-in/out readback; not exercised because it would record actual working hours.
 
 - [x] Add cached visible_staff_ids lookup and restrictive fallback.
 - [x] Filter roster rows, pickers, leave views, exports and signed-in shared views without changing existing scope or anonymous sharing.

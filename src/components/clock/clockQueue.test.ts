@@ -10,3 +10,9 @@ it('drops no_open_visit',async()=>{enqueue('u',{...action,rpc:'clock_out'});awai
 it('does not close a different entry on replay',async()=>{enqueue('u',{...action,rpc:'clock_out',expectedEntry:'old'});const invoke=vi.fn().mockResolvedValue({data:{open:{entry_id:'new'}},error:null});await flushQueue('u',invoke,undefined,true);expect(invoke).toHaveBeenCalledTimes(1);expect(invoke.mock.calls[0][0]).toBe('my_clock_status');expect(readQueue('u')).toHaveLength(0);});
 it('serializes concurrent retries',async()=>{enqueue('u',action);const invoke=vi.fn().mockResolvedValue({data:{entry_id:'e'},error:null});await Promise.all([flushQueue('u',invoke),flushQueue('u',invoke)]);expect(invoke).toHaveBeenCalledTimes(1);});
 it('keeps queues isolated per user',()=>{enqueue('u',action);expect(readQueue('other')).toEqual([]);});
+it('replays an offline start and end against the returned entry',async()=>{
+  enqueue('u',action);enqueue('u',{id:'end',rpc:'clock_out',args:{_client_time:'2026-11-08T16:20Z'}});
+  const invoke=vi.fn(async(name:string)=>({data:name==='clock_in'?{entry_id:'e'}:name==='my_clock_status'?{open:{entry_id:'e'}}:{entry_id:'e',minutes:495},error:null}));
+  await flushQueue('u',invoke,undefined,true);
+  expect(invoke.mock.calls.map(c=>c[0])).toEqual(['clock_in','my_clock_status','clock_out']);expect(readQueue('u')).toEqual([]);
+});

@@ -29,7 +29,7 @@ Deno.serve(async req=> {
   try {
     const settings=await pages('staff_time_settings','staff_id',q=>q.eq('time_tracking','ronin'));
     const ids=settings.map(s=>s.staff_id); const loginIds=check(await db.rpc('ids_with_login',{_ids:ids})) as string[];
-    const profiles=ids.length?await pages('profiles','id, full_name, language_pref',q=>q.in('id',loginIds).eq('is_archived',false)):[];
+    const profiles=loginIds.length?await pages('profiles','id, full_name, language_pref',q=>q.in('id',loginIds).eq('is_archived',false)):[];
     if(parsed.data.mode==='visits') {
       const properties=await pages('properties','id, name, timezone',q=>q); const props=new Map(properties.map(p=>[p.id,p]));
       const from=new Date(now.getTime()-86400000).toISOString().slice(0,10),to=new Date(now.getTime()+86400000).toISOString().slice(0,10);

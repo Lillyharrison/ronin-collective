@@ -1,5 +1,7 @@
 # Architecture rules
 
+- ClockCard uses owner-deployed time RPCs and a user-scoped durable ordered queue; reminder delivery is cron-token protected and claims existing dedupe keys before inserting notices, without changing database structures.
+
 - StaffCalendarTab filters its single profile/schedule/shift/leave feed through cached user-keyed visible_staff_ids before passing data to grids, pickers and exports; fallback evidence comes only from RLS-returned shifts/patterns, never profiles or leave.
 - SharedStaffSchedule applies viewer visibility for signed-in visitors and obtains fallback evidence through direct RLS queries, not the service-role share payload; anonymous token-authorized sharing remains unchanged.
 
