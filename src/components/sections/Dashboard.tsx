@@ -442,7 +442,6 @@ export function Dashboard() {
 
   return (
     <div className="animate-fade-in pb-4">
-      <ClockCard />
       {/* Quick-log Report Issue modal — triggered from dashboard quick action */}
       {reportIssueOpen && (
         <IssueModal
@@ -537,6 +536,8 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      <ClockCard />
 
       {/* Today's Snapshot — visibility controlled per user in Team settings */}
       {canSee("todays-snapshot") && (

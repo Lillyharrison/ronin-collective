@@ -21,7 +21,7 @@ vi.mock("@/hooks/useScopedProperties", () => ({ useScopedProperties: () => ({ pr
 vi.mock("@/hooks/usePropertyRules", () => ({ useActiveRulesForDashboard: () => [] }));
 vi.mock("@/hooks/useMaintenanceIssues", () => ({ useMaintenanceIssues: () => ({ categories: [], createIssue: vi.fn() }) }));
 vi.mock("@/components/maintenance/IssueModal", () => ({ IssueModal: () => null }));
-vi.mock("@/components/clock/ClockCard", () => ({ ClockCard: () => null }));
+vi.mock("@/components/clock/ClockCard", () => ({ ClockCard: () => <div data-testid="clock-card" /> }));
 vi.mock("@/components/NotificationRecordDialog", () => ({
   NotificationRecordDialog: ({ target, onClose, onEditPlanned }: { target: { type: string; id: string | null }; onClose: () => void; onEditPlanned: (id: string) => void }) =>
     <div role="dialog">{target.type}:{target.id}<button onClick={onClose}>Close details</button><button onClick={() => onEditPlanned(target.id ?? "")}>Edit planned</button></div>,
@@ -157,5 +157,12 @@ describe("dashboard notifications", () => {
     expect(screen.getByText("Test notice")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     log.mockRestore();
+  });
+  it("places the clock card below the greeting banner", () => {
+    const { container } = render(<Dashboard />);
+    const greeting = container.querySelector("h1");
+    const clock = screen.getByTestId("clock-card");
+    expect(greeting).not.toBeNull();
+    expect(greeting!.compareDocumentPosition(clock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
