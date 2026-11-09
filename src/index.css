@@ -117,6 +117,14 @@
 .clock-end { background: hsl(var(--clock-end)); color: hsl(var(--clock-button-foreground)); }
 .clock-start:hover { background: hsl(var(--clock-start) / .9); }
 .clock-end:hover { background: hsl(var(--clock-end) / .9); }
+.clock-card { container-type: inline-size; }
+.clock-card-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: center; }
+.clock-card-primary { grid-column: 1 / -1; }
+.clock-card-correction { justify-self: end; margin-top: -8px; }
+@container (min-width: 34rem) {
+  .clock-card-content { grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
+  .clock-card-correction { grid-column: 2; grid-row: 1; margin-block: -10px; }
+}
 .text-notification-delete-foreground { color: hsl(var(--notification-delete-foreground)); }
 .notification-desktop-delete { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
 /* Keyboard users can reveal the inline control without needing a swipe. */

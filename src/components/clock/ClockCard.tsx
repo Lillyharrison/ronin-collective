@@ -95,22 +95,24 @@ export function ClockCard() {
   const lastEnd=last?.action.rpc==='clock_out'&&localParts(new Date(String(last.data.clock_out)),timezone).date===localParts(new Date(s.now),timezone).date?last:null;
   const summary=lastEnd?text(`Terminaste a las ${format(String(lastEnd.data.clock_out))}, ${duration(Number(lastEnd.data.minutes))}`,`You finished at ${format(String(lastEnd.data.clock_out))}, ${duration(Number(lastEnd.data.minutes))}`):'';
   const buttonClass='w-full min-h-[72px] h-auto whitespace-normal text-xl px-4 py-4';
+  const cardButtonClass='clock-card-primary w-full h-[54px] min-h-[54px] text-lg px-4 py-2';
+  const correction=state!=='done'?<Button variant="link" className="clock-card-correction min-h-10 h-10 text-sm text-muted-foreground px-0 py-0" disabled={busy} onClick={()=>{pending.current={rpc:s.open?'clock_out':'clock_in',property:s.open?.property_id||visits[0]?.property_id||s.properties[0]?.id||null,at:'',manual:true};setSheet('time');}}>{s.open?text('¿Terminaste antes?','Finished earlier?'):text('¿Olvidaste empezar?','Forgot to start?')}</Button>:null;
   const extra=()=>{pending.current=null;if(s.properties.length===1)begin('clock_in',s.properties[0].id);else setSheet('houses');};
   const saveReason=async(reason:string)=> {
     if(!userId||!reasonEntry||busy)return;setBusy(true);
     try {enqueue(userId,{id:`reason:${reasonEntry}`,rpc:'set_visit_reason',args:{_entry_id:reasonEntry,_reason:reason}});await flushQueue(userId,invoke);setSheet(null);if(readQueue(userId).length)setMessage(text('Guardado. Se enviará cuando haya señal.','Saved. It will send when you have signal.'));}
     catch{setMessage(text('No se pudo guardar. Inténtalo de nuevo.','Could not save. Please try again.'));}finally{setBusy(false);}
   };
-  return <section aria-label={text('Tu visita','Your visit')} className="clock-surface px-5 py-5 border-b border-border space-y-3 text-base">
-    {state==='open'&&s.open&&<><p className="text-xl font-semibold">{s.open.property_name}</p><p>{text('Empezaste a las','You started at')} {format(s.open.clock_in,zones.data?.[s.open.property_id]||'UTC')}</p><Button disabled={busy} className={`${buttonClass} clock-end`} onClick={()=>begin('clock_out')}><Square/>{text('Terminar','End')}</Button></>}
-    {state==='visits'&&visits.map(v=><div key={`${v.property_id}:${v.start_time}`} className="space-y-3"><p>{text('Hoy','Today')}: <strong>{v.property_name}</strong>, {new Intl.DateTimeFormat(es?'es-US':'en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'}).format(new Date(`2000-01-01T${v.start_time}Z`))} {text('a','to')} {new Intl.DateTimeFormat(es?'es-US':'en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'}).format(new Date(`2000-01-01T${v.end_time}Z`))}</p><Button className={`${buttonClass} clock-start`} disabled={busy} onClick={()=>begin('clock_in',v.property_id)}><Play/>{text('Empezar','Start')}{visits.length>1&&` · ${v.property_name}`}</Button></div>)}
-    {state==='done'&&<p className="flex items-center gap-3 text-xl"><CheckCircle2/>{text('Listo por hoy','All done today')}</p>}
-    {state==='done'&&!summary&&totals.data!==undefined&&<p>{duration(totals.data)}</p>}
-    {state==='extra'&&<><p className="text-muted-foreground">{text('Hoy no tienes visita','No visit today')}</p><Button variant="secondary" className={buttonClass} disabled={busy||!s.properties.length} onClick={extra}><Play/>{text('Empezar una visita extra','Start an extra visit')}</Button></>}
-    {last?.action.rpc==='clock_in'&&state==='open'&&<p className="flex items-center gap-2" role="status"><CheckCircle2/>{text('Empezaste a las','You started at')} {format(String(last.data.clock_in))}</p>}
-    {summary&&state!=='open'&&<p role="status">{summary}</p>}
-    {message&&<p role="status">{message}</p>}
-    {state!=='done'&&<Button variant="link" className="min-h-11 text-base px-0" disabled={busy} onClick={()=>{pending.current={rpc:s.open?'clock_out':'clock_in',property:s.open?.property_id||visits[0]?.property_id||s.properties[0]?.id||null,at:'',manual:true};setSheet('time');}}>{s.open?text('¿Terminaste antes?','Finished earlier?'):text('¿Olvidaste empezar?','Forgot to start?')}</Button>}
+  return <section aria-label={text('Tu visita','Your visit')} className="clock-surface clock-card px-4 py-3 border-b border-border space-y-2 text-sm">
+    <div className="clock-card-content">
+    {state==='open'&&s.open&&<><p className="min-w-0 truncate" role={last?.action.rpc==='clock_in'?'status':undefined}><strong>{s.open.property_name}</strong> · {text('Empezaste a las','You started at')} {format(s.open.clock_in,zones.data?.[s.open.property_id]||'UTC')}</p><Button disabled={busy} className={`${cardButtonClass} clock-end`} onClick={()=>begin('clock_out')}><Square/>{text('Terminar','End')}</Button></>}
+    {state==='visits'&&visits.map(v=><div key={`${v.property_id}:${v.start_time}`} className="contents"><p className="min-w-0 truncate">{text('Hoy','Today')}: <strong>{v.property_name}</strong> · {new Intl.DateTimeFormat(es?'es-US':'en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'}).format(new Date(`2000-01-01T${v.start_time}Z`))} {text('a','to')} {new Intl.DateTimeFormat(es?'es-US':'en-US',{hour:'numeric',minute:'2-digit',timeZone:'UTC'}).format(new Date(`2000-01-01T${v.end_time}Z`))}</p><Button className={`${cardButtonClass} clock-start`} disabled={busy} onClick={()=>begin('clock_in',v.property_id)}><Play/><span className="truncate">{text('Empezar','Start')}{visits.length>1&&` · ${v.property_name}`}</span></Button></div>)}
+    {state==='done'&&<p className="flex min-w-0 items-center gap-2"><CheckCircle2 className="h-5 w-5 shrink-0"/><span className="truncate">{text('Listo por hoy','All done today')}{(lastEnd||totals.data!==undefined)&&` · ${duration(lastEnd?Number(lastEnd.data.minutes):totals.data||0)}`}</span></p>}
+    {state==='extra'&&<><p className="min-w-0 truncate text-muted-foreground">{text('Hoy no tienes visita','No visit today')}</p><Button variant="secondary" className={cardButtonClass} disabled={busy||!s.properties.length} onClick={extra}><Play/>{text('Empezar una visita extra','Start an extra visit')}</Button></>}
+    {correction}
+    </div>
+    {summary&&state!=='open'&&<p className="text-sm" role="status">{summary}</p>}
+    {message&&<p className="text-sm" role="status">{message}</p>}
     <Sheet open={!!sheet} onOpenChange={open=>{if(!open)setSheet(null);}}><SheetContent side="bottom" className="h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col text-base">
       <SheetTitle className="text-2xl">{sheet==='reason'?text('¿Qué hiciste hoy?','What was today?'):sheet==='houses'?text('¿En qué casa?','Which house?'):sheet==='time'?text('¿A qué hora?','What time?'):text('Tu ubicación','Your location')}</SheetTitle>
       <SheetDescription className="sr-only">{text('Tu visita','Your visit')}</SheetDescription>
