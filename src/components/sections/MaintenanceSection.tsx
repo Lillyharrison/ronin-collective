@@ -376,93 +376,10 @@ export function MaintenanceSection() {
     setDetailIssue(prev => prev?.id === issue.id ? { ...prev, is_archived: archived } : prev);
   };
 
-  // ─── Calendar sync helper for planned maintenance ──────────────────────────
-  // Only these statuses should ever appear on the calendar. Anything else
-  // (future, to_be_booked, cancelled) means no firm date is set yet.
-  const CALENDAR_VISIBLE_STATUSES = new Set(["booked", "initiated_by_vendor", "completed"]);
-
-  const syncCalendarForPlanned = async (
-    entryId: string,
-    calendarEventId: string | null,
-    entry: Partial<PlannedMaintenanceEntry>,
-  ) => {
-    // Weekly and monthly recurring tasks are excluded from the calendar
-    if (entry.recurrence_months === -1 || entry.recurrence_months === -2) return;
-
-    // A rough month is not a booking — only entries with a real, specific date
-    // are allowed on the calendar.
-    const shouldBeOnCalendar =
-      entry.status != null &&
-      CALENDAR_VISIBLE_STATUSES.has(entry.status) &&
-      entry.date_type === "specific" &&
-      !!entry.scheduled_date;
-
-    // Not bookable yet → ensure no calendar event exists
-    if (!shouldBeOnCalendar) {
-      if (calendarEventId) {
-        await supabase.from("calendar_events").delete().eq("id", calendarEventId);
-        await supabase
-          .from("planned_maintenance")
-          .update({ calendar_event_id: null })
-          .eq("id", entryId);
-      }
-      return;
-    }
-
-    // Build calendar start/end date from the entry's specific date
-    let calStartDate: string | null = null;
-    let calEndDate: string | null = null;
-    {
-      const time = entry.scheduled_time ? entry.scheduled_time.slice(0, 5) : "09:00";
-      calStartDate = `${entry.scheduled_date}T${time}:00`;
-      const [h, m] = time.split(":").map(Number);
-      const endH = String(Math.min(h + 1, 23)).padStart(2, "0");
-      calEndDate = `${entry.scheduled_end_date ?? entry.scheduled_date}T${endH}:${String(m).padStart(2, "0")}:00`;
-    }
-
-    if (!calStartDate) return;
-
-    const calTitle = `🔧 ${entry.title ?? "Maintenance"}`;
-    const calStatus = entry.date_type === "month_only" ? "unconfirmed" : "upcoming";
-
-    if (calendarEventId) {
-      await supabase
-        .from("calendar_events")
-        .update({
-          title: calTitle,
-          description: entry.description ?? undefined,
-          start_date: calStartDate,
-          end_date: calEndDate,
-          property_id: entry.property_id ?? undefined,
-          status: calStatus,
-          calendar_source: "planned_maintenance",
-        })
-        .eq("id", calendarEventId);
-    } else {
-      const { data: calEvent } = await supabase
-        .from("calendar_events")
-        .insert({
-          title: calTitle,
-          description: entry.description ?? undefined,
-          event_type: "maintenance",
-          start_date: calStartDate,
-          end_date: calEndDate,
-          property_id: entry.property_id ?? undefined,
-          status: calStatus,
-          calendar_source: "planned_maintenance",
-          created_by: userId ?? undefined,
-        })
-        .select()
-        .single();
-
-      if (calEvent) {
-        await supabase
-          .from("planned_maintenance")
-          .update({ calendar_event_id: calEvent.id })
-          .eq("id", entryId);
-      }
-    }
-  };
+  // Planned-maintenance calendar entries are written only by the database trigger
+  // (sync_planned_maintenance_booking): house-local time, all-day when no time.
+  // The calendar hides linked entries that are not booked, so the app never
+  // writes, moves or deletes those calendar rows itself.
 
 
   // ─── Planned maintenance ──────────────────────────────────────────────────────
@@ -470,17 +387,6 @@ export function MaintenanceSection() {
     const entry = await createEntry(payload);
     if (!entry) return;
 
-    // Only sync to the calendar if the entry was created already-booked.
-    // For future / to_be_booked entries the calendar stays clean until a date is set.
-    // Re-read: a database trigger may already have created and linked the calendar
-    // event after the insert; syncing with a stale null id created duplicate events.
-    const { data: fresh } = await supabase
-      .from("planned_maintenance")
-      .select(PLANNED_FULL_COLS)
-      .eq("id", entry.id)
-      .maybeSingle();
-    const current = (fresh ?? entry) as PlannedMaintenanceEntry;
-    await syncCalendarForPlanned(entry.id, current.calendar_event_id ?? null, current);
 
 
     refetchPlanned();
@@ -516,16 +422,6 @@ export function MaintenanceSection() {
     const saved = await updateEntry(editPlanned.id, payload);
     if (!saved) return;
 
-    // Re-read the entry from DB to capture any auto-rolled dates from the hook
-    const { data: updated } = await supabase
-      .from("planned_maintenance")
-        .select(PLANNED_FULL_COLS)
-      .eq("id", editPlanned.id)
-      .single();
-
-    if (updated) {
-      await syncCalendarForPlanned(editPlanned.id, updated.calendar_event_id, updated as PlannedMaintenanceEntry);
-    }
 
     refetchPlanned();
     setEditPlanned(null);
@@ -900,20 +796,8 @@ export function MaintenanceSection() {
           onEdit={(entry) => { setEditPlanned(entry); setPlannedModalOpen(true); }}
           onDelete={deleteEntry}
           onStatusChange={async (id, status) => {
-            const entry = plannedEntries.find(e => e.id === id);
+            // The database trigger keeps the calendar entry in step with the dates.
             await updateEntry(id, { status });
-            // After updateEntry (which may have rolled dates forward), refetch and sync calendar
-            if (entry) {
-              // Re-read the updated entry to get rolled-forward dates
-              const { data: updated } = await supabase
-                .from("planned_maintenance")
-                .select(PLANNED_FULL_COLS)
-                .eq("id", id)
-                .single();
-              if (updated) {
-                await syncCalendarForPlanned(id, updated.calendar_event_id, updated as PlannedMaintenanceEntry);
-              }
-            }
           }}
           onCopy={handleCopyPlanned}
           refetch={refetchPlanned}

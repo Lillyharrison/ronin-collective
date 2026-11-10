@@ -27,6 +27,7 @@ export interface FamilyEvent {
   title: string;
   start_date: string;
   end_date: string | null;
+  all_day?: boolean | null;
   event_type: string;
   property_id: string | null;
 }

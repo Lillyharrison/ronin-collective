@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { describeEventWhen } from "../_shared/eventTime.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -474,7 +475,7 @@ async function executeObservationTool(
     const future = new Date();
     future.setDate(future.getDate() + daysAhead);
     let q = adminClient.from("calendar_events")
-      .select("id, title, event_type, start_date, end_date, property_id, description, status, location")
+      .select("id, title, event_type, start_date, end_date, all_day, property_id, description, status, location")
       .gte("start_date", new Date().toISOString())
       .lte("start_date", future.toISOString())
       .order("start_date")
@@ -488,6 +489,7 @@ async function executeObservationTool(
       total: data?.length ?? 0,
       events: data?.map(e => ({
         title: e.title, type: e.event_type, start: e.start_date, end: e.end_date,
+        all_day: e.all_day, when: describeEventWhen(e, null),
         property: propNameMap[e.property_id] ?? e.property_id ?? "N/A",
         description: e.description, status: e.status, location: e.location,
       })),

@@ -25,6 +25,12 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNavigation } from "@/contexts/NavigationContext";
+import { Switch } from "@/components/ui/switch";
+import {
+  eventStart, eventEnd, eventDayRange, isMultiDayEvent, eventOccursOn, localDateKey,
+  allDayStartIso, allDayEndIso, allDayDates, birthdayInYear, houseTimeZone, timeZoneLabel,
+  eventToFormTimes, formTimesToEvent, toggleAllDay, type EventFormTimes,
+} from "@/lib/calendarTime";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +43,7 @@ interface CalEvent {
   description: string | null;
   start_date: string;
   end_date: string | null;
+  all_day?: boolean | null;
   event_type: string;
   is_private: boolean;
   keywords: string[] | null;
@@ -55,6 +62,7 @@ interface CalEvent {
 interface Property {
   id: string;
   name: string;
+  timezone?: string | null;
 }
 
 interface Profile {
@@ -145,21 +153,12 @@ function persistMaintenanceTab(tab: "repairs" | "planned") {
 
 /** Returns true if an event spans more than one calendar day */
 function isMultiDay(ev: CalEvent): boolean {
-  if (!ev.end_date) return false;
-  try {
-    const s = startOfDay(parseISO(ev.start_date));
-    const e = startOfDay(parseISO(ev.end_date));
-    return e > s;
-  } catch { return false; }
+  try { return isMultiDayEvent(ev); } catch { return false; }
 }
 
 function eventsForDay(events: CalEvent[], day: Date): CalEvent[] {
   return events.filter((ev) => {
-    try {
-      const start = parseISO(ev.start_date);
-      const end = ev.end_date ? parseISO(ev.end_date) : start;
-      return isWithinInterval(startOfDay(day), { start: startOfDay(start), end: startOfDay(end) });
-    } catch { return false; }
+    try { return eventOccursOn(ev, day); } catch { return false; }
   });
 }
 
@@ -168,7 +167,7 @@ function singleDayEventsForDay(events: CalEvent[], day: Date): CalEvent[] {
   return events.filter((ev) => {
     if (isMultiDay(ev)) return false;
     try {
-      return isSameDay(parseISO(ev.start_date), day);
+      return isSameDay(eventDayRange(ev).start, day);
     } catch { return false; }
   });
 }
@@ -176,7 +175,7 @@ function singleDayEventsForDay(events: CalEvent[], day: Date): CalEvent[] {
 // ─── Drag-and-drop ────────────────────────────────────────────────────────────
 
 async function rescheduleEvent(ev: CalEvent, newDate: Date) {
-  const origStart = parseISO(ev.start_date);
+  const origStart = eventStart(ev);
   const newStart = setDayFn(setMonth(setYear(origStart, getYear(newDate)), getMonth(newDate)), getDate(newDate));
 
   if (ev._source === "maintenance" && ev._source_id) {
@@ -196,6 +195,21 @@ async function rescheduleEvent(ev: CalEvent, newDate: Date) {
       .eq("id", ev._source_id);
     if (error) { toast.error("Failed to reschedule delivery"); return false; }
     toast.success("Delivery date updated");
+    return true;
+  }
+
+  if ((ev._source === "calendar_events" || !ev._source) && ev.all_day) {
+    // All-day: move by whole dates, keeping the inclusive length.
+    const { start, end } = allDayDates(ev);
+    const lengthDays = Math.round((Date.UTC(+end.slice(0, 4), +end.slice(5, 7) - 1, +end.slice(8, 10)) - Date.UTC(+start.slice(0, 4), +start.slice(5, 7) - 1, +start.slice(8, 10))) / 86400000);
+    const newStartKey = localDateKey(newDate);
+    const newEndKey = localDateKey(addDays(newDate, lengthDays));
+    const { error } = await supabase
+      .from("calendar_events")
+      .update({ start_date: allDayStartIso(newStartKey), end_date: allDayEndIso(newEndKey) })
+      .eq("id", ev.id);
+    if (error) { toast.error("Failed to move event"); return false; }
+    toast.success("Event moved");
     return true;
   }
 
@@ -279,8 +293,7 @@ function getMultiDayBarsForWeek(events: CalEvent[], weekDays: Date[], isRoninMod
     if (!isMultiDay(ev)) return false;
     if (isRoninMode && activeTab !== "all" && getRoninTabForEvent(ev) !== activeTab) return false;
     try {
-      const evStart = startOfDay(parseISO(ev.start_date));
-      const evEnd = startOfDay(parseISO(ev.end_date!));
+      const { start: evStart, end: evEnd } = eventDayRange(ev);
       const weekStart = startOfDay(weekDays[0]);
       const weekEnd = startOfDay(weekDays[6]);
       // overlaps this week?
@@ -289,8 +302,7 @@ function getMultiDayBarsForWeek(events: CalEvent[], weekDays: Date[], isRoninMod
   });
 
   return multiDay.map((ev) => {
-    const evStart = startOfDay(parseISO(ev.start_date));
-    const evEnd = startOfDay(parseISO(ev.end_date!));
+    const { start: evStart, end: evEnd } = eventDayRange(ev);
     const weekStart = startOfDay(weekDays[0]);
     const weekEnd = startOfDay(weekDays[6]);
 
@@ -497,6 +509,40 @@ function WeekRow({
   );
 }
 
+// ─── Shared date/time fields (All day switch + house-time note) ──────────────
+
+function zoneForProperty(properties: Property[], propertyId: string): string | null {
+  if (!propertyId) return null;
+  return houseTimeZone(properties.find((p) => p.id === propertyId)?.timezone);
+}
+
+function EventTimeFields({ times, onChange, zone }: {
+  times: EventFormTimes;
+  onChange: (t: EventFormTimes) => void;
+  zone: string | null;
+}) {
+  const type = times.all_day ? "date" : "datetime-local";
+  return (
+    <>
+      <label className="flex items-center justify-between gap-3 cursor-pointer">
+        <span className="text-sm font-medium">All day</span>
+        <Switch checked={times.all_day} onCheckedChange={(v) => onChange(toggleAllDay(times, v))} aria-label="All day" />
+      </label>
+      <div className="space-y-1.5">
+        <Label>{times.all_day ? "Start date" : "Start"}</Label>
+        <Input type={type} value={times.start} onChange={(e) => onChange({ ...times, start: e.target.value })} className="w-full" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>{times.all_day ? "End date" : "End"} <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Input type={type} value={times.end} onChange={(e) => onChange({ ...times, end: e.target.value })} className="w-full" />
+      </div>
+      {!times.all_day && zone && (
+        <p className="text-xs text-muted-foreground">Times are {timeZoneLabel(zone)} time</p>
+      )}
+    </>
+  );
+}
+
 // ─── Edit Event Dialog ────────────────────────────────────────────────────────
 
 function EditEventDialog({ event, open, onClose, onSave, properties, userId }: {
@@ -511,29 +557,31 @@ function EditEventDialog({ event, open, onClose, onSave, properties, userId }: {
     title: "",
     description: "",
     location: "",
-    start_date: "",
-    end_date: "",
     event_type: "general",
     property_id: "",
     is_private: false,
     recurrence: "none",
   });
+  const [times, setTimes] = useState<EventFormTimes>({ all_day: false, start: "", end: "" });
+  const [initialTimes, setInitialTimes] = useState<EventFormTimes | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (event) {
+      const loaded = eventToFormTimes(event, zoneForProperty(properties, event.property_id ?? ""));
+      setTimes(loaded);
+      setInitialTimes(loaded);
       setForm({
         title: event.title,
         description: event.description ?? "",
         location: event.location ?? "",
-        start_date: event.start_date ? event.start_date.slice(0, 16) : "",
-        end_date: event.end_date ? event.end_date.slice(0, 16) : "",
         event_type: event.event_type ?? "general",
         property_id: event.property_id ?? "",
         is_private: event.is_private ?? false,
         recurrence: event.keywords?.find((k) => k.startsWith("recurrence:"))?.split(":")[1] ?? "none",
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event]);
 
   if (!event) return null;
@@ -543,12 +591,22 @@ function EditEventDialog({ event, open, onClose, onSave, properties, userId }: {
     setSaving(true);
     const keywords: string[] = [];
     if (form.recurrence !== "none") keywords.push(`recurrence:${form.recurrence}`);
+    if (!times.start) { setSaving(false); toast.error("Add a start date"); return; }
+    const zone = zoneForProperty(properties, form.property_id);
+    // Untouched dates/times (and same house) keep the stored values exactly — nothing moves.
+    const unchanged = initialTimes
+      && initialTimes.all_day === times.all_day && initialTimes.start === times.start && initialTimes.end === times.end
+      && (form.property_id || "") === (event.property_id ?? "");
+    const when = unchanged
+      ? { start_date: event.start_date, end_date: event.end_date, all_day: !!event.all_day }
+      : formTimesToEvent(times, zone);
     const { error } = await supabase.from("calendar_events").update({
       title: form.title.trim(),
       description: form.description || null,
       location: form.location || null,
-      start_date: form.start_date,
-      end_date: form.end_date || null,
+      start_date: when.start_date,
+      end_date: when.end_date,
+      all_day: when.all_day,
       event_type: form.event_type,
       is_private: form.is_private,
       property_id: form.property_id || null,
@@ -572,14 +630,7 @@ function EditEventDialog({ event, open, onClose, onSave, properties, userId }: {
             <Label>Title</Label>
             <Input value={form.title} onChange={(e) => f("title", e.target.value)} placeholder="Event title" />
           </div>
-          <div className="space-y-1.5">
-            <Label>Start</Label>
-            <Input type="datetime-local" value={form.start_date} onChange={(e) => f("start_date", e.target.value)} className="w-full" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>End <span className="text-muted-foreground font-normal">(optional)</span></Label>
-            <Input type="datetime-local" value={form.end_date} onChange={(e) => f("end_date", e.target.value)} className="w-full" />
-          </div>
+          <EventTimeFields times={times} onChange={setTimes} zone={zoneForProperty(properties, form.property_id)} />
           <div className="space-y-1.5">
             <Label>Repeat</Label>
             <Select value={form.recurrence} onValueChange={(v) => f("recurrence", v)}>
@@ -676,8 +727,8 @@ function EventDetailSheet({
   const tab = getRoninTabForEvent(event);
   const familyCfg = getFamilyTypeConfig(event.event_type);
   const roninCfg = RONIN_TAB_CONFIG[tab];
-  const start = parseISO(event.start_date);
-  const end = event.end_date ? parseISO(event.end_date) : null;
+  const start = eventStart(event);
+  const end = event.end_date ? eventEnd(event) : null;
 
   // Birthdays and linked planned maintenance events are auto-managed elsewhere
   const isDeletable = canDelete
@@ -732,9 +783,9 @@ function EventDetailSheet({
           <div className="flex items-start gap-3">
             <Clock size={16} className="text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="text-sm">
-              <p className="font-medium">{format(start, "EEEE, MMMM d, yyyy")}</p>
+              <p className="font-medium">{format(start, "EEEE, MMMM d, yyyy")}{!event.all_day && event._source === "calendar_events" ? ` · ${format(start, "h:mm a")}` : ""}</p>
               {end && !isSameDay(start, end) && (
-                <p className="text-muted-foreground">→ {format(end, "EEEE, MMMM d, yyyy")}</p>
+                <p className="text-muted-foreground">→ {format(end, "EEEE, MMMM d, yyyy")}{!event.all_day && event._source === "calendar_events" ? ` · ${format(end, "h:mm a")}` : ""}</p>
               )}
             </div>
           </div>
@@ -945,33 +996,36 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
     title: "",
     description: "",
     location: "",
-    start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-    end_date: "",
     event_type: "general",
     property_id: "",
     is_private: false,
     recurrence: "none",
     recurrence_end: "",
   });
+  const freshTimes = (): EventFormTimes => ({ all_day: false, start: format(new Date(), "yyyy-MM-dd'T'HH:mm"), end: "" });
+  const [times, setTimes] = useState<EventFormTimes>(freshTimes);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     if (!form.title.trim() || !userId) return;
+    if (!times.start) { toast.error("Add a start date"); return; }
     setSaving(true);
+    const when = formTimesToEvent(times, zoneForProperty(properties, form.property_id));
 
     const keywords: string[] = [];
     if (form.recurrence !== "none") keywords.push(`recurrence:${form.recurrence}`);
 
     const notes = form.recurrence !== "none"
-      ? `Recurs ${form.recurrence}${form.recurrence_end ? ` until ${format(new Date(form.recurrence_end), "MMM d, yyyy")}` : ""}`
+      ? `Recurs ${form.recurrence}${form.recurrence_end ? ` until ${format(parseISO(form.recurrence_end), "MMM d, yyyy")}` : ""}`
       : null;
 
     const { error } = await supabase.from("calendar_events").insert({
       title: form.title.trim(),
       description: form.description || null,
       location: form.location || null,
-      start_date: form.start_date,
-      end_date: form.end_date || null,
+      start_date: when.start_date,
+      end_date: when.end_date,
+      all_day: when.all_day,
       event_type: form.event_type,
       is_private: form.is_private,
       property_id: form.property_id || null,
@@ -986,7 +1040,8 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
     if (error) { toast.error("Failed to save"); return; }
     toast.success("Event added");
 
-    setForm({ title: "", description: "", location: "", start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"), end_date: "", event_type: "general", property_id: "", is_private: false, recurrence: "none", recurrence_end: "" });
+    setTimes(freshTimes());
+    setForm({ title: "", description: "", location: "", event_type: "general", property_id: "", is_private: false, recurrence: "none", recurrence_end: "" });
     onSave(); onClose();
   };
 
@@ -1001,14 +1056,7 @@ function NewEventDialog({ open, onClose, onSave, properties, userId }: {
             <Label>Title</Label>
             <Input value={form.title} onChange={(e) => f("title", e.target.value)} placeholder="Event title" />
           </div>
-          <div className="space-y-1.5">
-            <Label>Start</Label>
-            <Input type="datetime-local" value={form.start_date} onChange={(e) => f("start_date", e.target.value)} className="w-full" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>End <span className="text-muted-foreground font-normal">(optional)</span></Label>
-            <Input type="datetime-local" value={form.end_date} onChange={(e) => f("end_date", e.target.value)} className="w-full" />
-          </div>
+          <EventTimeFields times={times} onChange={setTimes} zone={zoneForProperty(properties, form.property_id)} />
           <div className="space-y-1.5">
             <Label>Repeat</Label>
             <Select value={form.recurrence} onValueChange={(v) => f("recurrence", v)}>
@@ -1118,13 +1166,12 @@ function RightPanel({
     return source
       .filter((e) => {
         try {
-          const start = parseISO(e.start_date);
-          const end = e.end_date ? parseISO(e.end_date) : start;
+          const { start, end } = eventDayRange(e);
           // Include if event ends on or after today AND starts before month end
           return !isBefore(end, now) && !isAfter(start, monthEnd);
         } catch { return false; }
       })
-      .sort((a, b) => parseISO(a.start_date).getTime() - parseISO(b.start_date).getTime())
+      .sort((a, b) => eventStart(a).getTime() - eventStart(b).getTime())
       .slice(0, 30);
   })();
 
@@ -1148,8 +1195,9 @@ function RightPanel({
           const roninCfg = RONIN_TAB_CONFIG[tab];
           const familyCfg = getFamilyTypeConfig(ev.event_type);
           let start: Date;
-          try { start = parseISO(ev.start_date); } catch { return null; }
-          const end = ev.end_date ? parseISO(ev.end_date) : null;
+          try { start = eventStart(ev); } catch { return null; }
+          if (Number.isNaN(start.getTime())) return null;
+          const end = ev.end_date ? eventEnd(ev) : null;
 
           return (
             <button
@@ -1234,10 +1282,11 @@ export function CalendarSection() {
 
   // ── Fetch family (iCal synced) events ──────────────────────────────────────
   const fetchFamilyEvents = useCallback(async () => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
+    // Pad a day each side so all-day entries (stored at UTC midnight) are never cut off by the viewer's zone.
+    const start = addDays(startOfMonth(currentMonth), -1);
+    const end = addDays(endOfMonth(currentMonth), 1);
     // Narrow columns + cap result size — calendar list never needs notes/description on chips
-    const CAL_COLS = "id, title, description, event_type, start_date, end_date, property_id, calendar_source, status, is_private, assigned_staff_ids, keywords, location, created_by";
+    const CAL_COLS = "id, title, description, event_type, start_date, end_date, all_day, property_id, calendar_source, status, is_private, assigned_staff_ids, keywords, location, created_by";
     const { data } = await supabase
       .from("calendar_events")
       .select(CAL_COLS)
@@ -1253,14 +1302,16 @@ export function CalendarSection() {
   const fetchRoninEvents = useCallback(async () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
-    const CAL_COLS = "id, title, description, event_type, start_date, end_date, property_id, calendar_source, status, is_private, assigned_staff_ids, keywords, location, created_by";
+    const CAL_COLS = "id, title, description, event_type, start_date, end_date, all_day, property_id, calendar_source, status, is_private, assigned_staff_ids, keywords, location, created_by";
 
+    const qStart = addDays(monthStart, -1);
+    const qEnd = addDays(monthEnd, 1);
     const [{ data: manualData }, { data: profiles }, { data: maintenance }, { data: orders }] = await Promise.all([
       // Manual calendar events (non-ical) — capped + scoped to overlapping month window
       supabase.from("calendar_events").select(CAL_COLS)
         .neq("calendar_source", "ical")
-        .or(`start_date.gte.${monthStart.toISOString()},end_date.gte.${monthStart.toISOString()}`)
-        .lte("start_date", monthEnd.toISOString())
+        .or(`start_date.gte.${qStart.toISOString()},end_date.gte.${qStart.toISOString()}`)
+        .lte("start_date", qEnd.toISOString())
         .order("start_date")
         .limit(500),
       supabase.from("profiles").select("id, full_name, birthday, avatar_url, job_title, is_archived"),
@@ -1279,7 +1330,7 @@ export function CalendarSection() {
     const { data: linkedPlanned } = manualEventIds.length
       ? await supabase
           .from("planned_maintenance")
-          .select("id, calendar_event_id")
+          .select("id, calendar_event_id, status, date_type, recurrence_months")
           .in("calendar_event_id", manualEventIds)
       : { data: [] };
 
@@ -1294,9 +1345,22 @@ export function CalendarSection() {
         .map((entry) => [entry.calendar_event_id, entry.id])
     );
 
+    // Only booked planned jobs with a real date belong on the calendar. The database
+    // trigger owns these rows, so hide (never delete) the ones that are not bookings.
+    const PLANNED_VISIBLE = new Set(["booked", "initiated_by_vendor", "completed"]);
+    const hiddenPlannedCalendarIds = new Set(
+      (linkedPlanned ?? [])
+        .filter((entry) => entry.calendar_event_id && (
+          !PLANNED_VISIBLE.has(entry.status ?? "") || entry.date_type !== "specific"
+          || entry.recurrence_months === -1 || entry.recurrence_months === -2
+        ))
+        .map((entry) => entry.calendar_event_id as string)
+    );
+
     const events: CalEvent[] = [];
 
     for (const ev of manualData ?? []) {
+      if (hiddenPlannedCalendarIds.has(ev.id)) continue;
       const tab: RoninTab =
         ev.event_type === "travel" ? "travel"
         : ev.event_type === "maintenance" || ev.event_type === "repair" ? "maintenance"
@@ -1319,15 +1383,16 @@ export function CalendarSection() {
     for (const p of profiles ?? []) {
       if (!p.birthday || !p.full_name || p.is_archived) continue;
       try {
-        const bDay = parseISO(p.birthday);
-        const thisYearBday = new Date(getYear(currentMonth), getMonth(bDay), getDate(bDay));
-        if (!isSameMonth(thisYearBday, currentMonth)) continue;
+        // 'YYYY-MM-DD' is a plain date: never parse it as UTC.
+        const thisYearBday = birthdayInYear(p.birthday, getYear(currentMonth));
+        if (!thisYearBday || !isSameMonth(thisYearBday, currentMonth)) continue;
         events.push({
           id: `bday-${p.id}`,
           title: `🎂 ${p.full_name}'s Birthday`,
           description: p.job_title ?? null,
-          start_date: thisYearBday.toISOString(),
+          start_date: allDayStartIso(localDateKey(thisYearBday)),
           end_date: null,
+          all_day: true,
           event_type: "birthday",
           is_private: false,
           keywords: ["birthday"],
@@ -1371,8 +1436,9 @@ export function CalendarSection() {
         id: `order-${order.id}`,
         title: `📦 ${order.title}`,
         description: `Status: ${order.status}`,
-        start_date: new Date(order.expected_delivery + "T12:00:00").toISOString(),
+        start_date: allDayStartIso(order.expected_delivery.slice(0, 10)),
         end_date: null,
+        all_day: true,
         event_type: "delivery",
         is_private: false,
         keywords: ["delivery"],
@@ -1402,7 +1468,7 @@ export function CalendarSection() {
 
   useEffect(() => {
     const canSeeAll = isMasterAdmin;
-    supabase.from("properties").select("id, name").order("sort_order").then(({ data }) => {
+    supabase.from("properties").select("id, name, timezone").order("sort_order").then(({ data }) => {
       const all = (data as Property[]) ?? [];
       setProperties(canSeeAll ? all : all.filter(p => assignedPropertyIds.includes(p.id)));
     });

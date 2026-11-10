@@ -1,3 +1,4 @@
+import { eventDayKeys } from "@/lib/calendarTime";
 import { format } from "date-fns";
 import { PlaneTakeoff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,8 +43,7 @@ export function FamilyOverlayBand({
           return monthDays.map((day) => {
             const dateStr = format(day, "yyyy-MM-dd");
             const inEvent = evs.some((ev) => {
-              const start = ev.start_date.slice(0, 10);
-              const end = (ev.end_date ?? ev.start_date).slice(0, 10);
+              const { start, end } = eventDayKeys(ev);
               return dateStr >= start && dateStr <= end;
             });
             return (

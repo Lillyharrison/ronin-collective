@@ -47,7 +47,7 @@ export async function fetchNotificationDetail(type: NotificationDetailType, id: 
   }
   if (type === "calendar_event") {
     const { data, error } = await supabase.from("calendar_events")
-      .select("id, title, start_date, end_date, property_id, location, description, notes")
+      .select("id, title, start_date, end_date, all_day, property_id, location, description, notes")
       .eq("id", id).maybeSingle();
     if (error || !data) return null;
     return { type, record: { ...data, property_name: await propertyName(data.property_id) } } as const;

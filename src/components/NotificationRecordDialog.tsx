@@ -9,6 +9,7 @@ import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { PlannedMaintenanceDetail, DetailField, detailDate } from "@/components/maintenance/PlannedMaintenanceDetail";
 import { fetchNotificationDetail, type NotificationDetailType } from "@/lib/notificationDetail";
 import { imageUrl } from "@/lib/imageUrl";
+import { formatEventWhen } from "@/lib/calendarTime";
 
 export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
   target: { type: NotificationDetailType; id: string | null };
@@ -61,7 +62,7 @@ export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
               <DetailField label={es ? "Propiedad" : "Property"}>{data.record.property_name}</DetailField>
             </dl>
             : data.type === "calendar_event" ? <dl className="grid gap-5">
-              <DetailField label={es ? "Fecha y hora" : "Date and time"}>{detailDate(data.record.start_date, language, data.record.start_date.length > 10)}{data.record.end_date && data.record.end_date !== data.record.start_date ? ` – ${detailDate(data.record.end_date, language, data.record.end_date.length > 10)}` : ""}</DetailField>
+              <DetailField label={es ? "Fecha y hora" : "Date and time"}>{formatEventWhen(data.record, es ? "es" : "en-US")}</DetailField>
               <DetailField label={es ? "Propiedad" : "Property"}>{data.record.property_name}</DetailField>
               <DetailField label={es ? "Ubicación" : "Location"}>{data.record.location}</DetailField>
               <DetailField label={es ? "Descripción" : "Description"}>{data.record.description}</DetailField>

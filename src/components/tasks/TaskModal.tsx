@@ -329,7 +329,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       await notifySection("orders", {
         title: `📦 Order placed: ${task.title_en}`,
         body: expectedDelivery
-          ? `Est. delivery: ${new Date(expectedDelivery).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+          ? `Est. delivery: ${new Date(`${expectedDelivery.slice(0, 10)}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
           : carrier ? `Via ${carrier}` : undefined,
         type: "success",
         action_url: "orders",
@@ -339,8 +339,8 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
       // Auto-create a delivery calendar event if expected_delivery is set
       if (expectedDelivery) {
-        const deliveryStart = new Date(expectedDelivery);
-        deliveryStart.setHours(9, 0, 0, 0);
+        // Expected delivery is a plain date → all-day entry on that date for every viewer.
+        const deliveryDay = expectedDelivery.slice(0, 10);
         await supabase.from("calendar_events").insert({
           title: `📦 Delivery: ${task.title_en}`,
           description: [
@@ -349,7 +349,9 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             packingList ? `Items: ${packingList}` : null,
           ].filter(Boolean).join(" · ") || null,
           event_type: "delivery",
-          start_date: deliveryStart.toISOString(),
+          start_date: `${deliveryDay}T00:00:00.000Z`,
+          end_date: `${deliveryDay}T23:59:00.000Z`,
+          all_day: true,
           property_id: task.property_id ?? null,
           created_by: userId,
           calendar_source: "manual",

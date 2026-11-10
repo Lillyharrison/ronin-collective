@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { parseICalDateProp, icalToStored } from "../_shared/eventTime.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,29 +23,6 @@ const PRIVATE_KEYWORDS = [
   "personal", "private", "kids", "school", "pickup", "dropoff",
   "pharmacy", "medical", "confidential",
 ];
-
-function parseICalDate(val: string): string | null {
-  if (!val) return null;
-  try {
-    // DATE-TIME: YYYYMMDDTHHMMSSZ or YYYYMMDDTHHMMSS
-    const dt = val.replace(/[TZ]/g, (c) => (c === "T" ? "T" : "")).trim();
-    if (val.includes("T")) {
-      const year = dt.slice(0, 4);
-      const month = dt.slice(4, 6);
-      const day = dt.slice(6, 8);
-      const hour = dt.slice(9, 11);
-      const min = dt.slice(11, 13);
-      const sec = dt.slice(13, 15) || "00";
-      const isUtc = val.endsWith("Z");
-      return `${year}-${month}-${day}T${hour}:${min}:${sec}${isUtc ? "Z" : ""}`;
-    } else {
-      // DATE: YYYYMMDD
-      return `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}T00:00:00Z`;
-    }
-  } catch {
-    return null;
-  }
-}
 
 function unescapeIcal(val: string): string {
   return val
@@ -84,6 +62,7 @@ interface CalendarEvent {
   location: string;
   start: string | null;
   end: string | null;
+  allDay: boolean;
   isPrivate: boolean;
 }
 
@@ -105,16 +84,18 @@ function parseICalFeed(icalText: string, customPrivateKeywords: string[]): Calen
       const title = unescapeIcal(current["SUMMARY"] || "");
       const description = unescapeIcal(current["DESCRIPTION"] || "");
       const location = unescapeIcal(current["LOCATION"] || "");
-      const startRaw = current["DTSTART"] || current["DTSTART;VALUE=DATE"] || "";
-      const endRaw = current["DTEND"] || current["DTEND;VALUE=DATE"] || "";
-      const start = parseICalDate(startRaw);
-      const end = parseICalDate(endRaw);
+      const startParsed = current["DTSTART"] ? parseICalDateProp(current["DTSTART__params"] ?? "", current["DTSTART"]) : null;
+      const endParsed = current["DTEND"] ? parseICalDateProp(current["DTEND__params"] ?? "", current["DTEND"]) : null;
+      const stored = startParsed ? icalToStored(startParsed, endParsed) : null;
+      const start = stored?.start_date ?? null;
+      const end = stored?.end_date ?? null;
+      const allDay = stored?.all_day ?? false;
       const allPrivate = [...PRIVATE_KEYWORDS, ...customPrivateKeywords.map((k) => k.toLowerCase())];
       const text = `${title} ${description}`.toLowerCase();
       const isPrivate = allPrivate.some((kw) => text.includes(kw));
 
       if (uid && title) {
-        events.push({ uid, title, description, location, start, end, isPrivate });
+        events.push({ uid, title, description, location, start, end, allDay, isPrivate });
       }
     } else if (inEvent) {
       // Handle property;param=value:value format
@@ -123,8 +104,13 @@ function parseICalFeed(icalText: string, customPrivateKeywords: string[]): Calen
       let key = line.slice(0, colonIdx);
       const val = line.slice(colonIdx + 1);
       // Normalize DTSTART;TZID=...: → DTSTART
-      if (key.startsWith("DTSTART")) key = "DTSTART";
-      if (key.startsWith("DTEND")) key = "DTEND";
+      // Keep the parameters (TZID / VALUE=DATE) so dates are read correctly.
+      for (const prop of ["DTSTART", "DTEND"]) {
+        if (key.startsWith(prop)) {
+          current[`${prop}__params`] = key.slice(prop.length);
+          key = prop;
+        }
+      }
       current[key] = val;
     }
   }
@@ -203,6 +189,7 @@ serve(async (req) => {
         location: ev.location || null,
         start_date: ev.start,
         end_date: ev.end || null,
+        all_day: ev.allDay,
         event_type: eventType,
         is_private: ev.isPrivate || !estateRelevant,
         keywords,

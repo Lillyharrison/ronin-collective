@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { describeEventWhen } from "../_shared/eventTime.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Internal webhook secret — must match the value in the DB trigger function
@@ -31,12 +32,13 @@ function buildBriefingPrompt(
   propertyName: string,
   staffNames: string[],
 ): string {
-  const dateStr = event.start_date
-    ? new Date(event.start_date as string).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
-    : "TBD";
-  const endDateStr = event.end_date
-    ? new Date(event.end_date as string).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
-    : null;
+  // All-day: date only. Timed: in the house's zone, with the zone named.
+  const extra = (event.payload ?? {}) as Record<string, unknown>;
+  const dateStr = describeEventWhen(
+    { start_date: event.start_date ?? extra.start_date, end_date: event.end_date ?? extra.end_date, all_day: event.all_day ?? extra.all_day },
+    event.property_timezone ?? extra.property_timezone,
+  );
+  const endDateStr = null;
   const location = event.location as string || "";
   const staffList = staffNames.length > 0 ? `Assigned staff: ${staffNames.join(", ")}` : "No staff assigned yet";
 
@@ -537,7 +539,7 @@ Be direct and professional.`;
 
       if (assignedIds.length > 0 && masterAdminId) {
         const staffBriefingPrompt = `You are Ronin AI, an estate management assistant.
-A calendar event has been added: "${event.title}" on ${event.start_date ? new Date(event.start_date as string).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "TBD"} at ${propertyName}.
+A calendar event has been added: "${event.title}" on ${describeEventWhen({ start_date: event.start_date, end_date: event.end_date, all_day: event.all_day ?? payload?.all_day }, event.property_timezone ?? payload?.property_timezone, "short")} at ${propertyName}.
 Write a SHORT, professional message (max 80 words) to assigned staff listing their 2-3 key preparation tasks. Do NOT include private family details. Use bullet points.`;
 
         const staffAiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

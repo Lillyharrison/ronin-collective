@@ -250,7 +250,7 @@ export function StaffCalendarTab({
     let cancelled = false;
     supabase
       .from("calendar_events")
-      .select("id, title, start_date, end_date, event_type, property_id")
+      .select("id, title, start_date, end_date, all_day, event_type, property_id")
       .in("event_type", ["travel", "guest"])
       .lte("start_date", endISO)
       .or(`end_date.gte.${startISO},end_date.is.null`)
