@@ -8,6 +8,8 @@ vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ language: m
 import { NotificationRecordDialog } from "./NotificationRecordDialog";
 
 afterEach(cleanup);
+const originalTZ = process.env.TZ;
+afterEach(() => { process.env.TZ = originalTZ; });
 beforeEach(() => { vi.clearAllMocks(); mocks.canEdit = false; mocks.language = "en"; });
 function open(type: "task" | "birthday" | "planned_maintenance" = "task") {
   const close = vi.fn(); const edit = vi.fn();
@@ -36,6 +38,12 @@ it("renders a compact read-only task with sender and assignee", async () => {
   expect(screen.getByText("Joanne")).toBeInTheDocument();
   expect(screen.getByText("Ronin")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+});
+it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("task notification keeps 23 Nov in %s", async tz => {
+  process.env.TZ = tz;
+  mocks.fetch.mockResolvedValue({ type: "task", record: { title_en: "Check windows", status: "pending", due_date: "2026-11-23T00:00:00.000Z" } });
+  open();
+  expect(await screen.findByText("Nov 23, 2026")).toBeInTheDocument();
 });
 it("birthday uses a profile and localized birthday label", async () => {
   mocks.language = "es";

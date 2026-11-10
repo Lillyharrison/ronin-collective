@@ -2,10 +2,30 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ allowed: new Set(["allowed"]) as ReadonlySet<string> | null }));
 vi.mock("@/hooks/useAssignableProfileIds", () => ({ useAssignableProfileIds: () => mocks.allowed }));
-vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", canEdit: () => false }) }));
+vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isAdmin: true, canEdit: () => false }) }));
 vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ language: "en", t: (key: string) => key }) }));
 import { IssueModal } from "./IssueModal";
 afterEach(cleanup);
+const originalTZ = process.env.TZ;
+afterEach(() => { process.env.TZ = originalTZ; });
+describe("repair date saves", () => {
+  it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("preserves untouched mixed stamps and saves edited dates at UTC midnight in %s", async tz => {
+    process.env.TZ = tz;
+    for (const stamp of ["2026-11-23T00:00:00.000Z", "2026-11-10T22:28:44Z"]) {
+      const save = vi.fn().mockResolvedValue(true);
+      const { unmount } = render(<IssueModal open mode="edit" onClose={vi.fn()} onSave={save}
+        initial={{ title: "Repair", status: "scheduled", scheduled_date: stamp }} categories={[]} properties={[]} profiles={[]} />);
+      fireEvent.click(screen.getByRole("button", { name: "save" }));
+      await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ scheduled_date: stamp })));
+      const dateInput = document.querySelector('input[type="date"]');
+      if (!dateInput) throw new Error("Missing repair date input");
+      fireEvent.change(dateInput, { target: { value: "2026-11-24" } });
+      fireEvent.click(screen.getByRole("button", { name: "save" }));
+      await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ scheduled_date: "2026-11-24T00:00:00.000Z" })));
+      unmount();
+    }
+  });
+});
 describe("repair assignee editor", () => {
   it("shows an ineligible current assignee and keeps its ID when saved", async () => {
     mocks.allowed = new Set(["allowed"]);

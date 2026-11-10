@@ -1,3 +1,4 @@
+import { stampToDisplayDate } from "@/lib/calendarTime";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -126,7 +127,7 @@ export function DraftTasksWidget() {
                   {task.due_date && (
                     <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground flex-shrink-0">
                       <Clock size={8} />
-                      {new Date(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {stampToDisplayDate(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </span>
                   )}
                   {task.linked_checklist && (

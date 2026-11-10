@@ -30,6 +30,7 @@ import {
   eventStart, eventEnd, eventDayRange, isMultiDayEvent, eventOccursOn, localDateKey,
   allDayStartIso, allDayEndIso, allDayDates, birthdayInYear, houseTimeZone, timeZoneLabel,
   eventToFormTimes, formTimesToEvent, toggleAllDay, type EventFormTimes,
+  isDateOnlyStamp, dateInputToStamp,
 } from "@/lib/calendarTime";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -181,7 +182,7 @@ async function rescheduleEvent(ev: CalEvent, newDate: Date) {
   if (ev._source === "maintenance" && ev._source_id) {
     const { error } = await supabase
       .from("maintenance_issues")
-      .update({ scheduled_date: newStart.toISOString() })
+      .update({ scheduled_date: ev.all_day ? dateInputToStamp(localDateKey(newDate)) : newStart.toISOString() })
       .eq("id", ev._source_id);
     if (error) { toast.error("Failed to reschedule maintenance issue"); return false; }
     toast.success("Maintenance rescheduled");
@@ -1317,8 +1318,9 @@ export function CalendarSection() {
       supabase.from("profiles").select("id, full_name, birthday, avatar_url, job_title, is_archived"),
       supabase.from("maintenance_issues").select("id, title, scheduled_date, status, priority, property_id")
         .not("scheduled_date", "is", null)
-        .gte("scheduled_date", monthStart.toISOString())
-        .lte("scheduled_date", monthEnd.toISOString()),
+        .gte("scheduled_date", qStart.toISOString())
+        .lte("scheduled_date", qEnd.toISOString())
+        .limit(500),
       supabase.from("orders").select("id, title, expected_delivery, status, property_id")
         .not("expected_delivery", "is", null)
         .gte("expected_delivery", format(monthStart, "yyyy-MM-dd"))
@@ -1416,6 +1418,7 @@ export function CalendarSection() {
         description: `Priority: ${issue.priority} · Status: ${issue.status}`,
         start_date: issue.scheduled_date,
         end_date: null,
+        all_day: isDateOnlyStamp(issue.scheduled_date),
         event_type: "maintenance",
         is_private: false,
         keywords: ["maintenance"],

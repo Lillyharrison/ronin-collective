@@ -1,3 +1,4 @@
+import { stampToDisplayDate } from "@/lib/calendarTime";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { PlannedMaintenanceEntry } from "@/hooks/usePlannedMaintenance";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Pencil } from "lucide-react";
 
 export function detailDate(value: string | null, language: string, withTime = false) {
   if (!value) return "—";
-  const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
+  const date = stampToDisplayDate(value);
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleString(language === "es" ? "es" : "en-US", {
     day: "numeric", month: "short", year: "numeric",

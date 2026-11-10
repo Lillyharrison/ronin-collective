@@ -1,3 +1,4 @@
+import { localDateKey } from "@/lib/calendarTime";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -29,7 +30,7 @@ function PartialChecklistsWidget({ mineOnly }: { mineOnly: boolean }) {
   useEffect(() => {
     if (permLoading || !userId) return;
     async function load() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateKey(new Date());
       let q = supabase
         .from("staff_shifts")
         .select("id, property_id, checklist_template_id, checklist_templates(title, icon), properties(name)")

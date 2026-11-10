@@ -1,3 +1,4 @@
+import { stampToDisplayDate, stampToDateInputValue, dateInputToStamp, dateInputToSavedStamp } from "@/lib/calendarTime";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -62,7 +63,7 @@ export function FamilyTasksView() {
     setEditAssignedTo(t.assigned_to ?? "");
     setEditWhat(t.title_en);
     setEditPropertyId(t.property_id ?? "");
-    setEditDueDate(t.due_date ? t.due_date.slice(0, 10) : "");
+    setEditDueDate(t.due_date ? stampToDateInputValue(t.due_date) : "");
   };
 
   const closeEdit = () => setEditingTask(null);
@@ -76,7 +77,7 @@ export function FamilyTasksView() {
       title_en: editWhat.trim(),
       assigned_to: editAssignedTo,
       property_id: editPropertyId || null,
-      due_date: editDueDate || null,
+      due_date: dateInputToSavedStamp(editDueDate, editingTask.due_date),
     } as any).eq("id", editingTask.id).select();
     setEditSaving(false);
     if (error || !data || data.length === 0) {
@@ -165,7 +166,7 @@ export function FamilyTasksView() {
       category: "general",
       assigned_to: assignedTo,
       property_id: propertyId || null,
-      due_date: dueDate || null,
+      due_date: dueDate ? dateInputToStamp(dueDate) : null,
       created_by: userId,
     } as any).select("id").single();
     setSaving(false);
@@ -287,7 +288,7 @@ export function FamilyTasksView() {
                     {t.due_date && (
                       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                         <Clock size={10} />
-                        {new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {stampToDisplayDate(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     )}
                   </div>

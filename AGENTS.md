@@ -20,3 +20,4 @@
 - Property visibility is by assignment for every role except master_admin (client `isMasterAdmin` checks + `user_can_access_property`); rank never grants extra properties.
 - Draft-to-live activation goes only through the service-role activate_draft_profile DB function (one transaction, re-points every profile reference, deletes draft last); new profile-id columns must be added to its list.
 - Calendar dates go through src/lib/calendarTime.ts (client) and supabase/functions/_shared/eventTime.ts (server): all-day entries read UTC date parts, timed entries show in the viewer's zone and are entered in the house zone; the planned-maintenance trigger is the only writer of its calendar rows, so one convention holds everywhere.
+- Task due dates and mixed repair scheduled stamps use calendarTime's stamp helpers: UTC midnight is a date, other stamps are moments; date-picker saves retain unchanged originals to avoid losing genuine times.

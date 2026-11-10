@@ -1,3 +1,4 @@
+import { stampToDisplayDate, compareStampCalendarDate } from "@/lib/calendarTime";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Clock, MapPin, User, BookOpen, Paperclip, AlertTriangle, Circle, CheckSquare, ChevronRight, Package } from "lucide-react";
@@ -43,7 +44,7 @@ export function TaskCard({ task, onClick }: Props) {
   const { language } = useLanguage();
   const isL = language === "es";
   const title = isL && task.title_es ? task.title_es : task.title_en;
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+  const isOverdue = task.due_date && compareStampCalendarDate(task.due_date) < 0 && task.status !== "completed";
   const hasAttachments = (task.attachments?.length ?? 0) > 0;
 
   return (
@@ -87,7 +88,7 @@ export function TaskCard({ task, onClick }: Props) {
         {task.due_date && (
           <span className={cn("flex items-center gap-0.5 text-[10px]", isOverdue ? "text-status-urgent" : "text-muted-foreground")}>
             <Clock size={9} />
-            {new Date(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {stampToDisplayDate(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </span>
         )}
         {task.property?.name && (

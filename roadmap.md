@@ -1,5 +1,11 @@
 # House-protected roster
 
+# Task and repair date-only stamps
+
+- [x] Share mixed date/moment helpers across task/repair displays, comparisons, forms, calendar and exports; redeploy ronin-ai and ronin-event-listener for task writes/text.
+- [x] Test four viewer zones and unchanged date saves (95 tests); signed-in Pacific-time Marble etching card/detail show Nov 23; no records saved.
+- [x] Audit other parsing: plain DATE fields using parseISO are already local-date safe; messaging/audit/resolved timestamps remain moments. Server overdue digest uses UTC calendar days because it has no viewer zone; its upstream database trigger is untouched as required.
+
 # Casual staff time tracking
 
 - [x] Switch reminder authorization to private_config and redeploy; invalid Bearer returns 401.

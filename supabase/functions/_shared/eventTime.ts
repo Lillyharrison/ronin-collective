@@ -3,6 +3,40 @@
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/** Task/repair dates are UTC-midnight stamps; non-midnight stamps remain moments. */
+export function isDateOnlyStamp(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T00:00:00(?:\.0+)?(?:Z|\+00:00)$/.test(iso)
+    && !Number.isNaN(new Date(iso).getTime());
+}
+
+export function dateInputToStamp(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid date input");
+  return `${date}T00:00:00.000Z`;
+}
+
+/** Servers have no viewer zone; use an explicit house zone, falling back to UTC. */
+export function stampDateKey(iso: string, timezone: unknown = "UTC"): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date stamp");
+  const tz = isDateOnlyStamp(iso) ? "UTC" : isValidTimeZone(timezone) ? timezone : "UTC";
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(d);
+  const get = (type: string) => parts.find(p => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+export function formatStampDate(iso: string, month: "long" | "short" = "short"): string {
+  const key = stampDateKey(iso);
+  return new Date(`${key}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month, day: "numeric" });
+}
+
+export function previousDateStamp(iso: string, timezone: unknown): string {
+  const key = stampDateKey(iso, timezone);
+  const d = new Date(dateInputToStamp(key));
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString();
+}
+
 export function isValidTimeZone(tz: unknown): tz is string {
   if (typeof tz !== "string" || !tz) return false;
   try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; }

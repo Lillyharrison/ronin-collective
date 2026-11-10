@@ -1,3 +1,4 @@
+import { stampToDisplayDate } from "@/lib/calendarTime";
 import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play, Archive, ArchiveRestore } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IssueStatusBadge, IssuePriorityBadge } from "./IssueStatusBadge";
@@ -148,7 +149,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
               <div className="flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 rounded-md px-1.5 py-0.5 w-fit">
                 <CalendarClock size={9} className="text-blue-400 flex-shrink-0" />
                 <span className="text-[10px] font-medium text-blue-400">
-                  {format(new Date(issue.scheduled_date), "MMM d, yyyy")}
+                  {format(stampToDisplayDate(issue.scheduled_date), "MMM d, yyyy")}
                 </span>
               </div>
             )}
@@ -193,7 +194,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
             <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1.5 w-fit">
               <CalendarClock size={11} className="text-blue-400 flex-shrink-0" />
               <span className="text-[11px] font-medium text-blue-400">
-                {format(new Date(issue.scheduled_date), "MMM d, yyyy")}
+                {format(stampToDisplayDate(issue.scheduled_date), "MMM d, yyyy")}
               </span>
             </div>
           )}

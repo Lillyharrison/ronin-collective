@@ -1,3 +1,4 @@
+import { stampToDisplayDate, stampToDateInputValue, dateInputToSavedStamp, localDateKey } from "@/lib/calendarTime";
 import { useState, useEffect } from "react";
 import { imageUrl, isVideoUrl } from "@/lib/imageUrl";
 import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon, Archive, ArchiveRestore } from "lucide-react";
@@ -35,24 +36,24 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<IssueStatus>(issue.status);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(
-    issue.scheduled_date ? new Date(issue.scheduled_date) : undefined
+    issue.scheduled_date ? stampToDisplayDate(issue.scheduled_date) : undefined
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Keep state in sync if parent refreshes the issue
   useEffect(() => {
     setPendingStatus(issue.status);
-    setScheduledDate(issue.scheduled_date ? new Date(issue.scheduled_date) : undefined);
+    setScheduledDate(issue.scheduled_date ? stampToDisplayDate(issue.scheduled_date) : undefined);
   }, [issue.status, issue.scheduled_date]);
 
   const statusChanged = pendingStatus !== issue.status;
-  const dateChanged = scheduledDate?.toISOString().split("T")[0] !== issue.scheduled_date?.split("T")[0];
+  const dateChanged = (scheduledDate ? localDateKey(scheduledDate) : "") !== (issue.scheduled_date ? stampToDateInputValue(issue.scheduled_date) : "");
   const hasChanges = statusChanged || (pendingStatus === "scheduled" && dateChanged);
 
   const handleSave = () => {
     if (!onStatusChange) return;
     const dateStr = pendingStatus === "scheduled" && scheduledDate
-      ? scheduledDate.toISOString()
+      ? dateInputToSavedStamp(localDateKey(scheduledDate), issue.scheduled_date) ?? undefined
       : undefined;
     onStatusChange(issue, pendingStatus, dateStr);
   };
@@ -159,7 +160,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
                   <Calendar size={9}/> {t("scheduledLabel")}
                 </p>
                 <p className="text-sm font-medium text-foreground">
-                  {format(new Date(issue.scheduled_date), "MMM d, yyyy")}
+                  {format(stampToDisplayDate(issue.scheduled_date), "MMM d, yyyy")}
                 </p>
               </div>
             )}

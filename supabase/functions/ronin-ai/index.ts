@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { describeEventWhen } from "../_shared/eventTime.ts";
+import { describeEventWhen, dateInputToStamp } from "../_shared/eventTime.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -1197,7 +1197,9 @@ serve(async (req) => {
           status: priority === 1 ? "urgent" : "pending",
           assigned_to: resolveStaffId(tool_args.assigned_to_name) ?? callerUserId,
           property_id: resolvePropertyId(tool_args.property_name),
-          due_date: tool_args.due_date ?? null,
+          due_date: tool_args.due_date
+            ? (/^\d{4}-\d{2}-\d{2}$/.test(tool_args.due_date) ? dateInputToStamp(tool_args.due_date) : tool_args.due_date)
+            : null,
           created_by: callerUserId,
         }).select("id").single();
 
