@@ -1,3 +1,4 @@
+import { utcToWallTime, houseTimeZone } from "@/lib/calendarTime";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,12 +50,12 @@ export function VisitEditor({
   const [start, setStart] = useState(
     e
       ? localInput(e.adj_in || e.clock_in, e.property?.timezone)
-      : `${seed.date || new Date().toISOString().slice(0, 10)}T${seed.start?.slice(0, 5) || "08:00"}`,
+      : `${seed.date || utcToWallTime(new Date().toISOString(), houseTimeZone(zone)).slice(0, 10)}T${seed.start?.slice(0, 5) || "08:00"}`,
   );
   const [end, setEnd] = useState(
     e
       ? localInput(e.adj_out || e.clock_out, e.property?.timezone)
-      : `${seed.date || new Date().toISOString().slice(0, 10)}T${seed.end?.slice(0, 5) || "16:00"}`,
+      : `${seed.date || utcToWallTime(new Date().toISOString(), houseTimeZone(zone)).slice(0, 10)}T${seed.end?.slice(0, 5) || "16:00"}`,
   );
   const [why, setWhy] = useState("");
   const [reason, setReason] = useState(e?.reason || "weekly_visit");

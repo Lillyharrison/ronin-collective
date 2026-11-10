@@ -1,4 +1,4 @@
-import { stampToDateInputValue, dateInputToSavedStamp } from "@/lib/calendarTime";
+import { plainDateKey, dateInputToPlainDate } from "@/lib/calendarTime";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, Upload, Camera, AlertTriangle, Search, Plus } from "lucide-react";
@@ -59,7 +59,7 @@ function ModalContent({
   const [room, setRoom]               = useState(initial.location_detail ?? "");
   const [assignedTo, setAssignedTo]   = useState(initial.assigned_to ?? "");
   const [scheduledDate, setScheduled] = useState(
-    initial.scheduled_date ? stampToDateInputValue(initial.scheduled_date) : ""
+    initial.scheduled_date ? plainDateKey(initial.scheduled_date) : ""
   );
   const [relatedIssueId, setRelated]  = useState(initial.related_issue_id ?? "");
   const [relatedSearch, setRelatedSch]= useState("");
@@ -141,7 +141,7 @@ function ModalContent({
       photo_url:           photos[0] ?? null,
       photo_urls:          photos,
       close_out_photo_url: closeOutUrl || null,
-      scheduled_date:      dateInputToSavedStamp(scheduledDate, initial.scheduled_date),
+      scheduled_date:      dateInputToPlainDate(scheduledDate),
       related_issue_id:    relatedIssueId || null,
       source:              initial.source ?? "manual",
       is_draft:            false,

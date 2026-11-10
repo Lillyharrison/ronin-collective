@@ -1,3 +1,4 @@
+import { localDateKey } from "@/lib/calendarTime";
 import { useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -222,7 +223,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
   const progress = items.length > 0 ? Math.round((completedIds.size / items.length) * 100) : 0;
   const colorCls = COLOR_BG[template.color] ?? COLOR_BG.green;
   const isAllComplete = items.length > 0 && completedIds.size === items.length;

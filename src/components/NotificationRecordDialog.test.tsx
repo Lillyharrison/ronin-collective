@@ -41,7 +41,7 @@ it("renders a compact read-only task with sender and assignee", async () => {
 });
 it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("task notification keeps 23 Nov in %s", async tz => {
   process.env.TZ = tz;
-  mocks.fetch.mockResolvedValue({ type: "task", record: { title_en: "Check windows", status: "pending", due_date: "2026-11-23T00:00:00.000Z" } });
+  mocks.fetch.mockResolvedValue({ type: "task", record: { title_en: "Check windows", status: "pending", due_date: "2026-11-23" } });
   open();
   expect(await screen.findByText("Nov 23, 2026")).toBeInTheDocument();
 });

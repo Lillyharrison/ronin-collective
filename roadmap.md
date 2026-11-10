@@ -1,3 +1,10 @@
+# Plain DATE task and repair follow-up
+
+- [x] Replace task/repair stamp handling with plain date keys in readers, writers and filters; database untouched.
+- [x] Add four-zone and source-regression tests (76 passed); deploy ronin-ai and ronin-event-listener.
+- [x] Read-only signed-in Pacific-time repair cards/details show Nov 23; task card/detail checked with Nov 10 (no saves); changed-file report provided.
+- [ ] Verify a real Nov 23 task card/detail: no tasks with due_date=2026-11-23 are returned for the signed-in Lilly session; four-zone tests cover Nov 23.
+
 # House-protected roster
 
 # Task and repair date-only stamps

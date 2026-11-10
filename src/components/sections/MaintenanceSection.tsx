@@ -1,3 +1,4 @@
+import { dateInputToPlainDate, localDateKey } from "@/lib/calendarTime";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
@@ -340,7 +341,7 @@ export function MaintenanceSection() {
     const patch: Partial<MaintenanceIssue> = { status: newStatus };
     if (newStatus === "resolved") patch.resolved_at = new Date().toISOString();
     if (newStatus === "scheduled" && scheduledDate) {
-      patch.scheduled_date = scheduledDate;
+      patch.scheduled_date = dateInputToPlainDate(scheduledDate);
     } else if (newStatus !== "scheduled") {
       patch.scheduled_date = null;
     }
@@ -1108,7 +1109,7 @@ export function MaintenanceSection() {
               <input
                 type="date"
                 value={backdateValue}
-                max={new Date().toISOString().slice(0, 10)}
+                max={localDateKey(new Date())}
                 onChange={(e) => setBackdateValue(e.target.value)}
                 className="flex-1 h-9 px-2 rounded-md border border-border bg-background text-sm"
               />

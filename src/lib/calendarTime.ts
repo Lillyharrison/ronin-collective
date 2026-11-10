@@ -21,37 +21,27 @@ const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** Only UTC midnight (including equivalent ISO offset spelling) is a date-only stamp. */
-export function isDateOnlyStamp(iso: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}T00:00:00(?:\.0+)?(?:Z|\+00:00)$/.test(iso)
-    && !Number.isNaN(new Date(iso).getTime());
+/** DATE columns: tolerate cached ISO inputs by taking their literal date part, never their moment. */
+export function plainDateKey(value: string): string {
+  return /^\d{4}-\d{2}-\d{2}(?:$|T)/.test(value) ? value.slice(0, 10) : "";
 }
 
-/** Mixed date/moment fields: dates stay on their UTC day; moments remain viewer-local. */
-export function stampToDisplayDate(iso: string): Date {
-  if (isDateOnlyStamp(iso) || DATE_ONLY.test(iso)) return parseDateOnly(iso) ?? new Date(NaN);
-  return new Date(iso);
+/** Task/repair/plain DATE value as local midnight, built from its date parts. */
+export function plainDateToLocal(value: string): Date {
+  return parseDateOnly(plainDateKey(value)) ?? new Date(NaN);
 }
 
-export function stampToDateInputValue(iso: string): string {
-  const d = stampToDisplayDate(iso);
-  return Number.isNaN(d.getTime()) ? "" : localDateKey(d);
-}
-
-export function dateInputToStamp(value: string): string {
-  if (!DATE_ONLY.test(value)) throw new Error("Invalid date input");
-  return `${value}T00:00:00.000Z`;
-}
-
-/** A date picker must not strip an existing moment or rewrite its ISO spelling. */
-export function dateInputToSavedStamp(value: string, original?: string | null): string | null {
-  if (original && value === stampToDateInputValue(original)) return original;
-  return value ? dateInputToStamp(value) : null;
+/** Date picker writes contain a plain DATE or null, including unchanged cached ISO values. */
+export function dateInputToPlainDate(value: string): string | null {
+  if (!value) return null;
+  const key = plainDateKey(value);
+  if (!key) throw new Error("Invalid date input");
+  return key;
 }
 
 /** Negative = overdue, zero = due today, positive = upcoming in the viewer's calendar. */
-export function compareStampCalendarDate(iso: string, today = new Date()): number {
-  return stampToDateInputValue(iso).localeCompare(localDateKey(today));
+export function comparePlainCalendarDate(value: string, today = new Date()): number {
+  return plainDateKey(value).localeCompare(localDateKey(today));
 }
 
 /** Local yyyy-MM-dd key of a Date. */

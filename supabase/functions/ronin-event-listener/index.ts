@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { describeEventWhen, formatStampDate, previousDateStamp, dateInputToStamp } from "../_shared/eventTime.ts";
+import { describeEventWhen, formatPlainDate, previousEventDate, dateKeyInZone } from "../_shared/eventTime.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Internal webhook secret — must match the value in the DB trigger function
@@ -324,7 +324,7 @@ Task: "${task_title}"
 Category: ${category || "general"}
 Assigned to: ${assigneeName}
 Property: ${propertyName}
-Due: ${due_date ? formatStampDate(due_date, "long") : "ASAP"}
+Due: ${due_date ? formatPlainDate(due_date, "long") : "ASAP"}
 Details: ${description || "No details provided"}
 
 Write a concise alert (max 100 words) for the Master Admin:
@@ -404,7 +404,7 @@ Be concise and professional.`;
         .from("tasks")
         .select("title_en, category, due_date, assigned_to, property_id")
         .not("status", "in", '("completed")')
-        .lt("due_date", dateInputToStamp(new Date().toISOString().slice(0, 10)))
+        .lt("due_date", dateKeyInZone(new Date(), payload?.property_timezone))
         .not("due_date", "is", null)
         .order("due_date")
         .limit(8);
@@ -419,7 +419,7 @@ Be concise and professional.`;
       });
 
       const taskList = (overdueTasks ?? [])
-        .map((t: any) => `- "${t.title_en}" (${t.category ?? "general"}) — ${propMap[t.property_id] ?? "Estate"} — assigned: ${staffMap[t.assigned_to] ?? "unassigned"} — due: ${formatStampDate(t.due_date)}`)
+        .map((t: any) => `- "${t.title_en}" (${t.category ?? "general"}) — ${propMap[t.property_id] ?? "Estate"} — assigned: ${staffMap[t.assigned_to] ?? "unassigned"} — due: ${formatPlainDate(t.due_date)}`)
         .join("\n");
 
       const aiPrompt = `You are Ronin AI. There are currently ${overdue_count} overdue tasks on the estate platform.
@@ -521,7 +521,7 @@ Be direct and professional.`;
           family: `Family event prep: ${event.title}`,
         };
         const dueDate = event.start_date
-          ? previousDateStamp(event.start_date as string, event.property_timezone ?? payload?.property_timezone)
+          ? previousEventDate(event.start_date as string, event.property_timezone ?? payload?.property_timezone, event.all_day === true)
           : null;
         const { data: matchedChecklist } = await adminClient
           .from("checklist_templates").select("id")

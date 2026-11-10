@@ -1,3 +1,4 @@
+import { localDateKey } from "@/lib/calendarTime";
 import { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -147,7 +148,7 @@ export function useChecklistSessions(templateId: string | null, propertyId?: str
   // Use sync context if available (may be null before Provider mounts)
   const syncCtx = useContext(OfflineSyncContext);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
 
   const load = useCallback(async () => {
     if (!templateId) { setSessions([]); return; }
@@ -255,7 +256,7 @@ export function useChecklistComments(templateId: string | null, propertyId?: str
   const [comments, setComments] = useState<ChecklistComment[]>([]);
   const [loading, setLoading] = useState(false);
   const { userId } = usePermissions();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
 
   const load = useCallback(async () => {
     if (!templateId) { setComments([]); return; }

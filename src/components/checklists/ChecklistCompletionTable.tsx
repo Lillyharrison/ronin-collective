@@ -1,4 +1,4 @@
-import { stampToDisplayDate, stampToDateInputValue, compareStampCalendarDate } from "@/lib/calendarTime";
+import { plainDateToLocal, plainDateKey, comparePlainCalendarDate } from "@/lib/calendarTime";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -105,7 +105,7 @@ export function ChecklistCompletionTable() {
 
     const taskRows: LogRow[] = taskList.map(t => {
       const due = t.due_date as string | null;
-      const overdue = !!due && compareStampCalendarDate(due) < 0;
+      const overdue = !!due && comparePlainCalendarDate(due) < 0;
       return {
         id: `t-${t.id}`,
         rawId: t.id as string,
@@ -116,7 +116,7 @@ export function ChecklistCompletionTable() {
         property_name: t.properties?.name ?? null,
         person_id: t.assigned_to ?? null,
         person_name: t.assigned_to ? (nameMap.get(t.assigned_to) || "—") : "Unassigned",
-        completion_date: due ? stampToDateInputValue(due) : (t.created_at as string).slice(0, 10),
+        completion_date: due ? plainDateKey(due) : (t.created_at as string).slice(0, 10),
         completed_at: due ?? t.created_at,
         items_done: 0,
         items_total: 0,
@@ -154,7 +154,7 @@ export function ChecklistCompletionTable() {
       case "Property":     return (r.property_name ?? "").toLowerCase();
       case "Checklist":    return (r.checklist_title ?? "").toLowerCase();
       case "Completed by": return (r.person_name ?? "").toLowerCase();
-      case "Date":         return r.completed_at ? (r.source === "task" ? stampToDisplayDate(r.completed_at) : new Date(r.completed_at)).getTime() : 0;
+      case "Date":         return r.completed_at ? (r.source === "task" ? plainDateToLocal(r.completed_at) : new Date(r.completed_at)).getTime() : 0;
       case "Progress":     return r.items_total ? r.items_done / r.items_total : -1;
       case "Status":       return r.status;
       case "Source":       return r.source;

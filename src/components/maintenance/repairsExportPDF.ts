@@ -1,4 +1,4 @@
-import { stampToDisplayDate } from "@/lib/calendarTime";
+import { plainDateToLocal } from "@/lib/calendarTime";
 // PDF export for the Repairs (Maintenance Issues) section.
 //
 // Mirrors the Planned Maintenance export pattern:
@@ -321,7 +321,7 @@ function buildListDoc(ctx: RepairsExportContext, scale: number, fonts: PdfFontDa
       i.status === "resolved" && i.resolved_at
         ? `Resolved ${format(parseISO(i.resolved_at), "dd MMM yyyy")}`
         : i.scheduled_date
-          ? format(stampToDisplayDate(i.scheduled_date), "dd MMM yyyy")
+          ? format(plainDateToLocal(i.scheduled_date), "dd MMM yyyy")
           : "—",
       firstName(i.assignee_name),
     ]);
@@ -665,7 +665,7 @@ function buildTileDoc(
       if (issue.status === "resolved" && issue.resolved_at) {
         metaPairs.push(["Resolved", format(parseISO(issue.resolved_at), "dd MMM yyyy")]);
       } else if (issue.scheduled_date) {
-        metaPairs.push(["Scheduled", format(stampToDisplayDate(issue.scheduled_date), "dd MMM yyyy")]);
+        metaPairs.push(["Scheduled", format(plainDateToLocal(issue.scheduled_date), "dd MMM yyyy")]);
       }
       // Priority sits beneath Scheduled so it reads as a property of the work,
       // not as competing chrome next to the title.

@@ -30,7 +30,7 @@ import {
   eventStart, eventEnd, eventDayRange, isMultiDayEvent, eventOccursOn, localDateKey,
   allDayStartIso, allDayEndIso, allDayDates, birthdayInYear, houseTimeZone, timeZoneLabel,
   eventToFormTimes, formTimesToEvent, toggleAllDay, type EventFormTimes,
-  isDateOnlyStamp, dateInputToStamp,
+  plainDateKey,
 } from "@/lib/calendarTime";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -175,14 +175,14 @@ function singleDayEventsForDay(events: CalEvent[], day: Date): CalEvent[] {
 
 // ─── Drag-and-drop ────────────────────────────────────────────────────────────
 
-async function rescheduleEvent(ev: CalEvent, newDate: Date) {
+export async function rescheduleEvent(ev: CalEvent, newDate: Date) {
   const origStart = eventStart(ev);
   const newStart = setDayFn(setMonth(setYear(origStart, getYear(newDate)), getMonth(newDate)), getDate(newDate));
 
   if (ev._source === "maintenance" && ev._source_id) {
     const { error } = await supabase
       .from("maintenance_issues")
-      .update({ scheduled_date: ev.all_day ? dateInputToStamp(localDateKey(newDate)) : newStart.toISOString() })
+      .update({ scheduled_date: localDateKey(newDate) })
       .eq("id", ev._source_id);
     if (error) { toast.error("Failed to reschedule maintenance issue"); return false; }
     toast.success("Maintenance rescheduled");
@@ -1318,8 +1318,8 @@ export function CalendarSection() {
       supabase.from("profiles").select("id, full_name, birthday, avatar_url, job_title, is_archived"),
       supabase.from("maintenance_issues").select("id, title, scheduled_date, status, priority, property_id")
         .not("scheduled_date", "is", null)
-        .gte("scheduled_date", qStart.toISOString())
-        .lte("scheduled_date", qEnd.toISOString())
+        .gte("scheduled_date", localDateKey(qStart))
+        .lte("scheduled_date", localDateKey(qEnd))
         .limit(500),
       supabase.from("orders").select("id, title, expected_delivery, status, property_id")
         .not("expected_delivery", "is", null)
@@ -1416,9 +1416,9 @@ export function CalendarSection() {
         id: `maint-${issue.id}`,
         title: issue.title,
         description: `Priority: ${issue.priority} · Status: ${issue.status}`,
-        start_date: issue.scheduled_date,
+        start_date: allDayStartIso(plainDateKey(issue.scheduled_date)),
         end_date: null,
-        all_day: isDateOnlyStamp(issue.scheduled_date),
+        all_day: true,
         event_type: "maintenance",
         is_private: false,
         keywords: ["maintenance"],

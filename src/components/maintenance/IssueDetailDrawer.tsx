@@ -1,4 +1,4 @@
-import { stampToDisplayDate, stampToDateInputValue, dateInputToSavedStamp, localDateKey } from "@/lib/calendarTime";
+import { plainDateToLocal, plainDateKey, dateInputToPlainDate, localDateKey } from "@/lib/calendarTime";
 import { useState, useEffect } from "react";
 import { imageUrl, isVideoUrl } from "@/lib/imageUrl";
 import { X, Pencil, Trash2, Calendar, MapPin, User, Link as LinkIcon, Archive, ArchiveRestore } from "lucide-react";
@@ -36,24 +36,24 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<IssueStatus>(issue.status);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(
-    issue.scheduled_date ? stampToDisplayDate(issue.scheduled_date) : undefined
+    issue.scheduled_date ? plainDateToLocal(issue.scheduled_date) : undefined
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Keep state in sync if parent refreshes the issue
   useEffect(() => {
     setPendingStatus(issue.status);
-    setScheduledDate(issue.scheduled_date ? stampToDisplayDate(issue.scheduled_date) : undefined);
+    setScheduledDate(issue.scheduled_date ? plainDateToLocal(issue.scheduled_date) : undefined);
   }, [issue.status, issue.scheduled_date]);
 
   const statusChanged = pendingStatus !== issue.status;
-  const dateChanged = (scheduledDate ? localDateKey(scheduledDate) : "") !== (issue.scheduled_date ? stampToDateInputValue(issue.scheduled_date) : "");
+  const dateChanged = (scheduledDate ? localDateKey(scheduledDate) : "") !== (issue.scheduled_date ? plainDateKey(issue.scheduled_date) : "");
   const hasChanges = statusChanged || (pendingStatus === "scheduled" && dateChanged);
 
   const handleSave = () => {
     if (!onStatusChange) return;
     const dateStr = pendingStatus === "scheduled" && scheduledDate
-      ? dateInputToSavedStamp(localDateKey(scheduledDate), issue.scheduled_date) ?? undefined
+      ? dateInputToPlainDate(localDateKey(scheduledDate)) ?? undefined
       : undefined;
     onStatusChange(issue, pendingStatus, dateStr);
   };
@@ -160,7 +160,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
                   <Calendar size={9}/> {t("scheduledLabel")}
                 </p>
                 <p className="text-sm font-medium text-foreground">
-                  {format(stampToDisplayDate(issue.scheduled_date), "MMM d, yyyy")}
+                  {format(plainDateToLocal(issue.scheduled_date), "MMM d, yyyy")}
                 </p>
               </div>
             )}

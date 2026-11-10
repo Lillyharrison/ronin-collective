@@ -1,4 +1,4 @@
-import { stampToDisplayDate, stampToDateInputValue, dateInputToSavedStamp, compareStampCalendarDate } from "@/lib/calendarTime";
+import { plainDateToLocal, plainDateKey, dateInputToPlainDate, comparePlainCalendarDate } from "@/lib/calendarTime";
 import { useState, useEffect, useRef, useContext } from "react";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
@@ -103,7 +103,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const [title, setTitle]               = useState(task?.title_en ?? "");
   const [description, setDescription]   = useState(task?.description_en ?? "");
   const [priority, setPriority]         = useState(task?.priority ?? 2);
-  const [dueDate, setDueDate]           = useState(task?.due_date ? stampToDateInputValue(task.due_date) : "");
+  const [dueDate, setDueDate]           = useState(task?.due_date ? plainDateKey(task.due_date) : "");
   const [assignedTo, setAssignedTo]     = useState(task?.assigned_to ?? "");
   const [propertyId, setPropertyId]     = useState(task?.property_id ?? "");
   const [dept, setDept]                 = useState(task?.assigned_department ?? "");
@@ -177,7 +177,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       description_en: description.trim() || null,
       priority,
       status: task?.status ?? "pending",
-      due_date: dateInputToSavedStamp(dueDate, task?.due_date),
+      due_date: dateInputToPlainDate(dueDate),
       assigned_to: assignedTo || null,
       property_id: propertyId || null,
       assigned_department: dept || null,
@@ -380,7 +380,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   const assigneeName = profiles.find(p => p.id === (task?.assigned_to ?? assignedTo))?.full_name ?? null;
   const propertyName = properties.find(p => p.id === (task?.property_id ?? propertyId))?.name ?? null;
   const checklistLinked = checklists.find(c => c.id === (task?.linked_checklist_id ?? linkedChecklist));
-  const isOverdue = task?.due_date && compareStampCalendarDate(task.due_date) < 0 && task.status !== "completed";
+  const isOverdue = task?.due_date && comparePlainCalendarDate(task.due_date) < 0 && task.status !== "completed";
 
   // ─────────────────────────────────────────────────────────────────────────────
   // READ-ONLY VIEW
@@ -436,7 +436,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                   isOverdue ? "bg-[hsl(var(--status-urgent)/0.1)] text-status-urgent border-status-urgent/30"
                             : "bg-muted text-muted-foreground border-border")}>
                   <Clock size={10} />
-                  {stampToDisplayDate(task.due_date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  {plainDateToLocal(task.due_date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </span>
               )}
               {propertyName && (

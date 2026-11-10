@@ -1,3 +1,4 @@
+import { localDateKey } from "@/lib/calendarTime";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,7 @@ export function TimesheetDetail({
     null,
   );
   const [why, setWhy] = useState("");
-  const [paid, setPaid] = useState(new Date().toISOString().slice(0, 10));
+  const [paid, setPaid] = useState(localDateKey(new Date()));
   const [adjust, setAdjust] = useState(false);
   const [kind, setKind] = useState("expense");
   const [description, setDescription] = useState("");
