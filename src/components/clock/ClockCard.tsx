@@ -70,9 +70,9 @@ export function ClockCard() {
       action=waiting||{id:crypto.randomUUID(),rpc:p.rpc,args:{_lat:null,_lng:null,_accuracy_m:null,_client_time:p.at,_manual_time:p.manual,...(p.rpc==='clock_in'?{_property_id:p.property}:{_reason:null})},expectedEntry:persisted?.open?.entry_id,propertyId:p.property||s?.open?.property_id};
       enqueue(userId,action);
       const locationRequest=getLocation();
-      // Ending is submitted at the tap, without an eight-second GPS wait. A cached
-      // immediate location can be included; otherwise location remains unavailable.
-      const location=p.rpc==='clock_out'?await Promise.race([locationRequest,Promise.resolve({_lat:null,_lng:null,_accuracy_m:null})]):await locationRequest;
+      // Start and End both wait for the position; _client_time already holds the tap
+      // moment, so the wait never changes the recorded time. Failure resolves to nulls.
+      const location=await locationRequest;
       // Update the existing durable action with the optional coordinates.
       const q=readQueue(userId).map(a=>a.id===action?.id?{...a,args:{...a.args,...location}}:a);
       localStorage.setItem(`ronin.clock.queue.${userId}`,JSON.stringify(q));

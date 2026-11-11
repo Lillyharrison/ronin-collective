@@ -19,3 +19,12 @@ it('open staff get End',async()=>{mocks.status.open=open;show();expect(await scr
 it('completed visit shows done',async()=>{mocks.status.visits=[{...visit,done:true}];show();expect(await screen.findByText('Listo por hoy')).toBeInTheDocument();});
 it('unrostered staff get extra visit',async()=>{show();expect(await screen.findByRole('button',{name:'Empezar una visita extra'})).toBeEnabled();});
 it('End records tap before presenting reasons, then saves choice',async()=>{mocks.status.open=open;mocks.rpc.mockImplementation(async(name)=>{if(name==='clock_out'){mocks.status.open=null;mocks.status.visits=[{...visit,done:true}];return {data:{entry_id:'e',clock_out:'2026-11-08T16:20Z',minutes:495},error:null};}return {data:name==='my_clock_status'?mocks.status:{},error:null};});show();fireEvent.click(await screen.findByRole('button',{name:'Terminar'}));expect(await screen.findByText('¿Qué hiciste hoy?')).toBeInTheDocument();expect(mocks.rpc.mock.calls.some(c=>c[0]==='set_visit_reason')).toBe(false);fireEvent.click(screen.getByRole('button',{name:'Visita semanal'}));await waitFor(()=>expect(mocks.rpc).toHaveBeenCalledWith('set_visit_reason',{_entry_id:'e',_reason:'weekly_visit'}));const names=mocks.rpc.mock.calls.map(c=>c[0]);expect(names.indexOf('clock_out')).toBeLessThan(names.indexOf('set_visit_reason'));expect(await screen.findByRole('status')).toHaveTextContent(/8 h 15 min/);});
+
+it('End sends lat, lng, accuracy and the original tap time to clock_out',async()=>{mocks.status.open=open;let tapAt='';
+Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:(ok:(p:unknown)=>void)=>setTimeout(()=>ok({coords:{latitude:34.05,longitude:-118.25,accuracy:12}}),50)}});
+mocks.rpc.mockImplementation(async(name)=>{if(name==='clock_out'){mocks.status.open=null;return {data:{entry_id:'e',clock_out:'2026-11-08T16:20Z',minutes:495},error:null};}return {data:name==='my_clock_status'?mocks.status:{},error:null};});
+show();const btn=await screen.findByRole('button',{name:'Terminar'});tapAt=new Date().toISOString();fireEvent.click(btn);
+await waitFor(()=>expect(mocks.rpc.mock.calls.some(c=>c[0]==='clock_out')).toBe(true));
+const args=mocks.rpc.mock.calls.find(c=>c[0]==='clock_out')![1];
+expect(args).toMatchObject({_lat:34.05,_lng:-118.25,_accuracy_m:12});
+expect(Math.abs(Date.parse(args._client_time)-Date.parse(tapAt))).toBeLessThan(40);});
