@@ -3034,6 +3034,7 @@ export type Database = {
       }
       ids_with_login: { Args: { _ids: string[] }; Returns: string[] }
       is_admin_user: { Args: { _uid: string }; Returns: boolean }
+      is_team_member: { Args: { _uid: string }; Returns: boolean }
       issue_timesheet: {
         Args: { _period_start: string; _staff_id: string }
         Returns: string
