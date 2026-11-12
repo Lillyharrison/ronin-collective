@@ -936,6 +936,7 @@ export type Database = {
         Row: {
           acknowledged_by: string[]
           action_url: string | null
+          actor_id: string | null
           body: string | null
           created_at: string
           entity_id: string | null
@@ -943,6 +944,7 @@ export type Database = {
           id: string
           is_read: boolean
           property_id: string | null
+          receipt_sent_at: string | null
           title: string
           type: string
           user_id: string
@@ -950,6 +952,7 @@ export type Database = {
         Insert: {
           acknowledged_by?: string[]
           action_url?: string | null
+          actor_id?: string | null
           body?: string | null
           created_at?: string
           entity_id?: string | null
@@ -957,6 +960,7 @@ export type Database = {
           id?: string
           is_read?: boolean
           property_id?: string | null
+          receipt_sent_at?: string | null
           title: string
           type?: string
           user_id: string
@@ -964,6 +968,7 @@ export type Database = {
         Update: {
           acknowledged_by?: string[]
           action_url?: string | null
+          actor_id?: string | null
           body?: string | null
           created_at?: string
           entity_id?: string | null
@@ -971,6 +976,7 @@ export type Database = {
           id?: string
           is_read?: boolean
           property_id?: string | null
+          receipt_sent_at?: string | null
           title?: string
           type?: string
           user_id?: string
@@ -2882,6 +2888,10 @@ export type Database = {
       acknowledge_notification: {
         Args: { _notif_id: string }
         Returns: undefined
+      }
+      acknowledge_notification_receipt: {
+        Args: { _notification_id: string }
+        Returns: Json
       }
       activate_draft_profile: {
         Args: { _draft_id: string; _new_id: string }
