@@ -11,15 +11,28 @@ import { PlannedMaintenanceDetail, DetailField, detailDate } from "@/components/
 import { fetchNotificationDetail, type NotificationDetailType } from "@/lib/notificationDetail";
 import { imageUrl } from "@/lib/imageUrl";
 import { formatEventWhen } from "@/lib/calendarTime";
+import { supabase } from "@/integrations/supabase/client";
+import { NotificationAcknowledgement, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
 
 export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
-  target: { type: NotificationDetailType; id: string | null };
+  target: { type: NotificationDetailType; id: string | null; notification?: ReceiptNotification };
   onClose: () => void;
   onEditPlanned: (id: string) => void;
 }) {
   const { language } = useLanguage();
   const { userId, canEdit, isManager, isAdmin, isMasterAdmin } = usePermissions();
   const es = language === "es";
+  const receipt = useQuery({
+    queryKey: ["notification-receipt", userId, target.notification?.id],
+    enabled: !!userId && !!target.notification?.id,
+    initialData: target.notification,
+    queryFn: async (): Promise<ReceiptNotification | null> => {
+      const { data, error } = await supabase.from("notifications").select("id, actor_id, receipt_sent_at")
+        .eq("id", target.notification?.id || "").eq("user_id", userId || "").maybeSingle();
+      if (error) throw error;
+      return data as unknown as ReceiptNotification | null;
+    },
+  });
   const { data, isPending } = useQuery({
     queryKey: ["notification-record", userId, target.type, target.id],
     queryFn: () => fetchNotificationDetail(target.type, target.id),
@@ -44,7 +57,7 @@ export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
       >
         {data?.type === "maintenance_issue" ? <>
           <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-          <IssueDetailDrawer embedded issue={data.record} categories={[]} onClose={onClose} />
+          <IssueDetailDrawer embedded hideAcknowledgement={!!target.notification} issue={data.record} categories={[]} onClose={onClose} />
         </> : <>
           <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border p-5">
             <DialogPrimitive.Title className="text-xl leading-snug break-words min-w-0">{title}</DialogPrimitive.Title>
@@ -55,7 +68,7 @@ export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
             : !data ? <p className="text-base">{es ? "Este elemento ya no existe o ya no tienes acceso a él." : "This item no longer exists, or you no longer have access to it."}</p>
             : data.type === "planned_maintenance" ? <PlannedMaintenanceDetail entry={data.record} onEdit={canEdit("maintenance") || isManager || isAdmin || isMasterAdmin ? () => onEditPlanned(data.record.id) : undefined} />
             : data.type === "task" ? <div className="space-y-5">
-              <EntryAcknowledgement kind="task" entry={data.record} />
+              {!target.notification && <EntryAcknowledgement kind="task" entry={data.record} />}
               <dl className="grid gap-5">
               <DetailField label={es ? "Estado" : "Status"}>{statuses[data.record.status] ?? data.record.status}</DetailField>
               <DetailField label={es ? "Descripción" : "Description"}>{es ? data.record.description_es || data.record.description_en : data.record.description_en}</DetailField>
@@ -78,6 +91,7 @@ export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
           </div>
           <div className="shrink-0 sticky bottom-0 border-t border-border bg-background p-4 flex justify-end"><Button variant="outline" className="min-h-11" onClick={onClose}>{closeLabel}</Button></div>
         </>}
+        {target.notification && receipt.data && <div className="shrink-0 border-t border-border bg-background px-5 pb-3"><NotificationAcknowledgement notification={receipt.data} /></div>}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   </DialogPrimitive.Root>;

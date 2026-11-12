@@ -13,8 +13,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { SwipeableNotificationRow } from "@/components/notifications/SwipeableNotificationRow";
 import { useNotificationDetails } from "@/components/notifications/useNotificationDetails";
 import { useNotificationSwipe } from "@/components/notifications/useNotificationSwipe";
+import { NotificationAcknowledgement, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
 
 interface Notification {
+  actor_id?: string | null;
+  receipt_sent_at?: string | null;
   id: string;
   title: string;
   body: string | null;
@@ -88,7 +91,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
     // sent to other admins (RLS allows master_admin to read all, but we only want their own)
     const query = supabase
       .from("notifications")
-      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type, property:properties(name)")
+      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type, actor_id, receipt_sent_at, property:properties(name)")
       .eq("user_id", userId)
       .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
@@ -98,6 +101,15 @@ export function NotificationsPanel({ open, onClose }: Props) {
     setNotifications((data as Notification[]) ?? []);
     setLoading(false);
   }, [userId, isMasterAdmin]);
+
+  useEffect(() => {
+    const changed = (event: Event) => {
+      const row = (event as CustomEvent<ReceiptNotification>).detail;
+      setNotifications(prev => prev.map(n => n.id === row.id ? { ...n, ...row, is_read: true } : n));
+    };
+    window.addEventListener(RECEIPT_CHANGED, changed);
+    return () => window.removeEventListener(RECEIPT_CHANGED, changed);
+  }, []);
 
   useEffect(() => {
     if (open) load();
@@ -284,6 +296,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
                           {n.body}
                         </p>
                       )}
+                      <NotificationAcknowledgement notification={n} />
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-[10px] text-muted-foreground/50">
                           {new Date(n.created_at).toLocaleString("en-US", {

@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Entry acknowledgement UI shares eligibility and status helpers; acknowledge-entry calls the owner RPC under the caller JWT and dispatches push only for the winning acknowledgement, never inserting notifications itself.
+- Notification receipt controls share user-keyed cache and an in-flight lock across rows/pop-ups; acknowledge-notification calls the owner RPC under caller JWT and pushes only winning notified results, independent of dashboard dismissal.
 
 - ClockCard uses owner-deployed time RPCs and a user-scoped durable ordered queue; reminders read their Bearer token through the service-role client from private_config and claim dedupe keys before inserting notices, without changing database structures.
 - Admin timesheets use owner-deployed review/issue RPCs; Excel generation reads immutable issued snapshots and private admin-only storage, so corrected versions retain historical exports and roster logic remains independent.

@@ -19,6 +19,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    // A public share name is not verified identity. Attribute only a signed-in
+    // visitor; anonymous token holders keep actor_id null.
+    const token = req.headers.get("Authorization")?.replace(/^Bearer /, "");
+    const { data: auth } = token ? await admin.auth.getUser(token) : { data: { user: null } };
 
     // Find session by token
     const { data: session, error: fetchErr } = await admin
@@ -74,6 +78,7 @@ Deno.serve(async (req) => {
       const { error: notifErr } = await admin.from("notifications").insert(
         adminIds.map((uid) => ({
           user_id: uid,
+          actor_id: auth.user?.id ?? null,
           title,
           body,
           type: "checklist_submitted",

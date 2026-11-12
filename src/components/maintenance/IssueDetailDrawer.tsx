@@ -21,6 +21,7 @@ interface Props {
   categories: MaintenanceCategory[];
   /** Render within an existing accessible dialog rather than creating another backdrop. */
   embedded?: boolean;
+  hideAcknowledgement?: boolean;
 }
 
 const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
@@ -31,7 +32,7 @@ const STATUSES: { value: IssueStatus; label: string; labelEs: string }[] = [
   { value: "resolved",            label: "Resolved",              labelEs: "Resuelto" },
 ];
 
-export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onArchiveToggle, onDelete, categories: _cats, embedded = false }: Props) {
+export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onArchiveToggle, onDelete, categories: _cats, embedded = false, hideAcknowledgement = false }: Props) {
   const { t, language } = useLanguage();
   const isL = language === "es";
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -99,7 +100,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
-          <EntryAcknowledgement kind="repair" entry={issue} />
+          {!hideAcknowledgement && <EntryAcknowledgement kind="repair" entry={issue} />}
           {(issue.photo_urls?.length ? issue.photo_urls : issue.photo_url ? [issue.photo_url] : []).map((url, i) => (
             <div key={url} className="rounded-xl overflow-hidden bg-muted/20">
               {isVideoUrl(url) ? (

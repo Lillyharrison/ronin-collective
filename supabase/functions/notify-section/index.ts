@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
 import { eligibleNotificationRecipients } from "../_shared/notificationAudience.ts";
+import { notificationActor } from "../_shared/notificationActor.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,8 +32,11 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
+    const serviceCall = authHeader === `Bearer ${serviceKey}`;
+    const { data: { user }, error: userError } = serviceCall
+      ? { data: { user: null }, error: null }
+      : await supabaseUser.auth.getUser();
+    if (!serviceCall && (userError || !user)) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -156,6 +160,7 @@ serve(async (req) => {
     const { error: insertError } = await supabaseAdmin.from("notifications").insert(
       recipients.map((uid) => ({
         user_id: uid,
+        actor_id: notificationActor(user?.id, serviceCall),
         title: payload.title,
         body: payload.body ?? null,
         type: payload.type ?? "info",

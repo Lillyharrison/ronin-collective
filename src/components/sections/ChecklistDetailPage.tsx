@@ -288,7 +288,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
     }
     await supabase.from("notifications").insert(
       Array.from(recipientIds).map(uid => ({
-        user_id: uid, title: notifTitle, body: notifBody,
+        user_id: uid, actor_id: userId, title: notifTitle, body: notifBody,
         type: "success", action_url: "checklists", property_id: propertyId ?? null,
       }))
     );

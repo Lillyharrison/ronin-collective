@@ -742,6 +742,7 @@ function ScheduleView({
   onRefresh: () => void;
   onClose: () => void;
 }) {
+  const { userId } = usePermissions();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
@@ -785,6 +786,7 @@ function ScheduleView({
       if (uniqueIds.length > 0) {
         const notifs = uniqueIds.map((uid: string) => ({
           user_id: uid,
+          actor_id: userId,
           title: notifTitle,
           body: notifBody,
           type: "car_wash",
@@ -818,6 +820,7 @@ function ScheduleView({
       const locationName = booking.locationProperty?.name ?? null;
       await db.from("notifications").insert({
         user_id: staffId,
+        actor_id: userId,
         title: `🚿 Car Wash Assigned`,
         body: `You've been assigned to wash ${vehicleName} on ${dateStr}${locationName ? ` at ${locationName}` : ""}.`,
         type: "car_wash",

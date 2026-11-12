@@ -1,3 +1,10 @@
+# Notification receipts
+
+- [x] Attribute human-triggered notification inserts; leave system/anonymous notices actorless and database untouched; owner calendar writer already attributes creators.
+- [x] Add shared row/pop-up receipt controls and caller-authorized push-only wrapper without changing dismissal; deployed five updated functions.
+- [x] Test eligibility, double taps, one push, Spanish and single pop-up controls; controlled phone/desktop readback checked; audit in notification-receipts-change-report.md.
+- [ ] Verify live recipient acknowledgement, originator receipt and phone push: preview signed out and self-session minting has no matching account; no real notifications changed.
+
 # Repair notification reporter names
 
 - [x] Audit Maintenance create/family flow, Dashboard quick report, repair reassignment and Ronin AI; prefix only new/assigned repair bodies from saved reporter profiles.

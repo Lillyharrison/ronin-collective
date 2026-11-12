@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     const notifTitle = `🛒 Order request: ${title}`;
     const notifBody = `${senderName} ticked ${snapshot.length} item${snapshot.length === 1 ? "" : "s"} to order.`;
     await admin.from("notifications").insert(tasks.map((t) => ({
-      user_id: t.assigned_to, title: notifTitle, body: notifBody, type: "info",
+      user_id: t.assigned_to, actor_id: user.id, title: notifTitle, body: notifBody, type: "info",
        action_url: "orders", entity_id: order.id, entity_type: "order", property_id: tpl.property_id,
     })));
     try {

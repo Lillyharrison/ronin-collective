@@ -25,6 +25,7 @@ import { useNotificationSwipe } from "@/components/notifications/useNotification
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
 import { ClockCard } from "@/components/clock/ClockCard";
+import { NotificationAcknowledgement, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
 
 interface FeedEvent {
   id: string;
@@ -37,6 +38,8 @@ interface FeedEvent {
 }
 
 interface DashNotification {
+  actor_id?: string | null;
+  receipt_sent_at?: string | null;
   id: string;
   title: string;
   body: string | null;
@@ -204,7 +207,7 @@ export function Dashboard() {
     if (!userId || permLoading) return;
     const { data } = await supabase
       .from("notifications")
-      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, property:properties(name)")
+      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, actor_id, receipt_sent_at, property:properties(name)")
       .eq("user_id", userId)
       .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
@@ -238,7 +241,7 @@ export function Dashboard() {
       // 3. Dashboard notifications (unread)
       supabase
         .from("notifications")
-        .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, property:properties(name)")
+        .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, actor_id, receipt_sent_at, property:properties(name)")
         .eq("user_id", userId)
         .not("acknowledged_by", "cs", `{${userId}}`)
         .order("created_at", { ascending: false })
@@ -354,6 +357,15 @@ export function Dashboard() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [userId, loadDashNotifs]);
+
+  useEffect(() => {
+    const changed = (event: Event) => {
+      const row = (event as CustomEvent<ReceiptNotification>).detail;
+      setDashNotifs(prev => prev.map(n => n.id === row.id ? { ...n, ...row } : n));
+    };
+    window.addEventListener(RECEIPT_CHANGED, changed);
+    return () => window.removeEventListener(RECEIPT_CHANGED, changed);
+  }, []);
 
   const greeting = getGreeting(language);
   const dateStr = formatDate(language);
@@ -693,6 +705,7 @@ export function Dashboard() {
                     <p className="text-[10px] text-muted-foreground leading-none mt-0.5 truncate">
                       {n.body ? `${n.body} · ` : ""}Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
+                    <NotificationAcknowledgement notification={n} />
                   </div>
                 </div>
                 </SwipeableNotificationRow>

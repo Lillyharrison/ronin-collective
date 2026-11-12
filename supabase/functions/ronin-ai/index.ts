@@ -732,6 +732,7 @@ async function notifyAdminsOfAIAction(
   entity_type?: string,
   excludeUserId?: string | null,
   requiredSection?: string | null,
+  actorId?: string | null,
 ): Promise<void> {
   try {
     // Get all master_admin and admin user_ids
@@ -764,6 +765,7 @@ async function notifyAdminsOfAIAction(
     await adminClient.from("notifications").insert(
       recipients.map(user_id => ({
         user_id,
+        actor_id: actorId ?? null,
         title,
         body,
         type,
@@ -1190,6 +1192,7 @@ serve(async (req) => {
           "maintenance_issue",
           null,
           "maintenance",
+          callerUserId,
         );
 
       // ── create_task ───────────────────────────────────────────────────────
@@ -1226,6 +1229,8 @@ serve(async (req) => {
           "tasks",
           task.id,
           "task",
+          callerUserId,
+          null,
           callerUserId,
         );
 
@@ -1267,6 +1272,8 @@ serve(async (req) => {
           asset.id,
           "asset",
           callerUserId,
+          null,
+          callerUserId,
         );
 
       // ── send_staff_message ────────────────────────────────────────────────
@@ -1304,6 +1311,7 @@ serve(async (req) => {
             // Notify the recipient
             await adminClient.from("notifications").insert({
               user_id: recipientId,
+              actor_id: callerUserId,
               title: `📨 Message from Ronin AI`,
               body: `${callerName} asked Ronin to send you a message. Check your DMs.`,
               type: "message",
