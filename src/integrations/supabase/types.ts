@@ -681,6 +681,10 @@ export type Database = {
       }
       maintenance_issues: {
         Row: {
+          ack_required: boolean
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          acknowledged_note: string | null
           assigned_to: string | null
           category: string
           close_out_photo_url: string | null
@@ -704,6 +708,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ack_required?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
           assigned_to?: string | null
           category?: string
           close_out_photo_url?: string | null
@@ -727,6 +735,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ack_required?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
           assigned_to?: string | null
           category?: string
           close_out_photo_url?: string | null
@@ -2085,6 +2097,10 @@ export type Database = {
       }
       tasks: {
         Row: {
+          ack_required: boolean
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          acknowledged_note: string | null
           ai_suggested: boolean
           assigned_department: string | null
           assigned_role: string | null
@@ -2113,6 +2129,10 @@ export type Database = {
           voice_note_url: string | null
         }
         Insert: {
+          ack_required?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
           ai_suggested?: boolean
           assigned_department?: string | null
           assigned_role?: string | null
@@ -2141,6 +2161,10 @@ export type Database = {
           voice_note_url?: string | null
         }
         Update: {
+          ack_required?: boolean
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          acknowledged_note?: string | null
           ai_suggested?: boolean
           assigned_department?: string | null
           assigned_role?: string | null
@@ -2851,6 +2875,10 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_entry: {
+        Args: { _id: string; _kind: string; _note?: string }
+        Returns: Json
+      }
       acknowledge_notification: {
         Args: { _notif_id: string }
         Returns: undefined
