@@ -316,6 +316,7 @@ export function TimesheetDetail({
     active?.payee_name || d.settings?.payee_name || d.profile.full_name;
   const step = mainStep(d.entries, period, active?.status);
   const reviewCount = d.entries.filter(e => e.status === "pending" || (e.status !== "not_worked" && !(e.adj_out || e.clock_out))).length;
+  const visitCount = d.entries.filter(e => e.status !== "not_worked").length;
   const issueAllowed = canIssue(period, d.entries, rate, !!active) && (d.entries.some(e => e.status === "approved") || d.adjustments.some(a => !a.timesheet_id));
   const status = active?.status === "paid" ? "paid" : active ? "issued" : reviewCount ? "review" : "ready";
   const missing = d.visits.filter(
@@ -360,11 +361,11 @@ export function TimesheetDetail({
       </header>
       <section className="timesheet-summary space-y-4" aria-label={t("Month summary", "Resumen del mes")}>
         <div className="grid grid-cols-2 gap-3">
-          <div><p className="text-3xl font-medium tabular-nums">{hours.toFixed(2)} <span className="text-xl">h</span></p><p className="text-sm text-muted-foreground mt-2">{d.entries.filter(e => e.status !== "not_worked").length} {t("visits", "visitas")}</p></div>
+          <div><p className="text-3xl font-medium tabular-nums">{hours.toFixed(2)} <span className="text-xl">h</span></p><p className="text-sm text-muted-foreground mt-2">{visitCount} {t(visitCount === 1 ? "visit" : "visits", visitCount === 1 ? "visita" : "visitas")}</p></div>
           <div className="text-right min-w-0"><p className="text-2xl font-medium tabular-nums break-words">{money(total)}</p><div className="mt-2"><StatusChip status={status} count={reviewCount} paidDate={active?.paid_on} es={es} /></div></div>
         </div>
         {step.kind === "open" && <Button className="w-full min-h-12 font-medium" disabled={busy} onClick={() => setSelectedVisit(step.entry)}>{t(`Fix ${step.count} ${step.count === 1 ? "visit" : "visits"}`, `Corregir ${step.count} ${step.count === 1 ? "visita" : "visitas"}`)}</Button>}
-        {step.kind === "pending" && <div><Button className="w-full min-h-12 font-medium" disabled={busy} onClick={() => mutate(() => result(db.rpc("approve_time_entries", { _ids: step.ids })))}>{t(`Approve ${step.count} visits`, `Aprobar ${step.count} visitas`)}</Button><p className="text-sm text-muted-foreground text-center mt-2">{t("Then you can issue the timesheet", "Después puedes emitir la hoja de horas")}</p></div>}
+        {step.kind === "pending" && <div><Button className="w-full min-h-12 font-medium" disabled={busy} onClick={() => mutate(() => result(db.rpc("approve_time_entries", { _ids: step.ids })))}>{t(`Approve ${step.count} ${step.count === 1 ? "visit" : "visits"}`, `Aprobar ${step.count} ${step.count === 1 ? "visita" : "visitas"}`)}</Button><p className="text-sm text-muted-foreground text-center mt-2">{t("Then you can issue the timesheet", "Después puedes emitir la hoja de horas")}</p></div>}
         {step.kind === "ready" && <Button className="w-full min-h-12 font-medium" disabled={busy || !issueAllowed} onClick={() => setConfirm("issue")}>{t("Issue timesheet", "Emitir hoja de horas")}</Button>}
         {step.kind === "unfinished" && <p className="text-sm text-muted-foreground">{t(`You can issue this after ${visitDate(monthEnd(period), es, true)}`, `Puedes emitirla después del ${visitDate(monthEnd(period), es, true)}`)}</p>}
         {active && <>

@@ -1,4 +1,5 @@
 import { classification, flagLabel, monthShift, type Entry, type Overview } from "./logic";
+import { localDateKey } from "@/lib/calendarTime";
 
 export function visitPresentation(entry: Entry, issued = false) {
   const tone = issued || entry.status !== "pending" ? "grey" : classification({ ...entry, clock_out: entry.adj_out || entry.clock_out }) === "green" ? "green" : "amber";
@@ -25,7 +26,7 @@ export function mainStep(entries: Entry[], period: string, status?: string, now 
   if (open.length) return { kind: "open", count: open.length, entry: open[0] } as const;
   const pending = entries.filter(e => e.status === "pending" && !!(e.adj_out || e.clock_out));
   if (pending.length) return { kind: "pending", count: pending.length, ids: pending.map(e => e.id) } as const;
-  return { kind: monthShift(period, 1) <= now.toISOString().slice(0, 10) ? "ready" : "unfinished", count: 0 } as const;
+  return { kind: monthShift(period, 1) <= localDateKey(now) ? "ready" : "unfinished", count: 0 } as const;
 }
 
 export function overviewStatus(row: Overview) {

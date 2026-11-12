@@ -6,6 +6,8 @@ import type { Entry, Overview } from "./logic";
 
 const entry: Entry = { id: "visit", staff_id: "staff", property_id: "park", visit_date: "2026-10-26", scheduled_start: "18:00", scheduled_end: "19:30", clock_in: "2026-10-26T22:08:00Z", clock_out: "2026-10-26T23:34:00Z", adj_in: null, adj_out: null, adj_reason: null, flags: [], reason: "call_out", note: null, status: "pending", rounded_hours: 1.5, timesheet_id: null, property: { id: "park", name: "502 Park", timezone: "America/New_York", latitude: null, longitude: null, geofence_radius_m: 100 } };
 const now = new Date("2026-11-12T00:43:00Z");
+const originalTZ = process.env.TZ;
+afterEach(() => { process.env.TZ = originalTZ; });
 afterEach(cleanup);
 describe("Timesheets visit presentation", () => {
   it("uses green for completed pending unflagged visits", () => expect(visitPresentation(entry).tone).toBe("green"));
@@ -48,6 +50,15 @@ describe("single next step", () => {
   it("approves all completed pending visits including flagged ones", () => expect(mainStep([entry, { ...entry, id: "flagged", flags: ["outside_in"] }, { ...entry, status: "approved" }], "2026-10-01", undefined, now)).toEqual({ kind: "pending", count: 2, ids: ["visit", "flagged"] }));
   it("offers issue for reviewed finished months", () => expect(mainStep([{ ...entry, status: "approved" }], "2026-10-01", undefined, now).kind).toBe("ready"));
   it("waits until the month has finished", () => expect(mainStep([{ ...entry, status: "approved" }], "2026-11-01", undefined, now).kind).toBe("unfinished"));
+  it.each([
+    ["America/Los_Angeles", "2026-11-01T00:30:00Z", "unfinished"],
+    ["America/New_York", "2026-11-01T00:30:00Z", "unfinished"],
+    ["Europe/Rome", "2026-10-31T23:30:00Z", "ready"],
+    ["Pacific/Auckland", "2026-10-31T12:30:00Z", "ready"],
+  ])("month cutoff follows the viewer's date in %s", (zone, instant, expected) => {
+    process.env.TZ = zone;
+    expect(mainStep([{ ...entry, status: "approved" }], "2026-10-01", undefined, new Date(instant)).kind).toBe(expected);
+  });
   it("issued overrides pending data", () => expect(mainStep([entry], "2026-10-01", "issued", now).kind).toBe("issued"));
   it("paid overrides pending data", () => expect(mainStep([entry], "2026-10-01", "paid", now).kind).toBe("paid"));
   it("orders people by review, ready, issued and paid", () => {

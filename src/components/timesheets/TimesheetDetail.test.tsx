@@ -9,19 +9,24 @@ import { TimesheetDetail } from "./TimesheetDetail";
 const entry = { id: "visit", staff_id: "mercy", property_id: "park", visit_date: "2026-10-26", scheduled_start: "18:00", scheduled_end: "19:30", clock_in: "2026-10-26T22:08:00Z", clock_out: "2026-10-26T23:34:00Z", flags: ["outside_out"], status: "pending", rounded_hours: 1.5, property: { id: "park", name: "502 Park", timezone: "America/New_York" } } as Entry;
 const sheet = { id: "issued", status: "issued", issued_at: "2026-11-02T12:00:00Z", issued_by: "admin", version: 1, hourly_rate: 50, currency: "USD", total_hours: 1.5, hours_amount: 75, adjustments_amount: 0, payee_name: "Mercy Riviera" } as Timesheet;
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
-function show(issued = false) {
+function show(issued = false, es = false, count = 1) {
   const client = new QueryClient({defaultOptions: {queries: {retry: false, staleTime: Infinity}}});
-  client.setQueryData(["timesheet-detail", "admin", "mercy", "2026-10-01"], {entries: [entry], visits: [], sheets: issued ? [sheet] : [], adjustments: [], settings: {hourly_rate: 50, currency: "USD"}, profile: {full_name: "Mercy Riviera"}, properties: [entry.property]});
+  client.setQueryData(["timesheet-detail", "admin", "mercy", "2026-10-01"], {entries: Array.from({ length: count }, (_, i) => ({ ...entry, id: i === 0 ? "visit" : `visit-${i}` })), visits: [], sheets: issued ? [sheet] : [], adjustments: [], settings: {hourly_rate: 50, currency: "USD"}, profile: {full_name: "Mercy Riviera"}, properties: [entry.property]});
   client.setQueryData(["timesheet-history", "admin", "mercy", 25], []);
   client.setQueryData(["timesheet-audit", "admin", "mercy", "2026-10-01", 50], {events: [], names: {}});
   client.setQueryData(["timesheet-issuers", "admin", []], {});
   vi.spyOn(client, "invalidateQueries").mockResolvedValue();
-  return render(<QueryClientProvider client={client}><TimesheetDetail staff="mercy" period="2026-10-01" es={false} userId="admin" /></QueryClientProvider>);
+  return render(<QueryClientProvider client={client}><TimesheetDetail staff="mercy" period="2026-10-01" es={es} userId="admin" /></QueryClientProvider>);
 }
-it("bulk approval keeps the existing RPC and includes completed flagged visits", async () => {
-  show();
-  fireEvent.click(screen.getByRole("button", { name: "Approve 1 visits" }));
-  await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("approve_time_entries", {_ids: ["visit"]}));
+it.each([
+  [false, 1, "Approve 1 visit"],
+  [true, 1, "Aprobar 1 visita"],
+  [false, 2, "Approve 2 visits"],
+  [true, 2, "Aprobar 2 visitas"],
+] as const)("bulk approval keeps the existing RPC for language %s and count %s", async (es, count, label) => {
+  show(false, es, count);
+  fireEvent.click(screen.getByRole("button", { name: label }));
+  await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("approve_time_entries", {_ids: count === 1 ? ["visit"] : ["visit", "visit-1"]}));
 });
 it("pending visit detail delegates edits to the existing required-reason form", async () => {
   show();
