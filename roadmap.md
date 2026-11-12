@@ -1,3 +1,9 @@
+# Timesheets visual redesign
+
+- [x] Replace people/month layouts with a centred, colour-coded single column and one next-step action; persistence/export unchanged.
+- [x] Verify visit states, flag priority, next actions and issued read-only cards: 37 Timesheets tests pass; controlled English/Spanish detail views checked at 360/390/430/1280px, including correction sheet and issued/paid menus.
+- [ ] Verify against a real signed-in admin's Timesheets: no preview session is available and session minting finds no account matching the requesting user. No real pay records changed.
+
 # Plain DATE task and repair follow-up
 
 - [x] Replace task/repair stamp handling with plain date keys in readers, writers and filters; database untouched.

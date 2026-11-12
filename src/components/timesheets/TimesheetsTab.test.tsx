@@ -1,4 +1,4 @@
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, it, expect, vi } from "vitest";
 const m = vi.hoisted(() => ({
@@ -7,6 +7,7 @@ const m = vi.hoisted(() => ({
   clear: vi.fn(),
   query: vi.fn(),
   rpc: vi.fn(),
+  rows: [] as Record<string, unknown>[],
 }));
 vi.mock("@/contexts/LanguageContext", () => ({
   useLanguage: () => ({ language: "en" }),
@@ -54,7 +55,7 @@ vi.mock("./api", () => ({
     },
     rpc: () => {
       m.rpc();
-      return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: m.rows, error: null });
     },
   },
   result: async (q: Promise<{ data: unknown }>) => (await q).data,
@@ -66,6 +67,7 @@ afterEach(() => {
   vi.clearAllMocks();
   m.admin = true;
   m.pending = "mercy";
+  m.rows = [];
 });
 const show = () =>
   render(
@@ -89,5 +91,18 @@ describe("timesheet pending targets", () => {
     await waitFor(() => expect(m.query).not.toHaveBeenCalled());
     expect(m.rpc).not.toHaveBeenCalled();
     expect(container).toBeEmptyDOMElement();
+  });
+  it("keeps the selected month and opens a person needing review", async () => {
+    m.pending = null;
+    m.rows = [
+      { staff_id: "paid", full_name: "Paid person", timesheet_status: "paid", total_hours: 4, pending_count: 0, attention_count: 0 },
+      { staff_id: "review", full_name: "Review person", total_hours: 5.75, pending_count: 2, attention_count: 1 },
+    ];
+    show();
+    const person = await screen.findByRole("button", { name: /Review person/ });
+    fireEvent.click(person);
+    expect(await screen.findByText(/^review:\d{4}-\d{2}-01$/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Timesheets" }));
+    expect(await screen.findByRole("button", { name: /Review person/ })).toBeInTheDocument();
   });
 });

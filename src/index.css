@@ -24,6 +24,15 @@
 
     /* Status Colors */
     --timesheet-issued: 210 75% 55%;
+    --timesheet-review: 35 78% 41%;
+    --timesheet-review-text: 35 80% 28%;
+    --timesheet-review-tint: 39 80% 94%;
+    --timesheet-fine: 161 69% 37%;
+    --timesheet-fine-text: 161 75% 24%;
+    --timesheet-fine-tint: 160 45% 94%;
+    --timesheet-approved: 49 7% 68%;
+    --timesheet-blue-text: 210 75% 34%;
+    --timesheet-blue-tint: 210 70% 95%;
     --status-done:     142 52% 42%;   /* Green  */
     --status-progress: 38  90% 52%;   /* Amber  */
     --status-urgent:   0   72% 54%;   /* Red    */
@@ -81,6 +90,12 @@
   }
 
   .dark {
+    --timesheet-review-text: 39 85% 73%;
+    --timesheet-review-tint: 35 45% 17%;
+    --timesheet-fine-text: 161 55% 70%;
+    --timesheet-fine-tint: 161 35% 16%;
+    --timesheet-blue-text: 210 80% 78%;
+    --timesheet-blue-tint: 210 40% 18%;
     --background:      220 13% 10%;
     --foreground:      38  35% 94%;
     --card:            220 13% 13%;

@@ -1,7 +1,7 @@
 import "./timesheets.css";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Settings, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings, ArrowLeft, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,6 +11,9 @@ import { db, result } from "./api";
 import { previousPeriod, monthShift, monthName, type Overview } from "./logic";
 import { TimesheetDetail } from "./TimesheetDetail";
 import { TimesheetSettings } from "./Settings";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { StatusChip } from "./StatusChip";
+import { orderOverview, overviewStatus } from "./presentation";
 export function TimesheetsTab() {
   const { language } = useLanguage();
   const es = language === "es";
@@ -91,58 +94,25 @@ export function TimesheetsTab() {
   });
   if (!allowed) return null;
   return (
-    <div className="space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {(staff || settings) && (
-          <Button
-            aria-label={t("Back", "Volver")}
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setStaff(null);
-              setSettings(false);
-            }}
-          >
-            <ArrowLeft />
+    <div className="timesheets-surface space-y-5 min-w-0 mx-auto w-full max-w-2xl">
+      <div className="flex items-center justify-between gap-2">
+        {(staff || settings) ? (
+          <Button variant="ghost" className="min-h-11 px-0 gap-1 font-medium" onClick={() => { setStaff(null); setSettings(false); }}>
+            <ArrowLeft size={16} />{t("Timesheets", "Hojas de horas")}
           </Button>
-        )}
-        <div className="flex items-center gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label={t("Previous month", "Mes anterior")}
-            onClick={() => setPeriod(monthShift(period, -1))}
-          >
-            <ChevronLeft />
-          </Button>
-          <Input
-            aria-label={t("Month", "Mes")}
-            className="w-44"
-            type="month"
-            value={period.slice(0, 7)}
-            onChange={(e) =>
-              e.target.value && setPeriod(e.target.value + "-01")
-            }
-          />
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label={t("Next month", "Mes siguiente")}
-            onClick={() => setPeriod(monthShift(period, 1))}
-          >
-            <ChevronRight />
-          </Button>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setSettings(!settings);
-            setStaff(null);
-          }}
-        >
-          <Settings size={18} />
-          {t("Settings", "Ajustes")}
-        </Button>
+        ) : <h2 className="text-2xl font-medium">{t("Timesheets", "Hojas de horas")}</h2>}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="timesheet-month gap-2 font-medium">{monthName(period, es)}<ChevronDown size={16} /></Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72">
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" aria-label={t("Previous month", "Mes anterior")} onClick={() => setPeriod(monthShift(period, -1))}><ChevronLeft /></Button>
+              <Input aria-label={t("Month", "Mes")} className="min-w-0" type="month" value={period.slice(0, 7)} onChange={e => e.target.value && setPeriod(e.target.value + "-01")} />
+              <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" aria-label={t("Next month", "Mes siguiente")} onClick={() => setPeriod(monthShift(period, 1))}><ChevronRight /></Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
       {target.isError && <p role="alert">{target.error.message}</p>}
       {settings ? (
@@ -154,10 +124,10 @@ export function TimesheetsTab() {
           period={period}
           es={es}
           userId={userId}
+          onPeriodChange={setPeriod}
         />
       ) : (
         <>
-          <h2 className="font-semibold">{monthName(period, es)}</h2>
           {overview.isPending && <p>{t("Loading…", "Cargando…")}</p>}
           {overview.isError && (
             <p role="alert">
@@ -167,45 +137,16 @@ export function TimesheetsTab() {
               </Button>
             </p>
           )}
-          {overview.data?.map((row) => {
-            const attention = Math.max(row.attention_count, row.pending_count);
-            return (
-              <Button
-                key={row.staff_id}
-                variant="ghost"
-                className="w-full h-auto min-h-16 py-3 border-b rounded-none justify-between text-left whitespace-normal gap-3"
-                onClick={() => setStaff(row.staff_id)}
-              >
-                <span className="min-w-0 break-words">
-                  {row.full_name}
-                  <span className="block text-muted-foreground">
-                    {Number(row.total_hours).toFixed(2)} h · {row.visits}{" "}
-                    {t("visits", "visitas")}
-                  </span>
-                </span>
-                <span
-                  className={
-                    "timesheet-status " +
-                    (row.timesheet_status === "paid"
-                      ? "timesheet-green"
-                      : row.timesheet_status === "issued"
-                        ? "timesheet-issued"
-                        : attention
-                          ? "timesheet-attention"
-                          : "text-muted-foreground")
-                  }
-                >
-                  {row.timesheet_status === "paid"
-                    ? t("Paid", "Pagado")
-                    : row.timesheet_status === "issued"
-                      ? `${t("Issued", "Emitido")} v${row.timesheet_version}`
-                      : attention
-                        ? `${attention} ${t("need attention", "por revisar")}`
-                        : t("Ready to issue", "Listo para emitir")}
-                </span>
+          <div className="space-y-2">
+            {orderOverview(overview.data || []).map(row => (
+              <Button key={row.staff_id} variant="ghost" className="timesheet-person" onClick={() => setStaff(row.staff_id)}>
+                <span className="min-w-0 flex-1 text-left break-words font-medium">{row.full_name}</span>
+                <span className="tabular-nums text-muted-foreground shrink-0">{Number(row.total_hours).toFixed(2)} h</span>
+                <StatusChip status={overviewStatus(row)} count={Math.max(row.attention_count, row.pending_count)} es={es} />
               </Button>
-            );
-          })}
+            ))}
+          </div>
+          <Button variant="ghost" className="min-h-11 text-muted-foreground gap-2" onClick={() => { setSettings(true); setStaff(null); }}><Settings size={18} />{t("Settings", "Ajustes")}</Button>
           {overview.data?.length === 0 && (
             <p>
               {t("No timesheets for this month", "Sin hojas de horas este mes")}

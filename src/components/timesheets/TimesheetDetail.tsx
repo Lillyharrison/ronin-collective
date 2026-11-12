@@ -28,21 +28,25 @@ import {
 } from "./api";
 import {
   canIssue,
-  classification,
   flagLabel,
   hoursFor,
   monthEnd,
   monthName,
   timeLabel,
   rosterTime,
-  reasonLabels,
   safeZone,
   type Timesheet,
   type Adjustment,
   type Property,
+  type Entry,
 } from "./logic";
 import { downloadSheet } from "./excel";
 import { VisitEditor, type VisitSeed } from "./VisitEditor";
+import { ChevronDown, ChevronRight, Download, Info, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { StatusChip } from "./StatusChip";
+import { VisitCard, visitDate } from "./VisitCard";
+import { mainStep, visitFlags } from "./presentation";
 type Visit = {
   visit_date: string;
   property_id: string;
@@ -64,14 +68,19 @@ export function TimesheetDetail({
   period,
   es,
   userId,
+  onPeriodChange,
 }: {
   staff: string;
   period: string;
   es: boolean;
   userId: string | null;
+  onPeriodChange?: (period: string) => void;
 }) {
   const qc = useQueryClient();
   const t = (a: string, b: string) => (es ? b : a);
+  const [selectedVisit, setSelectedVisit] = useState<Entry | null>(null);
+  const [showMissing, setShowMissing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [seed, setSeed] = useState<VisitSeed | null>(null);
   const [confirm, setConfirm] = useState<"issue" | "reopen" | "paid" | null>(
     null,
@@ -305,7 +314,10 @@ export function TimesheetDetail({
   const total = hoursAmount + adjustments;
   const name =
     active?.payee_name || d.settings?.payee_name || d.profile.full_name;
-  const green = d.entries.filter((e) => classification(e) === "green");
+  const step = mainStep(d.entries, period, active?.status);
+  const reviewCount = d.entries.filter(e => e.status === "pending" || (e.status !== "not_worked" && !(e.adj_out || e.clock_out))).length;
+  const issueAllowed = canIssue(period, d.entries, rate, !!active) && (d.entries.some(e => e.status === "approved") || d.adjustments.some(a => !a.timesheet_id));
+  const status = active?.status === "paid" ? "paid" : active ? "issued" : reviewCount ? "review" : "ready";
   const missing = d.visits.filter(
     (v) =>
       v.visit_date <
@@ -343,294 +355,64 @@ export function TimesheetDetail({
   return (
     <div className="space-y-5 min-w-0">
       <header>
-        <h2 className="text-xl font-semibold break-words">{name}</h2>
-        <p>
-          {monthName(period, es)} ·{" "}
-          {rate == null
-            ? t("Hourly rate not set", "Tarifa sin configurar")
-            : money(rate) + " / h"}
-        </p>
-        <span
-          className={
-            active?.status === "paid"
-              ? "timesheet-green"
-              : active
-                ? "timesheet-issued"
-                : "text-muted-foreground"
-          }
-        >
-          {active
-            ? active.status === "paid"
-              ? t("Paid", "Pagado")
-              : `${t("Issued", "Emitido")} v${active.version}`
-            : t("Review", "Revisión")}
-        </span>
+        <h2 className="font-display text-3xl font-medium break-words">{name}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{rate == null ? t("Hourly rate not set", "Tarifa sin configurar") : t(`Paid by timesheet, ${money(rate)} an hour`, `Pago por hoja de horas, ${money(rate)} por hora`)}</p>
       </header>
-      <div className="flex flex-wrap gap-2">
-        {!active ? (
-          <>
-            <Button
-              disabled={busy || !green.length}
-              onClick={() =>
-                mutate(() =>
-                  result(
-                    db.rpc("approve_time_entries", {
-                      _ids: green.map((e) => e.id),
-                    }),
-                  ),
-                )
-              }
-            >
-              {t("Approve all green", "Aprobar todos los verdes")}
-            </Button>
-            <Button variant="outline" onClick={() => setSeed({ date: period })}>
-              {t("Add visit", "Añadir visita")}
-            </Button>
-            <Button variant="outline" onClick={() => setAdjust(true)}>
-              {t("Add expense or adjustment", "Añadir gasto o ajuste")}
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button onClick={() => exportFile(active)}>
-              {t("Download Excel", "Descargar Excel")}
-            </Button>
-            {active.status === "issued" && (
-              <Button variant="outline" onClick={() => setConfirm("paid")}>
-                {t("Mark as paid", "Marcar pagado")}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => {
-                setWhy("");
-                setConfirm("reopen");
-              }}
-            >
-              {t("Re-open", "Reabrir")}
-            </Button>
-          </>
-        )}
-      </div>
-      <div className="overflow-x-auto">
-        <div className="hidden lg:grid timesheet-grid font-semibold border-b py-2">
-          <span>{t("Date / House", "Fecha / Casa")}</span>
-          <span>{t("Rostered", "Horario")}</span>
-          <span>{t("Clocked", "Registro")}</span>
-          <span>{t("Hours / Amount", "Horas / Importe")}</span>
-          <span>{t("Reason / Note", "Tipo / Nota")}</span>
-          <span>{t("Actions", "Acciones")}</span>
+      <section className="timesheet-summary space-y-4" aria-label={t("Month summary", "Resumen del mes")}>
+        <div className="grid grid-cols-2 gap-3">
+          <div><p className="text-3xl font-medium tabular-nums">{hours.toFixed(2)} <span className="text-xl">h</span></p><p className="text-sm text-muted-foreground mt-2">{d.entries.filter(e => e.status !== "not_worked").length} {t("visits", "visitas")}</p></div>
+          <div className="text-right min-w-0"><p className="text-2xl font-medium tabular-nums break-words">{money(total)}</p><div className="mt-2"><StatusChip status={status} count={reviewCount} paidDate={active?.paid_on} es={es} /></div></div>
         </div>
-        {d.entries.map((e) => (
-          <article
-            key={e.id}
-            className={`timesheet-line timesheet-${classification(e)} lg:grid timesheet-grid border-b py-3 space-y-2 lg:space-y-0`}
-          >
-            <div>
-              {e.visit_date}
-              <br />
-              <strong>{e.property?.name || "—"}</strong>
-            </div>
-            <div>
-              {rosterTime(e.scheduled_start)} – {rosterTime(e.scheduled_end)}
-            </div>
-            <div>
-              {timeLabel(e.clock_in, e.property?.timezone)} –{" "}
-              {timeLabel(e.clock_out, e.property?.timezone)}
-              {(e.adj_in || e.adj_out) && (
-                <p>
-                  {t("Adjusted", "Ajustado")}:{" "}
-                  {timeLabel(e.adj_in || e.clock_in, e.property?.timezone)} –{" "}
-                  {timeLabel(e.adj_out || e.clock_out, e.property?.timezone)}
-                </p>
-              )}
-              {[...e.flags, ...(!e.clock_out ? ["still_open"] : [])].map(
-                (f) => (
-                  <span className="timesheet-flag" key={f}>
-                    {f === "still_open"
-                      ? t("Still clocked in", "Sigue trabajando")
-                      : flagLabel(f, es)}
-                  </span>
-                ),
-              )}
-            </div>
-            <div>
-              {hoursFor(e, rounding).toFixed(2)} h<br />
-              {money(
-                e.status === "not_worked"
-                  ? 0
-                  : hoursFor(e, rounding) * (rate || 0),
-              )}
-            </div>
-            <div>
-              {reasonLabels.find((r) => r[0] === e.reason)?.[es ? 2 : 1] ||
-                e.reason}
-              <p className="break-words">{e.note}</p>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {!active && (
-                <>
-                  {e.status === "pending" && (
-                    <Button
-                      variant="outline"
-                      disabled={busy || !e.clock_out}
-                      onClick={() =>
-                        mutate(() =>
-                          result(
-                            db.rpc("approve_time_entries", { _ids: [e.id] }),
-                          ),
-                        )
-                      }
-                    >
-                      {t("Approve", "Aprobar")}
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    onClick={() => setSeed({ entry: e })}
-                  >
-                    {!e.clock_out
-                      ? t("End visit", "Terminar visita")
-                      : t("Edit", "Editar")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setSeed({ entry: e, notWorked: true })}
-                  >
-                    {t("Didn't work", "No trabajó")}
-                  </Button>
-                </>
-              )}
-            </div>
-          </article>
-        ))}
-        {!d.entries.length && (
-          <p className="py-4">
-            {t("No recorded visits", "Sin visitas registradas")}
-          </p>
-        )}
-      </div>
-      {missing.map((v, i) => (
-        <div
-          key={`${v.property_id}-${v.visit_date}-${i}`}
-          className="border-b py-3 timesheet-attention flex flex-wrap justify-between gap-2"
-        >
-          <span>
-            {v.visit_date} · {v.property_name} ·{" "}
-            {t("Rostered, no sign-in", "Programada, sin registro")}
-          </span>
-          {!active && (
-            <Button
-              variant="outline"
-              onClick={() =>
-                setSeed({
-                  property_id: v.property_id,
-                  date: v.visit_date,
-                  start: v.start_time,
-                  end: v.end_time,
-                })
-              }
-            >
-              {t("Add visit", "Añadir visita")}
-            </Button>
-          )}
-        </div>
-      ))}
-      <section>
-        <h3 className="font-semibold">
-          {t("Expenses and adjustments", "Gastos y ajustes")}
-        </h3>
-        {d.adjustments.map((a) => (
-          <div
-            key={a.id}
-            className="flex flex-wrap gap-2 justify-between border-b py-2"
-          >
-            <span>
-              {a.occurred_on} · {a.description} · {money(Number(a.amount))}
-            </span>
-            {!active && !a.timesheet_id && (
-              <Button
-                variant="ghost"
-                disabled={busy}
-                onClick={() =>
-                  mutate(() =>
-                    result(
-                      db
-                        .from("timesheet_adjustments")
-                        .delete()
-                        .eq("id", a.id)
-                        .is("timesheet_id", null)
-                        .select("id")
-                        .single(),
-                    ),
-                  )
-                }
-              >
-                {t("Delete", "Eliminar")}
-              </Button>
-            )}
+        {step.kind === "open" && <Button className="w-full min-h-12 font-medium" disabled={busy} onClick={() => setSelectedVisit(step.entry)}>{t(`Fix ${step.count} ${step.count === 1 ? "visit" : "visits"}`, `Corregir ${step.count} ${step.count === 1 ? "visita" : "visitas"}`)}</Button>}
+        {step.kind === "pending" && <div><Button className="w-full min-h-12 font-medium" disabled={busy} onClick={() => mutate(() => result(db.rpc("approve_time_entries", { _ids: step.ids })))}>{t(`Approve ${step.count} visits`, `Aprobar ${step.count} visitas`)}</Button><p className="text-sm text-muted-foreground text-center mt-2">{t("Then you can issue the timesheet", "Después puedes emitir la hoja de horas")}</p></div>}
+        {step.kind === "ready" && <Button className="w-full min-h-12 font-medium" disabled={busy || !issueAllowed} onClick={() => setConfirm("issue")}>{t("Issue timesheet", "Emitir hoja de horas")}</Button>}
+        {step.kind === "unfinished" && <p className="text-sm text-muted-foreground">{t(`You can issue this after ${visitDate(monthEnd(period), es, true)}`, `Puedes emitirla después del ${visitDate(monthEnd(period), es, true)}`)}</p>}
+        {active && <>
+          <div className="flex gap-2">
+            <Button className="min-h-12 flex-1 font-medium gap-2" onClick={() => exportFile(active)}><Download size={18} />{t("Download Excel", "Descargar Excel")}</Button>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button size="icon" variant="outline" className="h-12 w-12 shrink-0" aria-label={t("Timesheet actions", "Acciones de la hoja")}><MoreHorizontal size={20} /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {active.status === "issued" && <DropdownMenuItem className="min-h-11" onSelect={() => setConfirm("paid")}>{t("Mark as paid", "Marcar pagado")}</DropdownMenuItem>}
+                <DropdownMenuItem className="min-h-11" onSelect={() => { setWhy(""); setConfirm("reopen"); }}>{t("Re-open", "Reabrir")}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        ))}
+          <p className="text-sm text-muted-foreground">{t("Issued", "Emitido")} {new Date(active.issued_at).toLocaleDateString(es ? "es" : "en-US")} {t("by", "por")} {issuerNames.data?.[active.issued_by || ""] || audit.data?.names[active.issued_by || ""] || "—"}, {t("version", "versión")} {active.version}</p>
+        </>}
       </section>
-      <footer className="border-y py-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <span>
-          {t("Hours", "Horas")}
-          <br />
-          {hours.toFixed(2)}
-        </span>
-        <span>
-          {t("Rate", "Tarifa")}
-          <br />
-          {money(rate || 0)}
-        </span>
-        <span>
-          {t("Hours amount", "Importe horas")}
-          <br />
-          {money(hoursAmount)}
-        </span>
-        <span>
-          {t("Adjustments", "Ajustes")}
-          <br />
-          {money(adjustments)}
-        </span>
-        <strong>
-          {t("Total", "Total")}
-          <br />
-          {money(total)}
-        </strong>
-      </footer>
-      {!active && (
-        <>
-          <Button
-            disabled={
-              busy ||
-              !canIssue(period, d.entries, rate, !!active) ||
-              (!d.entries.some((e) => e.status === "approved") &&
-                !d.adjustments.some((a) => !a.timesheet_id))
-            }
-            onClick={() => setConfirm("issue")}
-          >
-            {t("Issue timesheet", "Emitir hoja de horas")}
-          </Button>
-          {d.entries.some((e) => e.status === "pending" || !e.clock_out) && (
-            <p className="text-muted-foreground">
-              {t(
-                "Review all pending visits and add missing end times first.",
-                "Revisa las visitas pendientes y añade las horas de fin.",
-              )}
-            </p>
-          )}
-        </>
-      )}
+      <section className="space-y-2" aria-label={t("Visits", "Visitas")}>
+        <div className="timesheet-visits-heading">
+          <span className="text-xs font-medium">{t("VISITS", "VISITAS")}</span>
+          <div className="timesheet-key text-xs text-muted-foreground"><span><i className="timesheet-dot timesheet-dot-green" />{t("All fine", "Todo bien")}</span><span><i className="timesheet-dot timesheet-dot-amber" />{t("Take a look", "Revisar")}</span><span><i className="timesheet-dot timesheet-dot-grey" />{t("Approved", "Aprobado")}</span></div>
+        </div>
+        {d.entries.map(e => <VisitCard key={e.id} entry={e} issued={!!active || !!e.timesheet_id} rounding={rounding} es={es} onOpen={() => setSelectedVisit(e)} />)}
+        {!d.entries.length && <p className="text-sm text-muted-foreground py-4">{t("No recorded visits", "Sin visitas registradas")}</p>}
+      </section>
+      <section className="space-y-2">
+        {d.adjustments.map(a => <div key={a.id} className="timesheet-quiet-row gap-2">
+          <span className="min-w-0 flex-1 break-words text-sm">{a.description}</span><span className="shrink-0 tabular-nums text-sm">{money(Number(a.amount))}</span>
+          {!active && !a.timesheet_id && <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label={t("Delete adjustment", "Eliminar ajuste")} disabled={busy} onClick={() => mutate(() => result(db.from("timesheet_adjustments").delete().eq("id", a.id).is("timesheet_id", null).select("id").single()))}><Trash2 size={16} /></Button>}
+        </div>)}
+        {!active && <Button variant="ghost" className="timesheet-quiet-row timesheet-add w-full justify-start gap-2 text-sm font-normal" onClick={() => setAdjust(true)}><Plus size={18} />{t("Add an expense or adjustment", "Añadir gasto o ajuste")}</Button>}
+      </section>
+      {missing.length > 0 && <section>
+        <Button variant="ghost" className="timesheet-quiet-row w-full justify-between text-sm font-normal" aria-expanded={showMissing} onClick={() => setShowMissing(!showMissing)}><span className="flex items-center gap-2"><i className="timesheet-dot timesheet-dot-amber" />{t("Rostered, no sign-in", "Programadas, sin registro")} ({missing.length})</span>{showMissing ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</Button>
+        {showMissing && missing.map((v, i) => <div key={`${v.property_id}-${v.visit_date}-${i}`} className="border-b py-3 flex flex-wrap items-center justify-between gap-2 text-sm"><span>{visitDate(v.visit_date, es)} · {v.property_name} · {rosterTime(v.start_time)} – {rosterTime(v.end_time)}</span>{!active && <Button variant="outline" className="min-h-11" onClick={() => setSeed({ property_id: v.property_id, date: v.visit_date, start: v.start_time, end: v.end_time })}>{t("Add visit", "Añadir visita")}</Button>}</div>)}
+      </section>}
       <section>
-        <h3 className="font-semibold">{t("History", "Historial")}</h3>
+        <Button variant="ghost" className="timesheet-quiet-row w-full justify-between text-sm font-normal" aria-expanded={showHistory} onClick={() => setShowHistory(!showHistory)}>{t("History and activity", "Historial y actividad")}{showHistory ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</Button>
+        {showHistory && <div className="space-y-5 py-3">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-muted-foreground"><dt>{t("Rate", "Tarifa")}</dt><dd className="text-right">{money(rate || 0)} / h</dd><dt>{t("Hours amount", "Importe horas")}</dt><dd className="text-right">{money(hoursAmount)}</dd><dt>{t("Adjustments", "Ajustes")}</dt><dd className="text-right">{money(adjustments)}</dd><dt>{t("Total", "Total")}</dt><dd className="text-right font-medium text-foreground">{money(total)}</dd></dl>
+          {!active && <Button variant="outline" className="min-h-11 gap-2" onClick={() => setSeed({ date: period })}><Plus size={16} />{t("Add visit", "Añadir visita")}</Button>}
+      <section>
+        <h3 className="font-medium">{t("History", "Historial")}</h3>
         {history.data?.map((s) => (
           <div
             key={s.id}
             className="border-b py-3 flex flex-wrap justify-between gap-2"
           >
             <div>
-              {monthName(s.period_start, es)} · v{s.version} ·{" "}
+              <Button variant="link" className="p-0 min-h-11 font-medium" onClick={() => onPeriodChange?.(s.period_start)}>{monthName(s.period_start, es)}</Button> · v{s.version} ·{" "}
               {s.status === "superseded"
                 ? t(
                     "Replaced by corrected version",
@@ -666,7 +448,7 @@ export function TimesheetDetail({
         )}
       </section>
       <section>
-        <h3 className="font-semibold">
+        <h3 className="font-medium">
           {t("Audit trail", "Registro de cambios")}
         </h3>
         {audit.data?.events.map((a) => (
@@ -690,6 +472,29 @@ export function TimesheetDetail({
           </Button>
         )}
       </section>
+        </div>}
+      </section>
+      {selectedVisit && (
+        <Dialog open onOpenChange={v => !v && setSelectedVisit(null)}>
+          <DialogContent aria-describedby={undefined} className="timesheet-detail-sheet h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col">
+            <DialogHeader><DialogTitle className="font-medium">{visitDate(selectedVisit.visit_date, es)} · {selectedVisit.property?.name || "—"}</DialogTitle></DialogHeader>
+            <div className="overflow-y-auto flex-1 space-y-4">
+              <div className="space-y-2">{visitFlags(selectedVisit).map(f => <p key={f} className="timesheet-warning"><Info size={16} className="shrink-0" />{f === "still_open" ? t("Still clocked in", "Sigue trabajando") : flagLabel(f, es)}</p>)}</div>
+              <dl className="space-y-3 text-sm">
+                <div><dt className="text-muted-foreground">{t("Rostered", "Horario")}</dt><dd>{rosterTime(selectedVisit.scheduled_start)} – {rosterTime(selectedVisit.scheduled_end)}</dd></div>
+                <div><dt className="text-muted-foreground">{t("Clocked", "Registro")}</dt><dd>{timeLabel(selectedVisit.clock_in, selectedVisit.property?.timezone)} – {timeLabel(selectedVisit.clock_out, selectedVisit.property?.timezone)}</dd></div>
+                {(selectedVisit.adj_in || selectedVisit.adj_out) && <div><dt className="text-muted-foreground">{t("Adjusted", "Ajustado")}</dt><dd>{timeLabel(selectedVisit.adj_in || selectedVisit.clock_in, selectedVisit.property?.timezone)} – {timeLabel(selectedVisit.adj_out || selectedVisit.clock_out, selectedVisit.property?.timezone)}</dd></div>}
+                <div><dt className="text-muted-foreground">{t("Hours", "Horas")}</dt><dd>{hoursFor(selectedVisit, rounding).toFixed(2)} h · {money(hoursFor(selectedVisit, rounding) * (rate || 0))}</dd></div>
+              </dl>
+              {selectedVisit.note && <p className="text-sm break-words">{selectedVisit.note}</p>}
+            </div>
+            {!active && !selectedVisit.timesheet_id && <div className="border-t pt-4 space-y-2">
+              {selectedVisit.status === "pending" && <Button className="w-full min-h-11" disabled={busy || !selectedVisit.clock_out} onClick={async () => { const ok = await mutate(() => result(db.rpc("approve_time_entries", { _ids: [selectedVisit.id] }))); if (ok) setSelectedVisit(null); }}>{t("Approve", "Aprobar")}</Button>}
+              <div className="grid grid-cols-2 gap-2"><Button variant="outline" className="min-h-11" onClick={() => { setSeed({ entry: selectedVisit }); setSelectedVisit(null); }}>{t("Edit times", "Editar horas")}</Button><Button variant="ghost" className="min-h-11" onClick={() => { setSeed({ entry: selectedVisit, notWorked: true }); setSelectedVisit(null); }}>{t("Didn't work", "No trabajó")}</Button></div>
+            </div>}
+          </DialogContent>
+        </Dialog>
+      )}
       {seed && (
         <VisitEditor
           seed={seed}
