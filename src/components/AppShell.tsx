@@ -12,6 +12,8 @@ import { PreviewModeBanner } from "@/components/PreviewModeBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistTemplate } from "@/hooks/useChecklists";
 import { Bell, X } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 
 // ── Lazy-loaded section components ───────────────────────────────────────────
 // Only the active section's bundle is downloaded — everything else is deferred.
@@ -183,6 +185,16 @@ export function AppShell() {
   const { activeSection, checklistDetailId, checklistDetailPropId, isChatOpen } = useNavigation();
   const { user } = useAuth();
   const { isMasterAdmin } = usePermissions();
+  const [entryParams, setEntryParams] = useSearchParams();
+  const entryKind = entryParams.get("entryKind");
+  const entryId = entryParams.get("entryId");
+  const pushEntry = entryId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryId) && (entryKind === "repair" || entryKind === "task")
+    ? { type: entryKind === "repair" ? "maintenance_issue" as const : "task" as const, id: entryId } : null;
+  const closePushEntry = () => {
+    const next = new URLSearchParams(entryParams);
+    next.delete("entryKind"); next.delete("entryId");
+    setEntryParams(next, { replace: true });
+  };
   const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
 
   // React Query: dedupes & caches the checklist template across navigations.
@@ -266,6 +278,7 @@ export function AppShell() {
       </main>
 
       {!isChatOpen && <BottomNav />}
+      {pushEntry && <NotificationRecordDialog target={pushEntry} onClose={closePushEntry} onEditPlanned={() => {}} />}
     </div>
   );
 }

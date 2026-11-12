@@ -1,3 +1,4 @@
+import { EntryAcknowledgement } from "@/components/EntryAcknowledgement";
 import { plainDateToLocal } from "@/lib/calendarTime";
 import { MapPin, Clock, User, Link as LinkIcon, CalendarClock, Play, Archive, ArchiveRestore } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -113,6 +114,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
             </div>
           )}
           <div className="flex-1 min-w-0 space-y-1.5">
+            <EntryAcknowledgement kind="repair" entry={issue} compact />
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold text-foreground text-sm leading-snug line-clamp-2">{issue.title}</p>
               <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -168,6 +170,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
             </div>
           </div>
 
+          <EntryAcknowledgement kind="repair" entry={issue} compact />
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-1.5">
             <IssueStatusBadge status={issue.status} />

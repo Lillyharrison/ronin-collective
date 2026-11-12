@@ -16,6 +16,7 @@ import {
   PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable,
 } from "@dnd-kit/core";
 import { toast } from "sonner";
+import { ENTRY_ACK_CHANGED } from "@/components/EntryAcknowledgement";
 
 // ─── Partial checklists widget (keep from original) ───────────────────────────
 function PartialChecklistsWidget({ mineOnly }: { mineOnly: boolean }) {
@@ -205,7 +206,7 @@ export function TasksSection() {
       .select(`
         id, title_en, title_es, description_en, status, priority, due_date,
         assigned_to, property_id, assigned_department, assigned_role,
-        linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category,
+        linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category, created_by, ack_required, acknowledged_at, acknowledged_by, acknowledged_note,
         property:properties(name),
         linked_checklist:checklist_templates(title, icon)
       `)
@@ -251,6 +252,12 @@ export function TasksSection() {
   const loadMore = () => { if (!loading && hasMore) fetchTasks(page + 1); };
 
   useEffect(() => {
+    const refresh = () => { void fetchTasks(0); };
+    window.addEventListener(ENTRY_ACK_CHANGED, refresh);
+    return () => window.removeEventListener(ENTRY_ACK_CHANGED, refresh);
+  }, [userId, isAdmin, isManager, isMasterAdmin, department, JSON.stringify(assignedPropertyIds)]);
+
+  useEffect(() => {
     if (!permLoading) fetchTasks(0);
   }, [permLoading, userId, isAdmin, isManager, isMasterAdmin, department, JSON.stringify(assignedPropertyIds)]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -274,7 +281,7 @@ export function TasksSection() {
         .select(`
           id, title_en, title_es, description_en, status, priority, due_date,
           assigned_to, property_id, assigned_department, assigned_role,
-          linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category
+          linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category, created_by, ack_required, acknowledged_at, acknowledged_by, acknowledged_note
         `)
         .eq("id", pending)
         .maybeSingle();
@@ -333,6 +340,11 @@ export function TasksSection() {
   const openEdit = (task: KanbanTask) => {
     setModalTask({
       id: task.id,
+      created_by: task.created_by,
+      ack_required: task.ack_required,
+      acknowledged_at: task.acknowledged_at,
+      acknowledged_by: task.acknowledged_by,
+      acknowledged_note: task.acknowledged_note,
       title_en: task.title_en,
       title_es: task.title_es,
       description_en: task.description_en,

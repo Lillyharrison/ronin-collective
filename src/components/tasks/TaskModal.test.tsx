@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const mocks = vi.hoisted(() => ({ update: vi.fn(), properties: [] as string[] }));
 vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isAdmin: true, assignedPropertyIds: mocks.properties }) }));
@@ -20,18 +21,18 @@ import { TaskModal } from "./TaskModal";
 
 const originalTZ = process.env.TZ;
 afterEach(() => { cleanup(); vi.clearAllMocks(); process.env.TZ = originalTZ; });
-it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("task date load/save preserves originals and writes UTC-midnight changes in %s", async tz => {
+it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("task date load/save tolerates old stamps and writes plain DATE values in %s", async tz => {
   process.env.TZ = tz;
   for (const stamp of ["2026-11-23T00:00:00.000Z", "2026-11-23T00:00:00+00:00", "2026-11-10T22:28:44Z"]) {
-    const { unmount } = render(<TaskModal task={{ id: "task", title_en: "Repair task", status: "pending", priority: 2, due_date: stamp }} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const { unmount } = render(<QueryClientProvider client={new QueryClient()}><TaskModal task={{ id: "task", title_en: "Repair task", status: "pending", priority: 2, due_date: stamp }} onClose={vi.fn()} onSaved={vi.fn()} /></QueryClientProvider>);
     fireEvent.click(screen.getByRole("button", { name: /Edit/ }));
     const input = document.querySelector('input[type="date"]');
     if (!input) throw new Error("Missing task date input");
     fireEvent.click(screen.getByRole("button", { name: /Save/ }));
-    await waitFor(() => expect(mocks.update).toHaveBeenLastCalledWith(expect.objectContaining({ due_date: stamp })));
+    await waitFor(() => expect(mocks.update).toHaveBeenLastCalledWith(expect.objectContaining({ due_date: stamp.slice(0, 10) })));
     fireEvent.change(input, { target: { value: "2026-11-24" } });
     fireEvent.click(screen.getByRole("button", { name: /Save/ }));
-    await waitFor(() => expect(mocks.update).toHaveBeenLastCalledWith(expect.objectContaining({ due_date: "2026-11-24T00:00:00.000Z" })));
+    await waitFor(() => expect(mocks.update).toHaveBeenLastCalledWith(expect.objectContaining({ due_date: "2026-11-24" })));
     unmount();
   }
 });

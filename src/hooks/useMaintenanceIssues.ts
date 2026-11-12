@@ -1,3 +1,5 @@
+import type { AcknowledgementFields } from "@/lib/entryAcknowledgement";
+import { ENTRY_ACK_CHANGED } from "@/lib/entryAcknowledgement";
 import { useState, useEffect, useCallback, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { enqueue } from "@/lib/offlineDB";
@@ -7,7 +9,7 @@ import { toast } from "sonner";
 export type IssuePriority = "urgent" | "high" | "medium" | "low";
 export type IssueStatus = "reported" | "under_investigation" | "approved" | "scheduled" | "in_progress" | "resolved";
 
-export interface MaintenanceIssue {
+export interface MaintenanceIssue extends AcknowledgementFields {
   id: string;
   title: string;
   description: string | null;
@@ -85,7 +87,7 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     }
 
     // Named columns only; include description so edit dialogs never overwrite existing notes with blank local state.
-    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, photo_urls, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at";
+    const ISSUE_COLS = "id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, photo_urls, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at, ack_required, acknowledged_at, acknowledged_by, acknowledged_note";
 
     // Build query with server-side property + filter params
     let query = supabase
@@ -163,6 +165,12 @@ export function useMaintenanceIssues(filterPropertyIds?: string[], filters?: Mai
     fetchCategories();
     fetchIssues(0);
   }, [fetchCategories, fetchIssues]);
+
+  useEffect(() => {
+    const refresh = () => { void fetchIssues(0); };
+    window.addEventListener(ENTRY_ACK_CHANGED, refresh);
+    return () => window.removeEventListener(ENTRY_ACK_CHANGED, refresh);
+  }, [fetchIssues]);
 
   const createIssue = async (payload: Omit<MaintenanceIssue, "id" | "created_at" | "updated_at" | "property_name" | "reporter_name" | "assignee_name" | "assignee_avatar" | "related_issue_title">) => {
     if (!navigator.onLine) {

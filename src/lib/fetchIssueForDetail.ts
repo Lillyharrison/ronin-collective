@@ -4,7 +4,7 @@ import type { MaintenanceIssue } from "@/hooks/useMaintenanceIssues";
 /** One-record lookup through the normal signed-in client; all joins retain RLS. */
 export async function fetchIssueForDetail(id: string): Promise<MaintenanceIssue | null> {
   const { data, error } = await supabase.from("maintenance_issues")
-    .select("id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, photo_urls, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at")
+    .select("id, title, description, category, priority, status, property_id, location_detail, reported_by, assigned_to, photo_url, photo_urls, close_out_photo_url, scheduled_date, resolved_at, source, related_issue_id, is_draft, is_archived, created_at, updated_at, ack_required, acknowledged_at, acknowledged_by, acknowledged_note")
     .eq("id", id).maybeSingle();
   if (error || !data) return null;
   const profileIds = [...new Set([data.reported_by, data.assigned_to].filter((value): value is string => Boolean(value)))];

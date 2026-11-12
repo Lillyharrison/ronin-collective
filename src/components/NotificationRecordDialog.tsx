@@ -1,3 +1,4 @@
+import { EntryAcknowledgement } from "@/components/EntryAcknowledgement";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -53,14 +54,16 @@ export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
             {isPending ? <div role="status" aria-label={es ? "Cargando" : "Loading"} className="space-y-5"><Skeleton className="h-8 w-3/4" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
             : !data ? <p className="text-base">{es ? "Este elemento ya no existe o ya no tienes acceso a él." : "This item no longer exists, or you no longer have access to it."}</p>
             : data.type === "planned_maintenance" ? <PlannedMaintenanceDetail entry={data.record} onEdit={canEdit("maintenance") || isManager || isAdmin || isMasterAdmin ? () => onEditPlanned(data.record.id) : undefined} />
-            : data.type === "task" ? <dl className="grid gap-5">
+            : data.type === "task" ? <div className="space-y-5">
+              <EntryAcknowledgement kind="task" entry={data.record} />
+              <dl className="grid gap-5">
               <DetailField label={es ? "Estado" : "Status"}>{statuses[data.record.status] ?? data.record.status}</DetailField>
               <DetailField label={es ? "Descripción" : "Description"}>{es ? data.record.description_es || data.record.description_en : data.record.description_en}</DetailField>
               <DetailField label={es ? "Asignado a" : "Assigned to"}>{data.record.assignee_name}</DetailField>
               <DetailField label={es ? "Enviado por" : "Sent by"}>{data.record.sender_name}</DetailField>
               <DetailField label={es ? "Fecha límite" : "Due date"}>{detailDate(data.record.due_date, language)}</DetailField>
               <DetailField label={es ? "Propiedad" : "Property"}>{data.record.property_name}</DetailField>
-            </dl>
+            </dl></div>
             : data.type === "calendar_event" ? <dl className="grid gap-5">
               <DetailField label={es ? "Fecha y hora" : "Date and time"}>{formatEventWhen(data.record, es ? "es" : "en-US")}</DetailField>
               <DetailField label={es ? "Propiedad" : "Property"}>{data.record.property_name}</DetailField>

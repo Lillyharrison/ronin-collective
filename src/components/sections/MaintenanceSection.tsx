@@ -1,3 +1,4 @@
+import { EntryAcknowledgement } from "@/components/EntryAcknowledgement";
 import { dateInputToPlainDate, localDateKey } from "@/lib/calendarTime";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -969,6 +970,7 @@ export function MaintenanceSection() {
                 >
                   <td className="px-3 py-2.5">
                     <p className="font-medium text-foreground truncate max-w-[200px]">{issue.title}</p>
+                    <EntryAcknowledgement kind="repair" entry={issue} compact />
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <IssueStatusBadge status={issue.status} size="xs" />

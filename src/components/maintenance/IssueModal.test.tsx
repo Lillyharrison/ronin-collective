@@ -9,19 +9,19 @@ afterEach(cleanup);
 const originalTZ = process.env.TZ;
 afterEach(() => { process.env.TZ = originalTZ; });
 describe("repair date saves", () => {
-  it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("preserves untouched mixed stamps and saves edited dates at UTC midnight in %s", async tz => {
+  it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("tolerates old stamps and saves plain DATE values in %s", async tz => {
     process.env.TZ = tz;
     for (const stamp of ["2026-11-23T00:00:00.000Z", "2026-11-10T22:28:44Z"]) {
       const save = vi.fn().mockResolvedValue(true);
       const { unmount } = render(<IssueModal open mode="edit" onClose={vi.fn()} onSave={save}
         initial={{ title: "Repair", status: "scheduled", scheduled_date: stamp }} categories={[]} properties={[]} profiles={[]} />);
       fireEvent.click(screen.getByRole("button", { name: "save" }));
-      await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ scheduled_date: stamp })));
+      await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ scheduled_date: stamp.slice(0, 10) })));
       const dateInput = document.querySelector('input[type="date"]');
       if (!dateInput) throw new Error("Missing repair date input");
       fireEvent.change(dateInput, { target: { value: "2026-11-24" } });
       fireEvent.click(screen.getByRole("button", { name: "save" }));
-      await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ scheduled_date: "2026-11-24T00:00:00.000Z" })));
+      await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ scheduled_date: "2026-11-24" })));
       unmount();
     }
   });

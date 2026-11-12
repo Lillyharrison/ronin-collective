@@ -1,3 +1,5 @@
+import { EntryAcknowledgement } from "@/components/EntryAcknowledgement";
+import type { AcknowledgementFields } from "@/lib/entryAcknowledgement";
 import { plainDateToLocal, plainDateKey, dateInputToPlainDate, comparePlainCalendarDate } from "@/lib/calendarTime";
 import { useState, useEffect, useRef, useContext } from "react";
 import { sortProperties } from "@/hooks/useScopedProperties";
@@ -26,7 +28,8 @@ export interface TaskAttachment {
   name: string;
 }
 
-export interface FullTask {
+export interface FullTask extends AcknowledgementFields {
+  created_by?: string | null;
   id?: string;
   title_en: string;
   title_es?: string | null;
@@ -419,6 +422,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             <h2 className="font-display text-lg font-semibold text-foreground leading-snug">{task.title_en}</h2>
+            {task.id && <EntryAcknowledgement kind="task" entry={{ ...task, id: task.id }} />}
 
             {task.category === "order" && (
               <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(var(--gold))]">

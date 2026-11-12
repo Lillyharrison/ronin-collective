@@ -1,3 +1,5 @@
+import { EntryAcknowledgement } from "@/components/EntryAcknowledgement";
+import type { AcknowledgementFields } from "@/lib/entryAcknowledgement";
 import { plainDateToLocal, comparePlainCalendarDate } from "@/lib/calendarTime";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -5,7 +7,8 @@ import { Clock, MapPin, User, BookOpen, Paperclip, AlertTriangle, Circle, CheckS
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "urgent";
 
-export interface KanbanTask {
+export interface KanbanTask extends AcknowledgementFields {
+  created_by?: string | null;
   id: string;
   title_en: string;
   title_es?: string | null;
@@ -56,6 +59,7 @@ export function TaskCard({ task, onClick }: Props) {
         task.is_draft ? "opacity-70 border-dashed" : "",
       )}
     >
+      <EntryAcknowledgement kind="task" entry={task} compact />
       {/* Top row: badges */}
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         {task.ai_suggested && (

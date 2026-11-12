@@ -1,3 +1,5 @@
+import { EntryAcknowledgement, ENTRY_ACK_CHANGED } from "@/components/EntryAcknowledgement";
+import type { AcknowledgementFields } from "@/lib/entryAcknowledgement";
 import { plainDateToLocal, plainDateKey, dateInputToPlainDate } from "@/lib/calendarTime";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +14,8 @@ import { cn } from "@/lib/utils";
 import { Send, User, MapPin, Clock, X } from "lucide-react";
 import { toast } from "sonner";
 
-interface SimpleTask {
+interface SimpleTask extends AcknowledgementFields {
+  created_by?: string | null;
   id: string;
   title_en: string;
   status: string;
@@ -121,7 +124,7 @@ export function FamilyTasksView() {
     setLoading(true);
     const { data } = await supabase
       .from("tasks")
-      .select("id, title_en, status, due_date, assigned_to, property_id, created_at")
+      .select("id, title_en, status, due_date, assigned_to, property_id, created_at, created_by, ack_required, acknowledged_at, acknowledged_by, acknowledged_note")
       .eq("created_by", userId)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -150,6 +153,11 @@ export function FamilyTasksView() {
     const el = document.getElementById(`fam-task-${pending}`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [loading, pendingTaskIdRef, setPendingTaskId]);
+
+  useEffect(() => {
+    window.addEventListener(ENTRY_ACK_CHANGED, loadTasks);
+    return () => window.removeEventListener(ENTRY_ACK_CHANGED, loadTasks);
+  }, [loadTasks]);
 
   const nameOf = (id: string | null) =>
     staff.find(s => s.id === id)?.full_name ?? (isL ? "Sin asignar" : "Unassigned");
@@ -276,6 +284,7 @@ export function FamilyTasksView() {
                       {isL ? st.es : st.en}
                     </span>
                   </div>
+                  <EntryAcknowledgement kind="task" entry={t} compact />
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                       <User size={10} /> {nameOf(t.assigned_to)}
@@ -318,6 +327,7 @@ export function FamilyTasksView() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              <EntryAcknowledgement kind="task" entry={editingTask} />
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">{isL ? "Para" : "To"}</label>
                 <select className={inputCls} value={editAssignedTo} onChange={e => setEditAssignedTo(e.target.value)}>

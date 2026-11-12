@@ -39,7 +39,7 @@ export async function fetchNotificationDetail(type: NotificationDetailType, id: 
   }
   if (type === "task") {
     const { data, error } = await supabase.from("tasks")
-      .select("id, title_en, title_es, description_en, description_es, assigned_to, created_by, due_date, status, property_id")
+      .select("id, title_en, title_es, description_en, description_es, assigned_to, created_by, due_date, status, property_id, ack_required, acknowledged_at, acknowledged_by, acknowledged_note")
       .eq("id", id).maybeSingle();
     if (error || !data) return null;
     const [property, assignee, sender] = await Promise.all([propertyName(data.property_id), personName(data.assigned_to), personName(data.created_by)]);

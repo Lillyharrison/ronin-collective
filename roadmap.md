@@ -1,3 +1,10 @@
+# Entry acknowledgements
+
+- [x] Add shared acknowledgement controls, status and sender readback across repairs, tasks and notification details; database untouched.
+- [x] Deploy caller-authorized acknowledgement wrapper with push-only dispatch and entry tap targets; signed-out deployed endpoint returns 401.
+- [x] Test permission rules, single/double taps, sender status, chips and notification controls: 79 focused tests pass; controlled phone/desktop note and readback checked.
+- [ ] Verify live acknowledgement and sender push receipt: no requesting-user session is available; no real entries acknowledged or notifications sent.
+
 # Timesheets visual redesign
 
 - [x] Replace people/month layouts with a centred, colour-coded single column and one next-step action; persistence/export unchanged.
