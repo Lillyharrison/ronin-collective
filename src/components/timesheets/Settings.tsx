@@ -63,7 +63,10 @@ function PayRow({
           toast.success(t("Saved", "Guardado"));
           saved();
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Could not save");
+          const message = err && typeof err === "object" && "message" in err
+            ? String(err.message)
+            : t("Could not save. Please try again.", "No se pudo guardar. Inténtalo de nuevo.");
+          toast.error(message);
         } finally {
           setBusy(false);
         }
@@ -275,7 +278,15 @@ export function TimesheetSettings({
       const response = await result<{ people: Person[] }>(
         db.functions.invoke("time-tracking-staff", { body: {} }),
       );
-      const people = response.people;
+      // The login-only feed is shared with history: narrow only Settings.
+      const roles = await allRows<{ user_id: string }>((a, b) =>
+        db.from("user_roles").select("user_id").eq("role", "staff")
+          .order("user_id").range(a, b),
+      );
+      const staffIds = new Set(roles.map((r) => r.user_id));
+      const people = response.people.filter(
+        (p) => p.level === "staff" && !p.is_archived && staffIds.has(p.id),
+      );
       return {
         people,
         pay: await allRows<Pay>((a, b) =>

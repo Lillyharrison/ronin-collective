@@ -4,6 +4,7 @@
 
 - ClockCard uses owner-deployed time RPCs and a user-scoped durable ordered queue; reminders read their Bearer token through the service-role client from private_config and claim dedupe keys before inserting notices, without changing database structures.
 - Admin timesheets use owner-deployed review/issue RPCs; Excel generation reads immutable issued snapshots and private admin-only storage, so corrected versions retain historical exports and roster logic remains independent.
+- Time/pay Settings narrow the shared login-only people feed using profile level, archive state and database staff roles without filtering history; reminders fail closed through can_clock_in before processing candidates.
 - Timesheets presentation helpers choose visit colours, flag priority and the next visible action without changing persistence; visit review opens existing correction forms so the compact list retains the same audit machinery.
 
 - StaffCalendarTab filters its single profile/schedule/shift/leave feed through cached user-keyed visible_staff_ids before passing data to grids, pickers and exports; fallback evidence comes only from RLS-returned shifts/patterns, never profiles or leave.

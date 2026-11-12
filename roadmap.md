@@ -1,3 +1,8 @@
+# Staff-only Ronin eligibility
+
+- [x] Restrict time/pay settings to logged-in, non-archived staff with staff role and level; preserve history and show save errors.
+- [x] Skip reminder candidates not approved by can_clock_in; 69 Timesheets/clock/reminder/date tests pass and disabled clock remains hidden without edits.
+
 # Entry acknowledgements
 
 - [x] Add shared acknowledgement controls, status and sender readback across repairs, tasks and notification details; database untouched.

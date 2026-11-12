@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3';
 import { endDue, keys, localNow, monthWords, previousMonth, startWindow, timeMinutes, visitWords } from './logic.ts';
+import { clockEligiblePeople } from './eligibility.ts';
 const response=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsHeaders,'Content-Type':'application/json'}});
 Deno.serve(async req=> {
   if(req.method==='OPTIONS')return response({ok:true});
@@ -30,7 +31,8 @@ Deno.serve(async req=> {
   try {
     const settings=await pages('staff_time_settings','staff_id',q=>q.eq('time_tracking','ronin'));
     const ids=settings.map(s=>s.staff_id); const loginIds=check(await db.rpc('ids_with_login',{_ids:ids})) as string[];
-    const profiles=loginIds.length?await pages('profiles','id, full_name, language_pref',q=>q.in('id',loginIds).eq('is_archived',false)):[];
+    const candidates=loginIds.length?await pages('profiles','id, full_name, language_pref',q=>q.in('id',loginIds).eq('is_archived',false)):[];
+    const profiles=await clockEligiblePeople(candidates,id=>db.rpc('can_clock_in',{_uid:id}));
     if(parsed.data.mode==='visits') {
       const properties=await pages('properties','id, name, timezone',q=>q); const props=new Map(properties.map(p=>[p.id,p]));
       const from=new Date(now.getTime()-86400000).toISOString().slice(0,10),to=new Date(now.getTime()+86400000).toISOString().slice(0,10);
