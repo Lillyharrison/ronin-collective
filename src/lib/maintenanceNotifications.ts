@@ -1,12 +1,26 @@
 import { notifySection, notifyUsers } from "./notifySection";
+import { supabase } from "@/integrations/supabase/client";
+import { repairNotificationBody } from "../../supabase/functions/_shared/repairNotificationBody";
 
 interface RepairNotice {
-  id: string; title: string; assigned_to?: string | null; property_id?: string | null; location_detail?: string | null;
+  id: string; title: string; assigned_to?: string | null; property_id?: string | null; location_detail?: string | null; reported_by?: string | null;
 }
 
-export async function notifyRepairCreated(issue: RepairNotice, actorId: string) {
+export async function repairNoticeBody(issue: RepairNotice, language = "en") {
+  let name: string | null = null;
+  if (issue.reported_by) {
+    try {
+      const { data, error } = await supabase.from("profiles").select("full_name")
+        .eq("id", issue.reported_by).maybeSingle();
+      if (!error) name = data?.full_name ?? null;
+    } catch { /* Missing names must never stop the existing notification. */ }
+  }
+  return repairNotificationBody(name, issue.location_detail ? `Location: ${issue.location_detail}` : undefined, language);
+}
+
+export async function notifyRepairCreated(issue: RepairNotice, actorId: string, language = "en") {
   const payload = {
-    body: issue.location_detail ? `Location: ${issue.location_detail}` : undefined,
+    body: await repairNoticeBody(issue, language),
     action_url: "maintenance", entity_id: issue.id, entity_type: "maintenance_issue",
     property_id: issue.property_id ?? undefined,
   };

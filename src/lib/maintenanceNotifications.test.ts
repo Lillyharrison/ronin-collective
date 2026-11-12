@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { notifyPlannedSaved, notifyRepairCreated } from "./maintenanceNotifications";
+import { notifyPlannedSaved, notifyRepairCreated, repairNoticeBody } from "./maintenanceNotifications";
+import { repairNotificationBody } from "../../supabase/functions/_shared/repairNotificationBody";
 import { notifySection, notifyUsers } from "./notifySection";
 import { eligibleNotificationRecipients, reminderCandidates } from "../../supabase/functions/_shared/notificationAudience";
 
 vi.mock("./notifySection", () => ({ notifySection: vi.fn(), notifyUsers: vi.fn() }));
+const profiles = vi.hoisted(() => ({ name: "Julia Harris" as string | null, lookup: vi.fn() }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: {
+  from: () => ({ select: () => ({ eq: (_column: string, id: string) => {
+    profiles.lookup(id);
+    return { maybeSingle: async () => ({ data: { full_name: profiles.name }, error: null }) };
+  } }) }),
+} }));
 
 const planned = {
   id: "job", title: "HVAC", assigned_to: "assignee", property_id: "property",
@@ -11,7 +19,29 @@ const planned = {
   scheduled_month: 7, scheduled_year: 2027,
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); profiles.name = "Julia Harris"; });
+
+describe("repair notification reporter bodies", () => {
+  it.each([
+    ["en", "Reported by Julia Harris · Location: Outdoor light"],
+    ["es", "Reportado por Julia Harris · Ubicación: Outdoor light"],
+  ])("prefixes both new and assigned repair bodies in %s", async (language, expected) => {
+    await notifyRepairCreated({ id: "repair", title: "Return glass for light fixture", reported_by: "julia", assigned_to: "assignee", location_detail: "Outdoor light" }, "actor", language);
+    expect(vi.mocked(notifySection).mock.calls[0][1].body).toBe(expected);
+    expect(vi.mocked(notifyUsers).mock.calls[0][1].body).toBe(expected);
+    expect(profiles.lookup).toHaveBeenCalledWith("julia");
+  });
+  it("omits attribution when no profile name is found and preserves location", async () => {
+    profiles.name = null;
+    expect(await repairNoticeBody({ id: "repair", title: "Glass", reported_by: "missing", location_detail: "Outdoor light" })).toBe("Location: Outdoor light");
+    expect(repairNotificationBody(undefined, "Location: Outdoor light", "es")).toBe("Ubicación: Outdoor light");
+    expect(repairNotificationBody(null)).toBeUndefined();
+  });
+  it("uses the saved reporter rather than the person assigning on their behalf", async () => {
+    expect(await repairNoticeBody({ id: "repair", title: "Glass", reported_by: "original-reporter" })).toBe("Reported by Julia Harris");
+    expect(profiles.lookup).toHaveBeenCalledWith("original-reporter");
+  });
+});
 
 describe("maintenance notification audiences", () => {
   it("gives an opted-in repair assignee exactly one notification", async () => {

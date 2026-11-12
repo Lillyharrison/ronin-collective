@@ -1,3 +1,8 @@
+# Repair notification reporter names
+
+- [x] Audit Maintenance create/family flow, Dashboard quick report, repair reassignment and Ronin AI; prefix only new/assigned repair bodies from saved reporter profiles.
+- [x] Test English/Spanish names, missing names and original reporter attribution; 31 focused tests pass. Live repair creation not exercised (would create actual work and send notifications).
+
 # Staff-only Ronin eligibility
 
 - [x] Restrict time/pay settings to logged-in, non-archived staff with staff role and level; preserve history and show save errors.

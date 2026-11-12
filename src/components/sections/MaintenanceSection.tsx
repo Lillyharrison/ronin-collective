@@ -24,7 +24,7 @@ import { IssueDetailDrawer } from "@/components/maintenance/IssueDetailDrawer";
 import { fetchIssueForDetail } from "@/lib/fetchIssueForDetail";
 import { cn } from "@/lib/utils";
 import { notifySection, notifyUsers } from "@/lib/notifySection";
-import { notifyRepairCreated } from "@/lib/maintenanceNotifications";
+import { notifyRepairCreated, repairNoticeBody } from "@/lib/maintenanceNotifications";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { format, parseISO } from "date-fns";
 import { useBatchTranslation } from "@/hooks/useEntryTranslation";
@@ -299,7 +299,7 @@ export function MaintenanceSection() {
       const key = `create-${newIssue.id}`;
       if (notifyingRef.current.has(key)) return;
       notifyingRef.current.add(key);
-      await notifyRepairCreated({ ...newIssue, title: newIssue.title ?? "Maintenance issue" }, userId);
+      await notifyRepairCreated({ ...newIssue, title: newIssue.title ?? "Maintenance issue" }, userId, language);
       setTimeout(() => notifyingRef.current.delete(key), 5000);
     }
     return Boolean(newIssue);
@@ -322,7 +322,7 @@ export function MaintenanceSection() {
           notifyingRef.current.add(assignKey);
           await notifyUsers([patch.assigned_to], {
             title: `🔧 You've been assigned a repair: ${editIssue.title}`,
-            body: editIssue.location_detail ? `Location: ${editIssue.location_detail}` : undefined,
+            body: await repairNoticeBody(editIssue, language),
             type: "info",
             action_url: "maintenance",
             entity_id: editIssue.id,

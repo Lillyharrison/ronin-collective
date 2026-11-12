@@ -451,7 +451,7 @@ export function Dashboard() {
             if (!userId) return;
             const { data: issue, error } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
             if (error || !issue) return false;
-            if (navigator.onLine) await notifyRepairCreated(issue, userId);
+            if (navigator.onLine) await notifyRepairCreated(issue, userId, language);
             return true;
           }}
           categories={maintenanceCategories}

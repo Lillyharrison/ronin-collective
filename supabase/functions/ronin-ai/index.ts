@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { describeEventWhen, plainDateKey } from "../_shared/eventTime.ts";
+import { repairNotificationBody } from "../_shared/repairNotificationBody.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -1168,9 +1169,17 @@ serve(async (req) => {
         const notifTitle = issueStatus === "approved"
           ? `🔧 Maintenance issue approved: "${tool_args.title}"`
           : `🔧 New maintenance issue reported`;
+        const { data: reporterProfile } = issueStatus === "reported"
+          ? await adminClient.from("profiles").select("full_name").eq("id", reportedById).maybeSingle()
+          : { data: null };
         const notifBody = issueStatus === "approved"
           ? `${reporterName} reported via Ronin AI and ${callerName} approved: "${tool_args.title}"${propLabel}. Now active in the workflow.`
-          : `${reporterName} reported via Ronin AI: "${tool_args.title}"${propLabel}. Awaiting your approval.`;
+          : repairNotificationBody(
+              reporterProfile?.full_name,
+              [tool_args.location_detail ? `Location: ${tool_args.location_detail}` : null,
+                `Reported via Ronin AI: "${tool_args.title}"${propLabel}. Awaiting your approval.`].filter(Boolean).join(" · "),
+              callerProfile?.language_pref === "es" ? "es" : "en",
+            ) ?? "";
         await notifyAdminsOfAIAction(
           adminClient,
           notifTitle,

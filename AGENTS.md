@@ -11,6 +11,7 @@
 - SharedStaffSchedule applies viewer visibility for signed-in visitors and obtains fallback evidence through direct RLS queries, not the service-role share payload; anonymous token-authorized sharing remains unchanged.
 
 - MaintenanceSection and Dashboard share repair-create notices; usePlannedMaintenance owns planned save notifications based on persisted before/after dates so modal, copy and list mutations cannot create independent broadcasts.
+- Repair creation/assignment bodies use the shared repairNotificationBody formatter and the saved reported_by profile, including assistant-created reports, so attribution never substitutes the current editor.
 - Edge notification audiences use service-role ids_with_login before inserting rows or dispatching push; shared pure recipient rules keep reminder fallback and exclusions testable without exposing login lookups to clients.
 
 - Work assignee pickers use the cached profile_ids_who_can_see RPC through useAssignableProfileIds and shared option filtering; filter inside each work modal so all profile feeds retain fallback and existing-assignee data.
