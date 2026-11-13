@@ -1751,9 +1751,16 @@ export type Database = {
           library_item_id: string | null
           name: string
           notes: string | null
+          order_id: string | null
+          ordered_at: string | null
+          photo_url: string | null
           property_id: string | null
           quantity: string | null
+          received_at: string | null
+          received_by: string | null
+          status: string
           updated_at: string
+          urgent: boolean
         }
         Insert: {
           approved_at?: string | null
@@ -1766,9 +1773,16 @@ export type Database = {
           library_item_id?: string | null
           name: string
           notes?: string | null
+          order_id?: string | null
+          ordered_at?: string | null
+          photo_url?: string | null
           property_id?: string | null
           quantity?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          status?: string
           updated_at?: string
+          urgent?: boolean
         }
         Update: {
           approved_at?: string | null
@@ -1781,9 +1795,16 @@ export type Database = {
           library_item_id?: string | null
           name?: string
           notes?: string | null
+          order_id?: string | null
+          ordered_at?: string | null
+          photo_url?: string | null
           property_id?: string | null
           quantity?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          status?: string
           updated_at?: string
+          urgent?: boolean
         }
         Relationships: [
           {
@@ -1791,6 +1812,13 @@ export type Database = {
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_list_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -3021,9 +3049,14 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_items_received: { Args: { _ids: string[] }; Returns: number }
       create_checklist_tasks_for_todays_shifts: {
         Args: never
         Returns: undefined
+      }
+      create_order_from_requests: {
+        Args: { _expected_delivery?: string; _ids: string[]; _title?: string }
+        Returns: string
       }
       distance_m: {
         Args: { _lat1: number; _lat2: number; _lng1: number; _lng2: number }
