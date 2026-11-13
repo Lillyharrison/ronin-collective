@@ -72,20 +72,19 @@ describe("dashboard notifications", () => {
     if(type==='timesheet') expect(mocks.timesheet).toHaveBeenCalledWith('record-id');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
-  it.each(["maintenance_issue", "planned_maintenance", "task", "calendar_event", "birthday"])("acknowledges and opens %s details without navigating", async type => {
+  it.each(["maintenance_issue", "planned_maintenance", "task", "calendar_event", "birthday"])("opens %s details without navigating and keeps it on the dashboard", async type => {
     notice(type, type === "birthday" ? "home" : null);
     render(<Dashboard />);
     fireEvent.click(await screen.findByText("Test notice"));
     expect(await screen.findByRole("dialog")).toHaveTextContent(`${type}:record-id`);
-    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("acknowledge_notification", { _notif_id: "notice-id" });
-    expect(mocks.updated).toHaveBeenCalledWith("notifications", { is_read: true });
+    expect(mocks.rpc).not.toHaveBeenCalledWith("acknowledge_notification", expect.anything());
     expect(mocks.section).not.toHaveBeenCalled();
     expect(mocks.repair).not.toHaveBeenCalled();
     expect(mocks.planned).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("Close details"));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.queryByText("Test notice")).not.toBeInTheDocument();
+    expect(screen.getByText("Test notice")).toBeInTheDocument();
   });
   it("dismisses only from the dashboard, retaining the bell notification", async () => {
     notice();
@@ -146,17 +145,6 @@ describe("dashboard notifications", () => {
     fireEvent.click(await screen.findByText("Test notice"));
     await waitFor(() => expect(mocks.section).toHaveBeenCalledExactlyOnceWith("orders"));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-  it("does not hide or open a notification if acknowledgment fails", async () => {
-    notice();
-    mocks.rpcError = { message: "Denied" };
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    render(<Dashboard />);
-    fireEvent.click(await screen.findByText("Test notice"));
-    await waitFor(() => expect(log).toHaveBeenCalled());
-    expect(screen.getByText("Test notice")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    log.mockRestore();
   });
   it("places the clock card below the greeting banner", () => {
     const { container } = render(<Dashboard />);

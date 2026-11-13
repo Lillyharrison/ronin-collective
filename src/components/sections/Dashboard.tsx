@@ -390,7 +390,10 @@ export function Dashboard() {
   };
 
   const handleNotifClick = async (n: DashNotification) => {
-    if (!await dismissNotif(n.id, n.user_id)) return;
+    // Opening only marks it read; it stays on the Dashboard until deleted or acknowledged.
+    if (n.user_id === userId && !(n as { is_read?: boolean }).is_read) {
+      void supabase.from("notifications").update({ is_read: true }).eq("id", n.id).then(({ error }) => { if (error) console.error("Mark read failed", error); });
+    }
     if (openDetails(n)) return;
     const targetSection: ActiveSection | undefined =
       (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
