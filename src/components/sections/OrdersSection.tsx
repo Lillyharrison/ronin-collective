@@ -14,6 +14,7 @@ import { OrderLibraryTab } from "@/components/orders/library/OrderLibraryTab";
 import { BookOpen } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useNavigation } from "@/contexts/NavigationContext";
+import { filterOrdersByHouse, orderCounts, useArrivalHouseFilter, HouseFilterChip } from "@/components/orders/houseFilter";
 import { PropertyShoppingLists } from "@/components/orders/PropertyShoppingLists";
 
 type MainTab = "pending" | "delivered" | "shopping" | "library";
@@ -478,7 +479,16 @@ export function OrdersSection() {
   const [creating, setCreating]     = useState(false);
   const [activeTab, setActiveTab]   = useLocalStorage<MainTab>("orders-active-tab", "pending");
   const [params, setParams] = useSearchParams();
-  const { registerBackHandler, activePropertyId } = useNavigation();
+  const { registerBackHandler, activePropertyId, setActivePropertyId } = useNavigation();
+  const [houseId, setHouseId] = useArrivalHouseFilter(activePropertyId, setActivePropertyId);
+  const [houseName, setHouseName] = useState<string>("");
+  useEffect(() => {
+    if (!houseId) { setHouseName(""); return; }
+    let cancelled = false;
+    supabase.from("properties").select("name").eq("id", houseId).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setHouseName(data?.name ?? (isL ? "una casa" : "one house")); });
+    return () => { cancelled = true; };
+  }, [houseId]);
   const closeOrder = () => {
     setModalOrder(null);
     const next = new URLSearchParams(params); next.delete("order"); setParams(next, { replace: true });
@@ -545,12 +555,7 @@ export function OrdersSection() {
   }, []);
 
   // pending = not_placed + placed + pending_delivery (legacy)
-  const scopedOrders = orders.filter(o => !activePropertyId || o.property_id === activePropertyId);
-  const pending   = scopedOrders.filter(o => o.status !== "delivered");
-  const delivered = scopedOrders.filter(o => o.status === "delivered");
-
-  // Count breakdown for badge
-  const notPlacedCount = pending.filter(o => o.status === "not_placed").length;
+  const { pending, delivered, notPlaced: notPlacedCount } = orderCounts(filterOrdersByHouse(orders, houseId));
 
   const tableHeaders = [
     { label: isL ? "Artículo" : "Item", w: "28%" },
@@ -588,6 +593,10 @@ export function OrdersSection() {
           </button>
         )}
       </div>
+
+      {houseId && (activeTab === "pending" || activeTab === "delivered") && (
+        <HouseFilterChip houseName={houseName || "…"} isES={isL} onClear={() => setHouseId(null)} />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 px-4 py-3 border-b border-border">
