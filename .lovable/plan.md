@@ -1,43 +1,94 @@
-# Security review findings (read-only, nothing changed)
+# House-isolation audit: findings and proposed fix order
 
-Source: latest database scan (9 Nov 2026, 23:08 UTC) plus the database linter, run 10 Nov. The scan groups 15 findings under 3 rule families. The "2 issues" Lovable is suggesting are most likely the 2 families that contain Critical (error) items. I can't see the exact panel Lilly is looking at, so this matching is my best inference.
+Read-only audit. Nothing was changed. "Service-role" means the function skips the database's row-level rules. Fix-order proposals are at the end; nothing is built until you approve.
 
-Root cause shared by both: **open sign-up**. Sign-up is switched on, and no hook limits who can register. Anyone with the public app key can create an account through the login service, even if the website is private. Any rule that only checks "is signed in" is therefore effectively public.
+## Urgent (outside the house rule, but serious)
+| Where | What leaks | Smallest safe fix |
+|---|---|---|
+| `generate-vapid-keys` (public, no login) | Returns the **stored private push key** verbatim | Delete the function, rotate the push keys |
+| `send-push-notification` (public, no login) | Anyone can push any text to any user ID; reveals each user's device count | Require the internal service secret |
+| `ronin-event-listener` | Webhook secret is hard-coded in source | Move to a stored secret and rotate it |
+| `GanttChart.tsx:52` + `timeline-share-get/save` | Fixed token in the app code gives anyone read/**write** of the whole construction board, for every house | Edits need sign-in and admin; random, revocable, house-bound read links |
 
-## Issue 1 - "Some access rules only check that someone is signed in" (Critical)
-- `vehicles` - policy "Authenticated users can view vehicles" (Critical): any account can read every car, including make, model, owner and house.
-- `gantt_shared_boards` - policy "Authenticated users can update gantt boards" (Critical): any account can overwrite or vandalise every construction timeline.
-- `car_wash_bookings` - policy "Authenticated users can create bookings" (Warning): any account can add fake wash bookings. Reading bookings is already limited by house.
-- Verdict: **genuine problem**. This is not one of the intended designs (definer functions, private pay tables, admin-only rules).
-- Fix (choose one or both):
-  - (a) Switch off open sign-up, since staff are invited. Low risk, but check the invite and set-password flows still work, because they create users with the admin key.
-  - (b) Tighten the rules: vehicles readable by house access; gantt edits for admins and managers only (shared links already go through a server function); bookings only by people with access to that house. Possible breakage: car-wash staff without house access stop seeing cars, and non-admin timeline editors lose editing.
+## 1. Backend functions
+### Critical / high: break the house rule
+- **`ronin-ai` (AI assistant): critical.** Every query runs with service-role. Before answering, it loads into the AI's context, across all houses: all houses (address, occupants), up to 50 open tasks, 50 assets, 20 open repairs, 15 system events and the top 20 **memories (full text)**. The only guard is the prompt line "staff only receive their properties", which is not a security boundary.
+  - **Search tools, all unscoped:** search_tasks, search_assets, get_calendar_events, search_maintenance_issues, search_planned_maintenance, search_vendors, search_library_item. If you name a house you aren't assigned to, it is searched; if no house is named, all houses are searched.
+  - **Write tools, no house check:** log_maintenance_issue, create_task, update_task_status (fuzzy title match across all houses), log_asset, send_staff_message, save_memory, add_shopping_list_item, log_vendor. update_occupancy is admin-only but still unscoped.
+  - **Chat threads:** reads any chat thread's title and last 25 messages by ID, with no membership check.
+  - **Answer to your question:** yes. A staff or family member can ask about an unassigned house and get an answer, directly or through memories.
+  - **Signed-out calls:** the chat path does not reject calls without a login.
+  - **Alerts:** AI-action alerts go to every admin and every section subscriber, with no house check.
+  - **Admin actions:** invite, create draft and save draft are admin-gated, but a plain admin can set any role, houses or permissions. Save draft doesn't check the target is actually a draft.
+  - **Not touched by the assistant:** manuals, house rules, orders and schedules are never queried.
+  - **Fix:** reject signed-out calls; filter every snapshot and tool by allowed houses (master admin exempt). Refuse unassigned or unknown houses instead of searching everything. Give memories a house or audience rule. Check thread membership. Scope the AI-action alert audience.
+- **`ronin-event-listener`: high.** Staff briefings go to whoever the event lists, with no house check. The event title is copied verbatim, and private events aren't excluded. It reuses any thread containing both people (not just two-person threads). Master-admin briefings are fine.
+- **`notify-section`: high.** Any signed-in user can choose recipients, title and body. Direct recipients and all admins skip the house filter. Subscribers are house-filtered only when the caller passes a house. **Fix:** work out the house from the record on the server and filter every recipient (master admin exempt).
+- **`staff-schedule-share-get` (public link): high.** A link holder sees every staff member (names, assigned house IDs, contract hours, leave entitlement, start date, level). They also see **every house name and city**, all shifts and patterns with notes, and approved leave for the date range. Links **cannot** be scoped to one house today.
+- **`staff-schedule-share-mutate` (public link): high.** The same link can create, edit or delete shifts for any staff or house in the range. **Fix:** read-only links bound to chosen houses, and editing only when signed in.
+- **`calendar-sync`: high.** Public, service-role. Anyone can trigger imports (no direct data returned). **Fix:** require a scheduled-job secret.
+- **`planned-maintenance-reminder`: high.** Public, service-role, changes statuses and sends reminders. **Fix:** require a scheduled-job secret.
+- **`order-list-submit`: high.** Signed-in only, with no check that the sender can access that list's house. **Fix:** check house access before sending.
 
-## Issue 2 - "Rules that let every row through (always true)" (Critical)
-- `chat_threads` UPDATE "Participants and admins can update threads", WITH CHECK true (Critical): a participant can rewrite a thread's participant list, for example to add outsiders or remove others. Fix: make the check match the participant/admin rule. Low risk.
-- `checklist_items` SELECT "Authenticated users can view checklist items", USING true for role **public** (Critical): even signed-out visitors can read every checklist step, including notes and photo links. Fix: limit to signed-in users with checklist access. Check that the public checklist share links still work, because they now go through a server function.
-- `system_settings` SELECT true (Critical): every account can read all app settings. Real risk depends on the contents. Usually low; it would matter if any keys or tokens were ever stored there (tokens live in private_config, which is locked).
-- `user_presence` SELECT true (Critical): any account sees who is online and when. Low sensitivity; it's normal for a chat app, but still exposed to self-registered accounts.
-- `staff_schedule_publications` SELECT true (Critical): any account can see which weeks were published, but only dates, not shifts. Low real risk; arguably intended.
-- Warnings in the same family: `maintenance_categories`, `job_title_suggestions`, `achievements`, `order_library_items` read-all. This is reference data meant to be shared, so effectively **false positives**, except that open sign-up exposes them to strangers.
+### Medium / low
+- **Checklist public links (`checklist-public-get/update/submit`): high exposure, but one house.**
+  - A holder sees one checklist with its item photos and notes, the house name, and the whole session row. They can tick items and submit.
+  - Links are tied to one house, but tokens are a title slug plus 4 random characters, so they are guessable, and they never expire.
+  - **Fix:** long random tokens, expiry, and show only the fields needed.
+- **`save-push-subscription`: medium.** A device registration can be taken over from its owner. **Fix:** don't reassign an existing one.
+- **`extract-checklists`, `translate-entries`: medium.** No login check. No house data is involved, but anyone can run up AI usage.
+- **`debug-vapid`: low.** Public diagnostic. Remove it.
 
-## Other lower-severity findings
-- Storage (Warning): "maintenance" and "order-library" photo uploads aren't tied to the uploader. Any account can add files there. (Info) Any account can list "manuals" files. These are intended shared buckets; the real fix is again closing sign-up.
-- Linter: 33 "public can run SECURITY DEFINER function" warnings and 52 "signed-in can run" warnings. These are **the intended design**: each function checks the caller's role itself. 4 functions have no fixed search path and 2 extensions sit in the public area. Both are housekeeping-level.
-- Linter info: 2 tables with locks but no rules. These are `private_config` and `time_reminders_sent`, and they are **intentionally locked** (server-only).
-- Older scan entries (May/July) are stale but still listed, e.g. checklist_public_sessions, shopping list, vendors and property rules. Several were already addressed in earlier work; a fresh deep scan would clear or re-rate them.
+### Safe or acceptable
+- **`acknowledge-entry`:** runs as the caller; the database function does check the house.
+- **`acknowledge-notification`:** runs as the caller, and the database function checks that the notification belongs to the caller. It has no house check, but it only touches the caller's own notification.
+- **`time-tracking-reminders`:** secret-protected.
+- **`time-tracking-staff`:** admin-only.
+- **`set-user-password`:** master-admin only.
+- **`extract-care-guide`:** signed-in, no stored house data read.
+- **No separate invite function:** invites go through `ronin-ai`, covered above.
 
-## Recent changes - none are flagged
-- `ids_with_login`, `activate_draft_profile` and `archive_profile_core`: not callable by signed-out or signed-in users (server-only). Correct.
-- Time tracking and archive functions (clock_in/out, issue/reopen/pay timesheet, archive_profile, unarchive, etc.): callable only by signed-in users, never signed-out ones. Each checks the caller's role internally. This is the intended design; they only appear in the generic definer-function warning count.
-- `time_entries`, `timesheets` and the related tables: read-only rules, with writes blocked except through the functions. Not flagged.
-- `private_config`: fully locked. Not flagged as a problem.
-- `timesheets` storage bucket: private and admin-only. Not flagged.
+## 2. App reads that skip the normal rules
+- **`get_staff_schedule_profiles`: high.** Admins and schedule viewers get all staff with their full assigned-house lists. The screen filters afterwards, but the data was already sent.
+- **`timesheet_overview`, `effective_visits`, `archive_blockers`: unverified.** No house check (all three are used only on admin screens).
+- **`visible_staff_ids`, `profile_ids_who_can_see`: low.** Both return IDs only, with no house check.
+- **`batch_mark_messages_seen`: medium.** Uses a user ID the caller supplies, so anyone can mark any messages as seen.
+- **`acknowledge_notification`: medium.** Has no ownership check. These two are integrity problems, not leaks.
+- **Already safe:** `clock_in` and `my_clock_status` check the house. The view `checklist_completion_log` follows the normal row rules.
+- **Property pickers:** about 12 pickers query the full house list but rely on the database rules, so they are safe.
 
-## Recommendation
-1. Close open sign-up first. It removes the "whoever signs up" exposure behind most findings at once.
-2. Then fix `checklist_items` (readable while signed out) and the `chat_threads` update check. These are the two real holes.
-3. Next tighten `vehicles` and `gantt_shared_boards`.
-4. Mark the reference-data and definer-function warnings as intended.
+### Public file buckets (anyone with the link can open the file)
+| Bucket | Where links are stored | Writers / readers |
+|---|---|---|
+| maintenance | maintenance_issues.photo_url, photo_urls, close_out_photo_url | IssueModal, IssueDetailDrawer, repairs PDF |
+| manuals | checklist_templates.cover_image_url, card_images; checklist_items.photo_url; checklist product images; tasks.attachments (path `task-attachments/...`, no house in path) | ChecklistDetailPage, ChecklistItemRow, CareGuideDetailPage, CareGuideScanModal, TaskModal |
+| chat-media | messages.content_media_url | ChatView, MessageBubble |
+| vehicles | vehicles.photo_url | CarWashSection |
+| order-library | order_library_items.image_url, order_list_draft_lines.photo_url | useOrderLibrary, OrderListDetailPage |
+| property-images | properties.image_url | PropertySection |
+| avatars (also public) | profiles.avatar_url | ProfileSection, PropertySection |
+| timesheets (private, downloads only) | timesheets.file_path | timesheets Excel helper |
 
-Nothing was changed. Approving this would only mean I prepare the fixes as a separate step.
+- **Could not trace to a bucket:** manuals.file_url and cover_image_url, assets.photo_url, tasks.photo_url. No current upload code was found for them, so check which bucket the stored links point to.
+- **Moving to private buckets:** most object paths don't include the house, so access checks would need to look up the owning record. Signed links would come from a small server check.
+
+## 3. Names, counts and badges
+- **AI assistant:** the biggest leak (above).
+- **Repair and planned-maintenance alerts:** the title and house name go out through `notify-section`, so they can reach unassigned admins or direct recipients. Once copied into someone's notification, the database rules no longer protect the text.
+- **Shared schedule link:** shows every house name.
+- **Staff calendar exports:** built from already-filtered data, apart from the house lists sent by the schedule RPC.
+- **Dashboard counts:** use normal queries (safe). Dashboard summaries stored in system settings and events weren't traced, so that's unverified.
+- **Search:** no app-wide search exists. Local searches follow the database rules.
+- **Repairs, planned and library PDFs:** follow the data on screen (safe), but the photos inside them come from public links.
+
+## Questions for Lilly
+1. Should plain admins (not master) also be limited to their assigned houses everywhere, including alerts? The code currently lets admins through in several places.
+2. Should share links remain an intended exception (external people with a link), but bound to chosen houses?
+
+## Proposed fix order (after approval, one step at a time)
+1. Remove the key-leaking function and rotate the push keys. Lock down send-push, calendar-sync and the maintenance reminder; move the listener secret.
+2. AI assistant: require sign-in; scope the snapshot, memories, tools, threads and alerts to allowed houses.
+3. Alerts: notify-section works out the house on the server and filters every recipient; same in the event listener.
+4. Share links: house-bound, read-only schedule links; strong expiring checklist tokens; Gantt editing only when signed in.
+5. Schedule profiles RPC: return only allowed staff and houses (needs a database change, so it will need your go-ahead).
+6. Make buckets private with signed links, one bucket at a time, starting with maintenance and chat-media.
