@@ -1,4 +1,5 @@
 import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
+import { sendPasswordRecovery } from "../_shared/passwordRecovery.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { describeEventWhen, plainDateKey } from "../_shared/eventTime.ts";
 import { repairNotificationBody } from "../_shared/repairNotificationBody.ts";
@@ -743,20 +744,8 @@ serve(async (req) => {
       if (!emailToReset) {
         return new Response(JSON.stringify({ error: "Could not resolve email for this user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://ronin-collective.lovable.app";
-      const redirectTo = body.redirect_url || `${origin}/reset-password`;
-      const { data: linkData, error: linkErr } = await adminDb.auth.admin.generateLink({
-        type: "recovery",
-        email: emailToReset,
-        options: { redirectTo },
-      });
-      if (linkErr) {
-        return new Response(JSON.stringify({ error: linkErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      const actionLink = linkData?.properties?.action_link;
-      if (actionLink) {
-        await fetch(actionLink, { method: "GET" });
-      }
+      const sent = await sendPasswordRecovery(adminDb, emailToReset, req, body.redirect_url);
+      if (!sent) return new Response(JSON.stringify({ error: "The password reset email could not be sent. Please try again." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ success: true, email: emailToReset }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

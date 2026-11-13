@@ -15,6 +15,8 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 vi.mock("@/hooks/usePermissions", () => ({ usePermissionsControl: () => ({ enterPreview: vi.fn() }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// The login-email flow is exercised with its own query provider in LoginEmailRow.test.tsx.
+vi.mock("./LoginEmailRow", () => ({ LoginEmailRow: () => null, canChangeLoginEmail: () => false }));
 
 import { MemberEditDrawer } from "./MemberEditDrawer";
 

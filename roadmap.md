@@ -1,5 +1,9 @@
 # Notification receipts
 
+# Admin login-email change
+- [x] Add protected same-account email change, masked lookup and bilingual member-editor dialog; no database changes.
+- [x] Test access, validation, masking and consent (29 focused tests); deploy admin-change-email and shared-recovery ronin-ai; verify unauthenticated 401 and signed-in Joselita masked lookup/consent on phone/desktop. No real accounts changed; live update, revocation, email delivery and audit remain intentionally unverified.
+
 - [x] Attribute human-triggered notification inserts; leave system/anonymous notices actorless and database untouched; owner calendar writer already attributes creators.
 - [x] Add shared row/pop-up receipt controls and caller-authorized push-only wrapper without changing dismissal; deployed five updated functions.
 - [x] Test eligibility, double taps, one push, Spanish and single pop-up controls; controlled phone/desktop readback checked; audit in notification-receipts-change-report.md.

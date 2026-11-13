@@ -25,6 +25,7 @@ import {
 } from "./memberAccess";
 import { ALL_QUICK_ACTIONS } from "./teamConstants";
 import { cn } from "@/lib/utils";
+import { LoginEmailRow, canChangeLoginEmail } from "./LoginEmailRow";
 
 type TabKey = "details" | "contract" | "houses" | "access" | "home";
 
@@ -472,6 +473,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               <Field label={isEN ? "Notes" : "Notas"} wide>
                 <Input value={notes} onChange={e => setNotes(e.target.value)} disabled={!canEdit} className={inputCls} />
               </Field>
+              {canChangeLoginEmail(canEdit || isMasterAdmin, isDraft, member.role) && <LoginEmailRow userId={member.id} isEN={isEN} />}
             </div>
           )}
 
