@@ -4,6 +4,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
 import { eligibleNotificationRecipients } from "../_shared/notificationAudience.ts";
 import { notificationActor } from "../_shared/notificationActor.ts";
+import { entityHouse, houseScopedRecipients } from "../_shared/houseAccess.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -145,6 +146,15 @@ serve(async (req) => {
       recipients = [...recipientSet];
     }
 
+    // House scope (server-side, whatever the caller asked for): an alert about a house — given as
+    // property_id or derived from the record — only reaches people who can access that house.
+    const derivedHouse = !payload.property_id && payload.entity_type && payload.entity_id
+      ? await entityHouse(supabaseAdmin, payload.entity_type, payload.entity_id)
+      : null;
+    recipients = await houseScopedRecipients(supabaseAdmin, recipients, {
+      propertyId: payload.property_id ?? null, entityType: payload.entity_type ?? null, entityId: payload.entity_id ?? null, label: "notify-section",
+    });
+
     const { data: loginIds, error: loginError } = await supabaseAdmin.rpc("ids_with_login", { _ids: recipients });
     if (loginError) throw loginError;
     recipients = eligibleNotificationRecipients(recipients, loginIds ?? [], excludeUserId, excludeUserIds);
@@ -167,7 +177,7 @@ serve(async (req) => {
         action_url: payload.action_url ?? null,
         entity_id: payload.entity_id ?? null,
         entity_type: payload.entity_type ?? null,
-        property_id: payload.property_id ?? null,
+        property_id: payload.property_id ?? derivedHouse ?? null,
       }))
     );
 

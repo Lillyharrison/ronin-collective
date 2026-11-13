@@ -3,6 +3,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3';
 import { endDue, keys, localNow, monthWords, previousMonth, startWindow, timeMinutes, visitWords } from './logic.ts';
 import { clockEligiblePeople } from './eligibility.ts';
+import { houseScopedRecipients } from '../_shared/houseAccess.ts';
 const response=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsHeaders,'Content-Type':'application/json'}});
 Deno.serve(async req=> {
   if(req.method==='OPTIONS')return response({ok:true});
@@ -22,6 +23,7 @@ Deno.serve(async req=> {
   async function send(key:string,staff:string,kind:string,recipient:string,words:{title:string;body:string},entityType:string,entityId:string|null,property:string|null=null) {
     const claimed=check(await db.from('time_reminders_sent').upsert({dedupe_key:key,staff_id:staff,kind},{onConflict:'dedupe_key',ignoreDuplicates:true}).select('id'));
     if(!claimed?.length)return;
+    if(property&&!(await houseScopedRecipients(db,[recipient],{propertyId:property,label:'time-tracking-reminders'})).length)return;
     const action=entityType==='clock_reminder'?'home':'staff-schedule';
     const {error}=await db.from('notifications').insert({user_id:recipient,...words,type:'info',entity_type:entityType,entity_id:entityId,property_id:property,action_url:action});
     if(error){await db.from('time_reminders_sent').delete().eq('dedupe_key',key);throw error;}

@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
+import { houseScopedRecipients } from "../_shared/houseAccess.ts";
 import { receiptAndPush, type ReceiptResult } from "../_shared/notificationReceipt.ts";
 
 Deno.serve(async req => {
@@ -34,6 +35,7 @@ Deno.serve(async req => {
       const { data: ids, error } = await admin.rpc("ids_with_login", { _ids: [receipt.sender_id] });
       if (error) throw error;
       if (!ids?.includes(receipt.sender_id)) return;
+      if (!(await houseScopedRecipients(admin, [receipt.sender_id], { entityType: (receipt as any).entity_type ?? null, entityId: (receipt as any).entity_id ?? null, label: "acknowledge-notification" })).length) return;
       const pushed = await fetch(`${url}/functions/v1/send-push-notification`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${service}` },
         body: JSON.stringify({ recipientUserIds: [receipt.sender_id], title: receipt.title, body: receipt.body ?? "", url: target }),

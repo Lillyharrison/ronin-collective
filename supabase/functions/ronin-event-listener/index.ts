@@ -2,6 +2,7 @@ import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/inter
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { describeEventWhen, formatPlainDate, previousEventDate, dateKeyInZone } from "../_shared/eventTime.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { houseScopedRecipients } from "../_shared/houseAccess.ts";
 
 
 const corsHeaders = {
@@ -466,7 +467,8 @@ Be direct and professional.`;
         event.location ?? "",
       );
 
-      const assignedIds: string[] = event.assigned_staff_ids ?? [];
+      // Briefings only reach people who can access the event's house.
+      const assignedIds: string[] = await houseScopedRecipients(adminClient, event.assigned_staff_ids ?? [], { propertyId: event.property_id ?? null, label: "ronin-event-listener" });
       const assignedStaff = allStaff.filter((s: { id: string }) => assignedIds.includes(s.id));
       const assignedNames = assignedStaff.map((s: { full_name: string | null }) => s.full_name ?? "Unknown");
 

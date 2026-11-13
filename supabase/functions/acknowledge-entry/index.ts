@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
+import { houseScopedRecipients } from "../_shared/houseAccess.ts";
 import { acknowledgeAndPush, type AcknowledgementResult } from "../_shared/acknowledgeEntry.ts";
 
 Deno.serve(async req => {
@@ -30,6 +31,7 @@ Deno.serve(async req => {
       const { data: ids, error: loginError } = await admin.rpc("ids_with_login", { _ids: [result.sender_id] });
       if (loginError) throw loginError;
       if (!ids?.includes(result.sender_id)) return;
+      if (!(await houseScopedRecipients(admin, [result.sender_id], { entityType: kind === "repair" ? "maintenance_issue" : "task", entityId: id, label: "acknowledge-entry" })).length) return;
       const response = await fetch(`${url}/functions/v1/send-push-notification`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${service}` },

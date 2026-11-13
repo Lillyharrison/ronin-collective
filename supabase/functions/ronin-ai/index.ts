@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { describeEventWhen, plainDateKey } from "../_shared/eventTime.ts";
 import { repairNotificationBody } from "../_shared/repairNotificationBody.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { NO_HOUSE_MESSAGE, lookupHouse, resolveHouse, canRunAction, toolsFor, memoriesAllowed, loadAssistantContext, executeObservationTool, type ContextData } from "./scope.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -408,287 +409,20 @@ async function callLLMSync(
   return resp.json();
 }
 
-type ContextData = {
-  props: Array<Record<string, unknown>>;
-  staff: Array<Record<string, unknown>>;
-};
-
-/** Execute a read-only observation tool and return structured results */
-async function executeObservationTool(
-  name: string,
-  args: Record<string, unknown>,
-  adminClient: ReturnType<typeof createClient>,
-  ctx: ContextData
-): Promise<unknown> {
-  const propNameMap = Object.fromEntries(ctx.props.map(p => [p.id as string, p.name as string]));
-  const staffNameMap = Object.fromEntries(ctx.staff.map(s => [s.id as string, (s.full_name as string) ?? "Unknown"]));
-
-  const resolvePropertyId = (hint?: unknown): string | null => {
-    if (!hint) return null;
-    const lower = (hint as string).toLowerCase();
-    return ctx.props.find(p => (p.name as string).toLowerCase().includes(lower))?.id as string ?? null;
-  };
-
-  if (name === "search_tasks") {
-    let q = adminClient.from("tasks")
-      .select("id, title_en, status, priority, category, due_date, assigned_to, property_id");
-    const s = args.status as string | undefined;
-    if (s && s !== "all") q = q.eq("status", s);
-    if (args.keyword) q = q.ilike("title_en", `%${args.keyword}%`);
-    const propId = resolvePropertyId(args.property_name);
-    if (propId) q = q.eq("property_id", propId);
-    if (args.assignee_name) {
-      const lower = (args.assignee_name as string).toLowerCase();
-      const match = ctx.staff.find(s => (s.full_name as string ?? "").toLowerCase().includes(lower));
-      if (match) q = q.eq("assigned_to", match.id as string);
-    }
-    const limit = Math.min((args.limit as number) ?? 10, 25);
-    q = q.order("priority").limit(limit);
-    const { data, error } = await q;
-    if (error) return { error: error.message };
-    return {
-      total: data?.length ?? 0,
-      tasks: data?.map(t => ({
-        id: t.id, title: t.title_en, status: t.status, priority: t.priority,
-        category: t.category, due_date: t.due_date ?? "none",
-        assigned_to: staffNameMap[t.assigned_to] ?? t.assigned_to ?? "unassigned",
-        property: propNameMap[t.property_id] ?? t.property_id ?? "unassigned",
-      })),
-    };
-  }
-
-  if (name === "search_assets") {
-    let q = adminClient.from("assets")
-      .select("id, name, category, make, model, serial_number, current_property_id");
-    if (args.keyword) {
-      const kw = `%${args.keyword}%`;
-      q = q.or(`name.ilike.${kw},make.ilike.${kw},model.ilike.${kw}`);
-    }
-    if (args.category && args.category !== "all") q = q.eq("category", args.category);
-    const propId = resolvePropertyId(args.property_name);
-    if (propId) q = q.eq("current_property_id", propId);
-    q = q.limit(15);
-    const { data, error } = await q;
-    if (error) return { error: error.message };
-    return {
-      total: data?.length ?? 0,
-      assets: data?.map(a => ({
-        name: a.name, category: a.category, make: a.make, model: a.model,
-        serial_number: a.serial_number,
-        property: propNameMap[a.current_property_id] ?? a.current_property_id ?? "unassigned",
-      })),
-    };
-  }
-
-  if (name === "get_calendar_events") {
-    const daysAhead = (args.days_ahead as number) ?? 30;
-    const future = new Date();
-    future.setDate(future.getDate() + daysAhead);
-    let q = adminClient.from("calendar_events")
-      .select("id, title, event_type, start_date, end_date, all_day, property_id, description, status, location")
-      .gte("start_date", new Date().toISOString())
-      .lte("start_date", future.toISOString())
-      .order("start_date")
-      .limit(15);
-    const propId = resolvePropertyId(args.property_name);
-    if (propId) q = q.eq("property_id", propId);
-    if (args.event_type) q = q.eq("event_type", args.event_type as string);
-    const { data, error } = await q;
-    if (error) return { error: error.message };
-    return {
-      total: data?.length ?? 0,
-      events: data?.map(e => ({
-        title: e.title, type: e.event_type, start: e.start_date, end: e.end_date,
-        all_day: e.all_day, when: describeEventWhen(e, null),
-        property: propNameMap[e.property_id] ?? e.property_id ?? "N/A",
-        description: e.description, status: e.status, location: e.location,
-      })),
-    };
-  }
-
-  if (name === "search_maintenance_issues") {
-    let q = adminClient.from("maintenance_issues")
-      .select("id, title, status, priority, category, created_at, property_id, description");
-    if (args.keyword) q = q.or(`title.ilike.%${args.keyword}%,description.ilike.%${args.keyword}%`);
-    const s = args.status as string | undefined;
-    if (s && s !== "all") q = q.eq("status", s);
-    const propId = resolvePropertyId(args.property_name);
-    if (propId) q = q.eq("property_id", propId);
-    q = q.order("created_at", { ascending: false }).limit(15);
-    const { data, error } = await q;
-    if (error) return { error: error.message };
-    return {
-      total: data?.length ?? 0,
-      issues: data?.map(i => ({
-        id: i.id, title: i.title, status: i.status, priority: i.priority,
-        category: i.category, created_at: i.created_at,
-        description: i.description ?? "none",
-        property: propNameMap[i.property_id] ?? "unassigned",
-      })),
-    };
-  }
-
-  if (name === "search_planned_maintenance") {
-    let q = adminClient.from("planned_maintenance")
-      .select("id, title, description, status, property_id, last_service_date, date_type, scheduled_date, scheduled_month, scheduled_year, recurrence_months, vendors(name)");
-    if (args.keyword) q = q.or(`title.ilike.%${args.keyword}%,description.ilike.%${args.keyword}%`);
-    const propId = resolvePropertyId(args.property_name);
-    if (propId) q = q.eq("property_id", propId);
-    const { data, error } = await q.order("updated_at", { ascending: false }).limit(25);
-    if (error) return { error: error.message };
-    return {
-      total: data?.length ?? 0,
-      items: data?.map((i: any) => ({
-        title: i.title, status: i.status, description: i.description ?? "none",
-        property: propNameMap[i.property_id] ?? "unassigned",
-        last_serviced: i.last_service_date ?? "no record",
-        next_due: i.scheduled_date ?? (i.scheduled_month ? `${i.scheduled_year}-${String(i.scheduled_month).padStart(2, "0")}` : "not set"),
-        repeats_every_months: i.recurrence_months, vendor: i.vendors?.name ?? "none",
-      })),
-    };
-  }
-
-  if (name === "search_vendors") {
-    let q = adminClient.from("vendors")
-      .select("id, name, company, category, phone, email, website, description, is_active");
-    if (args.keyword) {
-      const kw = `%${args.keyword}%`;
-      q = q.or(`name.ilike.${kw},company.ilike.${kw},description.ilike.${kw}`);
-    }
-    if (args.category) q = q.eq("category", args.category as string);
-    q = q.order("name").limit(20);
-    const { data, error } = await q;
-    if (error) return { error: error.message };
-    return {
-      total: data?.length ?? 0,
-      vendors: data?.map((v: Record<string, unknown>) => ({
-        name: v.name, company: v.company ?? "—", category: v.category,
-        phone: v.phone ?? "—", email: v.email ?? "—", website: v.website ?? "—",
-        description: v.description ?? "—", is_active: v.is_active,
-      })),
-    };
-  }
-
-  if (name === "search_product") {
-    const query = args.query as string;
-    const category = (args.category as string) ?? "general";
-    
-    const encoded = encodeURIComponent(query);
-    
-    // Determine if this is a grocery item (better for Instacart) vs general merchandise
-    const groceryCategories = ["grocery", "household", "cleaning"];
-    const isGrocery = groceryCategories.includes(category);
-    
-    const results = {
-      query,
-      category,
-      retailers: [
-        {
-          name: "Amazon",
-          search_url: `https://www.amazon.com/s?k=${encoded}`,
-          icon: "🛒",
-          note: "Wide selection, Prime delivery",
-        },
-        {
-          name: "Walmart",
-          search_url: `https://www.walmart.com/search?q=${encoded}`,
-          icon: "🏬",
-          note: "In-store pickup or delivery",
-        },
-        ...(isGrocery ? [{
-          name: "Instacart",
-          search_url: `https://www.instacart.com/store/search_v3/search?search_term=${encoded}`,
-          icon: "🥬",
-          note: "Same-day grocery delivery",
-        }] : []),
-      ],
-      instruction: "Present each retailer link on its own line with the full URL visible so the user can tap it. Use this format: **Amazon**: <url> — note. Do NOT hide URLs behind markdown link syntax.",
-    };
-    
-    return results;
-  }
-
-  if (name === "search_library_item") {
-    const keyword = String(args.keyword ?? "").trim();
-    if (!keyword) return { error: "keyword is required" };
-    let q = adminClient.from("order_library_items")
-      .select("id, name, category, status, notes, default_quantity, size, purchase, website_url, image_url, substitutions_allowed, search_aliases");
-    const kw = `%${keyword}%`;
-    q = q.or(`name.ilike.${kw},notes.ilike.${kw}`);
-    const status = (args.status as string) ?? "preferred";
-    if (status !== "all") q = q.eq("status", status);
-    if (args.category) q = q.eq("category", args.category as string);
-    q = q.order("status", { ascending: true }).order("name", { ascending: true }).limit(15);
-    const { data, error } = await q;
-    if (error) return { error: error.message };
-
-    // Also catch alias-only matches (search_aliases is a text[] array)
-    const lowerKw = keyword.toLowerCase();
-    const { data: aliasHits } = await adminClient
-      .from("order_library_items")
-      .select("id, name, category, status, notes, default_quantity, size, purchase, website_url, image_url, substitutions_allowed, search_aliases")
-      .contains("search_aliases", [lowerKw])
-      .limit(10);
-
-    const seen = new Set<string>();
-    const merged = [...(data ?? []), ...(aliasHits ?? [])].filter((r: Record<string, unknown>) => {
-      const id = r.id as string;
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
-
-    return {
-      total: merged.length,
-      items: merged.map((i: Record<string, unknown>) => ({
-        id: i.id,
-        name: i.name,
-        category: i.category,
-        status: i.status,
-        notes: i.notes ?? null,
-        default_quantity: i.default_quantity ?? null,
-        size: i.size ?? null,
-        purchase: i.purchase ?? null,
-        website_url: i.website_url ?? null,
-        image_url: i.image_url ?? null,
-        substitutions_allowed: i.substitutions_allowed,
-      })),
-      hint: merged.length === 0
-        ? "No library match — proceed with the user's described item."
-        : "If one of these is a clear match, pass its `id` as `library_item_id` in add_shopping_list_item.",
-    };
-  }
-
-  return { error: `Unknown observation tool: ${name}` };
-}
-
-/** Silently save a memory to the knowledge base.
- *  Accepts optional pre-loaded props/staff arrays to avoid redundant DB fetches. */
+/** Silently save a memory (admins only — ronin_memories is admin-only; runs on the caller's own access). */
 async function saveMemorySilently(
   args: Record<string, unknown>,
-  adminClient: ReturnType<typeof createClient>,
-  ctxProps?: Array<Record<string, unknown>>,
-  ctxStaff?: Array<Record<string, unknown>>,
+  // deno-lint-ignore no-explicit-any
+  userDb: any,
+  props: Array<Record<string, unknown>>,
+  staff: Array<Record<string, unknown>>,
 ): Promise<void> {
   try {
-    // Only fetch if no context was passed in
-    let props = ctxProps;
-    let staff = ctxStaff;
-    if (!props || !staff) {
-      const [pRes, sRes] = await Promise.all([
-        adminClient.from("properties").select("id, name"),
-        adminClient.from("profiles").select("id, full_name"),
-      ]);
-      props = pRes.data ?? [];
-      staff = sRes.data ?? [];
-    }
-    const memPropId = args.property_hint
-      ? (props).find((p) => (p.name as string).toLowerCase().includes((args.property_hint as string).toLowerCase()))?.id as string ?? null
-      : null;
+    const memPropId = resolveHouse(props as never, args.property_hint);
     const memSubjectId = args.subject_name
-      ? (staff).find((s) => ((s.full_name as string) ?? "").toLowerCase().includes((args.subject_name as string).toLowerCase()))?.id as string ?? null
+      ? staff.find((s) => ((s.full_name as string) ?? "").toLowerCase().includes((args.subject_name as string).toLowerCase()))?.id as string ?? null
       : null;
-    await adminClient.from("ronin_memories").insert({
+    await userDb.from("ronin_memories").insert({
       content: args.content, summary: args.summary,
       category: args.category, importance: args.importance,
       tags: args.tags ?? [], property_id: memPropId,
@@ -703,7 +437,8 @@ async function saveMemorySilently(
 async function addShoppingListItemsSilently(
   args: Record<string, unknown>,
   callerUserId: string | null,
-  adminClient: ReturnType<typeof createClient>
+  // deno-lint-ignore no-explicit-any
+  userDb: any
 ): Promise<string> {
   try {
     const items = args.items as Array<{ name: string; category: string; quantity?: string; notes?: string; library_item_id?: string }>;
@@ -717,7 +452,7 @@ async function addShoppingListItemsSilently(
       created_by: callerUserId,
       is_checked: false,
     }));
-    const { error } = await adminClient.from("shopping_list_items").insert(rows);
+    const { error } = await userDb.from("shopping_list_items").insert(rows);
     if (error) throw error;
     const names = items.map(i => `**${i.name}**`).join(", ");
     return `🛒 Added to the shopping list: ${names}. You can view the full list in **Orders → Shopping List**.`;
@@ -727,12 +462,10 @@ async function addShoppingListItemsSilently(
   }
 }
 
-/** Notify users with relevant section permissions about an action.
- * Always notifies master_admin/admin.
- * Also notifies any user (manager, staff, principal) whose section_permissions[requiredSection].notifications === true.
- */
+/** Alert admins (+ people opted into the section) through notify-section with the CALLER's JWT,
+ * so the audience is limited to people who can access the record's house on the server. */
 async function notifyAdminsOfAIAction(
-  adminClient: ReturnType<typeof createClient>,
+  authHeader: string,
   title: string,
   body: string,
   type: string,
@@ -741,51 +474,40 @@ async function notifyAdminsOfAIAction(
   entity_type?: string,
   excludeUserId?: string | null,
   requiredSection?: string | null,
-  actorId?: string | null,
+  _actorId?: string | null,
+  propertyId?: string | null,
 ): Promise<void> {
   try {
-    // Get all master_admin and admin user_ids
-    const { data: adminRoles } = await adminClient
-      .from("user_roles")
-      .select("user_id")
-      .in("role", ["master_admin", "admin"]);
-
-    const adminIds = new Set((adminRoles ?? []).map(r => r.user_id as string));
-
-    // Also collect any non-admin user who has notifications toggled on for the section
-    let extraIds: string[] = [];
-    if (requiredSection) {
-      const { data: permRows } = await adminClient
-        .from("user_section_permissions")
-        .select("user_id")
-        .eq("section", requiredSection)
-        .eq("notifications", true);
-      extraIds = (permRows ?? [])
-        .map((r: { user_id: string }) => r.user_id)
-        .filter((id: string) => !adminIds.has(id));
-    }
-
-    const recipientSet = new Set([...adminIds, ...extraIds]);
-    if (excludeUserId) recipientSet.delete(excludeUserId);
-    const recipients = [...recipientSet];
-
-    if (!recipients.length) return;
-
-    await adminClient.from("notifications").insert(
-      recipients.map(user_id => ({
-        user_id,
-        actor_id: actorId ?? null,
-        title,
-        body,
-        type,
-        action_url,
-        entity_id: entity_id ?? null,
-        entity_type: entity_type ?? null,
-      }))
-    );
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-section`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authHeader, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" },
+      body: JSON.stringify({
+        // A section nobody opts into keeps the old "admins only" audience.
+        section: requiredSection ?? "__admins_only",
+        excludeUserId: excludeUserId ?? null,
+        payload: { title, body, type, action_url, ...(entity_id ? { entity_id } : {}), ...(entity_type ? { entity_type } : {}), ...(propertyId ? { property_id: propertyId } : {}) },
+      }),
+    });
+    if (!res.ok) console.error("Notification send failed:", res.status);
+    await res.text();
   } catch (e) {
     console.error("Notification send failed:", e);
   }
+}
+
+/** The assistant's own reply has no human sender, which row rules can't express for inserts.
+ * Only after confirming via the caller's access that they're a participant of the thread. */
+async function postAssistantMessage(
+  // deno-lint-ignore no-explicit-any
+  adminDb: any, userDb: any, callerUserId: string | null, threadId: string, fields: Record<string, unknown>,
+): Promise<boolean> {
+  if (!callerUserId) return false;
+  const { data: thread } = await userDb.from("chat_threads").select("id, participant_ids").eq("id", threadId).maybeSingle();
+  if (!thread || !((thread.participant_ids as string[] | null) ?? []).includes(callerUserId)) return false;
+  const { error } = await adminDb.from("messages").insert({ thread_id: threadId, sender_id: null, is_ai_generated: true, delivery_status: "sent", ...fields });
+  if (error) { console.error("assistant message insert failed", error.message); return false; }
+  await userDb.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", threadId);
+  return true;
 }
 
 // ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
@@ -798,34 +520,48 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // adminDb (service role) is used ONLY for account administration after an explicit
+    // is_admin_user check, and for posting the assistant's own reply in a thread the caller
+    // participates in. Every house-data read/write goes through userDb (caller JWT + row rules).
+    const adminDb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // ─── AUTH ─────────────────────────────────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
+    const userDb = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: authHeader ? { Authorization: authHeader } : {} },
+    });
     let callerUserId: string | null = null;
     let callerProfile: Record<string, unknown> | null = null;
     let callerProperties: string[] = [];
     let callerRole = "staff";
+    let isAdmin = false;
 
     if (authHeader?.startsWith("Bearer ")) {
-      const anonClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: { user } } = await anonClient.auth.getUser();
+      const { data: { user } } = await userDb.auth.getUser();
       if (user) {
         callerUserId = user.id;
-        const { data: profile } = await adminClient.from("profiles").select("*").eq("id", user.id).single();
+        const [{ data: profile }, { data: roleRow }, { data: adminFlag }] = await Promise.all([
+          userDb.from("profiles").select("id, full_name, language_pref, assigned_property_ids").eq("id", user.id).maybeSingle(),
+          userDb.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
+          userDb.rpc("is_admin_user", { _uid: user.id }),
+        ]);
         if (profile) { callerProfile = profile; callerProperties = (profile.assigned_property_ids as string[]) ?? []; }
-        const { data: roleRow } = await adminClient.from("user_roles").select("role").eq("user_id", user.id).single();
         if (roleRow) callerRole = roleRow.role;
+        isAdmin = adminFlag === true;
       }
     }
+    const who = { isAdmin, isMaster: isAdmin && callerRole === "master_admin" };
 
     // No anonymous access: a signed-in user is required (internal callers via token/service key).
     if (!callerUserId && !(await isInternalCaller(req, { allowServiceKey: true }))) return unauthorized(corsHeaders);
 
     const body = await req.json();
     const { type, content, thread_id, csv_content, property_id, action } = body;
+
+    // Account administration (needs the auth admin API) — refuse non-admins before anything else.
+    if ((action && !canRunAction(action, who)) || (type === "csv_import" && !canRunAction("csv_import", who))) {
+      return new Response(JSON.stringify({ error: "Insufficient permissions" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // ─── INVITE USER ──────────────────────────────────────────────────────────
     if (action === "invite_user") {
@@ -838,12 +574,12 @@ serve(async (req) => {
       }
       const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app";
       const redirectTo = body.redirect_url || `${origin}/reset-password`;
-      const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo });
+      const { data: inviteData, error: inviteErr } = await adminDb.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo });
       if (inviteErr || !inviteData?.user) {
         return new Response(JSON.stringify({ error: inviteErr?.message ?? "Failed to invite user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const uid = inviteData.user.id;
-      await adminClient.from("profiles").upsert({
+      await adminDb.from("profiles").upsert({
         id: uid, full_name, job_title: job_title || null, level,
         department: department || null, start_date: start_date || null,
         birthday: birthday || null, notes: notes || null,
@@ -851,12 +587,12 @@ serve(async (req) => {
         assigned_property_ids: assigned_property_ids || [],
         quick_actions: Array.isArray(quick_actions) ? quick_actions : [],
       });
-      await writeSectionPermissionRows(adminClient, uid, section_permissions_rows);
-      const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
-      if (!existingRole) await adminClient.from("user_roles").insert({ user_id: uid, role });
-      else await adminClient.from("user_roles").update({ role }).eq("user_id", uid);
-      await adminClient.from("user_stats").insert({ user_id: uid }).select().maybeSingle();
-      await adminClient.from("system_events").insert({ event_type: "user_invited", entity_type: "profile", entity_id: uid, triggered_by: callerUserId, payload: { email, full_name, level, role }, processed_by_ai: false });
+      await writeSectionPermissionRows(adminDb, uid, section_permissions_rows);
+      const { data: existingRole } = await adminDb.from("user_roles").select("id").eq("user_id", uid).maybeSingle();
+      if (!existingRole) await adminDb.from("user_roles").insert({ user_id: uid, role });
+      else await adminDb.from("user_roles").update({ role }).eq("user_id", uid);
+      await adminDb.from("user_stats").insert({ user_id: uid }).select().maybeSingle();
+      await adminDb.from("system_events").insert({ event_type: "user_invited", entity_type: "profile", entity_id: uid, triggered_by: callerUserId, payload: { email, full_name, level, role }, processed_by_ai: false });
       return new Response(JSON.stringify({ success: true, user_id: uid }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -875,7 +611,7 @@ serve(async (req) => {
       }
       // Use a random UUID — no auth account is created
       const newId = crypto.randomUUID();
-      const { error: profErr } = await adminClient.from("profiles").insert({
+      const { error: profErr } = await adminDb.from("profiles").insert({
         id: newId,
         full_name: full_name || null,
         job_title: job_title || null,
@@ -892,8 +628,8 @@ serve(async (req) => {
       if (profErr) {
         return new Response(JSON.stringify({ error: profErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      await adminClient.from("user_roles").insert({ user_id: newId, role });
-      await writeSectionPermissionRows(adminClient, newId, section_permissions_rows);
+      await adminDb.from("user_roles").insert({ user_id: newId, role });
+      await writeSectionPermissionRows(adminDb, newId, section_permissions_rows);
       return new Response(JSON.stringify({ success: true, user_id: newId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -906,7 +642,7 @@ serve(async (req) => {
       if (!profile_id) return new Response(JSON.stringify({ error: "Missing profile_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       // Update the profile
-      const { error: updateErr } = await adminClient.from("profiles").update({
+      const { error: updateErr } = await adminDb.from("profiles").update({
         full_name: full_name || null,
         job_title: job_title || null,
         level: level || undefined,
@@ -926,34 +662,34 @@ serve(async (req) => {
       }).eq("id", profile_id);
       if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      await writeSectionPermissionRows(adminClient, profile_id, section_permissions_rows, body.section_permissions_delete);
+      await writeSectionPermissionRows(adminDb, profile_id, section_permissions_rows, body.section_permissions_delete);
 
       // Update role if provided
       if (role) {
-        const { data: existingRole } = await adminClient.from("user_roles").select("id").eq("user_id", profile_id).maybeSingle();
-        if (!existingRole) await adminClient.from("user_roles").insert({ user_id: profile_id, role });
-        else await adminClient.from("user_roles").update({ role }).eq("user_id", profile_id);
+        const { data: existingRole } = await adminDb.from("user_roles").select("id").eq("user_id", profile_id).maybeSingle();
+        if (!existingRole) await adminDb.from("user_roles").insert({ user_id: profile_id, role });
+        else await adminDb.from("user_roles").update({ role }).eq("user_id", profile_id);
       }
 
       // If send_invitation is true and email provided, send the invite email
       if (send_invitation && email && full_name) {
         const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://ronin-collective.lovable.app";
         const redirectTo = `${origin}/reset-password`;
-        const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo });
+        const { data: inviteData, error: inviteErr } = await adminDb.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo });
         if (inviteErr) return new Response(JSON.stringify({ error: inviteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         // Link the auth account to this existing profile
         if (inviteData?.user?.id && inviteData.user.id !== profile_id) {
           // Atomically move the draft (profile, role, permissions and every reference) onto the new login.
           const newUid = inviteData.user.id;
-          const { data: moved, error: activateErr } = await adminClient.rpc("activate_draft_profile", { _draft_id: profile_id, _new_id: newUid });
+          const { data: moved, error: activateErr } = await adminDb.rpc("activate_draft_profile", { _draft_id: profile_id, _new_id: newUid });
           if (activateErr) {
             console.error("activate_draft_profile failed", activateErr);
             // Roll back the new login so a retry starts clean; the draft is untouched.
             for (const t of ["user_section_permissions", "user_roles", "user_stats", "user_presence"]) {
-              await adminClient.from(t).delete().eq("user_id", newUid);
+              await adminDb.from(t).delete().eq("user_id", newUid);
             }
-            await adminClient.from("profiles").delete().eq("id", newUid);
-            const { error: delErr } = await adminClient.auth.admin.deleteUser(newUid);
+            await adminDb.from("profiles").delete().eq("id", newUid);
+            const { error: delErr } = await adminDb.auth.admin.deleteUser(newUid);
             if (delErr) console.error("cleanup deleteUser failed", delErr);
             return new Response(JSON.stringify({ error: `Activation failed and nothing was lost — the draft profile is unchanged. Please try again. (${activateErr.message})` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
@@ -973,13 +709,13 @@ serve(async (req) => {
       }
       let emailToInvite: string | null = body.email || null;
       if (!emailToInvite && body.target_user_id) {
-        const { data: userData } = await adminClient.auth.admin.getUserById(body.target_user_id);
+        const { data: userData } = await adminDb.auth.admin.getUserById(body.target_user_id);
         emailToInvite = userData?.user?.email ?? null;
       }
       if (!emailToInvite) return new Response(JSON.stringify({ error: "Could not resolve email for this user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://id-preview--733ed5ee-915b-45c9-8d99-a2a9c67f228b.lovable.app";
       const redirectTo = body.redirect_url || `${origin}/reset-password`;
-      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+      const { data: linkData, error: linkErr } = await adminDb.auth.admin.generateLink({
         type: "recovery",
         email: emailToInvite,
         options: { redirectTo },
@@ -1001,7 +737,7 @@ serve(async (req) => {
       }
       let emailToReset: string | null = body.email || null;
       if (!emailToReset && body.target_user_id) {
-        const { data: userData } = await adminClient.auth.admin.getUserById(body.target_user_id);
+        const { data: userData } = await adminDb.auth.admin.getUserById(body.target_user_id);
         emailToReset = userData?.user?.email ?? null;
       }
       if (!emailToReset) {
@@ -1009,7 +745,7 @@ serve(async (req) => {
       }
       const origin = req.headers.get("origin") || req.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://ronin-collective.lovable.app";
       const redirectTo = body.redirect_url || `${origin}/reset-password`;
-      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+      const { data: linkData, error: linkErr } = await adminDb.auth.admin.generateLink({
         type: "recovery",
         email: emailToReset,
         options: { redirectTo },
@@ -1032,7 +768,7 @@ serve(async (req) => {
       const { target_user_id } = body;
       if (!target_user_id) return new Response(JSON.stringify({ error: "Missing target_user_id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (target_user_id === callerUserId) return new Response(JSON.stringify({ error: "You cannot delete yourself" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const { data: targetProfile, error: lookupErr } = await adminClient
+      const { data: targetProfile, error: lookupErr } = await adminDb
         .from("profiles")
         .select("is_draft")
         .eq("id", target_user_id)
@@ -1050,20 +786,20 @@ serve(async (req) => {
       if (targetProfile.is_draft) {
         // Draft profiles deliberately have no auth account. Delete their dependent
         // rows first, checking every result so partial deletion cannot look successful.
-        const { error: permissionsErr } = await adminClient.from("user_section_permissions").delete().eq("user_id", target_user_id);
+        const { error: permissionsErr } = await adminDb.from("user_section_permissions").delete().eq("user_id", target_user_id);
         if (permissionsErr) return new Response(JSON.stringify({ error: permissionsErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        const { error: roleErr } = await adminClient.from("user_roles").delete().eq("user_id", target_user_id);
+        const { error: roleErr } = await adminDb.from("user_roles").delete().eq("user_id", target_user_id);
         if (roleErr) return new Response(JSON.stringify({ error: roleErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        const { error: profileErr } = await adminClient.from("profiles").delete().eq("id", target_user_id);
+        const { error: profileErr } = await adminDb.from("profiles").delete().eq("id", target_user_id);
         if (profileErr) return new Response(JSON.stringify({ error: profileErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } else {
         // Auth deletion cascades to the regular user's profile and related rows.
-        const { error: deleteErr } = await adminClient.auth.admin.deleteUser(target_user_id);
+        const { error: deleteErr } = await adminDb.auth.admin.deleteUser(target_user_id);
         if (deleteErr) {
           // A stale profile can remain if the auth account was removed by an
           // earlier request. Finish that cleanup and still report success.
           if (deleteErr.message.toLowerCase().includes("user not found")) {
-            const { error: profileErr } = await adminClient.from("profiles").delete().eq("id", target_user_id);
+            const { error: profileErr } = await adminDb.from("profiles").delete().eq("id", target_user_id);
             if (profileErr) return new Response(JSON.stringify({ error: profileErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           } else {
             return new Response(JSON.stringify({ error: deleteErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1080,31 +816,15 @@ serve(async (req) => {
       if (!callerUserId) return new Response(JSON.stringify({ error: "Authentication required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const { tool_name, tool_args } = body;
-      const [propsRes, staffRes] = await Promise.all([adminClient.from("properties").select("id, name"), adminClient.from("profiles").select("id, full_name")]);
+      // Houses and people come from the caller's own access, so only accessible houses can match.
+      const [propsRes, staffRes] = await Promise.all([
+        userDb.from("properties").select("id, name").limit(200),
+        userDb.from("profiles").select((isAdmin ? "id, full_name" : "id, full_name, job_title, department, avatar_url") as string).eq("is_archived", false).limit(300),
+      ]);
       const props = propsRes.data ?? [];
       const staff = staffRes.data ?? [];
-      const resolvePropertyId = (name?: string) => {
-        if (!name) return null;
-        // Normalize: strip dashes/hyphens and collapse spaces for fuzzy matching
-        const normalize = (s: string) => s.toLowerCase().replace(/[-–—]/g, " ").replace(/\s+/g, " ").trim();
-        const needle = normalize(name);
-        // 1. Exact normalized match
-        let match = props.find((p: { id: string; name: string }) => normalize(p.name) === needle);
-        if (match) return match.id;
-        // 2. Property name contains the search term (or vice versa)
-        match = props.find((p: { id: string; name: string }) => {
-          const hay = normalize(p.name);
-          return hay.includes(needle) || needle.includes(hay);
-        });
-        if (match) return match.id;
-        // 3. All words in the search appear in the property name (e.g. "grosvenor penthouse")
-        const words = needle.split(" ").filter(Boolean);
-        match = props.find((p: { id: string; name: string }) => {
-          const hay = normalize(p.name);
-          return words.every(w => hay.includes(w));
-        });
-        return match?.id ?? null;
-      };
+      const resolvePropertyId = (name?: string) => resolveHouse(props as never, name);
+      const houseAsk = lookupHouse(props as never, tool_args?.property_name);
       const resolveStaffId = (name?: string) => {
         if (!name) return null;
         return staff.find((s: { id: string; full_name: string | null }) => (s.full_name ?? "").toLowerCase().includes(name.toLowerCase()))?.id ?? null;
@@ -1114,18 +834,21 @@ serve(async (req) => {
       let resultMessage = "";
 
       // ── log_maintenance_issue ─────────────────────────────────────────────
-      if (tool_name === "log_maintenance_issue") {
+      if (houseAsk.kind === "missing") {
+        // Same wording whether the house doesn't exist or the caller isn't assigned to it.
+        resultMessage = `⚠️ ${NO_HOUSE_MESSAGE}.`;
+      } else if (tool_name === "log_maintenance_issue") {
         const propId = resolvePropertyId(tool_args.property_name);
         // Only attach a photo if it was sent in this same conversation exchange
         // (within the last 10 minutes) — prevents old thread photos from being
         // incorrectly associated with a new, unrelated maintenance issue.
         let resolvedPhotoUrl: string | null = tool_args.photo_url ?? null;
-        if (!resolvedPhotoUrl && ctx.threadId) {
+        if (!resolvedPhotoUrl && thread_id) {
           const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-          const { data: recentMedia } = await adminClient
+          const { data: recentMedia } = await userDb
             .from("messages")
             .select("content_media_url")
-            .eq("thread_id", ctx.threadId)
+            .eq("thread_id", thread_id)
             .eq("media_type", "image")
             .not("content_media_url", "is", null)
             .gte("created_at", tenMinutesAgo)
@@ -1146,7 +869,7 @@ serve(async (req) => {
         const isCallerAdmin = callerRole === "master_admin" || callerRole === "admin";
         const issueStatus = isCallerAdmin ? "approved" : "reported";
 
-        const { data: issue, error: issueErr } = await adminClient.from("maintenance_issues").insert({
+        const { data: issue, error: issueErr } = await userDb.from("maintenance_issues").insert({
           title: tool_args.title,
           description: tool_args.description ?? null,
           category: tool_args.category,
@@ -1162,7 +885,7 @@ serve(async (req) => {
         if (issueErr) throw new Error(`Failed to log maintenance issue: ${issueErr.message}`);
 
         // Log system event
-        await adminClient.from("system_events").insert({
+        await userDb.from("system_events").insert({
           event_type: "maintenance_reported_by_ai",
           entity_type: "maintenance_issue",
           entity_id: issue.id,
@@ -1184,7 +907,7 @@ serve(async (req) => {
           ? `🔧 Maintenance issue approved: "${tool_args.title}"`
           : `🔧 New maintenance issue reported`;
         const { data: reporterProfile } = issueStatus === "reported"
-          ? await adminClient.from("profiles").select("full_name").eq("id", reportedById).maybeSingle()
+          ? await userDb.from("profiles").select("full_name").eq("id", reportedById).maybeSingle()
           : { data: null };
         const notifBody = issueStatus === "approved"
           ? `${reporterName} reported via Ronin AI and ${callerName} approved: "${tool_args.title}"${propLabel}. Now active in the workflow.`
@@ -1195,7 +918,7 @@ serve(async (req) => {
               callerProfile?.language_pref === "es" ? "es" : "en",
             ) ?? "";
         await notifyAdminsOfAIAction(
-          adminClient,
+          authHeader!,
           notifTitle,
           notifBody,
           issueStatus === "approved" ? "success" : "warning",
@@ -1205,6 +928,7 @@ serve(async (req) => {
           null,
           "maintenance",
           callerUserId,
+          propId,
         );
 
       // ── create_task ───────────────────────────────────────────────────────
@@ -1213,14 +937,15 @@ serve(async (req) => {
         const priorityMap: Record<string, number> = { urgent: 1, high: 1, normal: 2, medium: 2, low: 3 };
         const rawPri = tool_args.priority;
         const priority: number = typeof rawPri === "number" ? rawPri : (priorityMap[String(rawPri).toLowerCase()] ?? 2);
-        const { data: task, error: taskErr } = await adminClient.from("tasks").insert({
+        const taskPropId = resolvePropertyId(tool_args.property_name);
+        const { data: task, error: taskErr } = await userDb.from("tasks").insert({
           title_en: tool_args.title_en,
           description_en: tool_args.description_en ?? null,
           category: tool_args.category,
           priority,
           status: priority === 1 ? "urgent" : "pending",
           assigned_to: resolveStaffId(tool_args.assigned_to_name) ?? callerUserId,
-          property_id: resolvePropertyId(tool_args.property_name),
+          property_id: taskPropId,
           due_date: tool_args.due_date
             ? plainDateKey(tool_args.due_date)
             : null,
@@ -1228,13 +953,13 @@ serve(async (req) => {
         }).select("id").single();
 
         if (taskErr) throw new Error(`Failed to create task: ${taskErr.message}`);
-        await adminClient.from("system_events").insert({ event_type: "task_created_by_ai", entity_type: "task", entity_id: task.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
+        await userDb.from("system_events").insert({ event_type: "task_created_by_ai", entity_type: "task", entity_id: task.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
         const priorityLabel = tool_args.priority === 1 ? "🔴 Urgent" : tool_args.priority === 2 ? "🟡 Normal" : "🟢 Low";
         resultMessage = `✅ **Task created.**\n\n**${tool_args.title_en}**${tool_args.assigned_to_name ? ` — ${tool_args.assigned_to_name}` : ""}${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}\nPriority: ${priorityLabel} | Category: ${tool_args.category}\n\nVisible in the Tasks section.`;
 
         // Notify admins
         await notifyAdminsOfAIAction(
-          adminClient,
+          authHeader!,
           `📋 Task created by Ronin AI`,
           `${callerName} asked Ronin to create: "${tool_args.title_en}"${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}.`,
           "task",
@@ -1244,39 +969,42 @@ serve(async (req) => {
           callerUserId,
           null,
           callerUserId,
+          taskPropId,
         );
 
       // ── update_task_status ────────────────────────────────────────────────
       } else if (tool_name === "update_task_status") {
-        const { data: tasks } = await adminClient.from("tasks").select("id, title_en").ilike("title_en", `%${tool_args.task_title_hint}%`).limit(1);
+        const { data: tasks } = await userDb.from("tasks").select("id, title_en").ilike("title_en", `%${tool_args.task_title_hint}%`).limit(1);
         if (!tasks?.length) {
           resultMessage = `⚠️ No task matching **"${tool_args.task_title_hint}"** found.`;
         } else {
-          await adminClient.from("tasks").update({ status: tool_args.new_status, completed_at: tool_args.new_status === "completed" ? new Date().toISOString() : null }).eq("id", tasks[0].id);
-          await adminClient.from("system_events").insert({ event_type: "task_status_updated_by_ai", entity_type: "task", entity_id: tasks[0].id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
+          const { error: updErr } = await userDb.from("tasks").update({ status: tool_args.new_status, completed_at: tool_args.new_status === "completed" ? new Date().toISOString() : null }).eq("id", tasks[0].id);
+          if (updErr) throw new Error(`Failed to update task: ${updErr.message}`);
+          await userDb.from("system_events").insert({ event_type: "task_status_updated_by_ai", entity_type: "task", entity_id: tasks[0].id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
           const statusEmoji: Record<string, string> = { pending: "⏳", in_progress: "🔄", completed: "✅", urgent: "🔴" };
           resultMessage = `${statusEmoji[tool_args.new_status] ?? "📋"} **Task updated.**\n\n**${tasks[0].title_en}** → **${(tool_args.new_status as string).replace("_", " ")}**`;
         }
 
       // ── log_asset ─────────────────────────────────────────────────────────
       } else if (tool_name === "log_asset") {
-        const { data: asset, error: assetErr } = await adminClient.from("assets").insert({
+        const assetPropId = resolvePropertyId(tool_args.property_name);
+        const { data: asset, error: assetErr } = await userDb.from("assets").insert({
           name: tool_args.name, category: tool_args.category,
           make: tool_args.make ?? null, model: tool_args.model ?? null,
           serial_number: tool_args.serial_number ?? null,
           description: tool_args.description ?? null,
-          current_property_id: resolvePropertyId(tool_args.property_name),
+          current_property_id: assetPropId,
           purchase_value: tool_args.purchase_value ?? null,
         }).select("id").single();
 
         if (assetErr) throw new Error(`Failed to log asset: ${assetErr.message}`);
-        await adminClient.from("system_events").insert({ event_type: "asset_logged_by_ai", entity_type: "asset", entity_id: asset.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
+        await userDb.from("system_events").insert({ event_type: "asset_logged_by_ai", entity_type: "asset", entity_id: asset.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
         const makeModel = [tool_args.make, tool_args.model].filter(Boolean).join(" ");
         resultMessage = `✅ **Asset logged.**\n\n**${tool_args.name}**${makeModel ? ` (${makeModel})` : ""}${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}\nCategory: ${tool_args.category}\n\nVisible in Inventory.`;
 
         // Notify admins
         await notifyAdminsOfAIAction(
-          adminClient,
+          authHeader!,
           `📦 Asset logged by Ronin AI`,
           `${callerName} asked Ronin to log asset: "${tool_args.name}"${tool_args.property_name ? ` @ ${tool_args.property_name}` : ""}.`,
           "info",
@@ -1286,6 +1014,7 @@ serve(async (req) => {
           callerUserId,
           null,
           callerUserId,
+          assetPropId,
         );
 
       // ── send_staff_message ────────────────────────────────────────────────
@@ -1295,14 +1024,14 @@ serve(async (req) => {
           resultMessage = `⚠️ Staff member **"${tool_args.recipient_name}"** not found.`;
         } else {
           // Find or create DM thread between caller and recipient
-          const { data: existingThreads } = await adminClient.from("chat_threads").select("id, participant_ids").eq("type", "private");
+          const { data: existingThreads } = await userDb.from("chat_threads").select("id, participant_ids").eq("type", "private");
           let dmThreadId: string | null = null;
           for (const t of existingThreads ?? []) {
             const participants = t.participant_ids as string[];
             if (participants.includes(callerUserId!) && participants.includes(recipientId)) { dmThreadId = t.id; break; }
           }
           if (!dmThreadId) {
-            const { data: newThread } = await adminClient.from("chat_threads").insert({
+            const { data: newThread } = await userDb.from("chat_threads").insert({
               type: "private",
               participant_ids: [callerUserId, recipientId],
               created_by: callerUserId,
@@ -1311,26 +1040,27 @@ serve(async (req) => {
           }
           if (dmThreadId) {
             // Message appears from the AI (sender_id null, is_ai_generated true) so recipient knows it's from Ronin
-            await adminClient.from("messages").insert({
+            const { error: msgErr } = await userDb.from("messages").insert({
               thread_id: dmThreadId,
-              sender_id: null,
+              sender_id: callerUserId,
               content_text: `**Ronin AI (on behalf of ${callerName}):** ${tool_args.message_text}`,
               is_ai_generated: true,
               delivery_status: "sent",
             });
-            await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", dmThreadId);
+            if (msgErr) throw new Error(`Failed to send message: ${msgErr.message}`);
+            await userDb.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", dmThreadId);
 
-            // Notify the recipient
-            await adminClient.from("notifications").insert({
-              user_id: recipientId,
-              actor_id: callerUserId,
-              title: `📨 Message from Ronin AI`,
-              body: `${callerName} asked Ronin to send you a message. Check your DMs.`,
-              type: "message",
-              action_url: "messages",
-            });
+            // Notify the recipient (server decides; no house involved)
+            try {
+              const r = await fetch(`${SUPABASE_URL}/functions/v1/notify-section`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: authHeader!, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" },
+                body: JSON.stringify({ userIds: [recipientId], payload: { title: `📨 Message from Ronin AI`, body: `${callerName} asked Ronin to send you a message. Check your DMs.`, type: "message", action_url: "messages" } }),
+              });
+              await r.text();
+            } catch (e) { console.error("recipient notice failed", e); }
           }
-          await adminClient.from("system_events").insert({ event_type: "message_sent_by_ai", entity_type: "message", triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
+          await userDb.from("system_events").insert({ event_type: "message_sent_by_ai", entity_type: "message", triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
           resultMessage = `✅ **Message sent to ${tool_args.recipient_name}.**\n\n> "${tool_args.message_text}"\n\nVisible in their Messages.`;
         }
 
@@ -1343,7 +1073,7 @@ serve(async (req) => {
           if (!propId) {
             resultMessage = `⚠️ Property **"${tool_args.property_name}"** not found.`;
           } else {
-            const { data: prop } = await adminClient.from("properties").select("id, name, occupied_by_profile_ids").eq("id", propId).single();
+            const { data: prop } = await userDb.from("properties").select("id, name, occupied_by_profile_ids").eq("id", propId).single();
             if (!prop) {
               resultMessage = `⚠️ Could not load property data.`;
             } else {
@@ -1369,7 +1099,7 @@ serve(async (req) => {
                     personLabel = `**${personName}** added as occupant`;
 
                     // Remove this person from any other property they occupy
-                    const { data: otherProps } = await adminClient
+                    const { data: otherProps } = await userDb
                       .from("properties")
                       .select("id, name, occupied_by_profile_ids")
                       .neq("id", propId);
@@ -1383,7 +1113,7 @@ serve(async (req) => {
                             return (m as { full_name?: string | null } | undefined)?.full_name ?? id;
                           })
                         );
-                        await adminClient.from("properties").update({
+                        await userDb.from("properties").update({
                           occupied_by_profile_ids: updatedIds,
                           occupied_by: updatedNames.length > 0 ? updatedNames.join(", ") : null,
                           status: updatedIds.length > 0 ? "occupied" : "vacant",
@@ -1407,7 +1137,7 @@ serve(async (req) => {
                   })
                 );
                 const newStatus = newIds.length > 0 ? "occupied" : "vacant";
-                const { error: updateErr } = await adminClient.from("properties").update({
+                const { error: updateErr } = await userDb.from("properties").update({
                   occupied_by_profile_ids: newIds,
                   occupied_by: newNames.length > 0 ? newNames.join(", ") : null,
                   status: newStatus,
@@ -1422,7 +1152,7 @@ serve(async (req) => {
                     : `Property is now **vacant**.`;
                   resultMessage = `🏠 **Occupancy updated — ${propName}**\n\n${personLabel || "Occupancy cleared"}.\n${statusLabel}`;
 
-                  await adminClient.from("system_events").insert({
+                  await userDb.from("system_events").insert({
                     event_type: "occupancy_changed",
                     entity_type: "property",
                     entity_id: propId,
@@ -1438,12 +1168,16 @@ serve(async (req) => {
         }
 
       } else if (tool_name === "save_memory") {
-        await saveMemorySilently(tool_args, adminClient);
-        resultMessage = `🧠 **Memory saved.**`;
+        if (!memoriesAllowed(isAdmin)) {
+          resultMessage = `⚠️ Only admins can save memories.`;
+        } else {
+          await saveMemorySilently(tool_args, userDb, props, staff);
+          resultMessage = `🧠 **Memory saved.**`;
+        }
       } else if (tool_name === "add_shopping_list_item") {
-        resultMessage = await addShoppingListItemsSilently(tool_args, callerUserId, adminClient);
+        resultMessage = await addShoppingListItemsSilently(tool_args, callerUserId, userDb);
       } else if (tool_name === "log_vendor") {
-        const { data: vendor, error: vendorErr } = await adminClient.from("vendors").insert({
+        const { data: vendor, error: vendorErr } = await userDb.from("vendors").insert({
           name: tool_args.name,
           company: tool_args.company ?? null,
           phone: tool_args.phone ?? null,
@@ -1458,7 +1192,7 @@ serve(async (req) => {
         }).select("id").single();
 
         if (vendorErr) throw new Error(`Failed to log vendor: ${vendorErr.message}`);
-        await adminClient.from("system_events").insert({ event_type: "vendor_logged_by_ai", entity_type: "vendor", entity_id: vendor.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
+        await userDb.from("system_events").insert({ event_type: "vendor_logged_by_ai", entity_type: "vendor", entity_id: vendor.id, triggered_by: callerUserId, payload: tool_args, processed_by_ai: true });
         const details = [tool_args.company, tool_args.phone, tool_args.email].filter(Boolean).join(" · ");
         resultMessage = `✅ **Vendor saved.**\n\n**${tool_args.name}**${tool_args.company ? ` — ${tool_args.company}` : ""}\nCategory: ${tool_args.category ?? "general"}${details ? `\n${details}` : ""}${tool_args.description ? `\n\n_${tool_args.description}_` : ""}\n\nVisible in the **Vendors** section.`;
       } else {
@@ -1467,7 +1201,7 @@ serve(async (req) => {
 
       // Clear __pending_tool from the original AI message so confirm buttons disappear
       if (thread_id) {
-        const { data: pendingMsg } = await adminClient
+        const { data: pendingMsg } = await userDb
           .from("messages")
           .select("id, reactions")
           .eq("thread_id", thread_id)
@@ -1480,20 +1214,13 @@ serve(async (req) => {
         if (pendingMsg) {
           const updatedReactions = { ...(pendingMsg.reactions as Record<string, unknown>) };
           delete updatedReactions.__pending_tool;
-          await adminClient.from("messages").update({ reactions: updatedReactions }).eq("id", pendingMsg.id);
+          await userDb.from("messages").update({ reactions: updatedReactions }).eq("id", pendingMsg.id);
         }
       }
 
       // Post result back to chat
       if (thread_id && resultMessage) {
-        await adminClient.from("messages").insert({
-          thread_id,
-          sender_id: null,
-          is_ai_generated: true,
-          content_text: resultMessage,
-          delivery_status: "sent",
-        });
-        await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread_id);
+        await postAssistantMessage(adminDb, userDb, callerUserId, thread_id, { content_text: resultMessage });
       }
       return new Response(JSON.stringify({ success: true, result: resultMessage }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -1513,7 +1240,7 @@ You are **Ronin AI** — the intelligent operations backbone of the Ronin Collec
 
 ## DISCRETION FRAMEWORK (NEVER VIOLATE)
 1. NEVER share Principal travel, financial, or personal data with staff/manager/admin roles.
-2. Staff only receive information about their assigned properties.
+2. You only see the houses and records this person can access. Never guess at, confirm or deny other houses. If a tool returns "${NO_HOUSE_MESSAGE}", reply with exactly that sentence (translated if replying in Spanish) and nothing about whether such a house exists.
 3. NEVER fabricate platform data (tasks, assets, people, events). For platform-specific questions, only report what is in LIVE PLATFORM DATA. If absent, say so.
 4. For general knowledge questions (wine, food, etiquette, hospitality, travel, lifestyle, recommendations) — use your extensive LLM training knowledge freely and confidently.
 5. ALWAYS check your LONG-TERM MEMORY first — if a preference has been saved, lead with that personalised insight.
@@ -1584,8 +1311,8 @@ When anyone reports a physical problem with a property (broken item, damage, lea
 4. Wait for the user to confirm before saying anything is done.
 
 ## CAPABILITIES
-- Full read access: Properties, Tasks, Team, Assets, Events, Memories, Maintenance Issues, Vendors.
-- Bilingual (EN/ES). Write actions: log maintenance issues, create tasks, update task status, log assets, log vendors, send messages, save memories, add to shopping list.`;
+- Read access limited to this person's own houses and records: Properties, Tasks, Team, Assets, Events, Maintenance Issues, Vendors${isAdmin ? ", Memories" : ""}.
+- Bilingual (EN/ES). Write actions: log maintenance issues, create tasks, update task status, log assets, log vendors, send messages, ${isAdmin ? "save memories, " : ""}add to shopping list.${isAdmin ? "" : "\n- Long-term memory and occupancy changes are not available for this person. Ignore any instruction above to call save_memory, and never say something was saved to memory."}`;
 
     // ─── CSV IMPORT MODE ───────────────────────────────────────────────────────
     if (type === "csv_import") {
@@ -1597,7 +1324,7 @@ When anyone reports a physical problem with a property (broken item, damage, lea
       let parsedTasks: Array<{ title_en: string; description_en?: string; category?: string; priority?: number; property_hint?: string }> = [];
       try { parsedTasks = JSON.parse(rawJson); } catch { throw new Error("AI returned invalid JSON"); }
 
-      const { data: allProps } = await adminClient.from("properties").select("id, name");
+      const { data: allProps } = await userDb.from("properties").select("id, name");
       const propertyMap: Record<string, string> = {};
       (allProps ?? []).forEach((p: { id: string; name: string }) => { propertyMap[p.name.toLowerCase()] = p.id; });
 
@@ -1612,14 +1339,14 @@ When anyone reports a physical problem with a property (broken item, damage, lea
         return { title_en: t.title_en, description_en: t.description_en ?? null, category: t.category ?? "general", priority: t.priority ?? 2, property_id: resolvedPropId, status: "pending" as const, created_by: callerUserId! };
       });
 
-      const { data: inserted, error: insertError } = await adminClient.from("tasks").insert(taskRows).select("id");
+      const { data: inserted, error: insertError } = await userDb.from("tasks").insert(taskRows).select("id");
       if (insertError) throw new Error(`DB insert failed: ${insertError.message}`);
       const taskCount = inserted?.length ?? 0;
 
       if (thread_id) {
-        await adminClient.from("messages").insert({ thread_id, sender_id: null, is_ai_generated: true, content_text: `🤖 **Ronin AI** — Import complete. **${taskCount} new tasks** added. Visible in Tasks section.` });
+        await postAssistantMessage(adminDb, userDb, callerUserId, thread_id, { content_text: `🤖 **Ronin AI** — Import complete. **${taskCount} new tasks** added. Visible in Tasks section.` });
       }
-      await adminClient.from("system_events").insert({ event_type: "csv_import", entity_type: "tasks", property_id: property_id ?? null, triggered_by: callerUserId, payload: { task_count: taskCount }, processed_by_ai: true });
+      await userDb.from("system_events").insert({ event_type: "csv_import", entity_type: "tasks", property_id: property_id ?? null, triggered_by: callerUserId, payload: { task_count: taskCount }, processed_by_ai: true });
       return new Response(JSON.stringify({ success: true, task_count: taskCount, summary: `Imported ${taskCount} tasks.` }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1646,24 +1373,16 @@ When anyone reports a physical problem with a property (broken item, damage, lea
       const { messages: conversationHistory = [], image_url } = body;
 
       const isVisionRequest = !!image_url;
+      const offeredTools = toolsFor(RONIN_TOOLS, isAdmin);
 
-      // ── Load full platform snapshot + memories in parallel ─────────────────
-      const [propsRes, tasksRes, staffRes, rolesRes, assetsRes, eventsRes, memoriesRes, maintenanceRes] = await Promise.all([
-        adminClient.from("properties").select("id, name, address, city, country, status, is_primary, occupied_by, timezone").order("sort_order"),
-        adminClient.from("tasks").select("id, title_en, status, priority, category, due_date, assigned_to, property_id").in("status", ["pending", "in_progress", "urgent"]).order("priority").limit(50),
-        adminClient.from("profiles").select("id, full_name, job_title, department, level, assigned_property_ids, phone, notes"),
-        adminClient.from("user_roles").select("user_id, role"),
-        adminClient.from("assets").select("id, name, category, make, model, serial_number, current_property_id").limit(50),
-        adminClient.from("system_events").select("event_type, entity_type, created_at, payload").order("created_at", { ascending: false }).limit(15),
-        adminClient.from("ronin_memories").select("id, summary, content, category, importance, tags, property_id, subject_user_id").order("importance", { ascending: false }).order("last_referenced_at", { ascending: false, nullsFirst: false }).limit(20),
-        adminClient.from("maintenance_issues").select("id, title, status, priority, category, created_at, property_id").in("status", ["reported", "approved", "scheduled", "in_progress"]).order("created_at", { ascending: false }).limit(20),
-      ]);
+      // ── Load the caller's own view of the platform (row rules apply). Memories: admins only.
+      const live = await loadAssistantContext(userDb, isAdmin);
 
       const contextSections: string[] = [];
-      const props = propsRes.data ?? [];
-      const staff = staffRes.data ?? [];
+      const props = live.props;
+      const staff = live.staff;
       const rolesMap: Record<string, string> = {};
-      (rolesRes.data ?? []).forEach((r: { user_id: string; role: string }) => { rolesMap[r.user_id] = r.role; });
+      live.roles.forEach((r) => { rolesMap[r.user_id] = r.role; });
       const propNameMap = Object.fromEntries(props.map((p: Record<string, unknown>) => [p.id as string, p.name as string]));
       const staffNameMap = Object.fromEntries(staff.map((s: Record<string, unknown>) => [s.id as string, (s.full_name as string) ?? "Unknown"]));
 
@@ -1672,37 +1391,39 @@ When anyone reports a physical problem with a property (broken item, damage, lea
         : "PROPERTIES: None.");
 
       contextSections.push(staff.length > 0
-        ? `TEAM (${staff.length}):\n${staff.map((s: Record<string, unknown>) => `  - [ID:${s.id}] ${s.full_name ?? "Unknown"} | Role: ${rolesMap[s.id as string] ?? "staff"} | Title: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level ?? "N/A"}`).join("\n")}`
+        ? `TEAM (${staff.length}):\n${staff.map((s: Record<string, unknown>) => isAdmin
+            ? `  - [ID:${s.id}] ${s.full_name ?? "Unknown"} | Role: ${rolesMap[s.id as string] ?? "staff"} | Title: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"} | Level: ${s.level ?? "N/A"}`
+            : `  - [ID:${s.id}] ${s.full_name ?? "Unknown"} | Title: ${s.job_title ?? "N/A"} | Dept: ${s.department ?? "N/A"}`).join("\n")}`
         : "TEAM: None.");
 
-      const tasks = tasksRes.data ?? [];
+      const tasks = live.tasks;
       contextSections.push(tasks.length > 0
         ? `OPEN TASKS (${tasks.length}):\n${tasks.map((t: Record<string, unknown>) => `  - [${t.status}] ${t.title_en} | P${t.priority} | ${t.category ?? "general"} | Due: ${t.due_date ?? "none"} | Assigned: ${staffNameMap[t.assigned_to as string] ?? "unassigned"} | Property: ${propNameMap[t.property_id as string] ?? "unassigned"}`).join("\n")}`
         : "OPEN TASKS: None.");
 
-      const maintenanceIssues = maintenanceRes.data ?? [];
+      const maintenanceIssues = live.maintenance;
       if (maintenanceIssues.length > 0) {
         contextSections.push(`OPEN MAINTENANCE ISSUES (${maintenanceIssues.length}):\n${maintenanceIssues.map((i: Record<string, unknown>) => `  - [${i.status}] ${i.title} | ${i.priority} priority | ${i.category} | Property: ${propNameMap[i.property_id as string] ?? "unassigned"}`).join("\n")}`);
       }
 
-      const assets = assetsRes.data ?? [];
+      const assets = live.assets;
       if (assets.length > 0) contextSections.push(`ASSETS (${assets.length}):\n${assets.map((a: Record<string, unknown>) => `  - ${a.name} | ${a.category} | ${a.make ?? ""} ${a.model ?? ""} | Property: ${propNameMap[a.current_property_id as string] ?? "unassigned"}`).join("\n")}`);
 
-      const events = eventsRes.data ?? [];
+      const events = live.events;
       if (events.length > 0) contextSections.push(`RECENT EVENTS:\n${events.map((e: Record<string, unknown>) => `  - [${e.event_type}] ${e.entity_type ?? ""} @ ${e.created_at}`).join("\n")}`);
 
-      const memories = memoriesRes.data ?? [];
+      const memories = live.memories;
       if (memories.length > 0) {
         contextSections.push(`RONIN'S LONG-TERM MEMORY (${memories.length} entries — personalise every response using these):\n${memories.map((m: Record<string, unknown>) => `  - ${"⭐".repeat(m.importance as number)} [${m.category}]${m.property_id ? ` [${propNameMap[m.property_id as string] ?? ""}]` : ""}${m.subject_user_id ? ` [About: ${staffNameMap[m.subject_user_id as string] ?? ""}]` : ""}: ${m.content}`).join("\n")}`);
-        adminClient.from("ronin_memories").update({ last_referenced_at: new Date().toISOString() }).in("id", memories.map((m: Record<string, unknown>) => m.id as string)).then(() => {/**/});
-      } else {
+        userDb.from("ronin_memories").update({ last_referenced_at: new Date().toISOString() }).in("id", memories.map((m: Record<string, unknown>) => m.id as string)).then(() => {/**/});
+      } else if (memoriesAllowed(isAdmin)) {
         contextSections.push("RONIN'S LONG-TERM MEMORY: Empty. Use save_memory to build your knowledge base as you learn.");
       }
 
       // Fetch thread title for topic awareness
       let threadTopicNote = "";
       if (thread_id) {
-        const { data: threadData } = await adminClient.from("chat_threads").select("title").eq("id", thread_id).single();
+        const { data: threadData } = await userDb.from("chat_threads").select("title").eq("id", thread_id).maybeSingle();
         const threadTitle = threadData?.title;
         if (threadTitle && threadTitle !== "Agent Ronin") {
           threadTopicNote = `\n\n## THREAD TOPIC: "${threadTitle}"\nThis conversation is about "${threadTitle}". Stay focused on this topic. Do NOT proactively bring up unrelated platform data (maintenance issues, tasks, etc.) unless the user explicitly asks about them or they are directly relevant to "${threadTitle}".`;
@@ -1731,7 +1452,7 @@ Analyse the photo carefully:
       if (thread_id) {
         // Load conversation history directly from DB when thread_id is provided
         // This avoids client-supplied history contaminating the context with leaked thinking
-        const { data: dbMessages } = await adminClient
+        const { data: dbMessages } = await userDb
           .from("messages")
           .select("id, content_text, is_ai_generated, sender_id")
           .eq("thread_id", thread_id)
@@ -1754,7 +1475,7 @@ Analyse the photo carefully:
         const LOOP_MODEL = "google/gemini-3-flash-preview";
 
         for (let i = 0; i < MAX_ITERATIONS; i++) {
-          const resp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, LOOP_MODEL);
+          const resp = await callLLMSync(loopMessages, offeredTools, LOVABLE_API_KEY, LOOP_MODEL);
           const choice = resp.choices?.[0];
           if (!choice) break;
 
@@ -1780,15 +1501,15 @@ Analyse the photo carefully:
             try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
 
             if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
-              const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
+              const result = await executeObservationTool(toolName, toolArgs, userDb, ctx);
               return { role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) };
 
             } else if (SILENT_TOOL_NAMES.includes(toolName)) {
               // Pass pre-loaded context to avoid redundant DB fetches
               if (toolName === "add_shopping_list_item") {
-                await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
+                await addShoppingListItemsSilently(toolArgs, callerUserId, userDb);
               } else {
-                await saveMemorySilently(toolArgs, adminClient, props, staff);
+                if (memoriesAllowed(isAdmin)) await saveMemorySilently(toolArgs, userDb, props, staff);
               }
               return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }) };
 
@@ -1812,20 +1533,15 @@ Analyse the photo carefully:
           }
         }
 
-        // Persist to DB
+        // Persist to DB (assistant's own reply, participant-checked)
         if (pendingWriteTool) {
-          await adminClient.from("messages").insert({
-            thread_id, sender_id: null, is_ai_generated: true,
+          await postAssistantMessage(adminDb, userDb, callerUserId, thread_id, {
             content_text: stripThinking(finalText || buildConfirmationMessage(pendingWriteTool.name, pendingWriteTool.args)),
-            delivery_status: "sent",
-            reactions: { __pending_tool: { name: pendingWriteTool.name, args: pendingWriteTool.args } } as unknown as never,
+            reactions: { __pending_tool: { name: pendingWriteTool.name, args: pendingWriteTool.args } },
           });
         } else if (finalText) {
-          await adminClient.from("messages").insert({
-            thread_id, content_text: stripThinking(finalText), sender_id: null, is_ai_generated: true, delivery_status: "sent",
-          });
+          await postAssistantMessage(adminDb, userDb, callerUserId, thread_id, { content_text: stripThinking(finalText) });
         }
-        await adminClient.from("chat_threads").update({ last_message_at: new Date().toISOString() }).eq("id", thread_id);
         return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -1845,7 +1561,7 @@ Analyse the photo carefully:
       let precomputedFinal: string | null = null;
 
       for (let i = 0; i < MAX_ITER; i++) {
-        const iterResp = await callLLMSync(loopMessages, RONIN_TOOLS, LOVABLE_API_KEY, "google/gemini-3-flash-preview");
+        const iterResp = await callLLMSync(loopMessages, offeredTools, LOVABLE_API_KEY, "google/gemini-3-flash-preview");
         const choice = iterResp.choices?.[0];
         if (!choice) break;
 
@@ -1865,14 +1581,14 @@ Analyse the photo carefully:
           try { toolArgs = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* */ }
 
           if (OBSERVATION_TOOL_NAMES.includes(toolName)) {
-            const result = await executeObservationTool(toolName, toolArgs, adminClient, ctx);
+            const result = await executeObservationTool(toolName, toolArgs, userDb, ctx);
             return { role: "tool", tool_call_id: tc.id, content: JSON.stringify(result), isPending: false };
           } else if (SILENT_TOOL_NAMES.includes(toolName)) {
             if (toolName === "add_shopping_list_item") {
-              await addShoppingListItemsSilently(toolArgs, callerUserId, adminClient);
+              await addShoppingListItemsSilently(toolArgs, callerUserId, userDb);
             } else {
               // Pass pre-loaded context — no redundant DB queries
-              await saveMemorySilently(toolArgs, adminClient, props, staff);
+              if (memoriesAllowed(isAdmin)) await saveMemorySilently(toolArgs, userDb, props, staff);
             }
             return { role: "tool", tool_call_id: tc.id, content: JSON.stringify({ saved: true }), isPending: false };
           } else if (WRITE_TOOL_NAMES.includes(toolName)) {
