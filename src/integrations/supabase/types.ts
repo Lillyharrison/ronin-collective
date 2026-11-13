@@ -631,6 +631,33 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_log: {
+        Row: {
+          admin_id: string
+          ended_at: string | null
+          ended_how: string | null
+          id: string
+          started_at: string
+          target_id: string
+        }
+        Insert: {
+          admin_id: string
+          ended_at?: string | null
+          ended_how?: string | null
+          id?: string
+          started_at?: string
+          target_id: string
+        }
+        Update: {
+          admin_id?: string
+          ended_at?: string | null
+          ended_how?: string | null
+          id?: string
+          started_at?: string
+          target_id?: string
+        }
+        Relationships: []
+      }
       job_title_suggestions: {
         Row: {
           created_at: string
@@ -3008,6 +3035,10 @@ export type Database = {
           start_time: string
           visit_date: string
         }[]
+      }
+      end_impersonation: {
+        Args: { _how?: string; _log_id: string }
+        Returns: undefined
       }
       get_staff_schedule_profiles: {
         Args: never
