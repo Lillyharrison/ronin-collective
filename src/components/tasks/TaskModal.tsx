@@ -122,6 +122,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
   // ── "Mark Complete" flow for order tasks ─────────────────────────────────────
   const [completing, setCompleting]     = useState(false);
+  const [completionNote, setCompletionNote] = useState("");
   const [completed, setCompleted]       = useState(task?.status === "completed");
   // Phase 1: show tracking form inline before confirming completion
   const [showOrderComplete, setShowOrderComplete] = useState(false);
@@ -279,10 +280,15 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     setCompleting(true);
 
     // Mark the task complete
-    const completionPatch = {
+    // Completion notes are appended to the task description so they show wherever the task is read.
+    const note = completionNote.trim();
+    const completionPatch: Record<string, unknown> = {
       status: "completed",
       completed_at: new Date().toISOString(),
     };
+    if (note) {
+      completionPatch.description_en = [task.description_en?.trim(), `${isL ? "Nota al completar" : "Completion note"}: ${note}`].filter(Boolean).join("\n\n");
+    }
     if (!navigator.onLine) {
       // Optimistic — update local state visually, queue the write
       setCompleted(true);
@@ -295,6 +301,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     // Notify task completion
     await notifySection("tasks", {
       title: `✅ Task completed: ${task.title_en}`,
+      ...(note ? { body: note } : {}),
       type: "success",
       action_url: "tasks",
       entity_id: task.id,
@@ -431,7 +438,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             )}
 
             {task.description_en && (
-              <p className="text-sm text-muted-foreground leading-relaxed">{task.description_en}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{task.description_en}</p>
             )}
 
             <div className="flex flex-wrap gap-2">
@@ -563,6 +570,16 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                     />
                   </div>
                 </div>
+              </div>
+            )}
+            {task.status !== "completed" && !completed && !showOrderComplete && (
+              <div>
+                <label htmlFor="task-completion-note" className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                  {isL ? "Nota al completar (opcional)" : "Completion note (optional)"}
+                </label>
+                <textarea id="task-completion-note" value={completionNote} onChange={e => setCompletionNote(e.target.value)} rows={2}
+                  placeholder={isL ? "Ej.: instalación reservada para el 2 de dic." : "e.g. Install booked for Dec 2"}
+                  className="w-full text-base bg-muted border border-border rounded-xl px-3 py-2 outline-none focus:border-primary text-foreground placeholder:text-muted-foreground" />
               </div>
             )}
           </div>
