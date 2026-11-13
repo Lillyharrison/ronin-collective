@@ -1407,6 +1407,7 @@ export type Database = {
           quick_actions: string[]
           section_permissions: Json | null
           start_date: string | null
+          text_size: string
           updated_at: string
         }
         Insert: {
@@ -1435,6 +1436,7 @@ export type Database = {
           quick_actions?: string[]
           section_permissions?: Json | null
           start_date?: string | null
+          text_size?: string
           updated_at?: string
         }
         Update: {
@@ -1463,6 +1465,7 @@ export type Database = {
           quick_actions?: string[]
           section_permissions?: Json | null
           start_date?: string | null
+          text_size?: string
           updated_at?: string
         }
         Relationships: []
