@@ -29,6 +29,10 @@ import {
 import {
   canIssue,
   flagLabel,
+  payPreview,
+  snapshotByEntry,
+  rateFor,
+  type PayBasis,
   hoursFor,
   monthEnd,
   monthName,
@@ -136,7 +140,7 @@ export function TimesheetDetail({
         result<any>(
           db
             .from("staff_time_settings")
-            .select("payee_name,hourly_rate,currency,rounding_minutes")
+            .select("payee_name,hourly_rate,daily_rate,pay_basis,currency,rounding_minutes")
             .eq("staff_id", staff)
             .maybeSingle(),
         ),
@@ -280,17 +284,15 @@ export function TimesheetDetail({
   if (!q.data) return <p>{t("Loading…", "Cargando…")}</p>;
   const d = q.data;
   const active = d.sheets.find((s) => ["issued", "paid"].includes(s.status));
+  const basis: PayBasis = (active?.pay_basis || d.settings?.pay_basis || "hourly") as PayBasis;
   const rate = active
-    ? Number(active.hourly_rate)
-    : d.settings?.hourly_rate == null
-      ? null
-      : Number(d.settings.hourly_rate);
+    ? rateFor(basis, { hourly_rate: active.hourly_rate, daily_rate: active.day_rate })
+    : rateFor(basis, d.settings);
   const rounding = d.settings?.rounding_minutes || 15;
-  const hours = active
-    ? Number(active.total_hours)
-    : d.entries
-        .filter((e) => e.status !== "not_worked")
-        .reduce((sum, e) => sum + hoursFor(e, rounding), 0);
+  const preview = payPreview(d.entries, basis, rate, rounding);
+  const snap = active ? snapshotByEntry(active.lines) : null;
+  const hours = active ? Number(active.total_hours) : preview.hours;
+  const days = active ? Number(active.days_paid ?? Object.values(snap || {}).filter(l => l.label === "full").length) : preview.days;
   const adjustments = active
     ? Number(active.adjustments_amount)
     : d.adjustments
@@ -302,23 +304,19 @@ export function TimesheetDetail({
       style: "currency",
       currency,
     }).format(n);
-  const hoursAmount = active
-    ? Number(active.hours_amount)
-    : d.entries
-        .filter((e) => e.status !== "not_worked")
-        .reduce(
-          (sum, e) =>
-            sum + Math.round(hoursFor(e, rounding) * (rate || 0) * 100) / 100,
-          0,
-        );
+  const hoursAmount = active ? Number(active.hours_amount) : preview.amount;
+  const payroll = basis === "payroll";
+  const rateMissing = !active && !payroll && rate == null;
+  const fmtH = (n: number) => (Math.round(n * 100) / 100).toString();
+  const daysText = (n: number) => es ? `${n} ${n === 1 ? "día" : "días"}, ${fmtH(hours)} h` : `${n} ${n === 1 ? "day" : "days"}, ${fmtH(hours)} h`;
   const total = hoursAmount + adjustments;
   const name =
     active?.payee_name || d.settings?.payee_name || d.profile.full_name;
   const step = mainStep(d.entries, period, active?.status);
   const reviewCount = d.entries.filter(e => e.status === "pending" || (e.status !== "not_worked" && !(e.adj_out || e.clock_out))).length;
   const visitCount = d.entries.filter(e => e.status !== "not_worked").length;
-  const issueAllowed = canIssue(period, d.entries, rate, !!active) && (d.entries.some(e => e.status === "approved") || d.adjustments.some(a => !a.timesheet_id));
-  const status = active?.status === "paid" ? "paid" : active ? "issued" : reviewCount ? "review" : "ready";
+  const issueAllowed = !payroll && canIssue(period, d.entries, rate, !!active) && (d.entries.some(e => e.status === "approved") || d.adjustments.some(a => !a.timesheet_id));
+  const status = active?.status === "paid" ? "paid" : active ? "issued" : reviewCount ? "review" : payroll ? "payroll" : "ready";
   const missing = d.visits.filter(
     (v) =>
       v.visit_date <
@@ -357,16 +355,18 @@ export function TimesheetDetail({
     <div className="space-y-5 min-w-0">
       <header>
         <h2 className="font-display text-3xl font-medium break-words">{name}</h2>
-        <p className="text-sm text-muted-foreground mt-1">{rate == null ? t("Hourly rate not set", "Tarifa sin configurar") : t(`Paid by timesheet, ${money(rate)} an hour`, `Pago por hoja de horas, ${money(rate)} por hora`)}</p>
+        <p className="text-sm text-muted-foreground mt-1">{payroll ? t("Paid through TriNet payroll", "Pagado por nómina TriNet") : rate == null ? t(basis === "daily" ? "Day rate not set" : "Hourly rate not set", "Tarifa sin configurar") : basis === "daily" ? t(`Paid by the day, ${money(rate)} a day`, `Pago por día, ${money(rate)} por día`) : t(`Paid by timesheet, ${money(rate)} an hour`, `Pago por hoja de horas, ${money(rate)} por hora`)}</p>
       </header>
       <section className="timesheet-summary space-y-4" aria-label={t("Month summary", "Resumen del mes")}>
         <div className="grid grid-cols-2 gap-3">
-          <div><p className="text-3xl font-medium tabular-nums">{hours.toFixed(2)} <span className="text-xl">h</span></p><p className="text-sm text-muted-foreground mt-2">{visitCount} {t(visitCount === 1 ? "visit" : "visits", visitCount === 1 ? "visita" : "visitas")}</p></div>
-          <div className="text-right min-w-0"><p className="text-2xl font-medium tabular-nums break-words">{money(total)}</p><div className="mt-2"><StatusChip status={status} count={reviewCount} paidDate={active?.paid_on} es={es} /></div></div>
+          <div>{basis === "daily" ? <p className="text-2xl font-medium tabular-nums">{daysText(days)}</p> : <p className="text-3xl font-medium tabular-nums">{hours.toFixed(2)} <span className="text-xl">h</span></p>}<p className="text-sm text-muted-foreground mt-2">{visitCount} {t(visitCount === 1 ? "visit" : "visits", visitCount === 1 ? "visita" : "visitas")}</p></div>
+          <div className="text-right min-w-0">{!payroll && <p className="text-2xl font-medium tabular-nums break-words">{money(total)}</p>}<div className="mt-2"><StatusChip status={status} count={reviewCount} paidDate={active?.paid_on} es={es} /></div></div>
         </div>
         {step.kind === "open" && <Button className="w-full min-h-12 font-medium" disabled={busy} onClick={() => setSelectedVisit(step.entry)}>{t(`Fix ${step.count} ${step.count === 1 ? "visit" : "visits"}`, `Corregir ${step.count} ${step.count === 1 ? "visita" : "visitas"}`)}</Button>}
         {step.kind === "pending" && <div><Button className="w-full min-h-12 font-medium" disabled={busy} onClick={() => mutate(() => result(db.rpc("approve_time_entries", { _ids: step.ids })))}>{t(`Approve ${step.count} ${step.count === 1 ? "visit" : "visits"}`, `Aprobar ${step.count} ${step.count === 1 ? "visita" : "visitas"}`)}</Button><p className="text-sm text-muted-foreground text-center mt-2">{t("Then you can issue the timesheet", "Después puedes emitir la hoja de horas")}</p></div>}
-        {step.kind === "ready" && <Button className="w-full min-h-12 font-medium" disabled={busy || !issueAllowed} onClick={() => setConfirm("issue")}>{t("Issue timesheet", "Emitir hoja de horas")}</Button>}
+        {payroll && <p className="text-sm text-muted-foreground">{t("Paid through TriNet. Hours are recorded for reference.", "Pagado por TriNet. Las horas se registran como referencia.")}</p>}
+        {rateMissing && <p className="timesheet-warning"><Info size={16} className="shrink-0" />{t("No rate yet. Add it in the Contract tab.", "Aún sin tarifa. Añádela en la pestaña Contrato.")}</p>}
+        {step.kind === "ready" && !payroll && <Button className="w-full min-h-12 font-medium" disabled={busy || !issueAllowed} onClick={() => setConfirm("issue")}>{t("Issue timesheet", "Emitir hoja de horas")}</Button>}
         {step.kind === "unfinished" && <p className="text-sm text-muted-foreground">{t(`You can issue this after ${visitDate(monthEnd(period), es, true)}`, `Puedes emitirla después del ${visitDate(monthEnd(period), es, true)}`)}</p>}
         {active && <>
           <div className="flex gap-2">
@@ -386,7 +386,7 @@ export function TimesheetDetail({
           <span className="text-xs font-medium">{t("VISITS", "VISITAS")}</span>
           <div className="timesheet-key text-xs text-muted-foreground"><span><i className="timesheet-dot timesheet-dot-green" />{t("All fine", "Todo bien")}</span><span><i className="timesheet-dot timesheet-dot-amber" />{t("Take a look", "Revisar")}</span><span><i className="timesheet-dot timesheet-dot-grey" />{t("Approved", "Aprobado")}</span></div>
         </div>
-        {d.entries.map(e => <VisitCard key={e.id} entry={e} issued={!!active || !!e.timesheet_id} rounding={rounding} es={es} onOpen={() => setSelectedVisit(e)} />)}
+        {d.entries.map(e => <VisitCard key={e.id} entry={e} issued={!!active || !!e.timesheet_id} rounding={rounding} es={es} hours={snap?.[e.id]?.hours} dayLabel={snap ? snap[e.id]?.label : basis === "daily" ? preview.labels[e.id] : undefined} onOpen={() => setSelectedVisit(e)} />)}
         {!d.entries.length && <p className="text-sm text-muted-foreground py-4">{t("No recorded visits", "Sin visitas registradas")}</p>}
       </section>
       <section className="space-y-2">
@@ -403,7 +403,7 @@ export function TimesheetDetail({
       <section>
         <Button variant="ghost" className="timesheet-quiet-row w-full justify-between text-sm font-normal" aria-expanded={showHistory} onClick={() => setShowHistory(!showHistory)}>{t("History and activity", "Historial y actividad")}{showHistory ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</Button>
         {showHistory && <div className="space-y-5 py-3">
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-muted-foreground"><dt>{t("Rate", "Tarifa")}</dt><dd className="text-right">{money(rate || 0)} / h</dd><dt>{t("Hours amount", "Importe horas")}</dt><dd className="text-right">{money(hoursAmount)}</dd><dt>{t("Adjustments", "Ajustes")}</dt><dd className="text-right">{money(adjustments)}</dd><dt>{t("Total", "Total")}</dt><dd className="text-right font-medium text-foreground">{money(total)}</dd></dl>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-muted-foreground">{!payroll && <><dt>{t("Rate", "Tarifa")}</dt><dd className="text-right">{money(rate || 0)} {basis === "daily" ? t("/ day", "/ día") : "/ h"}</dd></>}<dt>{t("Hours amount", "Importe horas")}</dt><dd className="text-right">{money(hoursAmount)}</dd><dt>{t("Adjustments", "Ajustes")}</dt><dd className="text-right">{money(adjustments)}</dd><dt>{t("Total", "Total")}</dt><dd className="text-right font-medium text-foreground">{money(total)}</dd></dl>
           {!active && <Button variant="outline" className="min-h-11 gap-2" onClick={() => setSeed({ date: period })}><Plus size={16} />{t("Add visit", "Añadir visita")}</Button>}
       <section>
         <h3 className="font-medium">{t("History", "Historial")}</h3>
@@ -423,7 +423,7 @@ export function TimesheetDetail({
                   ? t("Paid", "Pagado")
                   : t("Issued", "Emitido")}
               <p>
-                {Number(s.total_hours).toFixed(2)} h ·{" "}
+                {s.pay_basis === "daily" && s.days_paid != null && `${s.days_paid} ${t(s.days_paid === 1 ? "day" : "days", s.days_paid === 1 ? "día" : "días")}, `}{Number(s.total_hours).toFixed(2)} h ·{" "}
                 {new Intl.NumberFormat(es ? "es" : "en-US", {
                   style: "currency",
                   currency: s.currency,
@@ -485,7 +485,7 @@ export function TimesheetDetail({
                 <div><dt className="text-muted-foreground">{t("Rostered", "Horario")}</dt><dd>{rosterTime(selectedVisit.scheduled_start)} – {rosterTime(selectedVisit.scheduled_end)}</dd></div>
                 <div><dt className="text-muted-foreground">{t("Clocked", "Registro")}</dt><dd>{timeLabel(selectedVisit.clock_in, selectedVisit.property?.timezone)} – {timeLabel(selectedVisit.clock_out, selectedVisit.property?.timezone)}</dd></div>
                 {(selectedVisit.adj_in || selectedVisit.adj_out) && <div><dt className="text-muted-foreground">{t("Adjusted", "Ajustado")}</dt><dd>{timeLabel(selectedVisit.adj_in || selectedVisit.clock_in, selectedVisit.property?.timezone)} – {timeLabel(selectedVisit.adj_out || selectedVisit.clock_out, selectedVisit.property?.timezone)}</dd></div>}
-                <div><dt className="text-muted-foreground">{t("Hours", "Horas")}</dt><dd>{hoursFor(selectedVisit, rounding).toFixed(2)} h · {money(hoursFor(selectedVisit, rounding) * (rate || 0))}</dd></div>
+                <div><dt className="text-muted-foreground">{t("Hours", "Horas")}</dt><dd>{(snap?.[selectedVisit.id]?.hours ?? hoursFor(selectedVisit, rounding)).toFixed(2)} h{!payroll && ` · ${money(snap?.[selectedVisit.id]?.amount ?? preview.amounts[selectedVisit.id] ?? 0)}`}</dd></div>
               </dl>
               {selectedVisit.note && <p className="text-sm break-words">{selectedVisit.note}</p>}
             </div>

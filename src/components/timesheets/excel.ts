@@ -17,13 +17,17 @@ export function buildWorkbook(t: Timesheet, name: string) {
   ];
   ws.getCell("A1").value = t.payee_name || name;
   ws.getCell("A1").font = { bold: true };
+  const daily = t.pay_basis === "daily";
+  const visitLines = t.lines.filter((l) => l.kind === "visit");
+  const days = t.days_paid ?? visitLines.filter((l) => Number(l.amount) > 0).length;
   ws.getCell("A2").value =
     monthName(t.period_start) +
+    (daily ? `, ${days} ${days === 1 ? "day" : "days"}` : "") +
     (t.version > 1
       ? ` — Corrected version ${t.version} (replaces version ${t.version - 1})`
       : "");
   ws.addRow([]);
-  ["Date", "Time", "Hours", "Per hour", "Amount", "Notes"].forEach((h, i) => {
+  ["Date", "Time", "Hours", daily ? "Day rate" : "Per hour", "Amount", "Notes"].forEach((h, i) => {
     ws.getCell(3, i + 1).value = h;
     ws.getCell(3, i + 1).font = { bold: i > 0 };
   });
@@ -38,11 +42,18 @@ export function buildWorkbook(t: Timesheet, name: string) {
     if (line.kind === "visit") {
       ws.getCell(r, 2).value = line.time_text || "";
       ws.getCell(r, 3).value = Number(line.hours || 0);
-      ws.getCell(r, 4).value = Number(line.rate ?? t.hourly_rate);
-      ws.getCell(r, 5).value = {
-        formula: `C${r}*D${r}`,
-        result: Number(line.amount),
-      };
+      if (daily) {
+        // Day pay: plain snapshot amounts, never hours x rate.
+        const paying = Number(line.amount) > 0;
+        if (paying) ws.getCell(r, 4).value = Number(line.rate ?? t.day_rate);
+        ws.getCell(r, 5).value = paying ? Number(line.amount) : 0;
+      } else {
+        ws.getCell(r, 4).value = Number(line.rate ?? t.hourly_rate);
+        ws.getCell(r, 5).value = {
+          formula: `C${r}*D${r}`,
+          result: Number(line.amount),
+        };
+      }
       ws.getCell(r, 6).value = line.notes || "";
       ws.getCell(r, 4).numFmt = accounting;
     } else {
@@ -65,8 +76,9 @@ export function buildWorkbook(t: Timesheet, name: string) {
   };
   ws.getRow(r).font = { bold: true };
   ws.getCell(r, 5).numFmt = accounting;
-  ws.getCell(r + 1, 1).value =
-    `Hours rounded to the nearest ${t.rounding_minutes} minutes.`;
+  ws.getCell(r + 1, 1).value = daily
+    ? "Paid by the day: one full day's pay for each day worked. Hours are shown for reference."
+    : `Hours rounded to the nearest ${t.rounding_minutes} minutes.`;
   return book;
 }
 function download(blob: Blob, name: string) {

@@ -40,6 +40,8 @@ export type Overview = {
 };
 export type SnapshotLine = {
   kind: string;
+  entry_id?: string;
+  basis?: "hourly" | "daily";
   date: string | null;
   time_text?: string;
   hours?: number;
@@ -56,7 +58,10 @@ export type Timesheet = {
   version: number;
   status: string;
   payee_name: string | null;
-  hourly_rate: number;
+  hourly_rate: number | null;
+  pay_basis?: PayBasis | null;
+  day_rate?: number | null;
+  days_paid?: number | null;
   currency: string;
   rounding_minutes: number;
   total_hours: number;
@@ -220,4 +225,40 @@ export function waitingPeriod(
       .sort((a, b) => b.period_start.localeCompare(a.period_start))[0]
       ?.period_start || fallback
   );
+}
+
+export type PayBasis = "hourly" | "daily" | "payroll";
+export type DayLabel = "full" | "same";
+/** Preview with the server's rule: hourly = rounded hours x rate; daily = one day's pay per distinct visit_date (first by clock-in), not_worked excluded. */
+export function payPreview(entries: Entry[], basis: PayBasis, rate: number | null, rounding = 15) {
+  const counted = entries.filter((e) => e.status !== "not_worked");
+  const hours = counted.reduce((sum, e) => sum + hoursFor(e, rounding), 0);
+  const labels: Record<string, DayLabel> = {};
+  const amounts: Record<string, number> = {};
+  const dates = new Set<string>();
+  [...counted]
+    .sort((a, b) => a.visit_date.localeCompare(b.visit_date) || a.clock_in.localeCompare(b.clock_in))
+    .forEach((e) => {
+      if (basis === "daily") {
+        const first = !dates.has(e.visit_date);
+        dates.add(e.visit_date);
+        labels[e.id] = first ? "full" : "same";
+        amounts[e.id] = first ? rate || 0 : 0;
+      } else amounts[e.id] = basis === "payroll" ? 0 : Math.round(hoursFor(e, rounding) * (rate || 0) * 100) / 100;
+    });
+  const amount = Object.values(amounts).reduce((a, b) => a + b, 0);
+  return { hours, visits: counted.length, days: dates.size, amount: basis === "payroll" ? 0 : Math.round(amount * 100) / 100, labels, amounts };
+}
+/** After issue: labels, hours and amounts come only from the snapshot lines. */
+export function snapshotByEntry(lines: SnapshotLine[] | null | undefined) {
+  const out: Record<string, { hours: number; amount: number; label?: DayLabel }> = {};
+  (Array.isArray(lines) ? lines : []).forEach((l) => {
+    if (l.kind !== "visit" || !l.entry_id) return;
+    out[l.entry_id] = { hours: Number(l.hours || 0), amount: Number(l.amount || 0), label: l.basis === "daily" ? (Number(l.amount) > 0 ? "full" : "same") : undefined };
+  });
+  return out;
+}
+export function rateFor(basis: PayBasis, s: { hourly_rate?: number | null; daily_rate?: number | null } | null | undefined) {
+  const v = basis === "daily" ? s?.daily_rate : basis === "hourly" ? s?.hourly_rate : null;
+  return v == null ? null : Number(v);
 }

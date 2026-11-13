@@ -92,6 +92,12 @@ export function TimesheetsTab() {
         db.rpc("timesheet_overview", { _period_start: period }),
       ),
   });
+  const ids = (overview.data || []).map(r => r.staff_id);
+  const bases = useQuery({
+    queryKey: ["timesheet-pay-basis", userId, ids],
+    enabled: allowed && ids.length > 0,
+    queryFn: async () => Object.fromEntries((await result<{ staff_id: string; pay_basis: string }[]>(db.from("staff_time_settings").select("staff_id,pay_basis").in("staff_id", ids).limit(ids.length))).map(r => [r.staff_id, r.pay_basis])) as Record<string, string>,
+  });
   if (!allowed) return null;
   return (
     <div className="timesheets-surface space-y-5 min-w-0 mx-auto w-full max-w-2xl">
@@ -138,11 +144,11 @@ export function TimesheetsTab() {
             </p>
           )}
           <div className="space-y-2">
-            {orderOverview(overview.data || []).map(row => (
+            {orderOverview(overview.data || [], bases.data).map(row => (
               <Button key={row.staff_id} variant="ghost" className="timesheet-person" onClick={() => setStaff(row.staff_id)}>
                 <span className="min-w-0 flex-1 text-left break-words font-medium">{row.full_name}</span>
                 <span className="tabular-nums text-muted-foreground shrink-0">{Number(row.total_hours).toFixed(2)} h</span>
-                <StatusChip status={overviewStatus(row)} count={Math.max(row.attention_count, row.pending_count)} es={es} />
+                <StatusChip status={overviewStatus(row, bases.data?.[row.staff_id])} count={Math.max(row.attention_count, row.pending_count)} es={es} />
               </Button>
             ))}
           </div>

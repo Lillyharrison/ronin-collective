@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { db, result, allRows } from "./api";
 import type { Property } from "./logic";
+import { invalidateTimeSettings } from "@/components/team/memberAccess";
 type Person = {
   id: string;
   full_name: string;
@@ -17,6 +18,8 @@ type Pay = {
   time_tracking: string;
   payee_name: string;
   hourly_rate: number | null;
+  daily_rate: number | null;
+  pay_basis: "hourly" | "daily" | "payroll";
   currency: string;
   rounding_minutes: number;
 };
@@ -37,6 +40,8 @@ function PayRow({
       time_tracking: "none",
       payee_name: "",
       hourly_rate: null,
+      daily_rate: null,
+      pay_basis: "hourly",
       currency: "USD",
       rounding_minutes: 15,
     },
@@ -96,6 +101,18 @@ function PayRow({
           />
         </Label>
         <Label>
+          {t("Paid", "Pago")}
+          <select
+            className="timesheet-input"
+            value={v.pay_basis}
+            onChange={(e) => setV({ ...v, pay_basis: e.target.value as Pay["pay_basis"] })}
+          >
+            <option value="hourly">{t("By the hour", "Por hora")}</option>
+            <option value="daily">{t("By the day", "Por día")}</option>
+            <option value="payroll">{t("Through TriNet payroll", "Por nómina TriNet")}</option>
+          </select>
+        </Label>
+        <Label>
           {t("Hourly rate", "Tarifa por hora")}
           <Input
             type="number"
@@ -106,6 +123,22 @@ function PayRow({
               setV({
                 ...v,
                 hourly_rate:
+                  e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+          />
+        </Label>
+        <Label>
+          {t("Day rate", "Tarifa por día")}
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={v.daily_rate ?? ""}
+            onChange={(e) =>
+              setV({
+                ...v,
+                daily_rate:
                   e.target.value === "" ? null : Number(e.target.value),
               })
             }
@@ -293,7 +326,7 @@ export function TimesheetSettings({
           db
             .from("staff_time_settings")
             .select(
-              "staff_id,time_tracking,payee_name,hourly_rate,currency,rounding_minutes",
+              "staff_id,time_tracking,payee_name,hourly_rate,daily_rate,pay_basis,currency,rounding_minutes",
             )
             .order("staff_id")
             .range(a, b),
@@ -308,8 +341,7 @@ export function TimesheetSettings({
       };
     },
   });
-  const refresh = () =>
-    qc.invalidateQueries({ queryKey: ["timesheet-settings"] });
+  const refresh = () => invalidateTimeSettings(qc);
   if (q.isError) return <p role="alert">{q.error.message}</p>;
   if (!q.data) return <p>{es ? "Cargando…" : "Loading…"}</p>;
   return (

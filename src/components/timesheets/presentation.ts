@@ -29,10 +29,10 @@ export function mainStep(entries: Entry[], period: string, status?: string, now 
   return { kind: monthShift(period, 1) <= localDateKey(now) ? "ready" : "unfinished", count: 0 } as const;
 }
 
-export function overviewStatus(row: Overview) {
-  return row.timesheet_status === "paid" ? "paid" : row.timesheet_status === "issued" ? "issued" : Math.max(row.attention_count, row.pending_count) > 0 ? "review" : "ready";
+export function overviewStatus(row: Overview, basis?: string | null) {
+  return row.timesheet_status === "paid" ? "paid" : row.timesheet_status === "issued" ? "issued" : Math.max(row.attention_count, row.pending_count) > 0 ? "review" : basis === "payroll" ? "payroll" : "ready";
 }
-export function orderOverview(rows: Overview[]) {
-  const rank = { review: 0, ready: 1, issued: 2, paid: 3 };
-  return [...rows].sort((a, b) => rank[overviewStatus(a)] - rank[overviewStatus(b)] || a.full_name.localeCompare(b.full_name));
+export function orderOverview(rows: Overview[], bases: Record<string, string | null | undefined> = {}) {
+  const rank = { review: 0, ready: 1, payroll: 2, issued: 3, paid: 4 };
+  return [...rows].sort((a, b) => rank[overviewStatus(a, bases[a.staff_id])] - rank[overviewStatus(b, bases[b.staff_id])] || a.full_name.localeCompare(b.full_name));
 }

@@ -155,3 +155,10 @@ export function allowedQuickActions(perms: SectionPermissions, isAdminRole: bool
 export function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 }
+
+/** Query keys that show staff_time_settings; the member editor and Timesheets settings both invalidate all of them. */
+export const TIME_SETTING_QUERY_KEYS = [["timesheet-settings"], ["staff-time-setting"], ["timesheet-detail"], ["timesheet-overview"], ["timesheet-pay-basis"]] as const;
+export function invalidateTimeSettings(qc: { invalidateQueries: (f: { queryKey: readonly unknown[] }) => unknown } | null | undefined) {
+  if (!qc) return;
+  TIME_SETTING_QUERY_KEYS.forEach(queryKey => void qc.invalidateQueries({ queryKey }));
+}

@@ -21,6 +21,7 @@ import {
 import {
   accessGroups, sectionInfo, canHaveClock, timeSettingWrite, payFromSetting, missingRate, withClockShortcut, parseContractNumber, CURRENCIES, ROUNDING_CHOICES, type TimeSetting, type PayEdit, type PayBasis, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
   buildPermissionRows, allowedQuickActions, isValidEmail, type PermField,
+  invalidateTimeSettings,
 } from "./memberAccess";
 import { ALL_QUICK_ACTIONS } from "./teamConstants";
 import { cn } from "@/lib/utils";
@@ -128,7 +129,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     if (error) throw error;
     const { staff_id: _id, ...saved } = row;
     setTimeSetting(saved); setPayEdited(false);
-    void queryClient?.invalidateQueries({ queryKey: ["timesheet-settings"] });
+    invalidateTimeSettings(queryClient);
   }
   const contractValues = () => ({
     contracted_days_per_week: parseContractNumber(contractDays),

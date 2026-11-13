@@ -44,7 +44,7 @@ function show() {
 it("settings only offer logged-in non-archived people with staff role AND staff level", async () => {
   show();
   await screen.findByText("Eligible staff");
-  expect(screen.getAllByRole("combobox")).toHaveLength(2);
+  expect(screen.getAllByRole("combobox")).toHaveLength(3);
   for (const p of people.filter(p => p.id !== "staff")) expect(screen.queryByText(p.full_name)).not.toBeInTheDocument();
 });
 it("shows the database rejection message without claiming a save succeeded", async () => {
