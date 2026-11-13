@@ -1,0 +1,85 @@
+import './requests.css';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Camera, Grid2X2, ClipboardList, Truck, MapPin, Package, X, ChevronDown } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useNavigation } from '@/contexts/NavigationContext';
+import { useScopedProperties } from '@/hooks/useScopedProperties';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { type Order } from '@/components/orders/OrderDetailModal';
+import { RequestScreen, RequestEditSheet } from './RequestForms';
+import { addedQuantity, byOrder, canChangeRequest, displayDelivery, type HouseRequest, type RequestLibraryItem } from './logic';
+import { REQUEST_ORDER_COLUMNS, useHouseRequests, useRequestLibrary } from './useHouseRequests';
+
+const categoryLabels: Record<string, [string,string]> = {food:['Food & Drink','Comida y bebida'],cleaning:['Cleaning','Limpieza'],supplies:['Supplies','Suministros'],personal:['Personal Care','Cuidado personal'],laundry:['Laundry','Lavandería'],tech:['Tech & Electronics','Tecnología'],other:['Other','Otro']};
+export type RequestView = 'home'|'request'|'library'|'list'|'way';
+export function RequestThumbnail({ row, library, onClick }: {row:HouseRequest;library:RequestLibraryItem[];onClick?:()=>void}) {
+  const url = row.photo_url ?? library.find(i=>i.id===row.library_item_id)?.image_url;
+  const image = url ? <img src={url} alt={row.name} className="h-16 w-16 object-cover rounded-lg"/> : <Package className="h-8 w-8 text-muted-foreground"/>;
+  return onClick && url ? <Button variant="ghost" size="icon" className="h-16 w-16 shrink-0" onClick={onClick} aria-label={row.name}>{image}</Button> : <div className="h-16 w-16 shrink-0 flex items-center justify-center bg-muted rounded-lg">{image}</div>;
+}
+export function RequesterOrders({ management = false, onExit }: { management?: boolean; onExit?:()=>void }) {
+  const { userId } = usePermissions(); const { language } = useLanguage(); const es=language==='es';
+  const {properties,loading:housesLoading}=useScopedProperties(); const [params,setParams]=useSearchParams();
+  const {registerBackHandler,activePropertyId,setActivePropertyId}=useNavigation();
+  const [chosen,setChosen]=useState(()=>activePropertyId ?? params.get('house') ?? (userId ? localStorage.getItem(`request-house:${userId}`) : null));
+  const house=properties.find(p=>p.id===chosen) ?? properties[0];
+  const initial = params.get('view');
+  const [view,setView]=useState<RequestView>(initial==='request'||initial==='library'||initial==='list'||initial==='way' ? initial : params.has('order') ? 'way' : management ? 'request' : 'home');
+  const [picker,setPicker]=useState(false); const [search,setSearch]=useState(''); const [category,setCategory]=useState('');
+  const [editing,setEditing]=useState<HouseRequest|null>(null); const [adding,setAdding]=useState<RequestLibraryItem|null>(null);
+  const [removing,setRemoving]=useState<HouseRequest|null>(null); const [busy,setBusy]=useState(false);
+  const data=useHouseRequests(house?.id ?? null); const library=useRequestLibrary(userId); const items=library.data ?? [];
+  useEffect(()=>{if(activePropertyId)setActivePropertyId(null);},[]);
+  useEffect(()=>{if(house && userId){localStorage.setItem(`request-house:${userId}`,house.id);}},[house?.id,userId]);
+  useEffect(()=>{const h=params.get('house');if(h)setChosen(h); const v=params.get('view'); if(v==='request'||v==='library'||v==='list'||v==='way')setView(v); else if(params.has('order'))setView('way');},[params]);
+  const go=(v:RequestView)=>{setView(v); const q=new URLSearchParams(params);q.delete('order');q.set('view',v);setParams(q,{replace:true});};
+  useEffect(()=>{registerBackHandler(()=>{if(adding||editing||removing||picker){setAdding(null);setEditing(null);setRemoving(null);setPicker(false);return true;}if(view!=='home'){if(management)onExit?.();else go('home');return true;}return false;});return()=>registerBackHandler(null);},[view,adding,editing,removing,picker,registerBackHandler]);
+  const orderIds=[...new Set(data.rows.map(r=>r.order_id).filter((id):id is string=>!!id))];
+  const orders=useQuery({queryKey:['request-orders',userId,house?.id,orderIds],enabled:!!house && !!orderIds.length,queryFn:async()=>{
+    const {data:rows,error}=await supabase.from('orders').select(REQUEST_ORDER_COLUMNS).in('id',orderIds).limit(orderIds.length);if(error)throw error;return rows as unknown as Order[];
+  }});
+  // An order deep link resolves its house through the caller's access, not the previous house choice.
+  useEffect(()=>{const id=params.get('order');if(!id)return;let alive=true; supabase.from('orders').select('property_id').eq('id',id).maybeSingle().then(({data:row})=>{if(alive&&row?.property_id)setChosen(row.property_id);});return()=>{alive=false;};},[params.get('order')]);
+  const receive=async(ids:string[])=>{if(busy)return;setBusy(true);try{const{data:count,error}=await supabase.rpc('confirm_items_received',{_ids:ids});if(error || !count)throw error ?? new Error('Nothing confirmed');await data.refresh();toast.success(es?'Recibido':'Received');}catch{toast.error(es?'No se pudo confirmar. Vuelve a intentarlo.':'Could not confirm. Please try again.');}finally{setBusy(false);}};
+  const remove=async()=>{if(!removing||!canChangeRequest(removing,userId)||busy)return;setBusy(true);try{const{data:row,error}=await supabase.from('shopping_list_items').delete().eq('id',removing.id).eq('created_by',userId).eq('status','requested').select('id').single();if(error||!row)throw error;await data.refresh();setRemoving(null);}catch{toast.error(es?'No se pudo quitar. Vuelve a intentarlo.':'Could not remove. Please try again.');}finally{setBusy(false);}};
+  const labels={home:es?'Pedidos':'Orders',request:es?'Pedir':'Request',library:es?'Biblioteca':'Library',list:es?'Mi lista':'My list',way:es?'En camino':'On the way'};
+  if(housesLoading)return <p className="p-5">{es?'Cargando…':'Loading…'}</p>;
+  if(!house||!userId)return <p className="p-5 text-muted-foreground">{es?'Aún no tienes una casa asignada.':'No house is assigned to you yet.'}</p>;
+  const list=data.rows.filter(r=>r.status==='requested');
+  const titles=[['request',Camera,'text-gold bg-gold/10',es?'Haz una foto de lo que necesitas':'Take a photo of what you need'],['library',Grid2X2,'text-status-done bg-status-done/10',es?'Elige de la lista':'Pick it from the list'],['list',ClipboardList,'request-amber',es?'Revisa lo que añadiste':'Check what you added'],['way',Truck,'request-blue',es?'Mira lo que llega':'See what is arriving']] as const;
+  return <div className="mx-auto w-full max-w-2xl px-4 py-5 pb-28 text-base min-w-0">
+    <header className="flex items-center justify-between gap-2 mb-6"><div className="flex items-center min-w-0 gap-2">{view!=='home'&&<Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label={es?'Volver':'Back'} onClick={()=>management?onExit?.():go('home')}><ArrowLeft/></Button>}<h1 className="font-display text-3xl break-words">{labels[view]}</h1></div>
+      {properties.length>1 ? <Button variant="outline" className="min-h-11 h-auto whitespace-normal max-w-[55%] text-base" onClick={()=>setPicker(true)}><MapPin className="shrink-0"/><span className="break-words">{house.name}</span><ChevronDown className="shrink-0"/></Button> : <span className="text-gold flex items-center gap-2 max-w-[50%] break-words"><MapPin className="shrink-0" size={18}/>{house.name}</span>}
+    </header>
+    {view==='home' ? <div className="grid grid-cols-2 gap-3">{titles.map(([key,Icon,color,subtitle])=><Button key={key} variant="outline" className={`aspect-square h-auto w-full min-w-0 p-3 flex-col gap-3 whitespace-normal justify-center ${color}`} onClick={()=>go(key)}><Icon className="!h-10 !w-10 shrink-0"/><span className="text-xl font-display">{labels[key]}{(key==='list'||key==='way')&&<span className="ml-2 rounded-full bg-background px-2 text-base">{key==='list'?data.counts.requested:data.counts.ordered}</span>}</span><span className="text-sm font-normal leading-snug">{subtitle}</span></Button>)}</div> : null}
+    {view==='request'&&<RequestScreen key={house.id} houseId={house.id} userId={userId} es={es} onSent={()=>{void data.refresh();management?onExit?.():go('home');}}/>}
+    {data.isError && view!=='request' && <div role="alert" className="my-4"><p>{es?'No se pudo cargar la lista.':'Could not load the list.'}</p><Button variant="outline" className="min-h-11" onClick={()=>{void data.refetch();}}>{es?'Reintentar':'Retry'}</Button></div>}
+    {view==='library'&&<>
+      <Input aria-label={es?'Buscar en biblioteca':'Search library'} placeholder={es?'Buscar':'Search'} className="text-base h-12" value={search} onChange={e=>setSearch(e.target.value)}/>
+      <div className="flex flex-wrap gap-2 my-4">{['',...new Set(items.map(i=>i.category))].map(c=><Button key={c} variant={category===c?'default':'outline'} className="min-h-11 h-auto whitespace-normal text-base" onClick={()=>setCategory(c)}>{c ? categoryLabels[c]?.[es?1:0] ?? c : (es?'Todo':'All')}</Button>)}</div>
+      {library.isError&&<Button variant="outline" onClick={()=>{void library.refetch();}}>{es?'Reintentar':'Retry'}</Button>}
+      <div className="grid grid-cols-2 gap-3">{items.filter(i=>(!category||i.category===category)&&i.name.toLowerCase().includes(search.toLowerCase())).map(i=>{const n=addedQuantity(data.rows,house.id,i.id);return <article key={i.id} className="border border-border rounded-lg overflow-hidden min-w-0 bg-card">
+        {i.image_url?<img src={i.image_url} alt={i.name} className="aspect-square w-full object-cover"/>:<div className="aspect-square flex items-center justify-center bg-muted"><Package className="h-12 w-12 text-muted-foreground"/></div>}
+        <div className="p-3"><h2 className="break-words">{i.name}</h2>{i.size&&<p className="text-sm text-muted-foreground break-words">{i.size}</p>}{n>0&&<p className="text-status-done bg-status-done/10 rounded-full px-2 py-1 text-sm mt-2 inline-block">{es?`${n} añadidos`:`${n} added`}</p>}<Button className="w-full min-h-12 mt-3" aria-label={`${es?'Añadir':'Add'} ${i.name}`} onClick={()=>setAdding(i)}>+</Button></div></article>;})}</div>
+      <div className="fixed bottom-20 left-4 right-4 z-20 mx-auto max-w-xl"><Button className="w-full min-h-14 text-base" onClick={()=>go('list')}>{es?'Ver Mi lista':'View My list'} ({data.counts.requested})</Button></div>
+    </>}
+    {view==='list'&&<><div className="space-y-3">{!data.isLoading&&!list.length&&<p className="text-muted-foreground">{es?'No hay solicitudes pendientes en esta casa.':'No requests waiting for this house.'}</p>}{list.map(r=><article key={r.id} className="flex gap-3 border-b border-border py-3 min-w-0">
+      <RequestThumbnail row={r} library={items}/><div className="flex-1 min-w-0">{canChangeRequest(r,userId)?<Button variant="ghost" className="p-0 h-auto min-h-11 justify-start whitespace-normal text-left text-base w-full" onClick={()=>setEditing(r)}>{r.name}</Button>:<h2 className="break-words">{r.name}</h2>}<p>× {r.quantity||'1'}</p>{r.notes&&<p className="text-muted-foreground break-words">{r.notes}</p>}{r.urgent&&<span className="request-urgent">{es?'Urgente':'Urgent'}</span>}<p className="text-sm text-muted-foreground">{r.created_by===userId?(es?'Añadido por ti':'Added by you'):data.names.get(r.created_by??'') || (es?'Compañero/a':'Colleague')}</p></div>
+      {canChangeRequest(r,userId)&&<Button variant="ghost" size="icon" className="w-11 h-11 shrink-0" aria-label={`${es?'Quitar':'Remove'} ${r.name}`} onClick={()=>setRemoving(r)}><X/></Button>}
+    </article>)}</div><p className="text-muted-foreground text-sm mt-6">{es?'La PA hará el pedido. Puedes quitar lo que añadiste. Aparecerá en En camino cuando esté pedido.':'The PA will order these. You can remove the ones you added. You will see them under On the way once they are ordered.'}</p></>}
+    {view==='way'&&<div className="space-y-6">{!data.isLoading&&!byOrder(data.rows).length&&<p className="text-muted-foreground">{es?'Todavía no hay nada en camino.':'Nothing is on the way yet.'}</p>}{byOrder(data.rows).map(([id,rows])=>{const order=orders.data?.find(o=>o.id===id); const ordered=rows.find(r=>r.ordered_at)?.ordered_at;
+      return <section key={id} className="space-y-3 border-b border-border pb-5"><h2 className="font-display text-xl">{order?.expected_delivery ? `${es?'Pedido':'Ordered'} ${ordered?new Date(ordered).toLocaleDateString(es?'es-ES':'en-US',{day:'numeric',month:'short'}):''}, ${es?'llega':'arriving'} ${displayDelivery(order.expected_delivery,es)}` : order?.status==='not_placed' ? (es?'Se está pidiendo':'Being ordered'):(es?'Pedido':'Ordered')}</h2>{order?.title&&<p className="text-muted-foreground break-words">{order.title}</p>}{rows.map(r=><div key={r.id} className="flex flex-wrap items-center gap-3"><RequestThumbnail row={r} library={items}/><span className="flex-1 min-w-0 break-words">{r.name} × {r.quantity||'1'}</span><Button variant="outline" className="min-h-12 text-base" disabled={busy} onClick={()=>receive([r.id])}>{es?'Lo recibí':'Got it'}</Button></div>)}<Button className="min-h-14 w-full text-base" disabled={busy} onClick={()=>receive(rows.map(r=>r.id))}>{es?'Recibí todo':'Got everything'}</Button></section>;})}
+      {data.rows.some(r=>r.status==='received')&&<section className="opacity-60"><h2 className="font-display text-xl mb-3">{es?'Llegó esta semana':'Arrived this week'}</h2>{data.rows.filter(r=>r.status==='received').map(r=><p key={r.id} className="py-2 break-words">✓ {r.name} × {r.quantity||'1'}</p>)}</section>}
+    </div>}
+    {(adding||editing)&&<RequestEditSheet key={adding?.id??editing?.id} item={adding??undefined} row={editing??undefined} houseId={house.id} userId={userId} es={es} onClose={()=>{setAdding(null);setEditing(null);}} onSaved={()=>{void data.refresh();}}/>}
+    <Dialog open={picker} onOpenChange={setPicker}><DialogContent className="request-sheet h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col"><DialogHeader><DialogTitle>{es?'Elige una casa':'Choose a house'}</DialogTitle></DialogHeader><div className="flex-1 overflow-y-auto space-y-3">{properties.map(p=><Button key={p.id} variant={p.id===house.id?'default':'outline'} className="w-full min-h-16 h-auto whitespace-normal text-lg" onClick={()=>{setChosen(p.id);setAdding(null);setEditing(null);setRemoving(null);setPicker(false);const q=new URLSearchParams(params);q.delete('order');q.set('house',p.id);setParams(q,{replace:true});}}>{p.name}</Button>)}</div></DialogContent></Dialog>
+    <Dialog open={!!removing} onOpenChange={open=>{if(!open&&!busy)setRemoving(null);}}><DialogContent className="request-sheet h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col"><DialogHeader><DialogTitle>{es?'¿Quitar esta solicitud?':'Remove this request?'}</DialogTitle></DialogHeader><p className="break-words">{removing?.name}</p><div className="mt-auto flex gap-3"><Button variant="outline" className="min-h-12 flex-1" onClick={()=>setRemoving(null)}>{es?'Cancelar':'Cancel'}</Button><Button variant="destructive" className="min-h-12 flex-1" disabled={busy} onClick={remove}>{es?'Quitar':'Remove'}</Button></div></DialogContent></Dialog>
+  </div>;
+}

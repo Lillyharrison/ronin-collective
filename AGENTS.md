@@ -32,3 +32,5 @@
 - Section access has no role fallback: non-admins need explicit user_section_permissions rows (dashboard/profile are baselines) and new people are created with no rows, houses or shortcuts; editor rules live in src/components/team/memberAccess.ts so they stay testable.
 - Protected edge functions authenticate through supabase/functions/_shared/internalAuth.ts: internal callers present x-internal-token (private_config) or the service-role Bearer; user-facing ones require a signed-in JWT, so no function relies on hard-coded secrets.
 - Car-wash request inserts must bind requested_by to the caller and check screen, vehicle and assigned-house access; direct shared Gantt reads/inserts are admin-only because public sharing uses token-scoped edge functions.
+
+- House requests use shopping_list_items and the owner create_order_from_requests/confirm_items_received RPCs; requester screens are separate from legacy management Orders, preserving house-scoped persistence and plain delivery dates.

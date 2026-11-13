@@ -17,7 +17,17 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { filterOrdersByHouse, orderCounts, useArrivalHouseFilter, HouseFilterChip } from "@/components/orders/houseFilter";
 import { PropertyShoppingLists } from "@/components/orders/PropertyShoppingLists";
 
-type MainTab = "pending" | "delivered" | "shopping" | "library";
+import { RequesterOrders } from '@/components/orders/requests/RequesterOrders';
+import { RequestsQueue } from '@/components/orders/requests/RequestsQueue';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+
+export function OrdersSection() {
+  const { isAdmin, isMasterAdmin, isManager } = usePermissions();
+  return isAdmin || isMasterAdmin || isManager ? <ManagementOrders /> : <RequesterOrders />;
+}
+
+type MainTab = "pending" | "delivered" | "shopping" | "library" | "requests";
 
 /* ─── Status badge ───────────────────────────────────────────────────────────── */
 function StatusBadge({ status }: { status: string }) {
@@ -464,10 +474,10 @@ function DeliveredTile({ order, onOpen }: { order: Order; onOpen: (o: Order) => 
 }
 
 /* ─── Main section ───────────────────────────────────────────────────────────── */
-export function OrdersSection() {
+function ManagementOrders() {
   const { language } = useLanguage();
   const isL = language === "es";
-  const { isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
+  const { isAdmin, isMasterAdmin, isManager, canEdit, userId } = usePermissions();
   const canCreateOrder = isAdmin || isMasterAdmin || isManager || canEdit("orders");
 
   const PAGE_SIZE = 50;
@@ -479,6 +489,12 @@ export function OrdersSection() {
   const [creating, setCreating]     = useState(false);
   const [activeTab, setActiveTab]   = useLocalStorage<MainTab>("orders-active-tab", "pending");
   const [params, setParams] = useSearchParams();
+  const [requesting, setRequesting] = useState(params.get('view') === 'request');
+  const requestCount = useQuery({queryKey:['request-counts', userId, 'management-header'], queryFn: async()=>{
+    const {count,error}=await supabase.from('shopping_list_items').select('id',{count:'exact',head:true}).eq('status','requested');
+    if(error)throw error;return count??0;
+  }, refetchInterval:60000});
+  useEffect(()=>{if(params.get('view')==='requests')setActiveTab('requests');if(params.get('view')==='request')setRequesting(true);},[params.get('view')]);
   const { registerBackHandler, activePropertyId, setActivePropertyId } = useNavigation();
   const [houseId, setHouseId] = useArrivalHouseFilter(activePropertyId, setActivePropertyId);
   const [houseName, setHouseName] = useState<string>("");
@@ -520,7 +536,7 @@ export function OrdersSection() {
   }, [modalOrder, creating, params, registerBackHandler]);
 
   const selectTab = (tab: MainTab) => {
-    const next = new URLSearchParams(params); next.delete("list"); next.delete("order"); setParams(next);
+    const next = new URLSearchParams(params); next.delete("list"); next.delete("order"); next.delete("view"); setParams(next);
     setModalOrder(null); setActiveTab(tab);
   };
 
@@ -570,6 +586,7 @@ export function OrdersSection() {
 
   const displayed = activeTab === "pending" ? pending : delivered;
 
+  if (requesting) return <RequesterOrders management onExit={()=>{setRequesting(false);const q=new URLSearchParams(params);q.delete('view');setParams(q,{replace:true});}} />;
   return (
     <div className="animate-fade-in pb-6">
       {/* Header */}
@@ -597,6 +614,11 @@ export function OrdersSection() {
       {houseId && (activeTab === "pending" || activeTab === "delivered") && (
         <HouseFilterChip houseName={houseName || "…"} isES={isL} onClear={() => setHouseId(null)} />
       )}
+
+      <div className="px-4 pt-3 flex flex-wrap gap-2">
+        <Button variant={activeTab==='requests'?'default':'outline'} className="min-h-11" onClick={()=>selectTab('requests')}>{isL?'Solicitudes':'Requests'} ({requestCount.data??0})</Button>
+        <Button variant="outline" className="min-h-11" onClick={()=>setRequesting(true)}>{isL?'Pedir algo':'Request something'}</Button>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1 px-4 py-3 border-b border-border">
@@ -648,6 +670,8 @@ export function OrdersSection() {
           {isL ? "Biblioteca" : "Library"}
         </button>
       </div>
+
+      {activeTab==='requests' && <RequestsQueue onRequest={()=>setRequesting(true)} onCreated={id=>{const q=new URLSearchParams(params);q.delete('view');q.set('order',id);setParams(q);setActiveTab('pending');void fetchOrders(0);}} />}
 
       {/* Shopping list */}
       {activeTab === "shopping" && <PropertyShoppingLists onSent={id => {

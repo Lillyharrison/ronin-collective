@@ -60,6 +60,7 @@ export function AmazonCartView({ lines, lib, house, onMarkPlaced }: View) {
             <h3 className="font-semibold mb-1">{es ? "No incluidos (sin código de Amazon)" : "Not included (no Amazon code)"} ({other.length})</h3>
             <ul className="space-y-1">{other.map((o, i) => <li key={i} className="flex justify-between gap-2 items-center">
               <span className="min-w-0">{o.name}{o.quantity ? ` × ${o.quantity}` : ""}</span>
+              {o.photo && <a href={o.photo} target="_blank" rel="noopener noreferrer" className="min-h-11 shrink-0 inline-flex items-center text-primary underline">{es ? "Foto" : "Photo"}</a>}
               {o.url && <a href={o.url} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-1 text-primary underline min-h-11">{es ? "Enlace" : "Link"}<ExternalLink size={14} /></a>}
             </li>)}</ul>
           </section>}

@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+import { orderNotificationPath } from "@/components/orders/requests/logic";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
@@ -38,6 +40,7 @@ interface FeedEvent {
 }
 
 interface DashNotification {
+  property_id?: string | null;
   actor_id?: string | null;
   receipt_sent_at?: string | null;
   id: string;
@@ -63,6 +66,7 @@ const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
   timesheet: "staff-schedule",
   maintenance_issue: "maintenance",
   task:              "tasks",
+  order_request: "orders",
   order:             "orders",
   calendar_event:    "calendar",
   message:           "messages",
@@ -88,6 +92,7 @@ const ALL_QUICK_ACTIONS_DASHBOARD = [
   { key: "alerts",        labelKey: "alerts" as const,           labelEs: "Alertas",                 icon: <Bell size={26} />,          section: "alerts" as const },
   { key: "checklists",    labelKey: "checklists" as const,       labelEs: "Listas",                  icon: <ClipboardList size={26} />, section: "checklists" as const },
   { key: "manuals",       labelKey: "manuals" as const,          labelEs: "Manuales",                icon: <BookOpen size={26} />,      section: "manuals" as const },
+  { key: "requestItem", labelKey: "orders" as const, labelEs: "Pedir algo", icon: <ShoppingBag size={26}/>, section: "orders" as const },
   { key: "orders",        labelKey: "orders" as const,           labelEs: "Pedidos",                 icon: <ShoppingBag size={26} />,   section: "orders" as const },
   { key: "inventory",     labelKey: "inventory" as const,        labelEs: "Inventario",              icon: <Package size={26} />,       section: "inventory" as const },
   { key: "laundry",       labelKey: "laundry" as const,          labelEs: "Lavandería",              icon: <Shirt size={26} />,         section: "laundry" as const },
@@ -169,9 +174,10 @@ function eventDotColor(eventType: string): string {
 }
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingTimesheetStaffId, setClockSheetRequested } = useNavigation();
-  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, userId, fullName, canSee, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
   const { properties: scopedProperties } = useScopedProperties();
   const [issueAssignees, setIssueAssignees] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
   const { retry: retryPermissions } = usePermissionsControl();
@@ -207,7 +213,7 @@ export function Dashboard() {
     if (!userId || permLoading) return;
     const { data } = await supabase
       .from("notifications")
-      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, actor_id, receipt_sent_at, property:properties(name)")
+      .select("id, title, body, type, created_at, action_url, entity_id, entity_type, property_id, user_id, actor_id, receipt_sent_at, property:properties(name)")
       .eq("user_id", userId)
       .not("acknowledged_by", "cs", `{${userId}}`)
       .order("created_at", { ascending: false })
@@ -241,7 +247,7 @@ export function Dashboard() {
       // 3. Dashboard notifications (unread)
       supabase
         .from("notifications")
-        .select("id, title, body, type, created_at, action_url, entity_id, entity_type, user_id, actor_id, receipt_sent_at, property:properties(name)")
+        .select("id, title, body, type, created_at, action_url, entity_id, entity_type, property_id, user_id, actor_id, receipt_sent_at, property:properties(name)")
         .eq("user_id", userId)
         .not("acknowledged_by", "cs", `{${userId}}`)
         .order("created_at", { ascending: false })
@@ -395,6 +401,8 @@ export function Dashboard() {
     if (n.user_id === userId && !(n as { is_read?: boolean }).is_read) {
       void supabase.from("notifications").update({ is_read: true }).eq("id", n.id).then(({ error }) => { if (error) console.error("Mark read failed", error); });
     }
+    const orderPath = orderNotificationPath(n.entity_type,n.entity_id,isAdmin || isMasterAdmin || isManager,n.property_id);
+    if (orderPath) { setActiveSection('orders'); navigate(orderPath); return; }
     if (openDetails(n)) return;
     const targetSection: ActiveSection | undefined =
       (n.entity_type ? SECTION_DEEP_LINK[n.entity_type] : undefined) ??
@@ -761,7 +769,7 @@ export function Dashboard() {
             <button
               key={action.key}
               onClick={() => {
-                if (action.key === "reportIssue") {
+                if (action.key === "requestItem") { setActiveSection("orders"); navigate("/orders?view=request"); } else if (action.key === "reportIssue") {
                   setReportIssueOpen(true);
                 } else {
                   setActiveSection(action.section);
@@ -771,7 +779,7 @@ export function Dashboard() {
             >
               <span className="text-gold">{action.icon}</span>
               <span className="text-xs font-medium text-foreground text-center leading-tight">
-                {language === "es" ? action.labelEs : t(action.labelKey)}
+                {language === "es" ? action.labelEs : action.key === "requestItem" ? "Request something" : t(action.labelKey)}
               </span>
             </button>
           ))}

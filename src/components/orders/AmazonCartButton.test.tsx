@@ -8,6 +8,12 @@ const lib = new Map([["a", { asin: "B000000001" }], ["b", { asin: null, website_
 const lines = [{ library_item_id: "a", name: "Paper towels", quantity: "3" }, { library_item_id: "b", name: "Olive oil" }];
 
 describe("Send to Amazon cart", () => {
+  it("offers photo-only request links outside Amazon", () => {
+    render(<AmazonCartView lines={[{name:"Photo request",photo_url:"https://example.com/photo.jpg"}]} lib={new Map()} house={{name:"Rockingham",address:"1 Main St"}} />);
+    fireEvent.click(screen.getByText("Send to Amazon cart"));
+    expect(screen.getByRole("link",{name:"Photo"}).getAttribute("href")).toBe("https://example.com/photo.jpg");
+    expect(screen.queryByText("Open Amazon with these items")).toBeNull();
+  });
   it("button shows how many items can go", () => {
     render(<AmazonCartView lines={lines} lib={lib} house={{ name: "Rockingham", address: "1 Main St" }} />);
     expect(screen.getByText("1 of 2 items have an Amazon code")).toBeTruthy();

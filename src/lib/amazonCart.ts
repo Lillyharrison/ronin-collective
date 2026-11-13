@@ -60,18 +60,18 @@ export function buildCartLinks(lines: CartLine[]): CartLink[] {
   return out;
 }
 
-export interface ListLine { library_item_id?: string | null; name: string; quantity?: string | null }
+export interface ListLine { library_item_id?: string | null; name: string; quantity?: string | null; photo_url?: string | null }
 export interface LibInfo { asin?: string | null; website_url?: string | null; default_quantity?: string | null }
 
 /** Split a house's list into Amazon lines and items without a code (with their own link, if any). */
 export function splitForAmazon(lines: ListLine[], lib: Map<string, LibInfo>) {
   const amazon: CartLine[] = [];
-  const other: { name: string; quantity: string | null; url: string | null }[] = [];
+  const other: { name: string; quantity: string | null; url: string | null; photo?: string | null }[] = [];
   for (const l of lines) {
     const info = l.library_item_id ? lib.get(l.library_item_id) : undefined;
     const az = info ? resolveAmazon(info) : null;
     if (az) amazon.push({ name: l.name, asin: az.asin, site: az.site, quantity: cartQuantity(l.quantity, info?.default_quantity) });
-    else other.push({ name: l.name, quantity: l.quantity ?? info?.default_quantity ?? null, url: info?.website_url ?? null });
+    else other.push({ name: l.name, quantity: l.quantity ?? info?.default_quantity ?? null, url: info?.website_url ?? null, ...(l.photo_url ? { photo: l.photo_url } : {}) });
   }
   return { amazon, other };
 }

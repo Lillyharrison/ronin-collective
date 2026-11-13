@@ -108,6 +108,7 @@ export const ALL_QUICK_ACTIONS: { key: string; label: string; labelEs: string; i
   { key: "alerts",        label: "Alerts",              labelEs: "Alertas",                 icon: "🔔" },
   { key: "checklists",    label: "Checklists",          labelEs: "Listas",                  icon: "📋" },
   { key: "manuals",       label: "Manuals",             labelEs: "Manuales",                icon: "📖" },
+  { key: "requestItem", label: "Request something", labelEs: "Pedir algo", icon: "📷" },
   { key: "orders",        label: "Orders",              labelEs: "Pedidos",                 icon: "🛍️" },
   { key: "inventory",     label: "Inventory",           labelEs: "Inventario",              icon: "📦" },
   { key: "laundry",       label: "Laundry",             labelEs: "Lavandería",              icon: "🧺" },
@@ -167,7 +168,7 @@ export const QUICK_ACTION_SECTION: Record<string, string> = {
   dashboard: "dashboard", property: "property", messages: "messages", maintenance: "maintenance",
   reportIssue: "maintenance", profile: "profile", calendar: "calendar", timeline: "timeline",
   staffSchedule: "staff-schedule", carWash: "car-wash", travel: "travel", tasks: "tasks",
-  alerts: "alerts", checklists: "checklists", manuals: "manuals", orders: "orders",
+  requestItem: "orders", alerts: "alerts", checklists: "checklists", manuals: "manuals", orders: "orders",
   inventory: "inventory", laundry: "laundry", meetTeam: "meet-team", vendors: "contacts",
   rules: "rules", masterImport: "master-import", memory: "memory",
 };

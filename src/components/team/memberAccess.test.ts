@@ -11,7 +11,7 @@ describe("a new person starts with nothing", () => {
   it("writes no access rows, no shortcuts and no houses", () => {
     expect(buildPermissionRows({}).upserts).toEqual([]);
     expect(switchesOn({})).toBe(0);
-    expect(allowedQuickActions({}, false).map(a => a.key).sort()).toEqual(["dashboard", "profile"]);
+    expect(allowedQuickActions({}, false).map(a => a.key).sort()).toEqual(["dashboard", "profile", "requestItem"]);
   });
   it("sees only home and profile", () => {
     const perms = p("staff", null);

@@ -1,0 +1,6 @@
+/* Existing semantic tokens: amber requests, blue arrivals, accessible sheet controls. */
+.request-amber { color: hsl(var(--timesheet-review-text)); background: hsl(var(--timesheet-review-tint)); }
+.request-blue { color: hsl(var(--timesheet-blue-text)); background: hsl(var(--timesheet-blue-tint)); }
+.request-urgent { color: hsl(var(--timesheet-review-text)); }
+.request-sheet { z-index: 100; background: hsl(var(--background)); }
+.request-sheet > button:last-child { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }

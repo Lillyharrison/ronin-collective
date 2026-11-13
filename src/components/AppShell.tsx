@@ -85,7 +85,7 @@ const sectionTitles: Record<string, string> = {
 
 function ActiveSection() {
   const { activeSection, setActiveSection } = useNavigation();
-  const { canSee, loading: permLoading, isMasterAdmin } = usePermissions();
+  const { canSee, loading: permLoading, isMasterAdmin, isAdmin, isManager } = usePermissions();
 
   if (permLoading) return <SectionSkeleton />;
 
@@ -110,7 +110,7 @@ function ActiveSection() {
     case "vendors":       return gated("vendors",       <VendorsSection />);
     case "inventory":     return gated("inventory",     <InventorySection />);
     case "laundry":       return gated("laundry",       <LaundrySection />);
-    case "orders":        return gated("orders",        <OrdersSection />);
+    case "orders":        return !isAdmin && !isMasterAdmin && !isManager ? <OrdersSection /> : gated("orders", <OrdersSection />);
     case "meet-team":     return gated("meet-team",     <MeetTeamSection />);
     case "travel":        return gated("travel",        <TravelSection />);
     case "calendar":      return gated("calendar",      <CalendarSection />);

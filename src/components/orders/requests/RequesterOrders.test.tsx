@@ -1,0 +1,24 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+const mocks=vi.hoisted(()=>({es:false,properties:[{id:'h',name:'Rockingham'}],rows:[] as any[],rpc:vi.fn(),refresh:vi.fn(),insert:vi.fn(),single:vi.fn()}));
+vi.mock('@/hooks/usePermissions',()=>({usePermissions:()=>({userId:'me'})}));
+vi.mock('@/contexts/LanguageContext',()=>({useLanguage:()=>({language:mocks.es?'es':'en'})}));
+vi.mock('@/hooks/useScopedProperties',()=>({useScopedProperties:()=>({properties:mocks.properties,loading:false})}));
+vi.mock('@/contexts/NavigationContext',()=>({useNavigation:()=>({registerBackHandler:()=>{},activePropertyId:null,setActivePropertyId:()=>{}})}));
+vi.mock('./useHouseRequests',()=>({REQUEST_ORDER_COLUMNS:'id',useHouseRequests:()=>({rows:mocks.rows,names:new Map([['colleague','Ana']]),counts:{requested:2,ordered:1},refresh:mocks.refresh}),useRequestLibrary:()=>({data:[{id:'soap',name:'Soap',category:'cleaning',size:'500 ml',image_url:null,default_quantity:'2'}]})}));
+vi.mock('@/integrations/supabase/client',()=>({supabase:{rpc:mocks.rpc,from:()=>({insert:mocks.insert,select:()=>({in:()=>({limit:async()=>({data:[{id:'o',status:'placed'}]})})})})}}));
+import { RequesterOrders } from './RequesterOrders';
+const row=(id:string,creator='me',extra:any={})=>({id,property_id:'h',name:id==='1'?'Soap':'Towels',category:'other',quantity:'2',notes:null,created_by:creator,library_item_id:'soap',photo_url:null,urgent:false,status:'requested',order_id:null,created_at:'2026-11-13T10:00:00Z',ordered_at:null,received_at:null,...extra});
+function mount(path='/orders'){return render(<MemoryRouter initialEntries={[path]}><QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><RequesterOrders/></QueryClientProvider></MemoryRouter>);}
+beforeEach(()=>{vi.clearAllMocks();localStorage.clear();mocks.es=false;mocks.properties=[{id:'h',name:'Rockingham'}];mocks.rows=[row('1'),row('2','colleague')];mocks.rpc.mockResolvedValue({data:1,error:null});mocks.insert.mockReturnValue({select:()=>({single:mocks.single})});mocks.single.mockResolvedValue({data:{id:'new'},error:null});});
+describe('requester screens',()=>{
+  it('single house label has no house picker and tiles show counts',()=>{mount();expect(screen.queryByRole('button',{name:/Rockingham/})).toBeNull();expect(screen.getByRole('button',{name:/My list 2/})).toBeTruthy();expect(screen.getByRole('button',{name:/On the way 1/})).toBeTruthy();});
+  it('multiple houses open large-button picker',()=>{mocks.properties.push({id:'h2',name:'Moreno'});mount();fireEvent.click(screen.getByRole('button',{name:/Rockingham/}));expect(screen.getByRole('button',{name:'Moreno'})).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Moreno'}));expect(localStorage.getItem('request-house:me')).toBe('h2');});
+  it('colleague rows remain visible, only own remove and edit are offered',()=>{mount('/orders?view=list');expect(screen.getByText('Ana')).toBeTruthy();expect(screen.getByRole('button',{name:'Remove Soap'})).toBeTruthy();expect(screen.queryByRole('button',{name:'Remove Towels'})).toBeNull();expect(screen.queryByRole('button',{name:'Towels'})).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Soap'}));expect(screen.getByRole('button',{name:'Save'})).toBeTruthy();});
+  it('library add persists selected quantity and shows added total',async()=>{mount('/orders?view=library');expect(screen.getByText('4 added')).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Add Soap'}));fireEvent.click(screen.getByLabelText('Increase quantity'));fireEvent.click(screen.getByRole('button',{name:'Add to my list'}));await waitFor(()=>expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({library_item_id:'soap',quantity:'3',property_id:'h'})));});
+  it('Got it calls owner receipt RPC with item id',async()=>{mocks.rows=[row('1','me',{status:'ordered',order_id:'o'})];mount('/orders?view=way');fireEvent.click(screen.getByRole('button',{name:'Got it'}));await waitFor(()=>expect(mocks.rpc).toHaveBeenCalledWith('confirm_items_received',{_ids:['1']}));expect(mocks.refresh).toHaveBeenCalled();});
+  it('Got everything sends every item in the group',async()=>{mocks.rows=[row('1','me',{status:'ordered',order_id:'o'}),row('2','colleague',{status:'ordered',order_id:'o'})];mount('/orders?view=way');fireEvent.click(screen.getByRole('button',{name:'Got everything'}));await waitFor(()=>expect(mocks.rpc).toHaveBeenCalledWith('confirm_items_received',{_ids:['1','2']}));});
+  it('Spanish requester navigation',()=>{mocks.es=true;mount();for(const label of ['Pedir','Biblioteca','Mi lista','En camino'])expect(screen.getByRole('button',{name:new RegExp(label)})).toBeTruthy();});
+});

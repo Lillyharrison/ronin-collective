@@ -6,6 +6,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { X, Bell, CheckCheck, Trash2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveSection } from "@/contexts/NavigationContext";
+import { orderNotificationPath } from "@/components/orders/requests/logic";
 import { useNavigate } from "react-router-dom";
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
@@ -26,6 +27,7 @@ interface Notification {
   action_url: string | null;
   entity_id: string | null;
   entity_type: string | null;
+  property_id?: string | null;
   property: { name: string } | null;
 }
 
@@ -49,6 +51,7 @@ const SECTION_DEEP_LINK: Partial<Record<string, ActiveSection>> = {
   maintenance_issue:   "maintenance",
   planned_maintenance: "maintenance",
   task:                "tasks",
+  order_request: "orders",
   order:               "orders",
   calendar_event:      "calendar",
   message:             "messages",
@@ -65,7 +68,7 @@ interface Props {
 export function NotificationsPanel({ open, onClose }: Props) {
   const { language } = useLanguage();
   const navigate = useNavigate();
-  const { userId, isMasterAdmin } = usePermissions();
+  const { userId, isMasterAdmin, isAdmin, isManager } = usePermissions();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId, setPendingTimesheetStaffId, setClockSheetRequested } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -90,7 +93,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
     // sent to other admins (RLS allows master_admin to read all, but we only want their own)
     const query = supabase
       .from("notifications")
-      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type, actor_id, receipt_sent_at, property:properties(name)")
+      .select("id, title, body, type, is_read, created_at, action_url, entity_id, entity_type, property_id, actor_id, receipt_sent_at, property:properties(name)")
       .eq("user_id", userId)
       .gte("created_at", sevenDaysAgo)
       .order("created_at", { ascending: false })
@@ -157,6 +160,8 @@ export function NotificationsPanel({ open, onClose }: Props) {
   };
 
   const handleNotificationClick = async (n: Notification) => {
+    const orderPath = orderNotificationPath(n.entity_type,n.entity_id,isAdmin || isMasterAdmin || isManager,n.property_id);
+    if (orderPath) { if (!n.is_read) markRead(n.id); onClose(); setActiveSection('orders'); navigate(orderPath); return; }
     if (isNotificationDetailType(n.entity_type)) {
       if (!n.is_read) markRead(n.id);
       openDetails(n);

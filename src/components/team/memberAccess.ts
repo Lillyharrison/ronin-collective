@@ -146,7 +146,7 @@ export function buildPermissionRows(perms: SectionPermissions) {
 /** Shortcuts this person's access allows (admins may use any). */
 export function allowedQuickActions(perms: SectionPermissions, isAdminRole: boolean) {
   return ALL_QUICK_ACTIONS.filter(qa => {
-    if (isAdminRole) return true;
+    if (isAdminRole || qa.key === "requestItem") return true;
     const section = QUICK_ACTION_SECTION[qa.key] ?? qa.key;
     return ALWAYS_ON_SECTIONS.includes(section) || perms[section]?.view === true;
   });

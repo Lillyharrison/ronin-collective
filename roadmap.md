@@ -113,3 +113,8 @@
 - [x] Hide archived people from team list, assignee pickers, chat pickers and birthdays; history names untouched.
 - [ ] Click-through as a signed-in admin not done (no preview session).
 - [x] Security step 1: lock down push/reminder/calendar-sync/listener/ronin-ai/extract/translate functions; delete vapid debug functions
+
+# Phone-first house requests
+- [x] Add requester Orders, photo requests, library, shared list and receipts; preserve management Orders.
+- [x] Add PA queue, single-house order creation, shortcut and notification routing; no database changes.
+- [x] Add regression tests and phone/desktop checks; 400 tests passed; signed-in queue read checked, requester layout checked with controlled data. Real camera/phone compression and live create/receive RPCs are unverified (would change real requests/orders).
