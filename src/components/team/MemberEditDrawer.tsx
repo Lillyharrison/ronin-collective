@@ -344,6 +344,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       if (error || errMsg) throw new Error(errMsg || error?.message || "Failed");
       toast.success(isEN ? "Password set — share it with them so they can sign in." : "Contraseña guardada.");
       setNewPwd("");
+      setPwdOpen(false);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to set password.");
     }
@@ -784,7 +785,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                   placeholder={isEN ? "Min. 8 characters" : "Mín. 8 caracteres"} className="text-base" />
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" className="h-11" onClick={() => { setPwdOpen(false); setNewPwd(""); }}>{isEN ? "Cancel" : "Cancelar"}</Button>
-                  <Button className="h-11" disabled={settingPwd || newPwd.length < 8} onClick={async () => { await handleSetPassword(); setPwdOpen(false); }}>
+                  <Button className="h-11" disabled={settingPwd || newPwd.length < 8} onClick={() => void handleSetPassword()}>
                     {settingPwd ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Set password" : "Guardar")}
                   </Button>
                 </div>

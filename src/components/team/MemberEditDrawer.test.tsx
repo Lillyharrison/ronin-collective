@@ -19,6 +19,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("./LoginEmailRow", () => ({ LoginEmailRow: () => null, canChangeLoginEmail: () => false }));
 
 import { MemberEditDrawer } from "./MemberEditDrawer";
+import { toast } from "sonner";
 
 const draft = { id: "d1", full_name: "Muaz", job_title: null, avatar_url: null, level: "staff", department: null, start_date: null, birthday: null,
   phone: null, notes: null, assigned_property_ids: [], section_permissions: null, quick_actions: [], role: "staff" as const, is_draft: true };
@@ -28,6 +29,22 @@ function show() {
 }
 
 describe("member editor", () => {
+  it("keeps a rejected password open for retry and closes only after success", async () => {
+    render(<MemberEditDrawer member={{ ...draft, is_draft: false }} properties={[]} isEN canEdit isMasterAdmin onClose={vi.fn()} onSaved={vi.fn()} onDeleted={vi.fn()} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "More" }), { key: "ArrowDown" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Set password…" }));
+    const input = screen.getByPlaceholderText("Min. 8 characters");
+    fireEvent.change(input, { target: { value: "test-password-rejected" } });
+    invoke.mockResolvedValueOnce({ data: null, error: { message: "Error", context: { json: async () => ({ error: "Password is known to be weak and easy to guess, please choose a different one." }) } } });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("Password is known to be weak and easy to guess, please choose a different one."));
+    expect(input).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "replacement-test-password" } });
+    invoke.mockResolvedValueOnce({ data: { success: true }, error: null });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await vi.waitFor(() => expect(screen.queryByPlaceholderText("Min. 8 characters")).not.toBeInTheDocument());
+    invoke.mockClear();
+  });
   it("warns when nothing is switched on and confirms before inviting", async () => {
     show();
     expect(screen.getByTestId("member-status")).toHaveTextContent("Nothing switched on yet");
