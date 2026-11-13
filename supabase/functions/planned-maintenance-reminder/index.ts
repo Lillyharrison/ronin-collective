@@ -1,3 +1,4 @@
+import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
@@ -5,6 +6,7 @@ import { eligibleNotificationRecipients, reminderCandidates, pendingReminderReci
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (!(await isInternalCaller(req, { allowServiceKey: false }))) return unauthorized(corsHeaders);
 
   const url = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

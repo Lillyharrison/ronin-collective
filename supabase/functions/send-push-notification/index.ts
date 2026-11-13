@@ -1,3 +1,4 @@
+import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 /**
  * send-push-notification
  *
@@ -281,6 +282,8 @@ async function sendPush(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  if (!(await isInternalCaller(req, { allowServiceKey: true }))) return unauthorized(corsHeaders);
+
   try {
     const db = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -351,7 +354,7 @@ Deno.serve(async (req) => {
 
     console.log(`Result: ${sent}/${subs.length} delivered`);
 
-    return new Response(JSON.stringify({ ok: true, sent, total: subs.length }), {
+    return new Response(JSON.stringify({ ok: true, sent }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

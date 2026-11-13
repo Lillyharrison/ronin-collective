@@ -12,16 +12,10 @@ verify_jwt = false
 [functions.send-push-notification]
 verify_jwt = false
 
-[functions.generate-vapid-keys]
-verify_jwt = false
-
 [functions.notify-section]
 verify_jwt = false
 
 [functions.calendar-sync]
-verify_jwt = false
-
-[functions.debug-vapid]
 verify_jwt = false
 
 [functions.checklist-public-get]

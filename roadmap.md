@@ -112,3 +112,4 @@
 - [x] Archive dialog with open-work check, Archived view with history and restore (admins only).
 - [x] Hide archived people from team list, assignee pickers, chat pickers and birthdays; history names untouched.
 - [ ] Click-through as a signed-in admin not done (no preview session).
+- [x] Security step 1: lock down push/reminder/calendar-sync/listener/ronin-ai/extract/translate functions; delete vapid debug functions

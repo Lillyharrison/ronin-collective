@@ -1,3 +1,4 @@
+import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { describeEventWhen, plainDateKey } from "../_shared/eventTime.ts";
 import { repairNotificationBody } from "../_shared/repairNotificationBody.ts";
@@ -819,6 +820,9 @@ serve(async (req) => {
         if (roleRow) callerRole = roleRow.role;
       }
     }
+
+    // No anonymous access: a signed-in user is required (internal callers via token/service key).
+    if (!callerUserId && !(await isInternalCaller(req, { allowServiceKey: true }))) return unauthorized(corsHeaders);
 
     const body = await req.json();
     const { type, content, thread_id, csv_content, property_id, action } = body;

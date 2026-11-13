@@ -1,3 +1,4 @@
+import { signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 // Edge function: extract-checklists
 // Accepts a base64-encoded file (.docx, .xlsx, .csv, .pdf) and uses Lovable AI
 // (Gemini multimodal) to extract one or more checklist drafts.
@@ -183,6 +184,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  if (!(await signedInUserId(req))) return unauthorized(corsHeaders);
 
   try {
     const { fileName, fileBase64, mimeType } = await req.json();

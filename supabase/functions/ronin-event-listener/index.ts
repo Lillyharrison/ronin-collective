@@ -1,13 +1,12 @@
+import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { describeEventWhen, formatPlainDate, previousEventDate, dateKeyInZone } from "../_shared/eventTime.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Internal webhook secret — must match the value in the DB trigger function
-const WEBHOOK_SECRET = "ronin-event-webhook-2026";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-ronin-webhook-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-token",
 };
 
 // ─── KEYWORD → EVENT CLASSIFICATION MAP ──────────────────────────────────────
@@ -179,13 +178,10 @@ Format with a header, bullet points for action items, and close with any escalat
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // ─── WEBHOOK SECRET VALIDATION ─────────────────────────────────────────────
-  const secret = req.headers.get("x-ronin-webhook-secret");
-  if (secret !== WEBHOOK_SECRET) {
-    console.error("ronin-event-listener: invalid webhook secret");
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  // ─── INTERNAL TOKEN VALIDATION (database triggers send x-internal-token) ───
+  if (!(await isInternalCaller(req, { allowServiceKey: false }))) {
+    console.error("ronin-event-listener: invalid internal token");
+    return unauthorized(corsHeaders);
   }
 
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

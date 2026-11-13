@@ -201,46 +201,8 @@ export function useMessages(threadId: string | null) {
     return msg?.id ?? null;
   };
 
-  /** Fire-and-forget push notification */
-  async function triggerPushForThread(tId: string, senderId: string, text: string) {
-    try {
-      const { data: thread } = await supabase
-        .from("chat_threads")
-        .select("participant_ids, title")
-        .eq("id", tId)
-        .single();
-      if (!thread?.participant_ids) return;
-
-      const recipientIds = (thread.participant_ids as string[]).filter(id => id !== senderId);
-      if (!recipientIds.length) return;
-
-      const { data: senderProfile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", senderId)
-        .single();
-
-      const senderName = senderProfile?.full_name ?? "Someone";
-      const chatTitle = thread.title ?? "New message";
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-
-      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push-notification`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          recipientUserIds: recipientIds,
-          title: `💬 ${senderName}`,
-          body: text.length > 80 ? text.slice(0, 80) + "…" : text,
-          url: "/messages",
-        }),
-      }).catch(() => {/* non-critical */});
-    } catch {/* non-critical */}
-  }
+  /** Push for new messages is sent by the database trigger on_new_message_push; nothing to do client-side. */
+  function triggerPushForThread(_tId: string, _senderId: string, _text: string) { /* handled server-side */ }
 
   /**
    * Batch markAsRead — single RPC call instead of N individual updates.

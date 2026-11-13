@@ -1,3 +1,4 @@
+import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { parseICalDateProp, icalToStored } from "../_shared/eventTime.ts";
@@ -125,6 +126,12 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  // Only signed-in admins / master admins (Calendar settings "Sync now") may run this.
+  const uid = await signedInUserId(req);
+  if (!uid) return unauthorized(corsHeaders);
+  const { data: roleRows } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+  if (!(roleRows ?? []).some((r: { role: string }) => r.role === "admin" || r.role === "master_admin")) return unauthorized(corsHeaders, 403);
 
   try {
     // Load settings
