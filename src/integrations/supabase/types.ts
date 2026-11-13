@@ -3142,6 +3142,7 @@ export type Database = {
         Args: { _reason: string; _timesheet_id: string }
         Returns: undefined
       }
+      revoke_user_sessions: { Args: { _uid: string }; Returns: number }
       round_work_hours: {
         Args: { _minutes: number; _step?: number }
         Returns: number
