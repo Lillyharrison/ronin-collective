@@ -79,7 +79,7 @@ it("receipt clicks do not open details, dismiss or delete; swipe still reveals d
   fireEvent.touchMove(row, { touches: [{ clientX: 140, clientY: 100 }] }); fireEvent.touchEnd(row);
   expect(reveal).toHaveBeenCalledOnce(); expect(remove).not.toHaveBeenCalled();
 });
-it("swiping right reveals and triggers the acknowledge action; rows without it ignore right swipes", async () => {
+it("one left swipe reveals both acknowledge and delete; right swipe does nothing", async () => {
   const ack = vi.fn(), remove = vi.fn(), reveal = vi.fn();
   show(<SwipeableNotificationRow revealed={false} resetEpoch={0} removing={false} onReveal={reveal} onClose={() => {}} onAction={remove} actionLabel="Delete" actionIcon={Trash2}
     secondaryAction={{ onAction: ack, label: "Acknowledge", icon: Check }}>
@@ -89,7 +89,10 @@ it("swiping right reveals and triggers the acknowledge action; rows without it i
   if (!row) throw new Error("Missing row");
   fireEvent.touchStart(row, { touches: [{ clientX: 100, clientY: 100 }] });
   fireEvent.touchMove(row, { touches: [{ clientX: 160, clientY: 100 }] }); fireEvent.touchEnd(row);
-  expect(reveal).toHaveBeenCalledExactlyOnceWith("right");
+  expect(reveal).not.toHaveBeenCalled();
+  fireEvent.touchStart(row, { touches: [{ clientX: 200, clientY: 100 }] });
+  fireEvent.touchMove(row, { touches: [{ clientX: 100, clientY: 100 }] }); fireEvent.touchEnd(row);
+  expect(reveal).toHaveBeenCalledExactlyOnceWith("left");
   expect(remove).not.toHaveBeenCalled(); expect(ack).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
   expect(ack).toHaveBeenCalledOnce(); expect(remove).not.toHaveBeenCalled();

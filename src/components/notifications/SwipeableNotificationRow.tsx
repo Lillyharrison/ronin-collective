@@ -18,19 +18,22 @@ export function SwipeableNotificationRow({ revealed, revealedSide = "left", rese
   const suppressClick = useRef(false);
   const [offset, setOffset] = useState<number | null>(null);
   useEffect(() => { gesture.current = null; setOffset(null); }, [resetEpoch]);
-  const startOffset = revealed ? (revealedSide === "right" ? REVEAL_PX : -REVEAL_PX) : 0;
+  // Both actions sit on the right and are revealed together by one left swipe (iOS-style).
+  const revealPx = secondaryAction ? REVEAL_PX * 2 - 12 : REVEAL_PX;
+  const shown = revealed;
+  const startOffset = shown ? -revealPx : 0;
   const SecondaryIcon = secondaryAction?.icon;
   return <div className={cn("notification-collapse grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none", removing && "grid-rows-[0fr] opacity-0 pointer-events-none")}>
     <div className="min-h-0 overflow-hidden">
-      <div className="notification-swipe-row relative isolate overflow-hidden" data-revealed={revealed}>
+      <div className="notification-swipe-row relative isolate overflow-hidden" data-revealed={revealed} style={{ ["--notification-reveal" as string]: `${revealPx}px` }}>
         <Button variant={destructive ? "destructive" : "secondary"} size="icon" aria-label={ariaLabel} title={actionLabel} disabled={removing}
-          tabIndex={revealed && revealedSide === "left" ? 0 : -1} aria-hidden={!(revealed && revealedSide === "left")}
-          className={cn("notification-touch-delete absolute right-3 top-1/2 z-0 h-14 w-14 -translate-y-1/2 rounded-full [&_svg]:size-[22px]", !(revealed && revealedSide === "left") && "invisible", destructive && "text-notification-delete-foreground")}
+          tabIndex={shown ? 0 : -1} aria-hidden={!shown}
+          className={cn("notification-touch-delete absolute right-3 top-1/2 z-0 h-14 w-14 -translate-y-1/2 rounded-full [&_svg]:size-[22px]", !shown && "invisible", destructive && "text-notification-delete-foreground")}
           onClick={e => { e.stopPropagation(); onAction(); }}><ActionIcon aria-hidden="true" /></Button>
         {secondaryAction && SecondaryIcon && (
-          <Button variant="secondary" size="icon" aria-label={secondaryAction.ariaLabel ?? secondaryAction.label} title={secondaryAction.label} disabled={removing}
-            tabIndex={revealed && revealedSide === "right" ? 0 : -1} aria-hidden={!(revealed && revealedSide === "right")}
-            className={cn("notification-touch-ack absolute left-3 top-1/2 z-0 h-14 w-14 -translate-y-1/2 rounded-full [&_svg]:size-[22px]", !(revealed && revealedSide === "right") && "invisible")}
+          <Button size="icon" aria-label={secondaryAction.ariaLabel ?? secondaryAction.label} title={secondaryAction.label} disabled={removing}
+            tabIndex={shown ? 0 : -1} aria-hidden={!shown}
+            className={cn("notification-touch-ack notification-ack-button absolute right-[80px] top-1/2 z-0 h-14 w-14 -translate-y-1/2 rounded-full [&_svg]:size-[22px]", !shown && "invisible")}
             onClick={e => { e.stopPropagation(); secondaryAction.onAction(); }}><SecondaryIcon aria-hidden="true" /></Button>
         )}
         <div className={cn("notification-swipe-content relative z-10 bg-card touch-pan-y transition-transform duration-200 motion-reduce:transition-none", offset !== null && "transition-none")}
@@ -53,8 +56,7 @@ export function SwipeableNotificationRow({ revealed, revealedSide = "left", rese
               else return;
             }
             if (current.axis !== "x") return;
-            const max = secondaryAction ? REVEAL_PX : 0;
-            current.offset = Math.max(-REVEAL_PX, Math.min(max, current.start + dx));
+            current.offset = Math.max(-revealPx, Math.min(0, current.start + dx));
             setOffset(current.offset);
           }}
           onTouchEnd={e => {
@@ -65,7 +67,6 @@ export function SwipeableNotificationRow({ revealed, revealedSide = "left", rese
             e.preventDefault(); // Do not synthesize a notification click after a swipe.
             suppressClick.current = true;
             if (current.offset <= -TRIGGER_PX) onReveal("left");
-            else if (secondaryAction && current.offset >= TRIGGER_PX) onReveal("right");
             else onClose();
           }}
           onTouchCancel={() => { gesture.current = null; setOffset(null); }}

@@ -32,7 +32,7 @@ export function useReceiptAcknowledgement(notification: ReceiptNotification) {
   const eligible = canSendReceipt(n, userId);
   const acknowledge = async () => {
     const lock = `${userId}:${n.id}`;
-    if (!canSendReceipt(n, userId) || !userId || pending.has(lock)) return;
+    if (!canSendReceipt(n, userId) || !userId || pending.has(lock)) return false;
     pending.add(lock); setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("acknowledge-notification", { body: { id: n.id } });
@@ -53,7 +53,8 @@ export function useReceiptAcknowledgement(notification: ReceiptNotification) {
       void cache.invalidateQueries({ queryKey: ["notification-record"] });
       toast.success(es ? "Enterado" : "Acknowledged");
       if (data.push_failed) toast.error(es ? "Confirmado, pero no se pudo enviar la notificación al teléfono." : "Acknowledged, but the phone notification could not be sent.");
-    } catch (error) { toast.error(error instanceof Error ? error.message : es ? "No se pudo confirmar" : "Could not acknowledge notification"); }
+      return true;
+    } catch (error) { toast.error(error instanceof Error ? error.message : es ? "No se pudo confirmar" : "Could not acknowledge notification"); return false; }
     finally { pending.delete(lock); setBusy(false); }
   };
   return { eligible, acknowledged: !!n.receipt_sent_at, busy, acknowledge, es };
@@ -78,7 +79,8 @@ export function ReceiptSwipeRow({ notification, children, ...rowProps }: { notif
   const { language } = useLanguage();
   return <SwipeableNotificationRow {...rowProps}
     secondaryAction={receipt.eligible ? {
-      onAction: () => { void receipt.acknowledge(); },
+      // Acknowledging clears the row the same way the delete/dismiss action does.
+      onAction: () => { void receipt.acknowledge().then(ok => { if (ok) rowProps.onAction(); }); },
       label: language === "es" ? "Enterado" : "Acknowledge",
       icon: Check,
     } : undefined}

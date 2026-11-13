@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ActiveSection } from "@/contexts/NavigationContext";
 import {
   Clock, ShoppingBag, TriangleAlert, CheckSquare,
-  Activity, Zap, Shield, ClipboardList, X, Bell,
+  Activity, Zap, Shield, ClipboardList, X, Bell, Trash2,
   Pencil, Check, ExternalLink, MapPin, Car, CalendarClock,
   Home, Building2, Wrench, User, Plane, BookOpen, Package,
   Shirt, UsersRound, Users, FileSpreadsheet, Brain, BarChart3,
@@ -680,7 +680,7 @@ export function Dashboard() {
               return (
                 <ReceiptSwipeRow key={n.id} notification={n} revealed={revealedId === n.id} revealedSide={revealedSide} resetEpoch={resetEpoch}
                   removing={false} onReveal={side => reveal(n.id, side)} onClose={closeRevealed}
-                  onAction={() => dismissNotif(n.id, n.user_id)} actionIcon={X}
+                  onAction={() => dismissNotif(n.id, n.user_id)} actionIcon={Trash2} destructive
                   actionLabel={language === "es" ? "Descartar" : "Dismiss"}>
                 <div
                   onClick={isClickable ? () => handleNotifClick(n) : undefined}
