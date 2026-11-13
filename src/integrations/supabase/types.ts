@@ -1020,6 +1020,7 @@ export type Database = {
       }
       order_library_items: {
         Row: {
+          asin: string | null
           category: string
           created_at: string
           created_by: string | null
@@ -1038,6 +1039,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          asin?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1056,6 +1058,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          asin?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
