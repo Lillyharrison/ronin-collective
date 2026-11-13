@@ -11,15 +11,39 @@ export const ACCESS_GROUPS: { key: string; label: string; labelEs: string; secti
   { key: "tasks", label: "Tasks", labelEs: "Tareas", sections: ["tasks", "checklists"] },
   { key: "calendar", label: "Calendar", labelEs: "Calendario", sections: ["calendar", "calendar-travel", "calendar-birthdays", "calendar-maintenance", "calendar-deliveries", "calendar-construction", "calendar-staff"] },
   { key: "family", label: "Family", labelEs: "Familia", sections: ["family-calendar", "family-movements", "principal-location", "travel"] },
-  { key: "team", label: "Team", labelEs: "Equipo", sections: ["staff-schedule"] },
+  { key: "schedule", label: "Schedule", labelEs: "Horario", sections: ["staff-schedule"] },
+  { key: "construction", label: "Construction", labelEs: "Construcción", sections: ["timeline"] },
 ];
 
-/** Groups including "Other", which collects every unmapped section so nothing is ever hidden. */
-export function accessGroups(existing: SectionPermissions = {}) {
+/** Groups plus a "More" catch-all, present ONLY when some section is unmapped, so nothing is ever hidden. */
+export function accessGroups(existing: SectionPermissions = {}, allSectionKeys: string[] = ALL_SECTIONS.map(s => s.key)) {
   const mapped = new Set([...ACCESS_GROUPS.flatMap(g => g.sections), ...ALWAYS_ON_SECTIONS]);
-  const other = ["timeline", ...ALL_SECTIONS.map(s => s.key), ...Object.keys(existing)]
+  const more = [...allSectionKeys, ...Object.keys(existing)]
     .filter((k, i, a) => !mapped.has(k) && k !== "_quick_actions" && a.indexOf(k) === i);
-  return [...ACCESS_GROUPS, { key: "other", label: "Other", labelEs: "Otros", sections: other }];
+  return more.length ? [...ACCESS_GROUPS, { key: "more", label: "More", labelEs: "Más", sections: more }] : [...ACCESS_GROUPS];
+}
+
+// ── Clock in and out on site (staff_time_settings.time_tracking) ─────────────
+export type TimeSetting = { time_tracking: string; payee_name: string | null; hourly_rate: number | null; currency: string; rounding_minutes: number } | null;
+
+/** Only people whose role AND level are staff can clock in (the database enforces it). */
+export function canHaveClock(role: string | null | undefined, level: string | null | undefined) {
+  return role === "staff" && level === "staff";
+}
+
+/** What to write for the clock switch. ON keeps existing pay fields; OFF turns 'ronin' into 'none', leaves 'trinet', never creates a row. */
+export function clockSettingWrite(staffId: string, current: TimeSetting, on: boolean):
+  { staff_id: string; time_tracking: string; payee_name: string | null; hourly_rate: number | null; currency: string; rounding_minutes: number } | null {
+  if (on) {
+    if (current?.time_tracking === "ronin") return null;
+    return {
+      staff_id: staffId, time_tracking: "ronin",
+      payee_name: current?.payee_name ?? null, hourly_rate: current?.hourly_rate ?? null,
+      currency: current?.currency ?? "USD", rounding_minutes: current?.rounding_minutes ?? 15,
+    };
+  }
+  if (current?.time_tracking !== "ronin") return null;
+  return { staff_id: staffId, time_tracking: "none", payee_name: current.payee_name, hourly_rate: current.hourly_rate, currency: current.currency, rounding_minutes: current.rounding_minutes };
 }
 
 export function sectionInfo(key: string) {

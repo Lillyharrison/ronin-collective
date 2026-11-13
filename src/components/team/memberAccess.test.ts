@@ -61,9 +61,9 @@ describe("See / Change / Alerts rules", () => {
     expect(r.upserts.map(x => x.section)).toEqual(["tasks"]);
     expect(r.deletes).toEqual(["laundry"]);
   });
-  it("puts unmapped sections in Other so nothing is hidden", () => {
-    const other = accessGroups({ "mystery-section": { view: true, edit: false, notifications: false } }).find(g => g.key === "other")!;
-    expect(other.sections).toContain("timeline");
+  it("puts unmapped sections in More so nothing is hidden", () => {
+    const other = accessGroups({ "mystery-section": { view: true, edit: false, notifications: false } }).find(g => g.key === "more")!;
+    expect(other.sections).not.toContain("timeline");
     expect(other.sections).toContain("mystery-section");
     expect(other.sections).not.toContain("dashboard");
   });
@@ -77,5 +77,38 @@ describe("dashboard shortcuts", () => {
   });
   it("shows saved shortcuts the person can see", () => {
     expect(selectShortcuts(all, ["tasks", "calendar"], s => s === "tasks", false).map(a => a.key)).toEqual(["tasks"]);
+  });
+});
+
+import { canHaveClock, clockSettingWrite, accessGroups as groupsFor } from "./memberAccess";
+describe("clock in and out on site", () => {
+  it("only staff role and staff level get the row", () => {
+    expect(canHaveClock("staff", "staff")).toBe(true);
+    for (const [r, l] of [["manager", "manager"], ["admin", "admin"], ["master_admin", "staff"], ["principal", "principal"], ["staff", "manager"]]) expect(canHaveClock(r, l)).toBe(false);
+  });
+  it("switching on creates a new row with USD and 15 minutes", () => {
+    expect(clockSettingWrite("s1", null, true)).toEqual({ staff_id: "s1", time_tracking: "ronin", payee_name: null, hourly_rate: null, currency: "USD", rounding_minutes: 15 });
+  });
+  it("switching on keeps existing rate and payee", () => {
+    const cur = { time_tracking: "none", payee_name: "Mercy R", hourly_rate: 22, currency: "EUR", rounding_minutes: 30 };
+    expect(clockSettingWrite("s1", cur, true)).toEqual({ staff_id: "s1", time_tracking: "ronin", payee_name: "Mercy R", hourly_rate: 22, currency: "EUR", rounding_minutes: 30 });
+  });
+  it("switching off sets none, leaves trinet, never creates a row", () => {
+    const ronin = { time_tracking: "ronin", payee_name: "P", hourly_rate: 20, currency: "USD", rounding_minutes: 15 };
+    expect(clockSettingWrite("s1", ronin, false)?.time_tracking).toBe("none");
+    expect(clockSettingWrite("s1", ronin, false)?.hourly_rate).toBe(20);
+    expect(clockSettingWrite("s1", { ...ronin, time_tracking: "trinet" }, false)).toBeNull();
+    expect(clockSettingWrite("s1", null, false)).toBeNull();
+  });
+  it("renamed groups and catch-all only when something is unmapped", () => {
+    const keys = groupsFor({}).map(g => g.label);
+    expect(keys).toContain("Schedule"); expect(keys).toContain("Construction");
+    expect(keys).not.toContain("Team"); expect(keys).not.toContain("Other");
+    expect(groupsFor({}).find(g => g.key === "construction")?.sections).toEqual(["timeline"]);
+    const withUnmapped = groupsFor({ "mystery-section": { view: true, edit: false, notifications: false } });
+    expect(withUnmapped.at(-1)).toMatchObject({ label: "More" });
+    expect(withUnmapped.at(-1)?.sections).toContain("mystery-section");
+    // Nothing unmapped => no catch-all at all.
+    expect(groupsFor({}, ["timeline", "staff-schedule", "tasks"]).some(g => g.key === "more")).toBe(false);
   });
 });

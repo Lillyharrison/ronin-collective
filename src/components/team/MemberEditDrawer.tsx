@@ -1,7 +1,8 @@
 // MemberEditDrawer — tabbed team member editor (Details, Houses, Access, Home screen).
 // Designed to fit without scrolling: one access group open at a time, always-visible footer.
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -18,7 +19,7 @@ import {
   type TeamMember, type Property, type Level, type Department, type AppRole, type SectionPermissions,
 } from "./teamConstants";
 import {
-  accessGroups, sectionInfo, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
+  accessGroups, sectionInfo, canHaveClock, clockSettingWrite, type TimeSetting, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
   buildPermissionRows, allowedQuickActions, isValidEmail, type PermField,
 } from "./memberAccess";
 import { ALL_QUICK_ACTIONS } from "./teamConstants";
@@ -100,7 +101,27 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const groups = useMemo(() => accessGroups(member.section_permissions ?? {}), [member.section_permissions]);
   const resolvedRole: AppRole = (member.role === "master_admin" ? "master_admin" : (level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff"))) as AppRole;
   const isAdminRole = resolvedRole === "admin" || resolvedRole === "master_admin";
-  const switchCount = switchesOn(perms);
+  // Clock in and out on site — staff_time_settings, shared with Timesheets "Time and pay".
+  const queryClient = useContext(QueryClientContext);
+  const [timeSetting, setTimeSetting] = useState<TimeSetting>(null);
+  const [clockOn, setClockOn] = useState(false);
+  useEffect(() => {
+    supabase.from("staff_time_settings").select("time_tracking, payee_name, hourly_rate, currency, rounding_minutes")
+      .eq("staff_id", member.id).maybeSingle()
+      .then(({ data }) => { const t = (data as TimeSetting) ?? null; setTimeSetting(t); setClockOn(t?.time_tracking === "ronin"); });
+  }, [member.id]);
+  const showClock = canHaveClock(resolvedRole, level);
+  const clockCounts = showClock && clockOn ? 1 : 0;
+  async function writeClockSetting(staffId: string) {
+    if (!showClock) return;
+    const row = clockSettingWrite(staffId, timeSetting, clockOn);
+    if (!row) return;
+    const { error } = await supabase.from("staff_time_settings").upsert(row as never, { onConflict: "staff_id" });
+    if (error) throw error;
+    setTimeSetting({ time_tracking: row.time_tracking, payee_name: row.payee_name, hourly_rate: row.hourly_rate, currency: row.currency, rounding_minutes: row.rounding_minutes });
+    void queryClient?.invalidateQueries({ queryKey: ["timesheet-settings"] });
+  }
+  const switchCount = switchesOn(perms) + clockCounts;
   const accessCount = sectionsOn(perms);
   const nothingOn = switchCount === 0;
   const canInvite = !!fullName.trim() && isValidEmail(draftEmail);
@@ -185,6 +206,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       if (isDraft) {
         const { error } = await supabase.functions.invoke("ronin-ai", { body: draftBody(false) });
         if (error) throw error;
+        await writeClockSetting(member.id);
       } else {
         const { error: profileErr } = await supabase.from("profiles").update({
           full_name: fullName, job_title: jobTitle, phone: phone || null, level,
@@ -198,6 +220,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
           const { error: roleErr } = await supabase.from("user_roles").update({ role: resolvedRole }).eq("user_id", member.id);
           if (roleErr) throw roleErr;
         }
+        await writeClockSetting(member.id);
       }
       toast.success(isEN ? "Saved" : "Guardado");
       onSaved({
@@ -234,6 +257,8 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
         description: isEN ? `A login invite has been sent to ${draftEmail}` : `Se envió un enlace de invitación a ${draftEmail}`,
       });
       const newId = (inviteRes as { user_id?: string } | null)?.user_id || member.id;
+      try { await writeClockSetting(newId); }
+      catch (e) { toast.error(e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e)); }
       onSaved({ ...member, id: newId, full_name: fullName, is_draft: false });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send invitation.");
@@ -471,7 +496,9 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               {/* Group headers: one group open at a time */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {visible.map(g => {
-                  const on = groupOnCount(perms, g.sections);
+                  const hasClock = g.key === "schedule" && showClock;
+                  const on = groupOnCount(perms, g.sections) + (hasClock && clockOn ? 1 : 0);
+                  const total = g.sections.length + (hasClock ? 1 : 0);
                   const open = openGroup === g.key;
                   return (
                     <div key={g.key} className={cn("flex items-center gap-1 rounded-lg border pr-1.5 min-w-0",
@@ -479,7 +506,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                       <button aria-expanded={open} onClick={() => setOpenGroup(open ? null : g.key)}
                         className="flex-1 min-w-0 min-h-11 flex flex-col justify-center pl-2.5 text-left">
                         <span className={cn("text-sm font-semibold truncate", open ? "text-gold" : "text-cream")}>{isEN ? g.label : g.labelEs}</span>
-                        <span className="text-[11px] text-muted-foreground truncate">{isEN ? `${on} of ${g.sections.length} on` : `${on} de ${g.sections.length}`}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">{isEN ? `${on} of ${total} on` : `${on} de ${total}`}</span>
                       </button>
                       <Switch checked={on > 0} disabled={!canEdit} aria-label={isEN ? `All of ${g.label}` : `Todo ${g.labelEs}`}
                         className={switchCls} onCheckedChange={v => setPerms(prev => setGroup(prev, g.sections, v))} />
@@ -523,6 +550,21 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                       </div>
                     );
                   })}
+                  {current.key === "schedule" && showClock && (
+                    <div data-testid="clock-row" className="border-t border-charcoal-light py-1.5">
+                      <div className="flex items-center min-h-10 sm:min-h-8">
+                        <span className={cn("flex-1 min-w-0 truncate text-sm", clockOn ? "text-cream" : "text-cream/60")}>{isEN ? "Clock in and out on site" : "Fichar entrada y salida en la casa"}</span>
+                        <span className="w-12 flex justify-center">
+                          <Switch checked={clockOn} disabled={!canEdit} aria-label={isEN ? "Clock in and out on site" : "Fichar entrada y salida en la casa"}
+                            className={switchCls} onCheckedChange={setClockOn} />
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground pr-14">{isEN ? "Lets them sign in and out at the house on their phone. Turn off if their hours are recorded in TriNet." : "Les permite fichar en la casa desde su teléfono. Desactívalo si sus horas se registran en TriNet."}</p>
+                      {clockOn && timeSetting?.hourly_rate == null && (
+                        <p data-testid="clock-no-rate" className="mt-1 text-xs text-amber-400">{isEN ? "No hourly rate yet. Add it under Timesheets, Time and pay, before issuing their timesheet." : "Aún no hay tarifa por hora. Añádela en Hojas de horas, Tiempo y pago, antes de emitir su hoja."}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : <p className="px-1 text-sm text-muted-foreground">{isEN ? "Choose a group to see its switches." : "Elige un grupo para ver sus opciones."}</p>}
             </div>

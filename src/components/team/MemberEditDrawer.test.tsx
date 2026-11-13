@@ -42,3 +42,25 @@ describe("member editor", () => {
     expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["Details", "Houses(0)", "Access(0)", "Home screen(0)"]);
   });
 });
+
+describe("clock row in Schedule", () => {
+  function openSchedule(member: typeof draft) {
+    render(<MemberEditDrawer member={member} properties={[]} isEN canEdit isMasterAdmin onClose={vi.fn()} onSaved={vi.fn()} onDeleted={vi.fn()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Access/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Schedule/ }));
+  }
+  it("shows for staff and counts in the group", () => {
+    openSchedule(draft);
+    expect(screen.getByTestId("clock-row")).toHaveTextContent("Clock in and out on site");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 2 on");
+    fireEvent.click(screen.getByRole("switch", { name: "Clock in and out on site" }));
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("1 of 2 on");
+    expect(screen.getByTestId("member-status")).toHaveTextContent("1 switch on");
+    expect(screen.getByTestId("clock-no-rate")).toBeTruthy();
+  });
+  it("is hidden for managers", () => {
+    openSchedule({ ...draft, level: "manager", role: "manager" as never });
+    expect(screen.queryByTestId("clock-row")).toBeNull();
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 1 on");
+  });
+});
