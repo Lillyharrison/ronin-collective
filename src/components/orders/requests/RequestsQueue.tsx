@@ -1,5 +1,6 @@
 import './requests.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useScopedProperties } from '@/hooks/useScopedProperties';
 import { toast } from 'sonner';
-import { createOrderArgs, toggleQueueSelection, urgentFirst, type HouseRequest } from './logic';
+import { byBatch, createOrderArgs, toggleQueueSelection, urgentFirst, type HouseRequest } from './logic';
 import { RequestThumbnail } from './RequesterOrders';
 import { useHouseRequests } from './useHouseRequests';
 export function RequestsQueue({ onCreated, onRequest }: {onCreated:(id:string)=>void;onRequest:()=>void}) {
@@ -16,7 +17,9 @@ export function RequestsQueue({ onCreated, onRequest }: {onCreated:(id:string)=>
   const data=useHouseRequests(null,true);const [selected,setSelected]=useState<string[]>([]);
   const [confirm,setConfirm]=useState(false);const [delivery,setDelivery]=useState('');const [busy,setBusy]=useState(false);
   const [photo,setPhoto]=useState<string|null>(null);const [cancel,setCancel]=useState<HouseRequest|null>(null);
+  const location=useLocation(); const batch=new URLSearchParams(location.search).get('batch'); const [highlight,setHighlight]=useState<string|null>(null);
   const rows=urgentFirst(data.rows);const validSelected=selected.filter(id=>rows.some(r=>r.id===id));
+  useEffect(()=>{if(!batch||!rows.some(r=>r.batch_id===batch))return;const el=document.getElementById(`request-batch-${batch}`);el?.scrollIntoView?.({behavior:'smooth',block:'center'});setHighlight(batch);const timer=setTimeout(()=>setHighlight(null),3500);return()=>clearTimeout(timer);},[batch,data.rows]);
   const groups=[...new Set(rows.map(r=>r.property_id))];
   const create=async()=>{if(busy)return;setBusy(true);try{
     const args=createOrderArgs(validSelected,rows,delivery);const{data:id,error}=await supabase.rpc('create_order_from_requests',args);
@@ -30,12 +33,12 @@ export function RequestsQueue({ onCreated, onRequest }: {onCreated:(id:string)=>
     {groups.map(h=>{const houseRows=rows.filter(r=>r.property_id===h);return <section key={h} className="mb-7">
       <h3 className="font-display text-xl break-words">{properties.find(p=>p.id===h)?.name ?? (es?'Casa':'House')}</h3>
       <Button variant="ghost" className="min-h-11 h-auto whitespace-normal my-2" onClick={()=>setSelected(houseRows.every(r=>validSelected.includes(r.id))?[]:houseRows.map(r=>r.id))}>{es?'Seleccionar todo para esta casa':'Select all for this house'}</Button>
-      <div className="space-y-3">{houseRows.map(r=><article key={r.id} className="bg-card border border-border rounded-lg p-3 min-w-0">
+      <div className="space-y-5">{byBatch(houseRows).map(([batchId,batchRows])=><div key={batchId} id={`request-batch-${batchId}`} className={`min-w-0 p-2 border-l-2 ${highlight===batchId?'border-gold bg-gold/10':'border-border'}`}><h4 className="break-words">{data.names.get(batchRows[0].created_by??'') || (es?'Solicitante':'Requester')} · {new Date(batchRows[0].sent_at ?? batchRows[0].created_at).toLocaleString(es?'es-ES':'en-US',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})} · {batchRows.length} {es?'artículos':'items'}</h4><Button variant="ghost" className="min-h-11 h-auto whitespace-normal" onClick={()=>setSelected(s=>{const sameHouse=s.every(id=>rows.find(r=>r.id===id)?.property_id===h);const base=sameHouse?s:[];return batchRows.every(r=>base.includes(r.id))?base.filter(id=>!batchRows.some(r=>r.id===id)):[...new Set([...base,...batchRows.map(r=>r.id)])];})}>{es?'Seleccionar toda esta lista':'Select all in this list'}</Button><div className="space-y-3">{batchRows.map(r=><article key={r.id} className="bg-card border border-border rounded-lg p-3 min-w-0">
         <div className="flex items-start gap-2"><label className="min-h-11 min-w-11 flex items-center justify-center"><Checkbox aria-label={`${es?'Seleccionar':'Select'} ${r.name}`} checked={validSelected.includes(r.id)} onCheckedChange={()=>setSelected(s=>toggleQueueSelection(s,r,rows))}/></label>
         <RequestThumbnail row={r} library={[]} onClick={()=>setPhoto(r.photo_url)}/><div className="min-w-0 flex-1"><h4 className="break-words font-medium">{r.name}</h4><p>× {r.quantity||'1'}</p>{r.urgent&&<span className="request-urgent">{es?'Urgente':'Urgent'}</span>}</div></div>
         {r.notes&&<p className="break-words mt-2">{r.notes}</p>}<p className="text-muted-foreground text-sm mt-2 break-words">{data.names.get(r.created_by??'') || (es?'Solicitante':'Requester')} · {new Date(r.created_at).toLocaleString(es?'es-ES':'en-US',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</p>
         <Button variant="ghost" className="min-h-11 text-destructive" onClick={()=>setCancel(r)}>{es?'Quitar':'Remove'}</Button>
-      </article>)}</div></section>;})}
+      </article>)}</div></div>)}</div></section>;})}
     {validSelected.length>0&&<div className="fixed bottom-20 left-4 right-4 mx-auto max-w-xl z-20"><Button className="min-h-16 w-full text-base" onClick={()=>setConfirm(true)}>{es?'Crear pedido':'Create order'} ({validSelected.length})</Button></div>}
     <Dialog open={confirm} onOpenChange={o=>{if(!busy)setConfirm(o);}}><DialogContent className="request-sheet h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col"><DialogHeader><DialogTitle>{es?'Crear pedido':'Create order'} ({validSelected.length})</DialogTitle></DialogHeader>
       <p>{properties.find(p=>p.id===rows.find(r=>validSelected.includes(r.id))?.property_id)?.name}</p><label className="space-y-2">{es?'Fecha estimada de entrega (opcional)':'Expected delivery date (optional)'}<Input type="date" className="h-12 text-base" value={delivery} onChange={e=>setDelivery(e.target.value)}/></label><Button className="mt-auto min-h-14" disabled={busy||!validSelected.length} onClick={create}>{es?'Crear pedido':'Create order'}</Button>

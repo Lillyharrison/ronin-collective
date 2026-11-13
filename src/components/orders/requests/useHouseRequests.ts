@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { type HouseRequest, type RequestLibraryItem } from './logic';
-export const REQUEST_COLUMNS = 'id,name,category,quantity,notes,property_id,created_by,library_item_id,photo_url,urgent,status,order_id,created_at,ordered_at,received_at,received_by';
+export const REQUEST_COLUMNS = 'id,name,category,quantity,notes,property_id,created_by,library_item_id,photo_url,urgent,status,order_id,created_at,ordered_at,received_at,received_by,batch_id,sent_at';
 export const REQUEST_ORDER_COLUMNS = 'id,title,description,property_id,status,expected_delivery,delivered_at,carrier,tracking_number,tracking_url,packing_list,notes,created_at,assigned_to,property:properties(name),assignee:profiles!orders_assigned_to_fkey(full_name)';
 export function useHouseRequests(house: string | null, management = false) {
   const { userId } = usePermissions(); const qc = useQueryClient();
@@ -16,7 +16,7 @@ export function useHouseRequests(house: string | null, management = false) {
       for (let from = 0; ; from += 100) {
         let q = supabase.from('shopping_list_items').select(REQUEST_COLUMNS);
         if (house) q = q.eq('property_id', house);
-        q = management ? q.eq('status', 'requested') : q.or(`status.in.(requested,ordered),and(status.eq.received,received_at.gte.${since})`);
+        q = management ? q.eq('status', 'requested') : q.or(`and(status.eq.draft,created_by.eq.${userId}),status.in.(requested,ordered),and(status.eq.received,received_at.gte.${since})`);
         const { data, error } = await q.order('created_at').order('id').range(from, from + 99);
         if (error) throw error;
         rows.push(...((data ?? []) as HouseRequest[]));
@@ -29,11 +29,13 @@ export function useHouseRequests(house: string | null, management = false) {
     },
   });
   const badges = useQuery({ queryKey: ['request-counts', userId, house, management], enabled: !!userId && (management || !!house), queryFn: async () => {
-    const counts = await Promise.all(['requested','ordered'].map(async status => {
+    const counts = await Promise.all(['draft','requested','ordered'].map(async status => {
+      if (management && status === 'draft') return 0;
       let q = supabase.from('shopping_list_items').select('id', { count: 'exact', head: true }).eq('status', status);
       if (house) q = q.eq('property_id', house);
+      if (status === 'draft') q = q.eq('created_by',userId);
       const { count, error } = await q; if (error) throw error; return count ?? 0;
-    })); return { requested: counts[0], ordered: counts[1] };
+    })); return { draft: counts[0], requested: counts[1], ordered: counts[2], way: counts[1]+counts[2] };
   }});
   const refresh = async () => { await Promise.all([qc.invalidateQueries({ queryKey: ['house-requests'] }), qc.invalidateQueries({ queryKey: ['request-counts'] }), qc.invalidateQueries({ queryKey: ['request-orders'] })]); };
   useEffect(() => {
@@ -41,7 +43,7 @@ export function useHouseRequests(house: string | null, management = false) {
     const ch = supabase.channel(`house-requests-${crypto.randomUUID()}`).on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_items' }, () => { void refresh(); }).subscribe();
     return () => { void supabase.removeChannel(ch); };
   }, [userId, house, management]);
-  return { ...query, rows: query.data?.rows ?? [], names: query.data?.names ?? new Map<string,string|null>(), counts: badges.data ?? { requested: 0, ordered: 0 }, refresh };
+  return { ...query, rows: query.data?.rows ?? [], names: query.data?.names ?? new Map<string,string|null>(), counts: badges.data ?? { draft: 0, requested: 0, ordered: 0, way: 0 }, refresh };
 }
 export function useRequestLibrary(userId: string | null) {
   return useQuery({ queryKey: ['request-library', userId], enabled: !!userId, queryFn: async () => {

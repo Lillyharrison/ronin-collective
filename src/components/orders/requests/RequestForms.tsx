@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { canChangeRequest, compressRequestPhoto, defaultQuantity, requestPayload, requestPhotoPath, validRequest, type HouseRequest, type RequestLibraryItem } from './logic';
+import { canChangeRequest, compressRequestPhoto, defaultQuantity, requestPayload, requestPhotoPath, sendListArgs, validRequest, type HouseRequest, type RequestLibraryItem } from './logic';
 
 export function QuantityStepper({ value, onChange, es }: { value: number; onChange: (n:number) => void; es: boolean }) {
   return <div className="flex items-center justify-between gap-4"><span>{es ? 'Cantidad' : 'Quantity'}</span><div className="flex items-center gap-4">
@@ -19,10 +19,11 @@ export function QuantityStepper({ value, onChange, es }: { value: number; onChan
 }
 const failure = (es: boolean) => es ? 'No se pudo guardar. Comprueba tu conexión y vuelve a intentarlo; tu solicitud sigue aquí.' : 'Could not save. Check your connection and try again; your request is still here.';
 
-export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string; userId: string; es: boolean; onSent: () => void }) {
+export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string; userId: string; es: boolean; onSent: (urgent: boolean) => void }) {
   const [name,setName] = useState(''); const [notes,setNotes] = useState(''); const [quantity,setQuantity] = useState(1);
   const [urgent,setUrgent] = useState(false); const [file,setFile] = useState<File|null>(null); const [preview,setPreview] = useState('');
   const [busy,setBusy] = useState(false); const [error,setError] = useState('');
+  const pendingId = useRef<string|null>(null);
   const uploaded = useRef<{ file: File; url: string }|null>(null); const input = useRef<HTMLInputElement>(null);
   useEffect(() => { if (!file) { setPreview(''); return; } const url = URL.createObjectURL(file); setPreview(url); return () => URL.revokeObjectURL(url); }, [file]);
   const send = async () => {
@@ -40,10 +41,21 @@ export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string
           uploaded.current = { file, url: photoUrl };
         }
       }
-      const payload = requestPayload({ houseId,userId,name,quantity,notes,urgent,photoUrl });
-      const { data, error: insertError } = await supabase.from('shopping_list_items').insert(payload).select('id').single();
-      if (insertError || !data) throw insertError ?? new Error('Not saved');
-      toast.success(es ? 'Solicitud enviada' : 'Request sent'); onSent();
+      if (!pendingId.current) {
+        const payload = requestPayload({ houseId,userId,name,quantity,notes,urgent,photoUrl });
+        const { data, error: insertError } = await supabase.from('shopping_list_items').insert(payload).select('id').single();
+        if (insertError || !data) throw insertError ?? new Error('Not saved');
+        pendingId.current = data.id;
+      } else {
+        // A failed urgent send may be retried after edits without duplicating its draft.
+        const { data, error: updateError } = await supabase.from('shopping_list_items').update(requestPayload({ houseId,userId,name,quantity,notes,urgent,photoUrl })).eq('id',pendingId.current).eq('created_by',userId).eq('status','draft').select('id').single();
+        if (updateError || !data) throw updateError ?? new Error('Not saved');
+      }
+      if (urgent) {
+        const {data,error: sendError} = await supabase.rpc('send_request_list',sendListArgs(houseId,[pendingId.current]));
+        if (sendError || !data) throw sendError ?? new Error('Not sent');
+      }
+      toast.success(urgent ? (es ? 'Enviado. La PA tiene tu solicitud.' : 'Sent. The PA has your request.') : (es ? 'Añadido a tu lista' : 'Added to your list')); onSent(urgent);
     } catch { setError(failure(es)); } finally { setBusy(false); }
   };
   return <div className="space-y-5 text-base">
@@ -58,7 +70,7 @@ export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string
     <label className="flex items-center justify-between min-h-14 gap-3 request-urgent"><span>{es ? 'Se necesita con urgencia' : 'Needed urgently'}</span><span className="flex min-h-11 items-center"><Switch checked={urgent} disabled={busy} onCheckedChange={setUrgent} className="data-[state=checked]:bg-status-progress" /></span></label>
     {!validRequest(name,file) && <p className="text-muted-foreground text-sm">{es ? 'Añade una foto o escribe qué necesitas.' : 'Add a photo or say what you need.'}</p>}
     {error && <p role="alert" className="text-destructive">{error}</p>}
-    <Button className="w-full min-h-16 text-base" disabled={busy || !validRequest(name,file)} onClick={send}>{busy ? (es ? 'Enviando…' : 'Sending…') : error ? (es ? 'Reintentar' : 'Retry') : (es ? 'Enviar solicitud' : 'Send request')}</Button>
+    <Button className="w-full min-h-16 text-base" disabled={busy || !validRequest(name,file)} onClick={send}>{busy ? (es ? 'Guardando…' : 'Saving…') : error ? (es ? 'Reintentar' : 'Retry') : urgent ? (es ? 'Enviar ya' : 'Send now') : (es ? 'Añadir a mi lista' : 'Add to my list')}</Button>
   </div>;
 }
 
@@ -71,7 +83,7 @@ export function RequestEditSheet({ item, row, houseId, userId, es, onClose, onSa
     if (busy || (row && !canChangeRequest(row,userId))) return;
     setBusy(true); setError('');
     try {
-      const result = row ? await supabase.from('shopping_list_items').update({quantity:String(quantity),notes:notes.trim() || null}).eq('id',row.id).eq('created_by',userId).eq('status','requested').select('id').single()
+      const result = row ? await supabase.from('shopping_list_items').update({quantity:String(quantity),notes:notes.trim() || null}).eq('id',row.id).eq('created_by',userId).eq('status',row.status).select('id').single()
         : await supabase.from('shopping_list_items').insert(requestPayload({houseId,userId,name:item?.name ?? '',quantity,notes,libraryItem:item})).select('id').single();
       if (result.error || !result.data) throw result.error ?? new Error('Not saved');
       toast.success(es ? 'Guardado en tu lista' : 'Saved to your list'); onSaved(); onClose();

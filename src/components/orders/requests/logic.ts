@@ -1,11 +1,12 @@
-import { dateInputToPlainDate, plainDateToLocal } from '@/lib/calendarTime';
+import { dateInputToPlainDate, plainDateToLocal, localDateKey } from '@/lib/calendarTime';
 
-export type RequestStatus = 'requested' | 'ordered' | 'received' | 'cancelled';
+export type RequestStatus = 'draft' | 'requested' | 'ordered' | 'received' | 'cancelled';
 export interface HouseRequest {
   id: string; name: string; category: string; quantity: string | null; notes: string | null;
   property_id: string; created_by: string | null; library_item_id: string | null;
   photo_url: string | null; urgent: boolean; status: RequestStatus; order_id: string | null;
   created_at: string; ordered_at: string | null; received_at: string | null; received_by: string | null;
+  batch_id?: string | null; sent_at?: string | null;
 }
 export interface RequestLibraryItem {
   id: string; name: string; category: string; image_url: string | null; size: string | null;
@@ -24,16 +25,28 @@ export function requestPayload(input: {
     name: input.name.trim() || 'Photo request', category: input.libraryItem?.category ?? 'other',
     property_id: input.houseId, created_by: input.userId, quantity: String(Math.max(1, input.quantity)),
     notes: input.notes.trim() || null, urgent: input.urgent ?? false, photo_url: input.photoUrl ?? null,
-    library_item_id: input.libraryItem?.id ?? null, status: 'requested' as const,
+    library_item_id: input.libraryItem?.id ?? null,
   };
 }
 export const defaultQuantity = (value: string | null) => /^\d+$/.test(value?.trim() ?? '') && Number(value) > 0 ? Number(value) : 1;
-export const canChangeRequest = (row: HouseRequest, uid: string | null) => row.status === 'requested' && !!uid && row.created_by === uid;
-export function requestCounts(rows: HouseRequest[], house: string) {
+export const canChangeRequest = (row: HouseRequest, uid: string | null) => ['draft','requested'].includes(row.status) && !!uid && row.created_by === uid;
+export const ownDrafts = (rows: HouseRequest[], house: string, uid: string) => rows.filter(r => r.property_id === house && r.created_by === uid && r.status === 'draft');
+export function requestCounts(rows: HouseRequest[], house: string, uid: string) {
   const scoped = rows.filter(r => r.property_id === house);
-  return { requested: scoped.filter(r => r.status === 'requested').length, ordered: scoped.filter(r => r.status === 'ordered').length };
+  const requested = scoped.filter(r => r.status === 'requested').length, ordered = scoped.filter(r => r.status === 'ordered').length;
+  return { draft: ownDrafts(scoped,house,uid).length, requested, ordered, way: requested + ordered };
 }
-export const addedQuantity = (rows: HouseRequest[], house: string, item: string) => rows.filter(r => r.property_id === house && r.library_item_id === item && r.status === 'requested').reduce((n, r) => n + defaultQuantity(r.quantity), 0);
+export const addedQuantity = (rows: HouseRequest[], house: string, item: string, uid: string) => ownDrafts(rows,house,uid).filter(r => r.library_item_id === item).reduce((n, r) => n + defaultQuantity(r.quantity), 0);
+export const sendListArgs = (house: string, ids?: string[]) => ids ? { _property_id: house, _ids: ids } : { _property_id: house };
+export function byBatch(rows: HouseRequest[]) {
+  const groups = new Map<string, HouseRequest[]>();
+  for (const row of rows.filter(r => r.status === 'requested')) {
+    const key = row.batch_id ?? row.id; groups.set(key,[...(groups.get(key) ?? []),row]);
+  }
+  return [...groups.entries()].sort((a,b) => Number(b[1].some(r=>r.urgent))-Number(a[1].some(r=>r.urgent)) || (a[1][0].sent_at ?? a[1][0].created_at).localeCompare(b[1][0].sent_at ?? b[1][0].created_at));
+}
+export const arrivalGroups = (rows: HouseRequest[]) => [...byBatch(rows).map(([id,lines])=>({id:`batch:${id}`,sent:true,rows:lines})), ...byOrder(rows).map(([id,lines])=>({id,sent:false,rows:lines}))];
+export const displaySentDate = (stamp: string, es: boolean) => displayDelivery(localDateKey(new Date(stamp)),es);
 export const urgentFirst = (rows: HouseRequest[]) => [...rows].sort((a,b) => Number(b.urgent) - Number(a.urgent) || a.created_at.localeCompare(b.created_at));
 export function byOrder(rows: HouseRequest[]) {
   const groups = new Map<string, HouseRequest[]>();
@@ -54,7 +67,7 @@ export function createOrderArgs(ids: string[], rows: HouseRequest[], delivery: s
 }
 export function orderNotificationPath(type: string | null, id: string | null, manager: boolean, house?: string | null) {
   const q = new URLSearchParams();
-  if (type === 'order_request') q.set('view', manager ? 'requests' : 'list');
+  if (type === 'order_request') { q.set('view', manager ? 'requests' : 'way'); if (manager && id) q.set('batch',id); }
   else if (type === 'order') { if (id) q.set('order', id); if (!manager) q.set('view', 'way'); }
   else return null;
   if (house) q.set('house', house);

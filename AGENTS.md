@@ -33,5 +33,5 @@
 - Protected edge functions authenticate through supabase/functions/_shared/internalAuth.ts: internal callers present x-internal-token (private_config) or the service-role Bearer; user-facing ones require a signed-in JWT, so no function relies on hard-coded secrets.
 - Car-wash request inserts must bind requested_by to the caller and check screen, vehicle and assigned-house access; direct shared Gantt reads/inserts are admin-only because public sharing uses token-scoped edge functions.
 
-- House requests use shopping_list_items and the owner create_order_from_requests/confirm_items_received RPCs; requester screens are separate from legacy management Orders, preserving house-scoped persistence and plain delivery dates.
+- House request inserts omit status to use private drafts; send_request_list is the only draft-to-sent path, with batch-aware notifications and PA grouping; existing order/receipt RPCs preserve house scoping and plain delivery dates without database changes.
 - Login email changes use a caller-JWT admin check, Auth's same-id update and the owner session-revocation RPC; shared recovery handling and masked-only audit records preserve account history without profile writes.

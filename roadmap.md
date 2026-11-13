@@ -119,6 +119,8 @@
 - [x] Security step 1: lock down push/reminder/calendar-sync/listener/ronin-ai/extract/translate functions; delete vapid debug functions
 
 # Phone-first house requests
+- [x] Switch additions to private drafts; single-list send and urgent single-line send; requested/ordered arrivals and batch-grouped PA queue.
+- [x] Verify draft/send/receipt rules, bilingual screens and notification batch links (69 focused tests); signed-in PA queue and request controls checked on phone/desktop without overflow. Database untouched; real staff draft/send/receipt and one-alert delivery intentionally unverified to avoid real changes or alerts.
 - [x] Add requester Orders, photo requests, library, shared list and receipts; preserve management Orders.
 - [x] Add PA queue, single-house order creation, shortcut and notification routing; no database changes.
 - [x] Add regression tests and phone/desktop checks; 400 tests passed; signed-in queue read checked, requester layout checked with controlled data. Real camera/phone compression and live create/receive RPCs are unverified (would change real requests/orders).
