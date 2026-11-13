@@ -53,10 +53,10 @@ export function StaffDaysSummary({
       const { daysExpected, hoursExpected } = calculateExpectedWork(person, rangeStart, rangeEnd);
       const allowance = calculateAccruedAnnualLeave(person, rangeEnd);
       const leaveTakenYTD = calculateAnnualLeaveTakenYTD(person, leaveRequests, rangeEnd);
-      const leaveLeft = Math.max(0, allowance - leaveTakenYTD);
+      const leaveLeft = allowance == null ? null : Math.max(0, allowance - leaveTakenYTD);
 
-      const daysDelta = daysWorked - daysExpected;
-      const hoursDelta = hoursWorked - hoursExpected;
+      const daysDelta = daysExpected == null ? null : daysWorked - daysExpected;
+      const hoursDelta = hoursExpected == null ? null : hoursWorked - hoursExpected;
 
       return {
         person,
@@ -130,12 +130,12 @@ export function StaffDaysSummary({
                     </div>
                   </div>
                 </td>
-                <td className="text-center font-semibold tabular-nums">{r.daysWorked} / {r.daysExpected}</td>
-                <td className="text-center"><Delta value={r.daysDelta} unit="d" /></td>
-                <td className="text-center font-semibold tabular-nums">{r.hoursWorked.toFixed(1)} / {r.hoursExpected}</td>
-                <td className="text-center"><Delta value={r.hoursDelta} unit="h" /></td>
-                <td className="text-center tabular-nums text-muted-foreground">{r.leaveTakenYTD} / {r.allowance}</td>
-                <td className="text-center font-semibold tabular-nums">{r.leaveLeft}</td>
+                <td className="text-center font-semibold tabular-nums">{r.daysWorked} / {r.daysExpected ?? "not set"}</td>
+                <td className="text-center">{r.daysDelta != null && <Delta value={r.daysDelta} unit="d" />}</td>
+                <td className="text-center font-semibold tabular-nums">{r.hoursWorked.toFixed(1)} / {r.hoursExpected ?? "not set"}</td>
+                <td className="text-center">{r.hoursDelta != null && <Delta value={r.hoursDelta} unit="h" />}</td>
+                <td className="text-center tabular-nums text-muted-foreground">{r.leaveTakenYTD} / {r.allowance ?? "not set"}</td>
+                <td className="text-center font-semibold tabular-nums">{r.leaveLeft ?? "—"}</td>
               </tr>
             ))}
           </tbody>

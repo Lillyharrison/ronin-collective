@@ -45,16 +45,16 @@ export function getEmploymentRange(person: Profile, rangeStart: Date, rangeEnd: 
 
 export function calculateExpectedWork(person: Profile, rangeStart: Date, rangeEnd: Date) {
   const employedRange = getEmploymentRange(person, rangeStart, rangeEnd);
-  if (!employedRange) return { daysExpected: 0, hoursExpected: 0 };
+  const contractedDays = person.contracted_days_per_week ?? null;
+  const contractedHours = person.contracted_hours_per_week ?? null;
+  if (!employedRange) return { daysExpected: contractedDays == null ? null : 0, hoursExpected: contractedHours == null ? null : 0 };
 
   const totalDays = differenceInCalendarDays(employedRange.end, employedRange.start) + 1;
   const weeksInRange = totalDays / 7;
-  const contractedDays = person.contracted_days_per_week ?? 5;
-  const contractedHours = person.contracted_hours_per_week ?? 40;
-
+  // Unset contract values stay null ("not set") — never an invented default.
   return {
-    daysExpected: Math.round(contractedDays * weeksInRange),
-    hoursExpected: contractedHours * weeksInRange,
+    daysExpected: contractedDays == null ? null : Math.round(contractedDays * weeksInRange),
+    hoursExpected: contractedHours == null ? null : contractedHours * weeksInRange,
   };
 }
 
@@ -72,8 +72,9 @@ export function calcWorkdaysBetween(startKey: string, endKey: string): number {
   return count;
 }
 
-export function calculateAccruedAnnualLeave(person: Profile, asOf: Date) {
-  const annualAllowance = person.annual_leave_days ?? 25;
+export function calculateAccruedAnnualLeave(person: Profile, asOf: Date): number | null {
+  const annualAllowance = person.annual_leave_days ?? null;
+  if (annualAllowance == null) return null;
   const yearStart = startOfYear(asOf);
   const yearEnd = endOfYear(asOf);
   const employeeStartKey = normalizeDateKey(person.start_date);
@@ -112,6 +113,7 @@ export function calculateAnnualLeaveTakenYTD(
     }, 0);
 }
 
-export function formatLeaveDays(value: number) {
+export function formatLeaveDays(value: number | null) {
+  if (value == null) return "not set";
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }

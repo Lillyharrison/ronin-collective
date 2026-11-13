@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  navigate: vi.fn(), section: vi.fn(), timesheet: vi.fn(), repair: vi.fn(), planned: vi.fn(), task: vi.fn(),
+  navigate: vi.fn(), clockSheet: vi.fn(), section: vi.fn(), timesheet: vi.fn(), repair: vi.fn(), planned: vi.fn(), task: vi.fn(),
   update: vi.fn(), deleted: vi.fn(), deleteError: null as unknown, notifications: [] as Record<string, unknown>[],
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
@@ -10,6 +10,7 @@ vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tes
 vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
   setActiveSection: mocks.section, setPendingMaintenanceIssueId: mocks.repair,
   setPendingPlannedMaintenanceEntryId: mocks.planned, setPendingTaskId: mocks.task, setPendingTimesheetStaffId: mocks.timesheet,
+  setClockSheetRequested: mocks.clockSheet,
 }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: () => {
@@ -43,6 +44,7 @@ describe("notification detail routing", () => {
     fireEvent.click(await screen.findByText('Test notice'));
     expect(mocks.section).toHaveBeenCalledWith(section);expect(close).toHaveBeenCalledOnce();
     if(type==='timesheet') expect(mocks.timesheet).toHaveBeenCalledWith('record-id');
+    if(type==='clock_reminder') expect(mocks.clockSheet).toHaveBeenCalledWith(true);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it.each(["maintenance_issue", "planned_maintenance", "task", "calendar_event", "birthday"])("opens %s over the list without navigating", async type => {

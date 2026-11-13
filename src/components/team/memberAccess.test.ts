@@ -87,11 +87,11 @@ describe("clock in and out on site", () => {
     for (const [r, l] of [["manager", "manager"], ["admin", "admin"], ["master_admin", "staff"], ["principal", "principal"], ["staff", "manager"]]) expect(canHaveClock(r, l)).toBe(false);
   });
   it("switching on creates a new row with USD and 15 minutes", () => {
-    expect(clockSettingWrite("s1", null, true)).toEqual({ staff_id: "s1", time_tracking: "ronin", payee_name: null, hourly_rate: null, currency: "USD", rounding_minutes: 15 });
+    expect(clockSettingWrite("s1", null, true)).toEqual({ staff_id: "s1", time_tracking: "ronin", pay_basis: "hourly", daily_rate: null, payee_name: null, hourly_rate: null, currency: "USD", rounding_minutes: 15 });
   });
   it("switching on keeps existing rate and payee", () => {
     const cur = { time_tracking: "none", payee_name: "Mercy R", hourly_rate: 22, currency: "EUR", rounding_minutes: 30 };
-    expect(clockSettingWrite("s1", cur, true)).toEqual({ staff_id: "s1", time_tracking: "ronin", payee_name: "Mercy R", hourly_rate: 22, currency: "EUR", rounding_minutes: 30 });
+    expect(clockSettingWrite("s1", cur, true)).toEqual({ staff_id: "s1", time_tracking: "ronin", pay_basis: "hourly", daily_rate: null, payee_name: "Mercy R", hourly_rate: 22, currency: "EUR", rounding_minutes: 30 });
   });
   it("switching off sets none, leaves trinet, never creates a row", () => {
     const ronin = { time_tracking: "ronin", payee_name: "P", hourly_rate: 20, currency: "USD", rounding_minutes: 15 };
@@ -110,5 +110,37 @@ describe("clock in and out on site", () => {
     expect(withUnmapped.at(-1)?.sections).toContain("mystery-section");
     // Nothing unmapped => no catch-all at all.
     expect(groupsFor({}, ["timeline", "staff-schedule", "tasks"]).some(g => g.key === "more")).toBe(false);
+  });
+});
+
+import { timeSettingWrite, missingRate, withClockShortcut, parseContractNumber, PAY_DEFAULTS } from "./memberAccess";
+describe("contract and pay", () => {
+  const cur = { time_tracking: "ronin", payee_name: "Mercy R", hourly_rate: 22, daily_rate: null, pay_basis: "hourly" as const, currency: "USD", rounding_minutes: 15 };
+  it("empty contract fields save null, never 0", () => {
+    expect(parseContractNumber("")).toBeNull(); expect(parseContractNumber("  ")).toBeNull();
+    expect(parseContractNumber("4.5")).toBe(4.5); expect(parseContractNumber("0")).toBe(0);
+  });
+  it("one combined write keeps unedited pay fields when only the clock changes", () => {
+    expect(timeSettingWrite("s1", cur, false, null)).toMatchObject({ time_tracking: "none", payee_name: "Mercy R", hourly_rate: 22 });
+  });
+  it("pay edits keep the clock value", () => {
+    expect(timeSettingWrite("s1", cur, true, { ...PAY_DEFAULTS, pay_basis: "daily", daily_rate: 180, payee_name: "Mercy R" }))
+      .toMatchObject({ time_tracking: "ronin", pay_basis: "daily", daily_rate: 180, payee_name: "Mercy R" });
+  });
+  it("never creates a row for defaults, and skips unchanged rows", () => {
+    expect(timeSettingWrite("s1", null, false, PAY_DEFAULTS)).toBeNull();
+    expect(timeSettingWrite("s1", null, false, null)).toBeNull();
+    expect(timeSettingWrite("s1", null, false, { ...PAY_DEFAULTS, hourly_rate: 20 })).toMatchObject({ time_tracking: "none", hourly_rate: 20 });
+    expect(timeSettingWrite("s1", cur, true, null)).toBeNull();
+  });
+  it("rate warning follows the pay basis", () => {
+    expect(missingRate({ ...PAY_DEFAULTS })).toBe(true);
+    expect(missingRate({ ...PAY_DEFAULTS, hourly_rate: 20 })).toBe(false);
+    expect(missingRate({ ...PAY_DEFAULTS, pay_basis: "daily", hourly_rate: 20 })).toBe(true);
+    expect(missingRate({ ...PAY_DEFAULTS, pay_basis: "payroll" })).toBe(false);
+  });
+  it("the clock switch adds 'clock' first and removes it", () => {
+    expect(withClockShortcut(["tasks", "clock"], true)).toEqual(["clock", "tasks"]);
+    expect(withClockShortcut(["clock", "tasks"], false)).toEqual(["tasks"]);
   });
 });

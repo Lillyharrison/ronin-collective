@@ -19,13 +19,13 @@ import {
   type TeamMember, type Property, type Level, type Department, type AppRole, type SectionPermissions,
 } from "./teamConstants";
 import {
-  accessGroups, sectionInfo, canHaveClock, clockSettingWrite, type TimeSetting, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
+  accessGroups, sectionInfo, canHaveClock, timeSettingWrite, payFromSetting, missingRate, withClockShortcut, parseContractNumber, CURRENCIES, ROUNDING_CHOICES, type TimeSetting, type PayEdit, type PayBasis, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
   buildPermissionRows, allowedQuickActions, isValidEmail, type PermField,
 } from "./memberAccess";
 import { ALL_QUICK_ACTIONS } from "./teamConstants";
 import { cn } from "@/lib/utils";
 
-type TabKey = "details" | "houses" | "access" | "home";
+type TabKey = "details" | "contract" | "houses" | "access" | "home";
 
 const ROLE_LABELS: Record<string, { en: string; es: string }> = {
   master_admin: { en: "Master admin", es: "Administrador principal" },
@@ -94,7 +94,11 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
 
   // Access shows only the person's real explicit settings — never level defaults.
   const [perms, setPerms] = useState<SectionPermissions>(() => ({ ...(member.section_permissions ?? {}) }));
-  const [quickActions, setQuickActions] = useState<string[]>(() => Array.isArray(member.quick_actions) ? member.quick_actions : []);
+  // 'clock' is managed by the clock switch, never edited as a normal shortcut.
+  const [quickActions, setQuickActions] = useState<string[]>(() => (Array.isArray(member.quick_actions) ? member.quick_actions : []).filter(k => k !== "clock"));
+  const [contractDays, setContractDays] = useState(member.contracted_days_per_week != null ? String(member.contracted_days_per_week) : "");
+  const [contractHours, setContractHours] = useState(member.contracted_hours_per_week != null ? String(member.contracted_hours_per_week) : "");
+  const [leaveDays, setLeaveDays] = useState(member.annual_leave_days != null ? String(member.annual_leave_days) : "");
   const [openGroup, setOpenGroup] = useState<string | null>("core");
   const [choosingShortcut, setChoosingShortcut] = useState(false);
 
@@ -106,21 +110,36 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const [timeSetting, setTimeSetting] = useState<TimeSetting>(null);
   const [clockOn, setClockOn] = useState(false);
   useEffect(() => {
-    supabase.from("staff_time_settings").select("time_tracking, payee_name, hourly_rate, currency, rounding_minutes")
+    supabase.from("staff_time_settings").select("time_tracking, payee_name, hourly_rate, daily_rate, pay_basis, currency, rounding_minutes")
       .eq("staff_id", member.id).maybeSingle()
-      .then(({ data }) => { const t = (data as TimeSetting) ?? null; setTimeSetting(t); setClockOn(t?.time_tracking === "ronin"); });
+      .then(({ data }) => { const t = (data as TimeSetting) ?? null; setTimeSetting(t); setClockOn(t?.time_tracking === "ronin"); setPay(payFromSetting(t)); });
   }, [member.id]);
+  const [pay, setPay] = useState<PayEdit>(() => payFromSetting(null));
+  const [payEdited, setPayEdited] = useState(false);
+  const editPay = (patch: Partial<PayEdit>) => { setPayEdited(true); setPay(p => ({ ...p, ...patch })); };
   const showClock = canHaveClock(resolvedRole, level);
   const clockCounts = showClock && clockOn ? 1 : 0;
   async function writeClockSetting(staffId: string) {
     if (!showClock) return;
-    const row = clockSettingWrite(staffId, timeSetting, clockOn);
+    // ONE upsert: clock switch (time_tracking) + Contract tab pay fields, unedited values preserved.
+    const row = timeSettingWrite(staffId, timeSetting, clockOn, payEdited ? pay : null);
     if (!row) return;
     const { error } = await supabase.from("staff_time_settings").upsert(row as never, { onConflict: "staff_id" });
     if (error) throw error;
-    setTimeSetting({ time_tracking: row.time_tracking, payee_name: row.payee_name, hourly_rate: row.hourly_rate, currency: row.currency, rounding_minutes: row.rounding_minutes });
+    const { staff_id: _id, ...saved } = row;
+    setTimeSetting(saved); setPayEdited(false);
     void queryClient?.invalidateQueries({ queryKey: ["timesheet-settings"] });
   }
+  const contractValues = () => ({
+    contracted_days_per_week: parseContractNumber(contractDays),
+    contracted_hours_per_week: parseContractNumber(contractHours),
+    annual_leave_days: parseContractNumber(leaveDays),
+  });
+  async function writeContract(profileId: string) {
+    const { error } = await supabase.from("profiles").update(contractValues() as never).eq("id", profileId);
+    if (error) throw error;
+  }
+  const savedQuickActions = withClockShortcut(quickActions, showClock && clockOn);
   const switchCount = switchesOn(perms) + clockCounts;
   const accessCount = sectionsOn(perms);
   const nothingOn = switchCount === 0;
@@ -191,7 +210,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       birthday: birthday || null,
       notes: notes || null,
       assigned_property_ids: assignedProps,
-      quick_actions: quickActions,
+      quick_actions: savedQuickActions,
       section_permissions_rows: upserts,
       section_permissions_delete: deletes,
       role: resolvedRole,
@@ -206,13 +225,14 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       if (isDraft) {
         const { error } = await supabase.functions.invoke("ronin-ai", { body: draftBody(false) });
         if (error) throw error;
+        await writeContract(member.id);
         await writeClockSetting(member.id);
       } else {
         const { error: profileErr } = await supabase.from("profiles").update({
           full_name: fullName, job_title: jobTitle, phone: phone || null, level,
           department: (level === "staff" || level === "manager") ? (department || null) : null,
           start_date: startDate || null, birthday: birthday || null, notes: notes || null,
-          assigned_property_ids: assignedProps, quick_actions: quickActions,
+          assigned_property_ids: assignedProps, quick_actions: savedQuickActions, ...contractValues(),
         } as never).eq("id", member.id);
         if (profileErr) throw profileErr;
         await writeDirectPermissions();
@@ -225,7 +245,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       toast.success(isEN ? "Saved" : "Guardado");
       onSaved({
         ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes,
-        assigned_property_ids: assignedProps, section_permissions: perms, quick_actions: quickActions,
+        assigned_property_ids: assignedProps, section_permissions: perms, quick_actions: savedQuickActions, ...contractValues(),
         role: resolvedRole, is_draft: isDraft,
       });
     } catch (e) {
@@ -257,7 +277,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
         description: isEN ? `A login invite has been sent to ${draftEmail}` : `Se envió un enlace de invitación a ${draftEmail}`,
       });
       const newId = (inviteRes as { user_id?: string } | null)?.user_id || member.id;
-      try { await writeClockSetting(newId); }
+      try { await writeContract(newId); await writeClockSetting(newId); }
       catch (e) { toast.error(e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e)); }
       onSaved({ ...member, id: newId, full_name: fullName, is_draft: false });
     } catch (e) {
@@ -336,6 +356,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
 
   const TABS: { key: TabKey; label: string; count?: number }[] = [
     { key: "details", label: isEN ? "Details" : "Datos" },
+    { key: "contract", label: isEN ? "Contract" : "Contrato" },
     { key: "houses", label: isEN ? "Houses" : "Casas", count: assignedProps.length },
     { key: "access", label: isEN ? "Access" : "Acceso", count: accessCount },
     { key: "home", label: isEN ? "Home screen" : "Inicio", count: quickActions.length },
@@ -378,7 +399,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
           nothingOn ? "bg-amber-500/10 text-amber-400" : "text-muted-foreground")}>{statusText}</p>
 
         {/* Tabs */}
-        <div role="tablist" className="grid grid-cols-4 border-b border-charcoal-light shrink-0">
+        <div role="tablist" className="grid grid-cols-5 border-b border-charcoal-light shrink-0">
           {TABS.map(t => (
             <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
               className={cn("min-w-0 min-h-11 px-1 py-1.5 text-[13px] font-semibold leading-tight transition-colors border-b-2",
@@ -450,6 +471,76 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               <Field label={isEN ? "Notes" : "Notas"} wide>
                 <Input value={notes} onChange={e => setNotes(e.target.value)} disabled={!canEdit} className={inputCls} />
               </Field>
+            </div>
+          )}
+
+          {tab === "contract" && (
+            <div className="px-4 py-3 space-y-3">
+              {showClock && (
+                <section aria-label={isEN ? "Pay" : "Pago"} className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{isEN ? "Paid" : "Pago"}</p>
+                  <div role="radiogroup" aria-label={isEN ? "Paid" : "Pago"} className="grid grid-cols-3 rounded-lg border border-charcoal-light overflow-hidden">
+                    {([["hourly", "By the hour", "Por hora"], ["daily", "By the day", "Por día"], ["payroll", "Through TriNet payroll", "Nómina TriNet"]] as [PayBasis, string, string][]).map(([k, en, es]) => (
+                      <button key={k} role="radio" aria-checked={pay.pay_basis === k} disabled={!canEdit} onClick={() => editPay({ pay_basis: k })}
+                        className={cn("min-h-11 px-1 text-sm leading-tight", pay.pay_basis === k ? "bg-gold text-charcoal font-semibold" : "text-cream/80 hover:bg-charcoal-light")}>
+                        {isEN ? en : es}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-x-3 gap-y-2">
+                    {pay.pay_basis === "hourly" && (
+                      <Field label={isEN ? "Hourly rate" : "Tarifa por hora"}>
+                        <Input type="number" inputMode="decimal" min={0} step="0.01" value={pay.hourly_rate ?? ""} disabled={!canEdit} className={inputCls}
+                          onChange={e => editPay({ hourly_rate: parseContractNumber(e.target.value) })} />
+                      </Field>
+                    )}
+                    {pay.pay_basis === "daily" && (
+                      <Field label={isEN ? "Day rate" : "Tarifa por día"}>
+                        <Input type="number" inputMode="decimal" min={0} step="0.01" value={pay.daily_rate ?? ""} disabled={!canEdit} className={inputCls}
+                          onChange={e => editPay({ daily_rate: parseContractNumber(e.target.value) })} />
+                      </Field>
+                    )}
+                    {pay.pay_basis !== "payroll" && (
+                      <Field label={isEN ? "Currency" : "Moneda"}>
+                        <select value={pay.currency} disabled={!canEdit} onChange={e => editPay({ currency: e.target.value })} className={cn(inputCls, "w-full rounded-md border px-2")}>
+                          {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </Field>
+                    )}
+                    {pay.pay_basis === "payroll" ? (
+                      <p className="col-span-full text-sm text-muted-foreground">{isEN ? "Paid through TriNet. No timesheet is produced here." : "Se paga por TriNet. Aquí no se genera hoja de horas."}</p>
+                    ) : (
+                      <>
+                        <Field label={isEN ? "Name on timesheet" : "Nombre en la hoja"}>
+                          <Input value={pay.payee_name ?? ""} disabled={!canEdit} className={inputCls} onChange={e => editPay({ payee_name: e.target.value })} />
+                        </Field>
+                        <Field label={isEN ? "Round times to" : "Redondear a"}>
+                          <select value={pay.rounding_minutes} disabled={!canEdit} onChange={e => editPay({ rounding_minutes: Number(e.target.value) })} className={cn(inputCls, "w-full rounded-md border px-2")}>
+                            {ROUNDING_CHOICES.map(m => <option key={m} value={m}>{m} min</option>)}
+                          </select>
+                        </Field>
+                      </>
+                    )}
+                    {pay.pay_basis === "daily" && (
+                      <p className="col-span-full text-xs text-muted-foreground">{isEN ? "Each day they clock in and out is paid in full. Hours are still recorded." : "Cada día que fichan entrada y salida se paga completo. Las horas se siguen registrando."}</p>
+                    )}
+                  </div>
+                </section>
+              )}
+              <section aria-label={isEN ? "Contract" : "Contrato"} className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{isEN ? "Contract" : "Contrato"}</p>
+                <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-x-3 gap-y-2 items-end">
+                  <Field label={isEN ? "Days per week" : "Días por semana"}>
+                  <Input type="number" inputMode="decimal" min={0} step="0.5" value={contractDays} onChange={e => setContractDays(e.target.value)} disabled={!canEdit} className={inputCls} />
+                </Field>
+                  <Field label={isEN ? "Hours per week" : "Horas por semana"}>
+                  <Input type="number" inputMode="decimal" min={0} step="0.5" value={contractHours} onChange={e => setContractHours(e.target.value)} disabled={!canEdit} className={inputCls} />
+                </Field>
+                  <Field label={isEN ? "Annual leave (days)" : "Vacaciones (días)"}>
+                  <Input type="number" inputMode="decimal" min={0} step="0.5" value={leaveDays} onChange={e => setLeaveDays(e.target.value)} disabled={!canEdit} className={inputCls} />
+                </Field>
+                </div>
+              </section>
             </div>
           )}
 
@@ -560,8 +651,8 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground pr-14">{isEN ? "Lets them sign in and out at the house on their phone. Turn off if their hours are recorded in TriNet." : "Les permite fichar en la casa desde su teléfono. Desactívalo si sus horas se registran en TriNet."}</p>
-                      {clockOn && timeSetting?.hourly_rate == null && (
-                        <p data-testid="clock-no-rate" className="mt-1 text-xs text-amber-400">{isEN ? "No hourly rate yet. Add it under Timesheets, Time and pay, before issuing their timesheet." : "Aún no hay tarifa por hora. Añádela en Hojas de horas, Tiempo y pago, antes de emitir su hoja."}</p>
+                      {clockOn && missingRate(pay) && (
+                        <p data-testid="clock-no-rate" className="mt-1 text-xs text-amber-400">{isEN ? "No rate yet. Add it in the Contract tab before issuing their timesheet." : "Aún no hay tarifa. Añádela en la pestaña Contrato antes de emitir su hoja de horas."}</p>
                       )}
                     </div>
                   )}
@@ -594,6 +685,12 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                 <>
                   <p className="text-xs text-muted-foreground">{isEN ? "Shortcuts on their home screen." : "Accesos directos en su pantalla de inicio."}</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {showClock && clockOn && (
+                      <div data-testid="locked-clock-tile" className="relative rounded-xl border border-gold/40 bg-charcoal-light px-2 py-3 flex flex-col items-center gap-1 min-h-[76px]">
+                        <span className="text-xl" aria-hidden>⏱️</span>
+                        <span className="text-xs text-cream text-center leading-tight">{isEN ? "Clock in/out (added by the clock switch)" : "Fichar (añadido por el interruptor de fichaje)"}</span>
+                      </div>
+                    )}
                     {quickActions.map(k => {
                       const a = ALL_QUICK_ACTIONS.find(x => x.key === k);
                       if (!a) return null;

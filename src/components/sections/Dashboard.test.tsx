@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  section: vi.fn(), timesheet: vi.fn(), planned: vi.fn(), repair: vi.fn(), navigate: vi.fn(), rpc: vi.fn(),
+  section: vi.fn(), clockSheet: vi.fn(), timesheet: vi.fn(), planned: vi.fn(), repair: vi.fn(), navigate: vi.fn(), rpc: vi.fn(),
   deleted: vi.fn(), updated: vi.fn(), rpcError: null as unknown,
   notifications: [] as Record<string, unknown>[], language: "en", assignedPropertyIds: [] as string[],
 }));
@@ -11,6 +11,7 @@ vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
 vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
   setActiveSection: mocks.section, setPendingPlannedMaintenanceEntryId: mocks.planned,
   setPendingMaintenanceIssueId: mocks.repair, setPendingTaskId: vi.fn(), setPendingTimesheetStaffId: mocks.timesheet,
+  setClockSheetRequested: mocks.clockSheet,
 }) }));
 vi.mock("@/hooks/usePermissions", () => ({
   usePermissions: () => ({ userId: "tester", fullName: "Tester", isAdmin: false, isMasterAdmin: false,
@@ -22,6 +23,7 @@ vi.mock("@/hooks/usePropertyRules", () => ({ useActiveRulesForDashboard: () => [
 vi.mock("@/hooks/useMaintenanceIssues", () => ({ useMaintenanceIssues: () => ({ categories: [], createIssue: vi.fn() }) }));
 vi.mock("@/components/maintenance/IssueModal", () => ({ IssueModal: () => null }));
 vi.mock("@/components/clock/ClockCard", () => ({ ClockCard: () => <div data-testid="clock-card" /> }));
+vi.mock("@/components/clock/ClockQuickAction", () => ({ ClockQuickAction: () => <div data-testid="clock-quick-action" /> }));
 vi.mock("@/components/NotificationRecordDialog", () => ({
   NotificationRecordDialog: ({ target, onClose, onEditPlanned }: { target: { type: string; id: string | null }; onClose: () => void; onEditPlanned: (id: string) => void }) =>
     <div role="dialog">{target.type}:{target.id}<button onClick={onClose}>Close details</button><button onClick={() => onEditPlanned(target.id ?? "")}>Edit planned</button></div>,
@@ -146,11 +148,15 @@ describe("dashboard notifications", () => {
     await waitFor(() => expect(mocks.section).toHaveBeenCalledExactlyOnceWith("orders"));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-  it("places the clock card below the greeting banner", () => {
-    const { container } = render(<Dashboard />);
-    const greeting = container.querySelector("h1");
-    const clock = screen.getByTestId("clock-card");
-    expect(greeting).not.toBeNull();
-    expect(greeting!.compareDocumentPosition(clock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  it("no longer shows the permanent clock card", () => {
+    render(<Dashboard />);
+    expect(screen.queryByTestId("clock-card")).toBeNull();
+  });
+  it("a clock reminder goes home and asks for the clock sheet", async () => {
+    notice("clock_reminder", "home");
+    render(<Dashboard />);
+    fireEvent.click(await screen.findByText("Test notice"));
+    await waitFor(() => expect(mocks.clockSheet).toHaveBeenCalledWith(true));
+    expect(mocks.section).toHaveBeenCalledWith("dashboard");
   });
 });

@@ -26,7 +26,7 @@ Deno.serve(async req=> {
     const {error}=await db.from('notifications').insert({user_id:recipient,...words,type:'info',entity_type:entityType,entity_id:entityId,property_id:property,action_url:action});
     if(error){await db.from('time_reminders_sent').delete().eq('dedupe_key',key);throw error;}
     sent++;
-    try {const pushed=await fetch(`${url}/functions/v1/send-push-notification`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${service}`},body:JSON.stringify({recipientUserIds:[recipient],...words,url:entityType==='clock_reminder'?'/':'/staff-schedule'})});if(!pushed.ok)console.error('Time reminder push was not accepted');}catch{console.error('Time reminder push unavailable');}
+    try {const pushed=await fetch(`${url}/functions/v1/send-push-notification`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${service}`},body:JSON.stringify({recipientUserIds:[recipient],...words,url:entityType==='clock_reminder'?'/?clock=1':'/staff-schedule'})});if(!pushed.ok)console.error('Time reminder push was not accepted');}catch{console.error('Time reminder push unavailable');}
   }
   try {
     const settings=await pages('staff_time_settings','staff_id',q=>q.eq('time_tracking','ronin'));

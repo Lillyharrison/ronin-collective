@@ -34,11 +34,11 @@ export interface FamilyEvent {
 
 export interface RosterStats {
   daysWorked: number;
-  daysExpected: number;
+  daysExpected: number | null;
   hoursWorked: number;
-  hoursExpected: number;
+  hoursExpected: number | null;
   leaveTakenYTD: number;
-  leaveAllowance: number;
+  leaveAllowance: number | null;
 }
 
 export interface DisplayShift {

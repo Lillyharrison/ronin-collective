@@ -66,7 +66,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const { language } = useLanguage();
   const navigate = useNavigate();
   const { userId, isMasterAdmin } = usePermissions();
-  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId, setPendingTimesheetStaffId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId, setPendingTimesheetStaffId, setClockSheetRequested } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const { detailTarget, openDetails, closeDetails, editPlanned } = useNotificationDetails(onClose);
@@ -179,6 +179,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
     }
 
     if (n.entity_type === "timesheet" && n.entity_id) setPendingTimesheetStaffId(n.entity_id);
+    if (n.entity_type === "clock_reminder") setClockSheetRequested(true);
     onClose();
 
     if (targetSection) {

@@ -23,7 +23,7 @@ import { useNotificationDetails } from "@/components/notifications/useNotificati
 import { useNotificationSwipe } from "@/components/notifications/useNotificationSwipe";
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
-import { ClockCard } from "@/components/clock/ClockCard";
+import { ClockQuickAction } from "@/components/clock/ClockQuickAction";
 import { selectShortcuts } from "@/lib/dashboardShortcuts";
 import { NotificationAcknowledgement, ReceiptSwipeRow, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
 
@@ -170,7 +170,7 @@ function eventDotColor(eventType: string): string {
 
 export function Dashboard() {
   const { language, t } = useLanguage();
-  const { setActiveSection, setPendingMaintenanceIssueId, setPendingTimesheetStaffId } = useNavigation();
+  const { setActiveSection, setPendingMaintenanceIssueId, setPendingTimesheetStaffId, setClockSheetRequested } = useNavigation();
   const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
   const { properties: scopedProperties } = useScopedProperties();
   const [issueAssignees, setIssueAssignees] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
@@ -403,6 +403,7 @@ export function Dashboard() {
       setPendingMaintenanceIssueId(n.entity_id);
     }
     if (n.entity_type === "timesheet" && n.entity_id) setPendingTimesheetStaffId(n.entity_id);
+    if (n.entity_type === "clock_reminder") setClockSheetRequested(true);
     if (targetSection) setActiveSection(targetSection);
   };
 
@@ -551,8 +552,6 @@ export function Dashboard() {
           </div>
         )}
       </div>
-
-      <ClockCard />
 
       {/* Today's Snapshot — visibility controlled per user in Team settings */}
       {canSee("todays-snapshot") && (
@@ -745,7 +744,8 @@ export function Dashboard() {
         ) : (
         (() => {
           const shown = selectShortcuts(ALL_QUICK_ACTIONS_DASHBOARD, userQuickActions, canSee, isMasterAdmin);
-          if (shown.length === 0) {
+          const hasClockTile = Array.isArray(userQuickActions) && userQuickActions.includes("clock");
+          if (shown.length === 0 && !hasClockTile) {
             const hasAnyAccess = isAdmin || Object.values(sectionPermissions ?? {}).some(p => p?.view);
             return <p className="text-sm text-muted-foreground bg-card border border-border rounded-xl px-4 py-4">
               {hasAnyAccess
@@ -755,6 +755,7 @@ export function Dashboard() {
           }
           return (
         <div className="grid grid-cols-2 gap-3">
+          <ClockQuickAction quickActions={userQuickActions} es={language === "es"} />
           {shown
             .map((action) => (
             <button

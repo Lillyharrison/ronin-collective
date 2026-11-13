@@ -14,7 +14,7 @@ const invoke = async (name:string,args:Record<string,unknown>):Promise<RpcResult
   const result=await supabase.rpc(name as 'my_clock_status', args as never);
   return { data: result.data as Record<string,unknown>|null, error:result.error };
 };
-export function ClockCard() {
+export function ClockCard({ onEnded }: { onEnded?: () => void } = {}) {
   const {user}=useAuth(); const {language}=useLanguage(); const {registerBackHandler}=useNavigation();
   const userId=user?.id; const es=language==='es'; const text=(a:string,b:string)=>es?a:b;
   const [message,setMessage]=useState(''); const [busy,setBusy]=useState(false); const lock=useRef(false);
@@ -46,8 +46,10 @@ export function ClockCard() {
     return (data||[]).filter(e=>s?.visits.some(v=>v.property_id===e.property_id&&v.visit_date===e.visit_date)).reduce((n,e)=>n+(Date.parse(e.clock_out||'')-Date.parse(e.clock_in))/60000,0);
   }});
   const format=(at:string,zone=timezone)=>new Intl.DateTimeFormat(es?'es-US':'en-US',{timeZone:zone,hour:'numeric',minute:'2-digit'}).format(new Date(at));
+  const ended=useRef(false);
   const onResult=useCallback((action:ClockAction,data:Record<string,unknown>)=> {
     setLast({action,data});
+    if(action.rpc==='clock_out')ended.current=true;
     if(action.rpc==='clock_out'&&typeof data.entry_id==='string') {setReasonEntry(data.entry_id);setSheet('reason');}
   },[]);
   const sync=useCallback(async()=> {
@@ -60,6 +62,8 @@ export function ClockCard() {
     window.addEventListener('online',sync);window.addEventListener('focus',sync);document.addEventListener('visibilitychange',visible);
     const timer=setInterval(visible,60000);return()=>{clearInterval(timer);window.removeEventListener('online',sync);window.removeEventListener('focus',sync);document.removeEventListener('visibilitychange',visible);};
   },[sync,userId]);
+  // After the end flow (including the reason question) show the confirmation briefly, then let the host close.
+  useEffect(()=> {if(!onEnded||sheet||busy||!ended.current)return;const t=setTimeout(()=>{ended.current=false;onEnded();},2500);return()=>clearTimeout(t);},[sheet,busy,last,onEnded]);
   useEffect(()=> {if(!sheet)return;registerBackHandler(()=>{setSheet(null);return true;});return()=>registerBackHandler(null);},[sheet,registerBackHandler]);
   const execute=async()=> {
     const p=pending.current;if(!p||!userId||lock.current)return;lock.current=true;setBusy(true);setMessage('');setSheet(null);

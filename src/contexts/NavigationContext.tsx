@@ -110,6 +110,9 @@ interface NavigationContextType {
   pendingTaskId: string | null;
   setPendingTaskId: (id: string | null) => void;
   pendingTaskIdRef: React.MutableRefObject<string | null>;
+  /** Set by clock_reminder notification taps: the home screen opens the clock sheet. */
+  clockSheetRequested: boolean;
+  setClockSheetRequested: (v: boolean) => void;
   /** When a maintenance deep-link comes from the calendar, remember to return there on close */
   maintenanceReturnSection: ActiveSection | null;
   setMaintenanceReturnSection: (section: ActiveSection | null) => void;
@@ -161,6 +164,8 @@ const NavigationContext = createContext<NavigationContextType>({
   pendingTaskId: null,
   setPendingTaskId: () => {},
   pendingTaskIdRef: { current: null },
+  clockSheetRequested: false,
+  setClockSheetRequested: () => {},
   maintenanceReturnSection: null,
   setMaintenanceReturnSection: () => {},
   canGoBack: false,
@@ -216,6 +221,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pendingTimesheetStaffIdRef = useRef<string | null>(null);
   const setPendingTimesheetStaffId = useCallback((id: string | null) => { pendingTimesheetStaffIdRef.current = id; setPendingTimesheetStaffIdState(id); }, []);
   const [pendingTaskId, setPendingTaskIdState] = useState<string | null>(null);
+  const [clockSheetRequested, setClockSheetRequested] = useState(false);
   const pendingTaskIdRef = useRef<string | null>(null);
   const [maintenanceReturnSection, setMaintenanceReturnSection] = useState<ActiveSection | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -359,6 +365,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         pendingTaskId,
         setPendingTaskId,
         pendingTaskIdRef,
+        clockSheetRequested,
+        setClockSheetRequested,
         maintenanceReturnSection,
         setMaintenanceReturnSection,
         canGoBack,

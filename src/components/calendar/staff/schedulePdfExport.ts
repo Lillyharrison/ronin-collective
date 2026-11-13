@@ -595,19 +595,19 @@ function renderTracking(
     const { daysExpected, hoursExpected } = calculateExpectedWork(person, rangeStart, rangeEnd);
     const allowance = calculateAccruedAnnualLeave(person, rangeEnd);
     const leaveTakenYTD = calculateAnnualLeaveTakenYTD(person, leaveRequests, rangeEnd);
-    const leaveLeft = Math.max(0, allowance - leaveTakenYTD);
-    const daysDelta = daysWorked - daysExpected;
-    const hoursDelta = hoursWorked - hoursExpected;
+    const leaveLeft = allowance == null ? null : Math.max(0, allowance - leaveTakenYTD);
+    const daysDelta = daysExpected == null ? 0 : daysWorked - daysExpected;
+    const hoursDelta = hoursExpected == null ? 0 : hoursWorked - hoursExpected;
 
     return [
       getDisplayName(person),
       person.job_title ?? "—",
-      `${daysWorked} / ${daysExpected}`,
+      `${daysWorked} / ${daysExpected ?? "not set"}`,
       daysDelta === 0 ? "" : (daysDelta > 0 ? `+${daysDelta}d` : `${daysDelta}d`),
-      `${hoursWorked.toFixed(1)} / ${hoursExpected}`,
+      `${hoursWorked.toFixed(1)} / ${hoursExpected ?? "not set"}`,
       hoursDelta === 0 ? "" : (hoursDelta > 0 ? `+${Math.round(hoursDelta)}h` : `${Math.round(hoursDelta)}h`),
       `${formatLeaveDays(leaveTakenYTD)} / ${formatLeaveDays(allowance)}`,
-      `${formatLeaveDays(leaveLeft)}`,
+      `${leaveLeft == null ? "—" : formatLeaveDays(leaveLeft)}`,
     ];
   });
 

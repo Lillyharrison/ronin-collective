@@ -23,27 +23,78 @@ export function accessGroups(existing: SectionPermissions = {}, allSectionKeys: 
   return more.length ? [...ACCESS_GROUPS, { key: "more", label: "More", labelEs: "Más", sections: more }] : [...ACCESS_GROUPS];
 }
 
-// ── Clock in and out on site (staff_time_settings.time_tracking) ─────────────
-export type TimeSetting = { time_tracking: string; payee_name: string | null; hourly_rate: number | null; currency: string; rounding_minutes: number } | null;
+// ── Clock in and out on site + pay (staff_time_settings) ──────────────────────
+export type PayBasis = "hourly" | "daily" | "payroll";
+export type TimeSetting = {
+  time_tracking: string; payee_name: string | null; hourly_rate: number | null; currency: string; rounding_minutes: number;
+  pay_basis?: PayBasis | null; daily_rate?: number | null;
+} | null;
+export type PayEdit = { pay_basis: PayBasis; hourly_rate: number | null; daily_rate: number | null; currency: string; payee_name: string | null; rounding_minutes: number };
+export type TimeSettingRow = { staff_id: string; time_tracking: string; pay_basis: PayBasis; hourly_rate: number | null; daily_rate: number | null; currency: string; payee_name: string | null; rounding_minutes: number };
 
-/** Only people whose role AND level are staff can clock in (the database enforces it). */
+export const PAY_DEFAULTS: PayEdit = { pay_basis: "hourly", hourly_rate: null, daily_rate: null, currency: "USD", payee_name: null, rounding_minutes: 15 };
+export const CURRENCIES = ["USD", "EUR", "GBP"];
+export const ROUNDING_CHOICES = [1, 5, 10, 15, 30, 60];
+
+/** Only people whose role AND level are staff can clock in or be paid here (the database enforces it). */
 export function canHaveClock(role: string | null | undefined, level: string | null | undefined) {
   return role === "staff" && level === "staff";
 }
 
-/** What to write for the clock switch. ON keeps existing pay fields; OFF turns 'ronin' into 'none', leaves 'trinet', never creates a row. */
-export function clockSettingWrite(staffId: string, current: TimeSetting, on: boolean):
-  { staff_id: string; time_tracking: string; payee_name: string | null; hourly_rate: number | null; currency: string; rounding_minutes: number } | null {
-  if (on) {
-    if (current?.time_tracking === "ronin") return null;
-    return {
-      staff_id: staffId, time_tracking: "ronin",
-      payee_name: current?.payee_name ?? null, hourly_rate: current?.hourly_rate ?? null,
-      currency: current?.currency ?? "USD", rounding_minutes: current?.rounding_minutes ?? 15,
-    };
+export function payFromSetting(current: TimeSetting): PayEdit {
+  return {
+    pay_basis: (current?.pay_basis as PayBasis) ?? "hourly", hourly_rate: current?.hourly_rate ?? null, daily_rate: current?.daily_rate ?? null,
+    currency: current?.currency ?? "USD", payee_name: current?.payee_name ?? null, rounding_minutes: current?.rounding_minutes ?? 15,
+  };
+}
+
+function hasPayData(p: PayEdit) {
+  return p.hourly_rate != null || p.daily_rate != null || !!p.payee_name?.trim() || p.pay_basis !== "hourly"
+    || p.currency !== "USD" || p.rounding_minutes !== 15;
+}
+
+/**
+ * ONE combined write for the clock switch and the Contract tab's pay fields.
+ * Clock ON => 'ronin'; OFF turns 'ronin' into 'none' and leaves 'trinet'.
+ * pay=null means the pay fields were not edited: existing values are preserved.
+ * Returns null when nothing changes, or when there is no row and nothing worth storing.
+ */
+export function timeSettingWrite(staffId: string, current: TimeSetting, clockOn: boolean, pay: PayEdit | null): TimeSettingRow | null {
+  const base = payFromSetting(current);
+  const nextPay = pay ?? base;
+  const tracking = clockOn ? "ronin" : (current?.time_tracking === "ronin" ? "none" : (current?.time_tracking ?? "none"));
+  if (!current && !clockOn && !hasPayData(nextPay)) return null;
+  const row: TimeSettingRow = { staff_id: staffId, time_tracking: tracking, ...nextPay, payee_name: nextPay.payee_name?.trim() || null };
+  if (current) {
+    const same = current.time_tracking === row.time_tracking && JSON.stringify(payFromSetting(current)) === JSON.stringify({ ...nextPay, payee_name: row.payee_name });
+    if (same) return null;
   }
-  if (current?.time_tracking !== "ronin") return null;
-  return { staff_id: staffId, time_tracking: "none", payee_name: current.payee_name, hourly_rate: current.hourly_rate, currency: current.currency, rounding_minutes: current.rounding_minutes };
+  return row;
+}
+
+/** Back-compat helper: clock-only change, pay fields preserved. */
+export function clockSettingWrite(staffId: string, current: TimeSetting, on: boolean) {
+  return timeSettingWrite(staffId, current, on, null);
+}
+
+/** The rate the current basis needs is missing (payroll needs none). */
+export function missingRate(pay: PayEdit) {
+  if (pay.pay_basis === "payroll") return false;
+  return pay.pay_basis === "daily" ? pay.daily_rate == null : pay.hourly_rate == null;
+}
+
+/** Saved quick actions: 'clock' first when the clock is on, removed when off. */
+export function withClockShortcut(quickActions: string[], clockOn: boolean) {
+  const rest = quickActions.filter(k => k !== "clock");
+  return clockOn ? ["clock", ...rest] : rest;
+}
+
+/** Contract number fields: empty => null, never 0 or a default. */
+export function parseContractNumber(v: string): number | null {
+  const t = v.trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 export function sectionInfo(key: string) {
