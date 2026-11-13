@@ -2031,7 +2031,9 @@ export type Database = {
         Row: {
           created_at: string
           currency: string
+          daily_rate: number | null
           hourly_rate: number | null
+          pay_basis: string
           payee_name: string | null
           rounding_minutes: number
           staff_id: string
@@ -2041,7 +2043,9 @@ export type Database = {
         Insert: {
           created_at?: string
           currency?: string
+          daily_rate?: number | null
           hourly_rate?: number | null
+          pay_basis?: string
           payee_name?: string | null
           rounding_minutes?: number
           staff_id: string
@@ -2051,7 +2055,9 @@ export type Database = {
         Update: {
           created_at?: string
           currency?: string
+          daily_rate?: number | null
           hourly_rate?: number | null
+          pay_basis?: string
           payee_name?: string | null
           rounding_minutes?: number
           staff_id?: string
@@ -2467,8 +2473,10 @@ export type Database = {
         Row: {
           adjustments_amount: number
           currency: string
+          day_rate: number | null
+          days_paid: number | null
           file_path: string | null
-          hourly_rate: number
+          hourly_rate: number | null
           hours_amount: number
           id: string
           issued_at: string
@@ -2477,6 +2485,7 @@ export type Database = {
           paid_marked_at: string | null
           paid_marked_by: string | null
           paid_on: string | null
+          pay_basis: string
           payee_name: string | null
           period_end: string
           period_start: string
@@ -2493,8 +2502,10 @@ export type Database = {
         Insert: {
           adjustments_amount?: number
           currency: string
+          day_rate?: number | null
+          days_paid?: number | null
           file_path?: string | null
-          hourly_rate: number
+          hourly_rate?: number | null
           hours_amount: number
           id?: string
           issued_at?: string
@@ -2503,6 +2514,7 @@ export type Database = {
           paid_marked_at?: string | null
           paid_marked_by?: string | null
           paid_on?: string | null
+          pay_basis?: string
           payee_name?: string | null
           period_end: string
           period_start: string
@@ -2519,8 +2531,10 @@ export type Database = {
         Update: {
           adjustments_amount?: number
           currency?: string
+          day_rate?: number | null
+          days_paid?: number | null
           file_path?: string | null
-          hourly_rate?: number
+          hourly_rate?: number | null
           hours_amount?: number
           id?: string
           issued_at?: string
@@ -2529,6 +2543,7 @@ export type Database = {
           paid_marked_at?: string | null
           paid_marked_by?: string | null
           paid_on?: string | null
+          pay_basis?: string
           payee_name?: string | null
           period_end?: string
           period_start?: string
