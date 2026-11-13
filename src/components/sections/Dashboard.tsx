@@ -19,13 +19,12 @@ import { useScopedProperties } from "@/hooks/useScopedProperties";
 import { filterAssignableStaff } from "@/lib/assignableStaff";
 import { notifyRepairCreated } from "@/lib/maintenanceNotifications";
 import { useMaintenanceIssues } from "@/hooks/useMaintenanceIssues";
-import { SwipeableNotificationRow } from "@/components/notifications/SwipeableNotificationRow";
 import { useNotificationDetails } from "@/components/notifications/useNotificationDetails";
 import { useNotificationSwipe } from "@/components/notifications/useNotificationSwipe";
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
 import { ClockCard } from "@/components/clock/ClockCard";
-import { NotificationAcknowledgement, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
+import { NotificationAcknowledgement, ReceiptSwipeRow, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
 
 interface FeedEvent {
   id: string;
@@ -189,7 +188,7 @@ export function Dashboard() {
   // Notifications widget on dashboard (unread)
   const [dashNotifs, setDashNotifs] = useState<DashNotification[]>([]);
   const { detailTarget, openDetails, closeDetails, editPlanned } = useNotificationDetails();
-  const { revealedId, resetEpoch, closeRevealed, reveal } = useNotificationSwipe(detailTarget);
+  const { revealedId, revealedSide, resetEpoch, closeRevealed, reveal } = useNotificationSwipe(detailTarget);
   const dismissingIds = useRef(new Set<string>());
 
   // Smart tagline — loaded from DB (shared across all users)
@@ -679,8 +678,8 @@ export function Dashboard() {
               const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
               const isClickable = !!(isNotificationDetailType(n.entity_type) || n.action_url || (n.entity_type && SECTION_DEEP_LINK[n.entity_type]));
               return (
-                <SwipeableNotificationRow key={n.id} revealed={revealedId === n.id} resetEpoch={resetEpoch}
-                  removing={false} onReveal={() => reveal(n.id)} onClose={closeRevealed}
+                <ReceiptSwipeRow key={n.id} notification={n} revealed={revealedId === n.id} revealedSide={revealedSide} resetEpoch={resetEpoch}
+                  removing={false} onReveal={side => reveal(n.id, side)} onClose={closeRevealed}
                   onAction={() => dismissNotif(n.id, n.user_id)} actionIcon={X}
                   actionLabel={language === "es" ? "Descartar" : "Dismiss"}>
                 <div
@@ -705,10 +704,10 @@ export function Dashboard() {
                     <p className="text-[10px] text-muted-foreground leading-none mt-0.5 truncate">
                       {n.body ? `${n.body} · ` : ""}Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
-                    <NotificationAcknowledgement notification={n} />
+                    <NotificationAcknowledgement notification={n} hideAction />
                   </div>
                 </div>
-                </SwipeableNotificationRow>
+                </ReceiptSwipeRow>
               );
             })}
           </div>

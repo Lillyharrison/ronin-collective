@@ -10,10 +10,9 @@ import { useNavigate } from "react-router-dom";
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SwipeableNotificationRow } from "@/components/notifications/SwipeableNotificationRow";
 import { useNotificationDetails } from "@/components/notifications/useNotificationDetails";
 import { useNotificationSwipe } from "@/components/notifications/useNotificationSwipe";
-import { NotificationAcknowledgement, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
+import { NotificationAcknowledgement, ReceiptSwipeRow, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
 
 interface Notification {
   actor_id?: string | null;
@@ -71,7 +70,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const { detailTarget, openDetails, closeDetails, editPlanned } = useNotificationDetails(onClose);
-  const { revealedId, resetEpoch, closeRevealed, reveal } = useNotificationSwipe(detailTarget);
+  const { revealedId, revealedSide, resetEpoch, closeRevealed, reveal } = useNotificationSwipe(detailTarget);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const deletingIds = useRef(new Set<string>());
   useEffect(() => { closeRevealed(); }, [open, detailTarget, closeRevealed]);
@@ -258,8 +257,8 @@ export function NotificationsPanel({ open, onClose }: Props) {
                 const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.info;
                 const clickable = isClickable(n);
                 return (
-              <SwipeableNotificationRow key={n.id} revealed={revealedId === n.id} resetEpoch={resetEpoch}
-                removing={removingIds.has(n.id)} onReveal={() => reveal(n.id)}
+              <ReceiptSwipeRow key={n.id} notification={n} revealed={revealedId === n.id} revealedSide={revealedSide} resetEpoch={resetEpoch}
+                removing={removingIds.has(n.id)} onReveal={side => reveal(n.id, side)}
                 onClose={closeRevealed} onAction={() => deleteNotification(n.id)}
                 actionLabel={language === "es" ? "Eliminar notificación" : "Delete notification"} actionIcon={Trash2} destructive>
               <div
@@ -296,7 +295,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
                           {n.body}
                         </p>
                       )}
-                      <NotificationAcknowledgement notification={n} />
+                      <NotificationAcknowledgement notification={n} hideAction />
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-[10px] text-muted-foreground/50">
                           {new Date(n.created_at).toLocaleString("en-US", {
@@ -313,7 +312,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
                     </div>
 
                   </div>
-                </SwipeableNotificationRow>
+                </ReceiptSwipeRow>
                 );
               })}
             </div>

@@ -18,7 +18,7 @@ vi.mock("@/lib/notificationDetail", () => ({ fetchNotificationDetail: async (typ
 import { NotificationAcknowledgement, canSendReceipt } from "./NotificationAcknowledgement";
 import { NotificationRecordDialog } from "../NotificationRecordDialog";
 import { SwipeableNotificationRow } from "./SwipeableNotificationRow";
-import { Trash2 } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 const notice = { id: "notice", actor_id: "sender", receipt_sent_at: null };
 const client = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 const show = (element = <NotificationAcknowledgement notification={notice} />) => render(<QueryClientProvider client={client()}>{element}</QueryClientProvider>);
@@ -78,6 +78,32 @@ it("receipt clicks do not open details, dismiss or delete; swipe still reveals d
   fireEvent.touchStart(row, { touches: [{ clientX: 200, clientY: 100 }] });
   fireEvent.touchMove(row, { touches: [{ clientX: 140, clientY: 100 }] }); fireEvent.touchEnd(row);
   expect(reveal).toHaveBeenCalledOnce(); expect(remove).not.toHaveBeenCalled();
+});
+it("swiping right reveals and triggers the acknowledge action; rows without it ignore right swipes", async () => {
+  const ack = vi.fn(), remove = vi.fn(), reveal = vi.fn();
+  show(<SwipeableNotificationRow revealed={false} resetEpoch={0} removing={false} onReveal={reveal} onClose={() => {}} onAction={remove} actionLabel="Delete" actionIcon={Trash2}
+    secondaryAction={{ onAction: ack, label: "Acknowledge", icon: Check }}>
+    <div><p>Swipe me</p></div>
+  </SwipeableNotificationRow>);
+  const row = screen.getByText("Swipe me").closest(".notification-swipe-content");
+  if (!row) throw new Error("Missing row");
+  fireEvent.touchStart(row, { touches: [{ clientX: 100, clientY: 100 }] });
+  fireEvent.touchMove(row, { touches: [{ clientX: 160, clientY: 100 }] }); fireEvent.touchEnd(row);
+  expect(reveal).toHaveBeenCalledExactlyOnceWith("right");
+  expect(remove).not.toHaveBeenCalled(); expect(ack).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
+  expect(ack).toHaveBeenCalledOnce(); expect(remove).not.toHaveBeenCalled();
+});
+it("a right swipe on a delete-only row neither reveals nor acts", () => {
+  const remove = vi.fn(), reveal = vi.fn(), close = vi.fn();
+  show(<SwipeableNotificationRow revealed={false} resetEpoch={0} removing={false} onReveal={reveal} onClose={close} onAction={remove} actionLabel="Delete" actionIcon={Trash2}>
+    <div><p>Delete only</p></div>
+  </SwipeableNotificationRow>);
+  const row = screen.getByText("Delete only").closest(".notification-swipe-content");
+  if (!row) throw new Error("Missing row");
+  fireEvent.touchStart(row, { touches: [{ clientX: 100, clientY: 100 }] });
+  fireEvent.touchMove(row, { touches: [{ clientX: 160, clientY: 100 }] }); fireEvent.touchEnd(row);
+  expect(reveal).not.toHaveBeenCalled(); expect(close).toHaveBeenCalledOnce(); expect(remove).not.toHaveBeenCalled();
 });
 it.each([
   { already_acknowledged: true }, { acknowledged: true, notified: false, sender_id: "sender", title: "Seen" },
