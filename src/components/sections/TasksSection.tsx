@@ -190,7 +190,7 @@ export function TasksSection() {
   const [draftCount, setDraftCount] = useState(0);
   // Pre-filter: if arriving from a property deep-link, pre-set property filter
   const [filterPropId, setFilterPropId] = useState<string | null>(null);
-  const [taskViewFilter, setTaskViewFilter] = useState<'mine' | 'all'>('all');
+  const [taskViewFilter, setTaskViewFilter] = useState<string>('all') // 'all' | 'mine' | a person's id;
 
   const [modalTask, setModalTask]   = useState<FullTask | null | undefined>(undefined);
   const [newStatus, setNewStatus]   = useState<TaskStatus>("pending");
@@ -291,8 +291,11 @@ export function TasksSection() {
 
   const liveTasks = tasks.filter(t => !t.is_draft && (!filterPropId || t.property_id === filterPropId));
   const draftTasks = tasks.filter(t => t.is_draft);
-  const visibleLiveTasks = taskViewFilter === 'mine' ? liveTasks.filter(t => t.assigned_to === userId) : liveTasks;
-  const visibleDraftTasks = taskViewFilter === 'mine' ? draftTasks.filter(t => t.assigned_to === userId) : draftTasks;
+  const viewAssignee = taskViewFilter === 'all' ? null : taskViewFilter === 'mine' ? userId : taskViewFilter;
+  const visibleLiveTasks = viewAssignee ? liveTasks.filter(t => t.assigned_to === viewAssignee) : liveTasks;
+  const visibleDraftTasks = viewAssignee ? draftTasks.filter(t => t.assigned_to === viewAssignee) : draftTasks;
+  const assigneeOptions = [...new Map(tasks.filter(t => t.assigned_to && t.assigned_to !== userId)
+    .map(t => [t.assigned_to as string, t.assignee?.full_name ?? "—"])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
 
   const columns: TaskStatus[] = ["urgent", "pending", "in_progress", "completed"];
   const byStatus = (s: TaskStatus) => visibleLiveTasks.filter(t => t.status === s);
@@ -406,30 +409,12 @@ export function TasksSection() {
           </button>
         ) : <div />}
         {(isAdmin || isMasterAdmin) && (
-          <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
-            <button
-              onClick={() => setTaskViewFilter('mine')}
-              className={cn(
-                "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
-                taskViewFilter === 'mine'
-                  ? "bg-[hsl(var(--gold))] text-charcoal"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {isL ? "Mis tareas" : "My tasks"}
-            </button>
-            <button
-              onClick={() => setTaskViewFilter('all')}
-              className={cn(
-                "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
-                taskViewFilter === 'all'
-                  ? "bg-[hsl(var(--gold))] text-charcoal"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {isL ? "Todas" : "All tasks"}
-            </button>
-          </div>
+          <select aria-label={isL ? "Ver tareas de" : "Show tasks for"} value={taskViewFilter} onChange={e => setTaskViewFilter(e.target.value)}
+            className="h-11 max-w-[200px] text-base sm:text-sm bg-muted border border-border rounded-lg px-2.5 text-foreground outline-none focus:border-primary">
+            <option value="all">{isL ? "Todas las tareas" : "All tasks"}</option>
+            <option value="mine">{isL ? "Mis tareas" : "My tasks"}</option>
+            {assigneeOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
         )}
         {canManageTasks && (
           <button
