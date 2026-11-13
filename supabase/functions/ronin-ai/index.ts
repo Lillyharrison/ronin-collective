@@ -18,9 +18,17 @@ async function writeSectionPermissionRows(
   client: any,
   userId: string,
   rows: Array<{ section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope?: "own" | "department" | "all" | null }> | null | undefined,
+  deleteSections?: unknown,
 ): Promise<void> {
-  if (!Array.isArray(rows) || rows.length === 0) return;
-  const payload = rows.map(r => ({
+  // Sections with every switch off are removed rather than stored as empty rows.
+  const toDelete = Array.isArray(deleteSections) ? deleteSections.filter((s): s is string => typeof s === "string") : [];
+  if (toDelete.length) {
+    const { error: delErr } = await client.from("user_section_permissions").delete().eq("user_id", userId).in("section", toDelete);
+    if (delErr) throw delErr;
+  }
+  const active = Array.isArray(rows) ? rows.filter(r => r.can_view === true || r.can_edit === true || r.notifications === true) : [];
+  if (active.length === 0) return;
+  const payload = active.map(r => ({
     user_id: userId,
     section: r.section,
     can_view: r.can_view === true,
@@ -914,7 +922,7 @@ serve(async (req) => {
       }).eq("id", profile_id);
       if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      await writeSectionPermissionRows(adminClient, profile_id, section_permissions_rows);
+      await writeSectionPermissionRows(adminClient, profile_id, section_permissions_rows, body.section_permissions_delete);
 
       // Update role if provided
       if (role) {

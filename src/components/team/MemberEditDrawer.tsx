@@ -1,23 +1,51 @@
-// MemberEditDrawer — extracted from MeetTeamSection.tsx during the conservative refactor.
-// Behavior is unchanged. State stays local to the drawer; parent passes member + callbacks.
+// MemberEditDrawer — tabbed team member editor (Details, Houses, Access, Home screen).
+// Designed to fit without scrolling: one access group open at a time, always-visible footer.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  X, Check, Eye, Pencil, Bell, Save, Loader2, Trash2, Mail, Archive,
-  Zap,
+  X, Check, Eye, Loader2, Mail, Archive, Trash2, MoreHorizontal, ChevronDown, Plus, KeyRound, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
-  ALL_SECTIONS, LEVEL_OPTIONS, DEPT_OPTIONS, LEVEL_COLORS, DEPT_COLORS, ROLE_MAP,
-  defaultPermissionsForLevel, defaultQuickActionsForLevel,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  LEVEL_OPTIONS, DEPT_OPTIONS, LEVEL_COLORS, ROLE_MAP,
   type TeamMember, type Property, type Level, type Department, type AppRole, type SectionPermissions,
 } from "./teamConstants";
 import {
-  PropertyToggles, QuickActionToggles, FieldLabel, EditField,
-} from "./teamSharedComponents";
+  accessGroups, sectionInfo, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
+  buildPermissionRows, allowedQuickActions, isValidEmail, type PermField,
+} from "./memberAccess";
+import { ALL_QUICK_ACTIONS } from "./teamConstants";
+import { cn } from "@/lib/utils";
+
+type TabKey = "details" | "houses" | "access" | "home";
+
+const ROLE_LABELS: Record<string, { en: string; es: string }> = {
+  master_admin: { en: "Master admin", es: "Administrador principal" },
+  admin: { en: "Admin", es: "Administrador" },
+  manager: { en: "Manager", es: "Gerente" },
+  staff: { en: "Staff", es: "Personal" },
+  principal: { en: "Family", es: "Familia" },
+};
+
+// Gold "on" track so switches read clearly on the dark panel.
+const switchCls = "scale-90 data-[state=checked]:bg-gold data-[state=unchecked]:bg-charcoal-light border-cream/20";
+const inputCls = "h-10 bg-charcoal-light border-charcoal-light text-cream text-base disabled:opacity-50";
+
+function Field({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+  return (
+    <label className={cn("block min-w-0", wide && "col-span-full")}>
+      <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}
 
 export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted, onArchive }: {
   member: TeamMember;
@@ -30,21 +58,21 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   onDeleted: () => void;
   onArchive?: () => void;
 }) {
-  const [tab, setTab] = useState<"details" | "access" | "quickactions">("details");
+  const [tab, setTab] = useState<TabKey>("details");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resending, setResending] = useState(false);
   const [resettingPwd, setResettingPwd] = useState(false);
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [confirmEmptyInvite, setConfirmEmptyInvite] = useState(false);
+  const [pwdOpen, setPwdOpen] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [settingPwd, setSettingPwd] = useState(false);
 
-  // Draft state
   const [isDraft, setIsDraft] = useState(member.is_draft ?? false);
   const [draftEmail, setDraftEmail] = useState("");
 
-  // Edit state
   const [fullName, setFullName] = useState(member.full_name || "");
   const [jobTitle, setJobTitle] = useState(member.job_title || "");
   const [phone, setPhone] = useState(member.phone || "");
@@ -54,76 +82,34 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const [birthday, setBirthday] = useState(member.birthday || "");
   const [notes, setNotes] = useState(member.notes || "");
   const [assignedProps, setAssignedProps] = useState<string[]>(member.assigned_property_ids || []);
+  const [houseSearch, setHouseSearch] = useState("");
 
-  // Work roster (for staff-schedule worked-vs-expected calculator)
-  const m = member as TeamMember & {
-    contracted_days_per_week?: number | null;
-    contracted_hours_per_week?: number | null;
-    annual_leave_days?: number | null;
-  };
-  const [contractedDays, setContractedDays] = useState<string>(
-    m.contracted_days_per_week != null ? String(m.contracted_days_per_week) : "5"
-  );
-  const [contractedHours, setContractedHours] = useState<string>(
-    m.contracted_hours_per_week != null ? String(m.contracted_hours_per_week) : "40"
-  );
-  const [annualLeave, setAnnualLeave] = useState<string>(
-    m.annual_leave_days != null ? String(m.annual_leave_days) : "25"
-  );
-
-  // Principal designation toggle — only relevant when level = principal
   const [isPrincipal, setIsPrincipal] = useState(false);
   const [principalLoading, setPrincipalLoading] = useState(false);
-
-  // Load current principal from system_settings on mount
   useEffect(() => {
     supabase.from("system_settings").select("value").eq("key", "principal_user_id").maybeSingle()
-      .then(({ data }) => {
-        if (data?.value === member.id) setIsPrincipal(true);
-      });
+      .then(({ data }) => { if (data?.value === member.id) setIsPrincipal(true); });
   }, [member.id]);
 
-  // Section permissions — seed from DB or derive from level defaults
-  const [perms, setPerms] = useState<SectionPermissions>(() => {
-    if (member.section_permissions && Object.keys(member.section_permissions).length > 0) {
-      const base = defaultPermissionsForLevel(member.level || "staff");
-      return { ...base, ...member.section_permissions };
-    }
-    return defaultPermissionsForLevel(member.level || "staff");
-  });
+  // Access shows only the person's real explicit settings — never level defaults.
+  const [perms, setPerms] = useState<SectionPermissions>(() => ({ ...(member.section_permissions ?? {}) }));
+  const [quickActions, setQuickActions] = useState<string[]>(() => Array.isArray(member.quick_actions) ? member.quick_actions : []);
+  const [openGroup, setOpenGroup] = useState<string | null>("core");
+  const [choosingShortcut, setChoosingShortcut] = useState(false);
 
-  // Quick actions — read from dedicated `quick_actions` column on profile
-  const [quickActions, setQuickActions] = useState<string[]>(() => {
-    if (Array.isArray(member.quick_actions) && member.quick_actions.length > 0) {
-      return member.quick_actions;
-    }
-    return defaultQuickActionsForLevel(member.level || "staff");
-  });
+  const groups = useMemo(() => accessGroups(member.section_permissions ?? {}), [member.section_permissions]);
+  const resolvedRole: AppRole = (member.role === "master_admin" ? "master_admin" : (level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff"))) as AppRole;
+  const isAdminRole = resolvedRole === "admin" || resolvedRole === "master_admin";
+  const switchCount = switchesOn(perms);
+  const accessCount = sectionsOn(perms);
+  const nothingOn = switchCount === 0;
+  const canInvite = !!fullName.trim() && isValidEmail(draftEmail);
 
-  function togglePerm(sectionKey: string, field: "view" | "edit" | "notifications") {
-    setPerms(prev => ({
-      ...prev,
-      [sectionKey]: {
-        ...prev[sectionKey],
-        [field]: !prev[sectionKey]?.[field],
-        // If turning off view, also turn off edit & notifications
-        ...(field === "view" && prev[sectionKey]?.view ? { edit: false, notifications: false } : {}),
-      },
-    }));
+  function toggle(section: string, field: PermField, value: boolean) {
+    setPerms(prev => ({ ...prev, [section]: togglePermission(prev[section], field, value) }));
   }
-
-  function setScope(sectionKey: string, scope: "own" | "department" | "all") {
-    setPerms(prev => ({
-      ...prev,
-      [sectionKey]: { ...prev[sectionKey], scope },
-    }));
-  }
-
-  function applyLevelDefaults() {
-    if (level) {
-      setPerms(defaultPermissionsForLevel(level));
-      setQuickActions(defaultQuickActionsForLevel(level));
-    }
+  function setScope(section: string, scope: "own" | "department" | "all") {
+    setPerms(prev => ({ ...prev, [section]: { ...prev[section], scope } }));
   }
 
   async function handleDelete() {
@@ -156,154 +142,89 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     }
   }
 
+  async function writeDirectPermissions() {
+    const { upserts, deletes } = buildPermissionRows(perms);
+    if (upserts.length) {
+      const { error } = await supabase.from("user_section_permissions")
+        .upsert(upserts.map(r => ({ ...r, user_id: member.id })), { onConflict: "user_id,section" });
+      if (error) throw error;
+    }
+    if (deletes.length) {
+      const { error } = await supabase.from("user_section_permissions").delete().eq("user_id", member.id).in("section", deletes);
+      if (error) throw error;
+    }
+  }
+
+  function draftBody(sendInvitation: boolean) {
+    const { upserts, deletes } = buildPermissionRows(perms);
+    return {
+      action: "save_draft_user",
+      profile_id: member.id,
+      full_name: fullName || null,
+      ...(sendInvitation ? { email: draftEmail.trim() } : {}),
+      job_title: jobTitle || null,
+      phone: phone || null,
+      level,
+      department: (level === "staff" || level === "manager") ? (department || null) : null,
+      start_date: startDate || null,
+      birthday: birthday || null,
+      notes: notes || null,
+      assigned_property_ids: assignedProps,
+      quick_actions: quickActions,
+      section_permissions_rows: upserts,
+      section_permissions_delete: deletes,
+      role: resolvedRole,
+      send_invitation: sendInvitation,
+    };
+  }
+
   async function handleSave() {
     if (!canEdit) return;
     setSaving(true);
     try {
-      // Never downgrade a master_admin — if the member's current role is master_admin, preserve it
-      const resolvedRole = level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff");
-      const roleToSet: AppRole = (member.role === "master_admin" ? "master_admin" : resolvedRole) as AppRole;
-
-      // Build perm rows for the dedicated table — single source of truth
-      const permRows = Object.entries(perms)
-        .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
-        .map(([section, v]) => {
-          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
-          return {
-            user_id: member.id,
-            section,
-            can_view: p.view === true,
-            can_edit: p.edit === true,
-            notifications: p.notifications === true,
-            scope: p.scope ?? null,
-          };
-        });
-
       if (isDraft) {
-        // Draft profiles: save via edge function so is_draft flag is preserved
-        const { error: draftErr } = await supabase.functions.invoke("ronin-ai", {
-          body: {
-            action: "save_draft_user",
-            profile_id: member.id,
-            full_name: fullName || null,
-            job_title: jobTitle || null,
-            phone: phone || null,
-            level,
-            department: (level === "staff" || level === "manager") ? (department || null) : null,
-            start_date: startDate || null,
-            birthday: birthday || null,
-            notes: notes || null,
-            assigned_property_ids: assignedProps,
-            quick_actions: quickActions,
-            contracted_days_per_week: contractedDays === "" ? null : Number(contractedDays),
-            contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
-            annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
-            section_permissions_rows: permRows,
-            role: roleToSet,
-            send_invitation: false,
-          },
-        });
-        if (draftErr) throw draftErr;
+        const { error } = await supabase.functions.invoke("ronin-ai", { body: draftBody(false) });
+        if (error) throw error;
       } else {
-        // Regular (non-draft) profiles: update directly
         const { error: profileErr } = await supabase.from("profiles").update({
-          full_name: fullName,
-          job_title: jobTitle,
-          phone: phone || null,
-          level,
+          full_name: fullName, job_title: jobTitle, phone: phone || null, level,
           department: (level === "staff" || level === "manager") ? (department || null) : null,
-          start_date: startDate || null,
-          birthday: birthday || null,
-          notes: notes || null,
-          assigned_property_ids: assignedProps,
-          quick_actions: quickActions,
-          contracted_days_per_week: contractedDays === "" ? null : Number(contractedDays),
-          contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
-          annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
+          start_date: startDate || null, birthday: birthday || null, notes: notes || null,
+          assigned_property_ids: assignedProps, quick_actions: quickActions,
         } as never).eq("id", member.id);
         if (profileErr) throw profileErr;
-
-        // Write permissions to the dedicated table — the ONLY source of truth
-        if (permRows.length > 0) {
-          const { error: permErr } = await supabase
-            .from("user_section_permissions")
-            .upsert(permRows, { onConflict: "user_id,section" });
-          if (permErr) throw permErr;
-        }
-
-        // Update role if changed
-        if (roleToSet !== member.role) {
-          const { error: roleErr } = await supabase.from("user_roles").update({ role: roleToSet }).eq("user_id", member.id);
+        await writeDirectPermissions();
+        if (resolvedRole !== member.role) {
+          const { error: roleErr } = await supabase.from("user_roles").update({ role: resolvedRole }).eq("user_id", member.id);
           if (roleErr) throw roleErr;
         }
       }
-
       toast.success(isEN ? "Saved" : "Guardado");
       onSaved({
-        ...member,
-        full_name: fullName,
-        job_title: jobTitle,
-        phone,
-        level,
-        department,
-        notes,
-        assigned_property_ids: assignedProps,
-        section_permissions: perms,
-        quick_actions: quickActions,
-        role: roleToSet,
-        is_draft: isDraft,
-        contracted_days_per_week: contractedDays === "" ? null : Number(contractedDays),
-        contracted_hours_per_week: contractedHours === "" ? null : Number(contractedHours),
-        annual_leave_days: annualLeave === "" ? null : Number(annualLeave),
+        ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes,
+        assigned_property_ids: assignedProps, section_permissions: perms, quick_actions: quickActions,
+        role: resolvedRole, is_draft: isDraft,
       });
     } catch (e) {
       console.error(e);
-      const msg = e instanceof Error ? e.message : (isEN ? "Failed to save changes" : "No se pudieron guardar los cambios");
-      toast.error(msg);
+      toast.error(e instanceof Error ? e.message : (isEN ? "Failed to save changes" : "No se pudieron guardar los cambios"));
     }
     setSaving(false);
   }
 
+  function requestInvite() {
+    if (!canInvite) return;
+    if (nothingOn) { setConfirmEmptyInvite(true); return; }
+    void handleSendInvitation();
+  }
+
   async function handleSendInvitation() {
-    if (!fullName || !draftEmail) return;
+    setConfirmEmptyInvite(false);
+    if (!canInvite) return;
     setSendingInvite(true);
     try {
-      const resolvedRole = level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff");
-      const permRows = Object.entries(perms)
-        .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
-        .map(([section, v]) => {
-          const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
-          return {
-            user_id: member.id,
-            section,
-            can_view: p.view === true,
-            can_edit: p.edit === true,
-            notifications: p.notifications === true,
-            scope: p.scope ?? null,
-          };
-        });
-      const { data: inviteRes, error } = await supabase.functions.invoke("ronin-ai", {
-        body: {
-          action: "save_draft_user",
-          profile_id: member.id,
-          full_name: fullName,
-          email: draftEmail,
-          job_title: jobTitle || null,
-          phone: phone || null,
-          level,
-          department: (level === "staff" || level === "manager") ? (department || null) : null,
-          start_date: startDate || null,
-          birthday: birthday || null,
-          notes: notes || null,
-          assigned_property_ids: assignedProps,
-          quick_actions: quickActions,
-          section_permissions_rows: permRows,
-          role: resolvedRole,
-          send_invitation: true,
-        },
-      });
+      const { data: inviteRes, error } = await supabase.functions.invoke("ronin-ai", { body: draftBody(true) });
       if (error) {
-        // Show the server's explanation (e.g. "Activation failed and nothing was lost…")
         let serverMsg: string | undefined;
         try { serverMsg = (await (error as { context?: Response }).context?.json())?.error; } catch { /* ignore */ }
         throw new Error(serverMsg || error.message);
@@ -315,13 +236,11 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       const newId = (inviteRes as { user_id?: string } | null)?.user_id || member.id;
       onSaved({ ...member, id: newId, full_name: fullName, is_draft: false });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to send invitation.";
-      toast.error(msg);
+      toast.error(e instanceof Error ? e.message : "Failed to send invitation.");
     }
     setSendingInvite(false);
   }
 
-  const lvlInfo = LEVEL_OPTIONS.find(l => l.value === (member.level as Level));
 
   async function handleResendInvitation() {
     setResending(true);
@@ -384,457 +303,351 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     setSettingPwd(false);
   }
 
-  const TABS = [
-    { key: "details",      label: isEN ? "Details" : "Detalles" },
-    { key: "access",       label: isEN ? "Access & Alerts" : "Acceso" },
-    { key: "quickactions", label: isEN ? "Quick Actions" : "Acciones" },
-  ] as const;
+  const roleLabel = ROLE_LABELS[resolvedRole] ?? ROLE_LABELS.staff;
+  const filteredHouses = properties.filter(p => !houseSearch.trim() || p.name.toLowerCase().includes(houseSearch.trim().toLowerCase()));
+  const allowedShortcuts = allowedQuickActions(perms, isAdminRole);
+  const addable = allowedShortcuts.filter(a => !quickActions.includes(a.key));
+  const busy = saving || deleting || sendingInvite;
+
+  const TABS: { key: TabKey; label: string; count?: number }[] = [
+    { key: "details", label: isEN ? "Details" : "Datos" },
+    { key: "houses", label: isEN ? "Houses" : "Casas", count: assignedProps.length },
+    { key: "access", label: isEN ? "Access" : "Acceso", count: accessCount },
+    { key: "home", label: isEN ? "Home screen" : "Inicio", count: quickActions.length },
+  ];
+
+  const statusText = nothingOn
+    ? (isEN ? "Nothing switched on yet. They can sign in but will see only their home screen."
+            : "Nada activado todavía. Pueden iniciar sesión pero solo verán su pantalla de inicio.")
+    : (isEN
+        ? `${assignedProps.length} ${assignedProps.length === 1 ? "house" : "houses"}, ${switchCount} ${switchCount === 1 ? "switch" : "switches"} on`
+        : `${assignedProps.length} ${assignedProps.length === 1 ? "casa" : "casas"}, ${switchCount} ${switchCount === 1 ? "opción activada" : "opciones activadas"}`);
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <div className="bg-charcoal rounded-t-2xl sm:rounded-2xl w-full max-w-lg flex flex-col shadow-2xl border border-charcoal-light h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden">
-
+    <div className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-stretch sm:items-center justify-center sm:p-4">
+      <div role="dialog" aria-modal="true" aria-label={fullName || (isEN ? "Team member" : "Miembro del equipo")}
+        className="relative bg-charcoal w-full h-[100dvh] sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-2xl flex flex-col shadow-2xl sm:border border-charcoal-light overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-charcoal-light shrink-0">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center border shrink-0 ${LEVEL_COLORS[member.level || "staff"]}`}>
-              {member.avatar_url
-                ? <img src={member.avatar_url} className="w-full h-full rounded-full object-cover" />
-                : <span className="font-display text-base">{(member.full_name || "?")[0].toUpperCase()}</span>
-              }
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-cream font-semibold text-sm leading-none">{member.full_name || (isDraft ? "Draft Account" : "—")}</p>
-                {isDraft && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
-                    Draft
-                  </span>
-                )}
-              </div>
-              {lvlInfo && <p className={`text-[10px] tracking-widest uppercase mt-0.5 ${LEVEL_COLORS[member.level || "staff"].split(" ")[0]}`}>{isEN ? lvlInfo.label : lvlInfo.labelEs}</p>}
-            </div>
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-charcoal-light shrink-0">
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center border shrink-0 ${LEVEL_COLORS[member.level || "staff"]}`}>
+            {member.avatar_url
+              ? <img src={member.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+              : <span className="font-display text-base">{(fullName || member.full_name || "?")[0].toUpperCase()}</span>}
           </div>
-          <div className="flex items-center gap-2">
-            {isMasterAdmin && !isDraft && (
-              <ViewAsButton targetUserId={member.id} targetName={member.full_name || "User"} onAfter={onClose} isEN={isEN} />
-            )}
-            <button onClick={onClose} className="text-cream/50 hover:text-cream"><X size={20} /></button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-cream font-semibold text-base leading-tight truncate">{fullName || (isDraft ? (isEN ? "Draft account" : "Cuenta borrador") : "—")}</p>
+              {isDraft && <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">{isEN ? "Draft" : "Borrador"}</span>}
+            </div>
+            <p className="text-[11px] tracking-widest uppercase text-muted-foreground truncate">{isEN ? roleLabel.en : roleLabel.es}</p>
           </div>
+          {isMasterAdmin && !isDraft && (
+            <ViewAsButton targetUserId={member.id} targetName={member.full_name || "User"} onAfter={onClose} isEN={isEN} />
+          )}
+          <button onClick={onClose} aria-label={isEN ? "Close" : "Cerrar"} className="w-11 h-11 -mr-2 flex items-center justify-center text-cream/60 hover:text-cream shrink-0"><X size={20} /></button>
         </div>
 
-        {/* Draft banner */}
-        {isDraft && (
-          <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/30 shrink-0">
-            <p className="text-amber-400 text-xs font-medium">
-              {isEN
-                ? "This is a draft account — only admins can see it. Add a name and email, then send the invitation to activate."
-                : "Esta es una cuenta borrador — solo los administradores pueden verla. Agrega nombre y correo, luego envía la invitación para activarla."}
-            </p>
-          </div>
-        )}
+        {/* Status line */}
+        <p data-testid="member-status" className={cn("px-4 py-1.5 text-xs leading-snug border-b border-charcoal-light shrink-0",
+          nothingOn ? "bg-amber-500/10 text-amber-400" : "text-muted-foreground")}>{statusText}</p>
 
         {/* Tabs */}
-        <div className="flex border-b border-charcoal-light shrink-0">
+        <div role="tablist" className="grid grid-cols-4 border-b border-charcoal-light shrink-0">
           {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex-1 py-3 text-[11px] font-semibold tracking-widest uppercase transition-colors ${tab === t.key ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
-              {t.label}
+            <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
+              className={cn("min-w-0 min-h-11 px-1 py-1.5 text-[13px] font-semibold leading-tight transition-colors border-b-2",
+                tab === t.key ? "text-gold border-gold" : "text-muted-foreground border-transparent hover:text-cream")}>
+              {t.label}{t.count !== undefined && <span className="ml-1 tabular-nums opacity-80">({t.count})</span>}
             </button>
           ))}
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Body — sized to fit; the single scroll area is only a safety net */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {tab === "details" && (
-            <div className="px-5 py-4 space-y-4">
-              <EditField label={isEN ? "Full Name" : "Nombre"} value={fullName} onChange={setFullName} disabled={!canEdit} />
-              {/* Email field shown only for drafts — needed to send the invitation */}
-              {isDraft && canEdit && (
-                <div>
-                  <FieldLabel label={isEN ? "Email (required to send invitation)" : "Correo (requerido para invitar)"} />
-                  <Input
-                    type="email"
-                    value={draftEmail}
-                    onChange={e => setDraftEmail(e.target.value)}
-                    placeholder="jane@example.com"
-                    className="bg-charcoal-light border-charcoal-light text-cream"
-                  />
+            <div className="px-4 py-3 grid grid-cols-1 min-[360px]:grid-cols-2 gap-x-3 gap-y-2.5">
+              <Field label={isEN ? "Full name" : "Nombre"}>
+                <Input value={fullName} onChange={e => setFullName(e.target.value)} disabled={!canEdit} className={inputCls} />
+              </Field>
+              {isDraft ? (
+                <Field label={isEN ? "Email (to invite)" : "Correo (para invitar)"}>
+                  <Input type="email" value={draftEmail} onChange={e => setDraftEmail(e.target.value)} disabled={!canEdit}
+                    placeholder="jane@example.com" aria-invalid={!!draftEmail && !isValidEmail(draftEmail)} className={inputCls} />
+                </Field>
+              ) : (
+                <Field label={isEN ? "Phone" : "Teléfono"}>
+                  <Input type="tel" value={phone} onChange={e => setPhone(e.target.value)} disabled={!canEdit} className={inputCls} />
+                </Field>
+              )}
+              <Field label={isEN ? "Job title" : "Puesto"}>
+                <Input value={jobTitle} onChange={e => setJobTitle(e.target.value)} disabled={!canEdit} className={inputCls} />
+              </Field>
+              {isDraft && (
+                <Field label={isEN ? "Phone" : "Teléfono"}>
+                  <Input type="tel" value={phone} onChange={e => setPhone(e.target.value)} disabled={!canEdit} className={inputCls} />
+                </Field>
+              )}
+              <Field label={isEN ? "Level" : "Nivel"}>
+                <select value={level} disabled={!canEdit || member.role === "master_admin"} onChange={e => setLevel(e.target.value as Level)}
+                  className={cn(inputCls, "w-full rounded-md border px-2")}>
+                  <option value="" disabled>{isEN ? "Choose…" : "Elegir…"}</option>
+                  {LEVEL_OPTIONS.map(o => <option key={o.value} value={o.value}>{isEN ? o.label : o.labelEs}</option>)}
+                </select>
+              </Field>
+              <Field label={isEN ? `Department · role: ${roleLabel.en}` : `Departamento · rol: ${roleLabel.es}`}>
+                <select value={department} disabled={!canEdit || !(level === "staff" || level === "manager")}
+                  onChange={e => setDepartment(e.target.value as Department | "")} className={cn(inputCls, "w-full rounded-md border px-2")}>
+                  <option value="">{(level === "staff" || level === "manager") ? (isEN ? "None" : "Ninguno") : (isEN ? "Not needed" : "No aplica")}</option>
+                  {DEPT_OPTIONS.map(o => <option key={o.value} value={o.value}>{isEN ? o.label : o.labelEs}</option>)}
+                </select>
+              </Field>
+              <Field label={isEN ? "Start date" : "Fecha de inicio"}>
+                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} disabled={!canEdit} className={inputCls} />
+              </Field>
+              <Field label={isEN ? "Birthday" : "Cumpleaños"}>
+                <Input type="date" value={birthday} onChange={e => setBirthday(e.target.value)} disabled={!canEdit} className={inputCls} />
+              </Field>
+              {level === "principal" && canEdit && (
+                <div className="col-span-full flex items-center justify-between gap-3 rounded-lg border border-charcoal-light bg-charcoal-light/60 px-3 py-1.5">
+                  <span className="text-sm text-cream">👑 {isEN ? "Principal (shown as main location on home screen)" : "Principal (ubicación principal en inicio)"}</span>
+                  <Switch className={switchCls} checked={isPrincipal} disabled={principalLoading} aria-label="Principal"
+                    onCheckedChange={async () => {
+                      setPrincipalLoading(true);
+                      try {
+                        if (isPrincipal) { await supabase.from("system_settings").delete().eq("key", "principal_user_id"); setIsPrincipal(false); }
+                        else { await supabase.from("system_settings").upsert({ key: "principal_user_id", value: member.id, updated_at: new Date().toISOString() }); setIsPrincipal(true); }
+                      } catch (e) { console.error(e); }
+                      setPrincipalLoading(false);
+                    }} />
                 </div>
               )}
-              <EditField label={isEN ? "Job Title" : "Puesto"} value={jobTitle} onChange={setJobTitle} disabled={!canEdit} />
-              <EditField label={isEN ? "Phone" : "Teléfono"} value={phone} onChange={setPhone} disabled={!canEdit} type="tel" />
-
-              {/* Level */}
-              {canEdit && (
-                <>
-                  <FieldLabel label={isEN ? "Level" : "Nivel"} />
-                  <div className="grid grid-cols-2 gap-2">
-                    {LEVEL_OPTIONS.map(opt => (
-                      <button key={opt.value} onClick={() => setLevel(opt.value)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left text-sm transition-all ${level === opt.value ? `${LEVEL_COLORS[opt.value]} border-current` : "border-charcoal-light text-cream/50 hover:text-cream bg-charcoal-light"}`}>
-                        {level === opt.value && <Check size={12} />}
-                        {isEN ? opt.label : opt.labelEs}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Principal designation — only visible when level is Main Family */}
-                  {level === "principal" && (
-                    <div
-                      className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${isPrincipal ? "bg-gold/10 border-gold/50" : "bg-charcoal-light border-charcoal-light hover:border-cream/20"}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">👑</span>
-                        <div>
-                          <p className={`text-sm font-semibold ${isPrincipal ? "text-gold" : "text-cream/70"}`}>
-                            {isEN ? "Principal" : "Principal"}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {isEN ? "Shown as primary location on dashboard" : "Aparece como ubicación principal en el panel"}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={principalLoading}
-                        onClick={async () => {
-                          setPrincipalLoading(true);
-                          try {
-                            if (isPrincipal) {
-                              await supabase.from("system_settings").delete().eq("key", "principal_user_id");
-                              setIsPrincipal(false);
-                            } else {
-                              await supabase.from("system_settings").upsert({
-                                key: "principal_user_id",
-                                value: member.id,
-                                updated_at: new Date().toISOString(),
-                              });
-                              setIsPrincipal(true);
-                            }
-                          } catch (e) { console.error(e); }
-                          setPrincipalLoading(false);
-                        }}
-                        className={`relative w-11 h-6 rounded-full border-2 transition-all shrink-0 ${isPrincipal ? "bg-gold border-gold" : "bg-transparent border-charcoal-light"} disabled:opacity-50`}
-                      >
-                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${isPrincipal ? "left-5" : "left-0.5"}`} />
-                      </button>
-                    </div>
-                  )}
-
-                  {(level === "staff" || level === "manager") && (
-                    <>
-                      <FieldLabel label={isEN ? "Department" : "Departamento"} />
-                      <div className="flex flex-wrap gap-2">
-                        {DEPT_OPTIONS.map(opt => (
-                          <button key={opt.value} onClick={() => setDepartment(p => p === opt.value ? "" : opt.value)}
-                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${department === opt.value ? `${DEPT_COLORS[opt.value]} border-current bg-current/10` : "border-charcoal-light text-cream/50 hover:text-cream bg-charcoal-light"}`}>
-                            {isEN ? opt.label : opt.labelEs}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* Assigned properties */}
-              {canEdit && (
-                <>
-                  <FieldLabel label={isEN ? "Assigned Properties" : "Propiedades Asignadas"} />
-                  <PropertyToggles
-                    properties={properties}
-                    assignedProps={assignedProps}
-                    onChange={setAssignedProps}
-                  />
-                </>
-              )}
-
-              {/* Dates */}
-              <EditField label={isEN ? "Start Date" : "Fecha de Inicio"} value={startDate} onChange={setStartDate} disabled={!canEdit} type="date" />
-              <EditField label={isEN ? "Birthday" : "Cumpleaños"} value={birthday} onChange={setBirthday} disabled={!canEdit} type="date" />
-
-              {/* Work roster — powers the staff-schedule worked-vs-expected calculator */}
-              {canEdit && (level === "staff" || level === "manager") && (
-                <div className="rounded-xl border border-charcoal-light bg-charcoal-light/40 p-3 space-y-3">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
-                    {isEN ? "Work Roster" : "Horario Contratado"}
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <FieldLabel label={isEN ? "Days/week" : "Días/sem"} />
-                      <Input type="number" min={0} max={7} value={contractedDays}
-                        onChange={(e) => setContractedDays(e.target.value)}
-                        className="bg-charcoal border-charcoal-light text-cream h-9" />
-                    </div>
-                    <div>
-                      <FieldLabel label={isEN ? "Hours/week" : "Horas/sem"} />
-                      <Input type="number" min={0} max={80} step={0.5} value={contractedHours}
-                        onChange={(e) => setContractedHours(e.target.value)}
-                        className="bg-charcoal border-charcoal-light text-cream h-9" />
-                    </div>
-                    <div>
-                      <FieldLabel label={isEN ? "Annual leave" : "Vacaciones"} />
-                      <Input type="number" min={0} max={60} value={annualLeave}
-                        onChange={(e) => setAnnualLeave(e.target.value)}
-                        className="bg-charcoal border-charcoal-light text-cream h-9" />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground leading-snug">
-                    {isEN
-                      ? "Used by Staff Schedule to compute worked vs expected days/hours and annual leave remaining."
-                      : "Usado por el horario del personal para calcular días/horas trabajados y vacaciones restantes."}
-                  </p>
-                </div>
-              )}
-
-              <FieldLabel label={isEN ? "Notes" : "Notas"} />
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                disabled={!canEdit}
-                rows={3}
-                className="w-full bg-charcoal-light border border-charcoal-light rounded-lg px-3 py-2 text-cream text-sm resize-none outline-none focus:border-gold/40 placeholder:text-cream/30 transition-colors disabled:opacity-50"
-              />
+              <Field label={isEN ? "Notes" : "Notas"} wide>
+                <Input value={notes} onChange={e => setNotes(e.target.value)} disabled={!canEdit} className={inputCls} />
+              </Field>
             </div>
           )}
 
-          {tab === "access" && (
-            <div className="px-5 py-4">
-              {/* Reset to level defaults button */}
-              {canEdit && (
-                <div className="mb-4 flex items-center justify-between">
-                  <p className="text-muted-foreground text-xs">{isEN ? "Toggle per-section access and notifications" : "Activa acceso y alertas por sección"}</p>
-                  <button onClick={applyLevelDefaults} className="text-[10px] text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-1 transition-colors">
-                    {isEN ? "Reset to defaults" : "Valores por defecto"}
-                  </button>
+          {tab === "houses" && (
+            <div className="px-4 py-3 space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm text-cream">{isEN ? `${assignedProps.length} of ${properties.length} selected` : `${assignedProps.length} de ${properties.length} seleccionadas`}</p>
+                {canEdit && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <button className="min-h-11 px-2 text-gold hover:underline" onClick={() => setAssignedProps(properties.map(p => p.id))}>{isEN ? "Select all" : "Todas"}</button>
+                    <button className="min-h-11 px-2 text-gold hover:underline" onClick={() => setAssignedProps([])}>{isEN ? "None" : "Ninguna"}</button>
+                  </div>
+                )}
+              </div>
+              {properties.length > 15 && (
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input value={houseSearch} onChange={e => setHouseSearch(e.target.value)} placeholder={isEN ? "Search houses" : "Buscar casas"} className={cn(inputCls, "pl-9")} />
                 </div>
               )}
+              {properties.length === 0 ? <p className="text-sm text-muted-foreground">{isEN ? "No houses yet" : "Aún no hay casas"}</p> : (
+                <div className="flex flex-wrap gap-2">
+                  {filteredHouses.map(p => {
+                    const on = assignedProps.includes(p.id);
+                    return (
+                      <button key={p.id} disabled={!canEdit} aria-pressed={on}
+                        onClick={() => setAssignedProps(on ? assignedProps.filter(id => id !== p.id) : [...assignedProps, p.id])}
+                        className={cn("max-w-full min-h-10 px-3 rounded-full border text-sm font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50",
+                          on ? "bg-gold/15 border-gold/60 text-gold" : "bg-charcoal-light border-charcoal-light text-cream/60 hover:text-cream")}>
+                        {on && <Check size={14} className="shrink-0" />}<span className="truncate">{p.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
-              {/* Column headers */}
-              <div className="flex items-center gap-1 mb-2 pr-1">
-                <div className="flex-1" />
-                <div className="w-10 flex flex-col items-center gap-0.5">
-                  <Eye size={12} className="text-blue-400" />
-                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "View" : "Ver"}</span>
-                </div>
-                <div className="w-10 flex flex-col items-center gap-0.5">
-                  <Pencil size={12} className="text-green-400" />
-                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "Edit" : "Editar"}</span>
-                </div>
-                <div className="w-10 flex flex-col items-center gap-0.5">
-                  <Bell size={12} className="text-gold" />
-                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "Alerts" : "Alertas"}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                {ALL_SECTIONS.map(section => {
-                  const sp = perms[section.key] || { view: false, edit: false, notifications: false };
+          {tab === "access" && (() => {
+            const visible = groups.filter(g => g.sections.length > 0);
+            const current = visible.find(g => g.key === openGroup) ?? null;
+            return (
+            <div className="px-3 sm:px-4 py-2 space-y-2">
+              {/* Group headers: one group open at a time */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {visible.map(g => {
+                  const on = groupOnCount(perms, g.sections);
+                  const open = openGroup === g.key;
                   return (
-                    <div key={section.key} className={`flex flex-col gap-1 px-3 py-2 rounded-lg transition-colors ${sp.view ? "bg-charcoal-light" : "opacity-50"}`}>
-                      <div className="flex items-center gap-1">
-                        <span className="flex-1 text-cream text-xs font-medium">{isEN ? section.label : section.labelEs}</span>
-                        {/* View */}
-                        <div className="w-10 flex justify-center">
-                          <button
-                            onClick={() => canEdit && togglePerm(section.key, "view")}
-                            disabled={!canEdit}
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.view ? "bg-blue-400/20 border-blue-400/50 text-blue-400" : "border-charcoal-light text-transparent"}`}
-                          >
-                            <Check size={11} />
-                          </button>
-                        </div>
-                        {/* Edit */}
-                        <div className="w-10 flex justify-center">
-                          <button
-                            onClick={() => canEdit && section.hasEdit && sp.view && togglePerm(section.key, "edit")}
-                            disabled={!canEdit || !section.hasEdit || !sp.view}
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.edit ? "bg-green-400/20 border-green-400/50 text-green-400" : "border-charcoal-light text-transparent"} disabled:opacity-30`}
-                          >
-                            <Check size={11} />
-                          </button>
-                        </div>
-                        {/* Notifications */}
-                        <div className="w-10 flex justify-center">
-                          <button
-                            onClick={() => canEdit && sp.view && togglePerm(section.key, "notifications")}
-                            disabled={!canEdit || !sp.view}
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${sp.notifications ? "bg-gold/20 border-gold/50 text-gold" : "border-charcoal-light text-transparent"} disabled:opacity-30`}
-                          >
-                            <Check size={11} />
-                          </button>
-                        </div>
-                      </div>
-                      {section.hasScope && sp.view && (
-                        <div className="flex items-center gap-2 pl-2">
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{isEN ? "Visibility" : "Visibilidad"}</span>
-                          <select
-                            value={sp.scope ?? "own"}
-                            onChange={(e) => canEdit && setScope(section.key, e.target.value as "own" | "department" | "all")}
-                            disabled={!canEdit}
-                            className="text-[11px] bg-charcoal border border-charcoal-light rounded px-1.5 py-0.5 text-cream focus:outline-none focus:border-gold/50 disabled:opacity-50"
-                          >
-                            <option value="own">{isEN ? "Own only" : "Solo propio"}</option>
-                            <option value="department">{isEN ? "Their department" : "Su departamento"}</option>
-                            <option value="all">{isEN ? "All staff" : "Todo el personal"}</option>
-                          </select>
-                        </div>
-                      )}
+                    <div key={g.key} className={cn("flex items-center gap-1 rounded-lg border pr-1.5 min-w-0",
+                      open ? "border-gold/60 bg-gold/10" : "border-charcoal-light bg-charcoal-light/50")}>
+                      <button aria-expanded={open} onClick={() => setOpenGroup(open ? null : g.key)}
+                        className="flex-1 min-w-0 min-h-11 flex flex-col justify-center pl-2.5 text-left">
+                        <span className={cn("text-sm font-semibold truncate", open ? "text-gold" : "text-cream")}>{isEN ? g.label : g.labelEs}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">{isEN ? `${on} of ${g.sections.length} on` : `${on} de ${g.sections.length}`}</span>
+                      </button>
+                      <Switch checked={on > 0} disabled={!canEdit} aria-label={isEN ? `All of ${g.label}` : `Todo ${g.labelEs}`}
+                        className={switchCls} onCheckedChange={v => setPerms(prev => setGroup(prev, g.sections, v))} />
                     </div>
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {tab === "quickactions" && (
-            <div className="px-5 py-4">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Zap size={14} className="text-gold" />
-                  <p className="text-cream text-sm font-semibold">{isEN ? "Dashboard Shortcuts" : "Accesos del Panel"}</p>
-                </div>
-                {canEdit && level && (
-                  <button
-                    onClick={applyLevelDefaults}
-                    className="text-[10px] text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-1 transition-colors"
-                  >
-                    {isEN ? "Reset to defaults" : "Valores por defecto"}
-                  </button>
-                )}
+              <div className="flex items-center px-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <span className="flex-1 normal-case tracking-normal text-xs">{isEN ? "Home and Profile: always on" : "Inicio y Perfil: siempre activo"}</span>
+                {current && [isEN ? "See" : "Ver", isEN ? "Change" : "Editar", isEN ? "Alerts" : "Alertas"].map(h => <span key={h} className="w-12 text-center">{h}</span>)}
               </div>
-              <QuickActionToggles
-                isEN={isEN}
-                enabledKeys={quickActions}
-                onChange={canEdit ? setQuickActions : () => {}}
-                disabled={!canEdit}
-              />
+              {current ? (
+                <div className="rounded-lg border border-charcoal-light px-2">
+                  {current.sections.map(key => {
+                    const info = sectionInfo(key);
+                    const sp = perms[key];
+                    const name = isEN ? info.label : info.labelEs;
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center min-h-10 sm:min-h-8">
+                          <span className={cn("flex-1 min-w-0 truncate text-sm", sp?.view ? "text-cream" : "text-cream/60")}>{name}</span>
+                          {(["view", "edit", "notifications"] as PermField[]).map(f => (
+                            <span key={f} className="w-12 flex justify-center">
+                              <Switch checked={!!sp?.[f]} disabled={!canEdit || (f === "edit" && !info.hasEdit)}
+                                aria-label={`${name} ${f === "view" ? (isEN ? "see" : "ver") : f === "edit" ? (isEN ? "change" : "editar") : (isEN ? "alerts" : "alertas")}`}
+                                className={switchCls} onCheckedChange={v => toggle(key, f, v)} />
+                            </span>
+                          ))}
+                        </div>
+                        {info.hasScope && sp?.view && (
+                          <div className="flex items-center gap-2 pb-1 pl-2">
+                            <span className="text-xs text-muted-foreground">{isEN ? "Shows" : "Muestra"}</span>
+                            <select value={sp.scope ?? "own"} disabled={!canEdit} onChange={e => setScope(key, e.target.value as "own" | "department" | "all")}
+                              className="h-8 text-sm bg-charcoal border border-charcoal-light rounded px-1.5 text-cream">
+                              <option value="own">{isEN ? "Own only" : "Solo propio"}</option>
+                              <option value="department">{isEN ? "Their department" : "Su departamento"}</option>
+                              <option value="all">{isEN ? "All staff" : "Todo el personal"}</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : <p className="px-1 text-sm text-muted-foreground">{isEN ? "Choose a group to see its switches." : "Elige un grupo para ver sus opciones."}</p>}
+            </div>
+            );
+          })()}
+
+          {tab === "home" && (
+            <div className="px-4 py-3 space-y-3">
+              {choosingShortcut ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-cream">{isEN ? "Add a shortcut" : "Añadir acceso directo"}</p>
+                    <button className="min-h-11 px-2 text-sm text-gold" onClick={() => setChoosingShortcut(false)}>{isEN ? "Done" : "Listo"}</button>
+                  </div>
+                  {addable.length === 0
+                    ? <p className="text-sm text-muted-foreground">{isEN ? "Nothing else their access allows. Switch on more in Access." : "No hay más opciones con su acceso actual."}</p>
+                    : <div className="flex flex-wrap gap-2">
+                        {addable.map(a => (
+                          <button key={a.key} onClick={() => setQuickActions(q => [...q, a.key])}
+                            className="min-h-10 px-3 rounded-full border border-charcoal-light bg-charcoal-light text-sm text-cream flex items-center gap-1.5 hover:border-gold/50">
+                            <span aria-hidden>{a.icon}</span>{isEN ? a.label : a.labelEs}
+                          </button>
+                        ))}
+                      </div>}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">{isEN ? "Shortcuts on their home screen." : "Accesos directos en su pantalla de inicio."}</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {quickActions.map(k => {
+                      const a = ALL_QUICK_ACTIONS.find(x => x.key === k);
+                      if (!a) return null;
+                      return (
+                        <div key={k} className="relative rounded-xl border border-charcoal-light bg-charcoal-light px-2 py-3 flex flex-col items-center gap-1 min-h-[76px]">
+                          <span className="text-xl" aria-hidden>{a.icon}</span>
+                          <span className="text-xs text-cream text-center leading-tight">{isEN ? a.label : a.labelEs}</span>
+                          {canEdit && (
+                            <button aria-label={isEN ? `Remove ${a.label}` : `Quitar ${a.labelEs}`} onClick={() => setQuickActions(q => q.filter(x => x !== k))}
+                              className="absolute -top-1 -right-1 w-8 h-8 flex items-center justify-center text-cream/60 hover:text-cream"><X size={14} /></button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {canEdit && (
+                      <button onClick={() => setChoosingShortcut(true)}
+                        className="rounded-xl border border-dashed border-gold/50 text-gold px-2 py-3 flex flex-col items-center justify-center gap-1 min-h-[76px] hover:bg-gold/5">
+                        <Plus size={20} /><span className="text-xs">{isEN ? "Add shortcut" : "Añadir"}</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer — always visible */}
         {canEdit && (
-          <div className="shrink-0 px-5 py-4 border-t border-charcoal-light space-y-2">
-            {/* Draft: show Send Invitation CTA; non-draft: show Resend Invitation */}
+          <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-t border-charcoal-light pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label={isEN ? "More" : "Más"} className="h-11 w-11 shrink-0"><MoreHorizontal size={18} /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top" className="z-[90]">
+                {!isDraft && <DropdownMenuItem disabled={resending} onSelect={() => void handleResendInvitation()}><Mail size={14} className="mr-2" />{isEN ? "Resend invitation" : "Reenviar invitación"}</DropdownMenuItem>}
+                {isMasterAdmin && !isDraft && <DropdownMenuItem disabled={resettingPwd} onSelect={() => void handleSendPasswordReset()}><Mail size={14} className="mr-2" />{isEN ? "Send password reset" : "Enviar restablecer contraseña"}</DropdownMenuItem>}
+                {isMasterAdmin && !isDraft && <DropdownMenuItem onSelect={() => setPwdOpen(true)}><KeyRound size={14} className="mr-2" />{isEN ? "Set password…" : "Establecer contraseña…"}</DropdownMenuItem>}
+                {(onArchive || isMasterAdmin) && !isDraft && <DropdownMenuSeparator />}
+                {onArchive && <DropdownMenuItem disabled={busy} onSelect={() => onArchive()}><Archive size={14} className="mr-2" />{isEN ? "Archive (left)" : "Archivar (salió)"}</DropdownMenuItem>}
+                {isMasterAdmin && <DropdownMenuItem disabled={deleting} onSelect={() => setDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 size={14} className="mr-2" />{isEN ? "Delete user" : "Eliminar usuario"}</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {isDraft ? (
-              <Button
-                disabled={sendingInvite || saving || deleting || !fullName || !draftEmail}
-                onClick={handleSendInvitation}
-                className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold gap-2"
-              >
-                {sendingInvite ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
-                {sendingInvite
-                  ? (isEN ? "Sending…" : "Enviando…")
-                  : (isEN ? "Send Invitation" : "Enviar Invitación")}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                disabled={resending || saving || deleting}
-                onClick={handleResendInvitation}
-                className="w-full bg-charcoal-light border border-gold/40 text-gold hover:bg-gold/10 hover:border-gold gap-2 font-semibold"
-              >
-                {resending ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
-                {resending
-                  ? (isEN ? "Sending…" : "Enviando…")
-                  : (isEN ? "Resend Invitation" : "Reenviar Invitación")}
-              </Button>
-            )}
-
-            {/* Master admin: send password reset to existing users */}
-            {isMasterAdmin && !isDraft && (
-              <Button
-                variant="outline"
-                disabled={resettingPwd || saving || deleting || resending}
-                onClick={handleSendPasswordReset}
-                className="w-full bg-charcoal-light border border-gold/30 text-cream hover:bg-gold/10 hover:border-gold/60 gap-2 font-semibold"
-              >
-                {resettingPwd ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
-                {resettingPwd
-                  ? (isEN ? "Sending…" : "Enviando…")
-                  : (isEN ? "Send Password Reset" : "Enviar Restablecer Contraseña")}
-              </Button>
-            )}
-
-            {/* Master admin: set a password directly (bypasses email) */}
-            {isMasterAdmin && !isDraft && (
-              <div className="space-y-2 rounded-xl border border-gold/30 p-3">
-                <FieldLabel label={isEN ? "Set password directly" : "Establecer contraseña"} />
-                <Input
-                  type="text"
-                  autoComplete="new-password"
-                  value={newPwd}
-                  onChange={e => setNewPwd(e.target.value)}
-                  placeholder={isEN ? "Min. 8 characters" : "Mín. 8 caracteres"}
-                  className="text-base"
-                />
-                <Button
-                  variant="outline"
-                  disabled={settingPwd || newPwd.length < 8}
-                  onClick={handleSetPassword}
-                  className="w-full bg-charcoal-light border border-gold/30 text-cream hover:bg-gold/10 hover:border-gold/60 gap-2 font-semibold"
-                >
-                  {settingPwd ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-                  {isEN ? "Set Password" : "Guardar Contraseña"}
+              <>
+                <Button variant="outline" onClick={handleSave} disabled={busy} className="h-11 flex-1 min-w-0">
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Save draft" : "Guardar borrador")}
                 </Button>
-              </div>
+                <Button onClick={requestInvite} disabled={busy || !canInvite} className="h-11 flex-[1.3] min-w-0 bg-gold hover:bg-gold/90 text-charcoal font-semibold gap-1.5">
+                  {sendingInvite ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} className="shrink-0" />}
+                  <span className="truncate">{isEN ? "Send invitation" : "Enviar invitación"}</span>
+                </Button>
+              </>
+            ) : (
+              <Button onClick={handleSave} disabled={busy} className="h-11 flex-1 bg-gold hover:bg-gold/90 text-charcoal font-semibold">
+                {saving ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Save changes" : "Guardar cambios")}
+              </Button>
             )}
+          </div>
+        )}
 
-            <Button onClick={handleSave} disabled={saving || deleting} className="w-full bg-gold hover:bg-gold/90 text-charcoal font-semibold">
-              {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
-              {saving ? (isEN ? "Saving…" : "Guardando…") : (isDraft ? (isEN ? "Save Draft" : "Guardar Borrador") : (isEN ? "Save Changes" : "Guardar Cambios"))}
-            </Button>
-            {onArchive && !deleteDialogOpen && (
-              <Button type="button" variant="outline" disabled={deleting || saving} onClick={onArchive} className="w-full">
-                <Archive size={16} className="mr-2" />
-                {isEN ? "Archive (left)" : "Archivar (salió)"}
-              </Button>
-            )}
-            {isMasterAdmin && !deleteDialogOpen && (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={deleting}
-                onClick={() => setDeleteDialogOpen(true)}
-                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 size={16} className="mr-2" />
-                {isEN ? "Delete User" : "Eliminar Usuario"}
-              </Button>
-            )}
-            {isMasterAdmin && deleteDialogOpen && (
-              <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3" role="alert">
-                <p className="text-sm font-semibold text-destructive">
-                  {isEN ? "Permanently delete this user?" : "¿Eliminar permanentemente este usuario?"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {isEN
-                    ? `${member.full_name || "This user"} and all their data will be deleted. This cannot be undone.`
-                    : `${member.full_name || "Este usuario"} y todos sus datos serán eliminados. Esta acción no se puede deshacer.`}
-                </p>
+        {/* In-panel confirmations (kept inside the panel so they always sit above it) */}
+        {(confirmEmptyInvite || deleteDialogOpen || pwdOpen) && (
+          <div className="absolute inset-0 z-10 bg-black/60 flex items-center justify-center p-4">
+            <div role="alertdialog" aria-modal="true" className="w-full max-w-sm rounded-xl border border-charcoal-light bg-charcoal p-4 space-y-3 shadow-2xl">
+              {confirmEmptyInvite && (<>
+                <p className="text-base text-cream">{isEN ? "This person will see nothing yet. Send invitation anyway?" : "Esta persona aún no verá nada. ¿Enviar la invitación de todos modos?"}</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={deleting}
-                    onClick={() => setDeleteDialogOpen(false)}
-                  >
-                    {isEN ? "Cancel" : "Cancelar"}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => { void handleDelete(); }}
-                    disabled={deleting}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
+                  <Button variant="outline" className="h-11" onClick={() => setConfirmEmptyInvite(false)}>{isEN ? "Cancel" : "Cancelar"}</Button>
+                  <Button className="h-11 bg-gold hover:bg-gold/90 text-charcoal" onClick={() => void handleSendInvitation()}>{isEN ? "Send" : "Enviar"}</Button>
+                </div>
+              </>)}
+              {deleteDialogOpen && !confirmEmptyInvite && (<>
+                <p className="text-sm font-semibold text-destructive">{isEN ? "Permanently delete this user?" : "¿Eliminar permanentemente este usuario?"}</p>
+                <p className="text-sm text-muted-foreground">{isEN
+                  ? `${member.full_name || "This user"} and all their data will be deleted. This cannot be undone.`
+                  : `${member.full_name || "Este usuario"} y todos sus datos serán eliminados. Esta acción no se puede deshacer.`}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="h-11" disabled={deleting} onClick={() => setDeleteDialogOpen(false)}>{isEN ? "Cancel" : "Cancelar"}</Button>
+                  <Button className="h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deleting} onClick={() => void handleDelete()}>
                     {deleting ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Delete" : "Eliminar")}
                   </Button>
                 </div>
-              </div>
-            )}
+              </>)}
+              {pwdOpen && !confirmEmptyInvite && !deleteDialogOpen && (<>
+                <p className="text-sm font-semibold text-cream">{isEN ? "Set password directly" : "Establecer contraseña"}</p>
+                <Input type="text" autoComplete="new-password" value={newPwd} onChange={e => setNewPwd(e.target.value)}
+                  placeholder={isEN ? "Min. 8 characters" : "Mín. 8 caracteres"} className="text-base" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="h-11" onClick={() => { setPwdOpen(false); setNewPwd(""); }}>{isEN ? "Cancel" : "Cancelar"}</Button>
+                  <Button className="h-11" disabled={settingPwd || newPwd.length < 8} onClick={async () => { await handleSetPassword(); setPwdOpen(false); }}>
+                    {settingPwd ? <Loader2 size={16} className="animate-spin" /> : (isEN ? "Set password" : "Guardar")}
+                  </Button>
+                </div>
+              </>)}
+            </div>
           </div>
         )}
       </div>

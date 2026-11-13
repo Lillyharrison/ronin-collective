@@ -84,6 +84,8 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "inventory",          label: "Inventory",           labelEs: "Inventario",        hasEdit: true  },
   { key: "laundry",            label: "Laundry",             labelEs: "Lavandería",        hasEdit: true  },
   { key: "meet-team",          label: "Meet the Team",       labelEs: "Equipo",            hasEdit: false },
+  { key: "rules",              label: "House Rules",         labelEs: "Reglas de la Casa", hasEdit: true  },
+  { key: "calendar-staff",     label: "   ↳ Staff",             labelEs: "   ↳ Personal",               hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "contacts",           label: "Contacts",            labelEs: "Contactos",         hasEdit: true  },
   { key: "achievements",       label: "Achievements",        labelEs: "Logros",            hasEdit: false },
 ];
@@ -157,37 +159,15 @@ export const DEPT_COLORS: Record<string, string> = {
   office:   "text-blue-400",
 };
 
-// Default section permissions based on level
-export function defaultPermissionsForLevel(level: Level | string): SectionPermissions {
-  const base: Record<string, string[]> = {
-    principal:       ["dashboard","property","messages","travel","calendar","meet-team","profile","achievements","principal-location","family-calendar","calendar-travel","calendar-birthdays","family-movements"],
-    extended_family: ["dashboard","messages","calendar","profile","achievements","family-calendar","calendar-travel","calendar-birthdays"],
-    manager:         ["dashboard","property","maintenance","maintenance-repairs","maintenance-planned","messages","tasks","checklists","manuals","contacts","inventory","laundry","orders","calendar","staff-schedule","meet-team","profile","achievements","principal-location","todays-snapshot","family-calendar","calendar-travel","calendar-birthdays","calendar-maintenance","calendar-deliveries","family-movements"],
-    staff:           ["dashboard","maintenance","maintenance-repairs","messages","tasks","checklists","manuals","laundry","calendar","staff-schedule","profile","achievements","todays-snapshot","calendar-travel","calendar-birthdays","calendar-maintenance"],
-  };
-  const allowed = base[level] || base["staff"];
-  const perms: SectionPermissions = {};
-  ALL_SECTIONS.forEach(s => {
-    const entry: SectionPerm = {
-      view: allowed.includes(s.key),
-      edit: allowed.includes(s.key) && (s.hasEdit ?? false),
-      notifications: allowed.includes(s.key),
-    };
-    if (s.hasScope) {
-      entry.scope = (level === "manager" || level === "principal" || level === "extended_family") ? "all" : "own";
-    }
-    perms[s.key] = entry;
-  });
-  return perms;
-}
+// New people start with nothing: there are deliberately no per-level default
+// permissions or shortcuts. Admins switch on exactly what each person needs.
 
-// Default quick actions per level
-export function defaultQuickActionsForLevel(level: Level | string): string[] {
-  const base: Record<string, string[]> = {
-    principal:       ["calendar", "reportIssue"],
-    extended_family: ["calendar", "messages"],
-    manager:         ["checklists", "orders", "reportIssue", "calendar"],
-    staff:           ["checklists", "reportIssue", "tasks", "calendar"],
-  };
-  return base[level] || base["staff"];
-}
+// Which section a dashboard shortcut opens (mirrors the Dashboard's own list).
+export const QUICK_ACTION_SECTION: Record<string, string> = {
+  dashboard: "dashboard", property: "property", messages: "messages", maintenance: "maintenance",
+  reportIssue: "maintenance", profile: "profile", calendar: "calendar", timeline: "timeline",
+  staffSchedule: "staff-schedule", carWash: "car-wash", travel: "travel", tasks: "tasks",
+  alerts: "alerts", checklists: "checklists", manuals: "manuals", orders: "orders",
+  inventory: "inventory", laundry: "laundry", meetTeam: "meet-team", vendors: "contacts",
+  rules: "rules", masterImport: "master-import", memory: "memory",
+};

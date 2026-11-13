@@ -42,46 +42,13 @@ export interface UserPermissions {
   previewName: string | null;
 }
 
-// Fallback permission matrix: which sections each role can access
-export const SECTION_PERMISSIONS: Record<string, AppRole[]> = {
-  dashboard:            ["master_admin", "admin", "manager", "staff", "principal"],
-  property:             ["master_admin", "admin", "manager", "principal"],
-  maintenance:          ["master_admin", "admin", "manager", "staff"],
-  messages:             ["master_admin", "admin", "manager", "staff", "principal"],
-  profile:              ["master_admin", "admin", "manager", "staff", "principal"],
-  achievements:         ["master_admin", "admin", "manager", "staff", "principal"],
-  manuals:              ["master_admin", "admin", "manager", "staff"],
-  checklists:           ["master_admin", "admin", "manager", "staff"],
-  tasks:                ["master_admin", "admin", "manager", "staff", "principal"],
-  contacts:             ["master_admin", "admin", "manager"],
-  inventory:            ["master_admin", "admin", "manager"],
-  laundry:              ["master_admin", "admin", "manager", "staff"],
-  orders:               ["master_admin", "admin", "manager", "staff"],
-  "meet-team":          ["master_admin", "admin", "manager", "principal"],
-  travel:               ["master_admin", "admin", "principal"],
-  calendar:             ["master_admin", "admin", "manager", "staff", "principal"],
-  "master-import":      ["master_admin"],
-  rules:                ["master_admin", "admin", "manager", "staff"],
-  "car-wash":           ["master_admin", "admin", "manager", "staff", "principal"],
-  timeline:             ["master_admin"],
-  // Feature visibility — defaults to admin/manager only; staff must be granted explicitly
-  "principal-location":   ["master_admin", "admin", "manager", "principal"],
-  // Dashboard "Today's Snapshot" panel — on for staff/managers, off for family by default
-  "todays-snapshot":      ["master_admin", "admin", "manager", "staff"],
-  // Calendar sub-tab visibility
-  "family-calendar":      ["master_admin", "admin", "manager", "principal"],
-  "calendar-travel":      ["master_admin", "admin", "manager", "staff", "principal"],
-  "calendar-birthdays":   ["master_admin", "admin", "manager", "staff", "principal"],
-  "calendar-maintenance": ["master_admin", "admin", "manager", "staff"],
-  "calendar-deliveries":  ["master_admin", "admin", "manager"],
-  "calendar-construction":["master_admin", "admin", "manager"],
-  "calendar-staff":       ["master_admin", "admin", "manager"],
-  // Staff-schedule overlay: family travel/guest events on the monthly view
-  "family-movements":     ["master_admin", "admin", "manager", "principal"],
-};
+// There is no role-based fallback: anyone who is not an admin or master admin sees
+// only sections with an explicit user_section_permissions row, plus these baselines.
+export const BASELINE_SECTIONS = ["dashboard", "profile"] as const;
+const SECTION_ALIASES: Record<string, string> = { vendors: "contacts" };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5"; // v5: role fallback removed
 const CACHE_TTL_MS  = 5 * 60 * 1000;
 
 interface PermissionsCache {
@@ -179,7 +146,7 @@ const PermissionsControlContext = createContext<PermissionsControl>({
   retry: () => {},
 });
 
-function buildPermissions(
+export function buildPermissions(
   userId: string | null,
   role: AppRole | null,
   level: UserLevel | null,
@@ -197,45 +164,28 @@ function buildPermissions(
   const isManager = role === "manager" || isAdmin;
   const isFamily = level === "principal" || level === "extended_family";
 
-  const SECTION_ALIASES: Record<string, string> = { vendors: "contacts" };
+  const explicit = (section: string): SectionPermEntry | undefined => {
+    const key = SECTION_ALIASES[section] ?? section;
+    return sectionPermissions?.[key] ?? sectionPermissions?.[section];
+  };
 
   const canSee = (section: string): boolean => {
-    if (isMasterAdmin) return true;
-    const key = SECTION_ALIASES[section] ?? section;
-    if (sectionPermissions) {
-      const perm = sectionPermissions[key] ?? sectionPermissions[section];
-      if (perm !== undefined) return perm.view === true;
-    }
-    if (!role) return false;
-    const allowed = SECTION_PERMISSIONS[section];
-    if (!allowed) return false;
-    return allowed.includes(role);
+    if (isAdmin) return true;
+    if (!userId) return false;
+    if ((BASELINE_SECTIONS as readonly string[]).includes(section)) return true;
+    return explicit(section)?.view === true;
   };
 
   const canEdit = (section: string): boolean => {
-    if (isMasterAdmin || isAdmin) return true;
-    const key = SECTION_ALIASES[section] ?? section;
+    if (isAdmin) return true;
     if (!canSee(section)) return false;
-    if (sectionPermissions) {
-      const perm = sectionPermissions[key] ?? sectionPermissions[section];
-      if (perm !== undefined) return perm.edit === true;
-    }
-    const managerEditSections = [
-      "property", "maintenance", "tasks", "checklists", "manuals",
-      "contacts", "inventory", "laundry", "orders", "calendar", "travel", "rules",
-    ];
-    return isManager && managerEditSections.includes(section);
+    return explicit(section)?.edit === true;
   };
 
   const wantsAlerts = (section: string): boolean => {
-    if (isMasterAdmin) return true;
-    const key = SECTION_ALIASES[section] ?? section;
+    if (isAdmin) return true;
     if (!canSee(section)) return false;
-    if (sectionPermissions) {
-      const perm = sectionPermissions[key] ?? sectionPermissions[section];
-      if (perm !== undefined) return perm.notifications === true;
-    }
-    return isAdmin || isManager;
+    return explicit(section)?.notifications === true;
   };
 
   return {

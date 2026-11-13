@@ -24,6 +24,7 @@ import { useNotificationSwipe } from "@/components/notifications/useNotification
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
 import { ClockCard } from "@/components/clock/ClockCard";
+import { selectShortcuts } from "@/lib/dashboardShortcuts";
 import { NotificationAcknowledgement, ReceiptSwipeRow, RECEIPT_CHANGED, type ReceiptNotification } from "@/components/notifications/NotificationAcknowledgement";
 
 interface FeedEvent {
@@ -170,7 +171,7 @@ function eventDotColor(eventType: string): string {
 export function Dashboard() {
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingTimesheetStaffId } = useNavigation();
-  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, loading: permLoading, error: permError } = usePermissions();
+  const { isMasterAdmin, isAdmin, userId, fullName, canSee, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
   const { properties: scopedProperties } = useScopedProperties();
   const [issueAssignees, setIssueAssignees] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
   const { retry: retryPermissions } = usePermissionsControl();
@@ -279,7 +280,7 @@ export function Dashboard() {
 
       // 2. Quick actions
       const qa = (profileData as { quick_actions?: string[] } | null)?.quick_actions;
-      if (Array.isArray(qa) && qa.length > 0) setUserQuickActions(qa);
+      setUserQuickActions(Array.isArray(qa) ? qa : []);
       setQaLoading(false);
 
       // 3. Notifications
@@ -742,15 +743,19 @@ export function Dashboard() {
             ))}
           </div>
         ) : (
+        (() => {
+          const shown = selectShortcuts(ALL_QUICK_ACTIONS_DASHBOARD, userQuickActions, canSee, isMasterAdmin);
+          if (shown.length === 0) {
+            const hasAnyAccess = isAdmin || Object.values(sectionPermissions ?? {}).some(p => p?.view);
+            return <p className="text-sm text-muted-foreground bg-card border border-border rounded-xl px-4 py-4">
+              {hasAnyAccess
+                ? (language === "es" ? "Aún no hay accesos directos." : "No shortcuts yet.")
+                : (language === "es" ? "Tu cuenta está lista. Estamos configurando tu acceso." : "Your account is ready. Your access is being set up.")}
+            </p>;
+          }
+          return (
         <div className="grid grid-cols-2 gap-3">
-          {ALL_QUICK_ACTIONS_DASHBOARD
-            .filter(a => {
-              if (!isMasterAdmin && !canSee(a.section)) return false;
-              // If user has saved prefs, respect them; otherwise show defaults filtered by canSee
-              if (userQuickActions !== null) return userQuickActions.includes(a.key);
-              // Default: show first 4 that user can see
-              return true;
-            })
+          {shown
             .map((action) => (
             <button
               key={action.key}
@@ -770,6 +775,8 @@ export function Dashboard() {
             </button>
           ))}
         </div>
+          );
+        })()
         )}
       </div>
 

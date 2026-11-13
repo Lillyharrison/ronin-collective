@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   ALL_SECTIONS, LEVEL_OPTIONS, DEPT_OPTIONS, LEVEL_COLORS, DEPT_COLORS, ROLE_MAP,
-  defaultPermissionsForLevel, defaultQuickActionsForLevel,
   type TeamMember, type Property, type Level, type Department, type AppRole,
   type SectionPerm, type SectionPermissions, type AddUserForm,
 } from "@/components/team/teamConstants";
@@ -23,6 +22,7 @@ import {
   PropertyToggles, QuickActionToggles, FieldLabel,
 } from "@/components/team/teamSharedComponents";
 import { MemberEditDrawer } from "@/components/team/MemberEditDrawer";
+import { buildPermissionRows } from "@/components/team/memberAccess";
 import { ArchiveMemberDialog, ArchivedMembersList, fetchArchivedMembers, type ArchivedMember } from "@/components/team/ArchiveMember";
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -428,10 +428,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
       role: level ? ROLE_MAP[level] : "",
       department: (level === "staff" || level === "manager") ? f.department : "",
     }));
-    if (level) {
-      setPerms(defaultPermissionsForLevel(level));
-      setQuickActions(defaultQuickActionsForLevel(level));
-    }
+    // New people start with nothing: no access, alerts, houses or shortcuts.
   }
 
   function togglePerm(sectionKey: string, field: "view" | "edit" | "notifications") {
@@ -458,9 +455,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
     const isDraft = !noLogin && !form.email;
     setSaving(true);
     try {
-      const finalPerms = Object.keys(perms).length > 0
-        ? { ...perms, _quick_actions: quickActions as unknown as SectionPerm }
-        : null;
+      const finalPerms = perms;
 
       if (noLogin || isDraft) {
         // Create profile-only record via edge function (needs service role to bypass RLS)
@@ -478,12 +473,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             notes: form.notes || null,
             assigned_property_ids: assignedProps,
             quick_actions: quickActions,
-            section_permissions_rows: Object.entries(finalPerms)
-              .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
-              .map(([section, v]) => {
-                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
-                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true, scope: p.scope ?? null };
-              }),
+            section_permissions_rows: buildPermissionRows(finalPerms).upserts,
             is_draft: isDraft,
           },
         });
@@ -504,12 +494,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             phone: phone || null,
             assigned_property_ids: assignedProps,
             quick_actions: quickActions,
-            section_permissions_rows: Object.entries(finalPerms)
-              .filter(([k, v]) => k !== "_quick_actions" && v && typeof v === "object" && !Array.isArray(v))
-              .map(([section, v]) => {
-                const p = v as { view?: boolean; edit?: boolean; notifications?: boolean; scope?: "own" | "department" | "all" };
-                return { section, can_view: p.view === true, can_edit: p.edit === true, notifications: p.notifications === true, scope: p.scope ?? null };
-              }),
+            section_permissions_rows: buildPermissionRows(finalPerms).upserts,
           },
         });
       }
@@ -665,17 +650,12 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
             <div className="px-5 py-4">
               {Object.keys(perms).length === 0 && (
                 <div className="mb-4 p-3 bg-charcoal-light rounded-lg">
-                  <p className="text-muted-foreground text-xs">{isEN ? "Select a level on the Details tab to auto-populate permissions, or toggle manually below." : "Selecciona un nivel en Detalles para cargar permisos, o actívalos manualmente."}</p>
+                  <p className="text-muted-foreground text-xs">{isEN ? "New people start with nothing switched on. Turn on only what they need." : "Las personas nuevas empiezan sin nada activado. Activa solo lo que necesiten."}</p>
                 </div>
               )}
               {Object.keys(perms).length > 0 && (
                 <div className="mb-4 flex items-center justify-between">
                   <p className="text-muted-foreground text-xs">{isEN ? "Toggle per-section access and notifications" : "Activa acceso y alertas por sección"}</p>
-                  {form.level && (
-                    <button onClick={() => setPerms(defaultPermissionsForLevel(form.level as Level))} className="text-[10px] text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-1 transition-colors">
-                      {isEN ? "Reset to defaults" : "Valores por defecto"}
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -775,14 +755,6 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                   <Zap size={14} className="text-gold" />
                   <p className="text-cream text-sm font-semibold">{isEN ? "Dashboard Shortcuts" : "Accesos del Panel"}</p>
                 </div>
-                {form.level && (
-                  <button
-                    onClick={() => setQuickActions(defaultQuickActionsForLevel(form.level as Level))}
-                    className="text-[10px] text-gold hover:text-gold/80 border border-gold/30 rounded px-2 py-1 transition-colors"
-                  >
-                    {isEN ? "Reset to defaults" : "Valores por defecto"}
-                  </button>
-                )}
               </div>
               <QuickActionToggles
                 isEN={isEN}
