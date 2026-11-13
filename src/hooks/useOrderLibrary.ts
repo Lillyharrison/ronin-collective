@@ -20,6 +20,7 @@ export interface OrderLibraryItem {
   category: string;
   image_url: string | null;
   website_url: string | null;
+  asin: string | null;
   notes: string | null;
   default_quantity: string | null;
   size: string | null;

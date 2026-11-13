@@ -81,6 +81,7 @@ export function LibraryItemRow({ item, onOpen }: Props) {
         title={item.name}
       >
         {item.name}
+        {item.asin && <span className="ml-1.5 align-middle text-[9px] font-bold px-1 py-0.5 rounded border border-border text-muted-foreground">Amazon</span>}
       </span>
 
       {/* Quantity */}

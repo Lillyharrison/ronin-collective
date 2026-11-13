@@ -109,6 +109,7 @@ export function LibraryItemCard({ item, onOpen }: Props) {
         >
           {item.name}
         </span>
+        {item.asin && <span className="self-start text-[9px] font-bold px-1 rounded border border-border text-muted-foreground">Amazon</span>}
         {item.default_quantity && (
           <span className="text-[10px] text-muted-foreground leading-tight">
             {isL ? "Cant" : "Qty"}: {item.default_quantity}

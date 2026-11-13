@@ -5,6 +5,7 @@
  * a destructive Delete action when editing an existing item.
  */
 import { useEffect, useState } from "react";
+import { isValidAsin, parseAmazonUrl } from "@/lib/amazonCart";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
   const [category, setCategory] = useState("supplies");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [asin, setAsin] = useState("");
   const [notes, setNotes] = useState("");
   const [defaultQty, setDefaultQty] = useState("");
   const [size, setSize] = useState("");
@@ -89,6 +91,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setCategory(item.category);
       setImageUrl(item.image_url);
       setWebsiteUrl(item.website_url ?? "");
+      setAsin(item.asin ?? "");
       setNotes(item.notes ?? "");
       setDefaultQty(item.default_quantity ?? "");
       setSize(item.size ?? "");
@@ -102,6 +105,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       setCategory("supplies");
       setImageUrl(null);
       setWebsiteUrl("");
+      setAsin("");
       setNotes("");
       setDefaultQty("");
       setSize("");
@@ -122,6 +126,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
 
   const handleSave = async () => {
     if (!name.trim()) return;
+    if (asin.trim() && !isValidAsin(asin.trim())) return;
     setSaving(true);
     const aliasArr = aliases
       .split(",")
@@ -132,6 +137,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
       category,
       image_url: imageUrl,
       website_url: websiteUrl.trim() || null,
+      asin: asin.trim() || null,
       notes: notes.trim() || null,
       default_quantity: defaultQty.trim() || null,
       size: size.trim() || null,
@@ -285,9 +291,28 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
               <Input
                 type="url"
                 value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
+                onChange={(e) => {
+                  setWebsiteUrl(e.target.value);
+                  const parsed = parseAmazonUrl(e.target.value);
+                  if (parsed) setAsin(parsed.asin);
+                }}
                 placeholder="https://…"
               />
+            </div>
+
+            <div>
+              <Label className="text-xs" htmlFor="library-asin">{isL ? "Código de Amazon (ASIN)" : "Amazon code (ASIN)"}</Label>
+              <Input
+                id="library-asin"
+                value={asin}
+                onChange={(e) => setAsin(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                placeholder={isL ? "Opcional, p. ej. B07XJ8C8F5" : "Optional, e.g. B07XJ8C8F5"}
+                maxLength={10}
+                aria-invalid={!!asin && !isValidAsin(asin)}
+              />
+              {!!asin && !isValidAsin(asin) && (
+                <p className="text-xs text-destructive mt-1">{isL ? "Debe tener 10 letras o números." : "Must be 10 letters or digits."}</p>
+              )}
             </div>
 
             <div>
@@ -391,7 +416,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
               <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
                 {isL ? "Cancelar" : "Cancel"}
               </Button>
-              <Button onClick={handleSave} disabled={saving || !name.trim()}>
+              <Button onClick={handleSave} disabled={saving || !name.trim() || (!!asin.trim() && !isValidAsin(asin.trim()))}>
                 {saving && <Loader2 size={14} className="mr-1.5 animate-spin" />}
                 {isL ? "Guardar" : "Save"}
               </Button>

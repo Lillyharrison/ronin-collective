@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { orderStage } from "@/lib/orderLifecycle";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { AmazonCartButton } from "@/components/orders/AmazonCartButton";
 import {
   X, Truck, Link as LinkIcon, FileText, Check, Calendar,
   MapPin, ExternalLink, Trash2, Save, UserCircle2,
@@ -275,6 +276,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
 
         {/* Footer */}
         <div className="border-t border-border px-5 py-4 flex-shrink-0 space-y-2">
+          {canEdit && <AmazonCartButton orderId={order.id} propertyId={order.property_id} onMarkPlaced={stage === "not_placed" ? handleMarkPlaced : undefined} />}
           {stage === "not_placed" && canEdit && <Button className="w-full min-h-11" disabled={saving} onClick={handleMarkPlaced}><Check />{isL ? "Marcar como colocado" : "Mark as placed"}</Button>}
           {/* Mark as delivered — prominent button when pending */}
           {isPending && canEdit && (
