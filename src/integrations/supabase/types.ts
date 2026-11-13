@@ -1743,6 +1743,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          batch_id: string | null
           category: string
           created_at: string
           created_by: string | null
@@ -1758,6 +1759,7 @@ export type Database = {
           quantity: string | null
           received_at: string | null
           received_by: string | null
+          sent_at: string | null
           status: string
           updated_at: string
           urgent: boolean
@@ -1765,6 +1767,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          batch_id?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1780,6 +1783,7 @@ export type Database = {
           quantity?: string | null
           received_at?: string | null
           received_by?: string | null
+          sent_at?: string | null
           status?: string
           updated_at?: string
           urgent?: boolean
@@ -1787,6 +1791,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          batch_id?: string | null
           category?: string
           created_at?: string
           created_by?: string | null
@@ -1802,6 +1807,7 @@ export type Database = {
           quantity?: string | null
           received_at?: string | null
           received_by?: string | null
+          sent_at?: string | null
           status?: string
           updated_at?: string
           urgent?: boolean
@@ -3148,6 +3154,10 @@ export type Database = {
         Returns: number
       }
       safe_tz: { Args: { _tz: string }; Returns: string }
+      send_request_list: {
+        Args: { _ids?: string[]; _property_id: string }
+        Returns: Json
+      }
       set_property_location: {
         Args: {
           _lat: number
