@@ -38,7 +38,7 @@ Browser checks used the existing signed-in session at **390×844** and **1280×1
 | `LanguageContext.tsx:12–22` | URL `?lang=en/es`, then device-local stored choice, otherwise **English** | Does not detect phone/browser language; does not hydrate from profile; storage is not user-keyed. Public share URL language can win on first load. No storage-event account preference sync. |
 | `LanguageContext.tsx:41–42` | Missing selected-language key → English value → raw key | English fallback is real, but **no current missing static dictionary key was found**. Do not blame the supplied screenshots on missing keys. This differs from the standing preference for Spanish placeholders; this audit preserves existing behavior without choosing a replacement. |
 | Inline `language === "es"`, `isL`, `es`, `isEN`, `isES` ternaries | Two copies maintained at individual sites | Usually works when correctly used, but easy to omit aria labels, error paths, plural forms or sibling controls. |
-| Per-component `t(en,es)`, `text(es,en)`, dictionaries/tuples/`labelEs` | Separate local copies, not shared dictionary keys | Function names/order differ. The local Profile `t` is not the global dictionary `t`. English literals inside correctly selected pairs are **not** untranslated defects. |
+| Per-component `t(en,es)`, `text(a,b)`, dictionaries/tuples/`labelEs` | Separate local copies, not shared dictionary keys | Function names/order differ. The local Profile `t` is not the global dictionary `t`. English literals inside correctly selected pairs are **not** untranslated defects. |
 | `useEntryTranslation` / `useBatchTranslation` | Selected database strings translated after render, Spanish only | Separate from static UI translation; does not persist bilingual records. |
 | Stored bilingual fields (`tasks`, `manuals`, `achievements`) | Reader chooses a field where implemented | Presence of columns does not guarantee writers populate them or all readers use them. |
 
@@ -139,13 +139,13 @@ Plain Latin American Spanish; tuteo; sentence case; short verbs. Keep personal n
 | `checklist_templates` | **110**: **109 standard**, **1 order_list**; categories **95 cleaning, 10 activity, 5 care_guide** | Single title, categories, locations, JSON products/sections, manual-link label. ChecklistCard:39 and ChecklistDetailPage:84 translate titles on display. | Titles may translate online; settings/report/submission/order-list readers can remain original; category/location/product labels not covered universally. |
 | `checklist_items` | **1,076**, **131** notes | Single title/notes; ChecklistItemRow:48 translates title + notes; ChecklistDetailPage:907–913 translates grouping labels; SharedChecklist:191,193–198 uses same hooks. | Selected operational rows translate online. Not every care-guide renderer, print path, section/container or report is a consumer. |
 | `checklist_comments` | **4** | Single content; no translation hook | Raw comment text in checklist detail; no translation label or Show original. |
-| Checklist sessions/submissions | **18** public sessions and **32** in-app sessions from stats snapshot (approximate, not exact verified aggregates) | Public session notes, copied titles/names and snapshots single-language | Original notes/snapshots; archive UI also English. Count is explicitly approximate here. |
+| Checklist sessions/submissions | **18** public sessions and **32** in-app sessions (exact SELECT counts) | Public session notes, copied titles/names and snapshots single-language | Original notes/snapshots; archive UI also English. Exact session counts were verified in a final read-only aggregate. |
 | `order_library_items` | **40**, **35** notes, **24** sizes | Single name/notes/size, aliases/purchase metadata; no translation consumer | Library cards/rows/request library sheet show original. Preserve dimensions/product codes; translate descriptive terms, not quantity numbers or brand names. |
 | `orders` | **2**, both descriptions populated; **0** notes, **0** packing_list | Single title/description/notes/packing_list; no translation consumer | Exact supplied English examples reproduced in Spanish page. Order detail and list stay original. No English/Spanish storage or “show original”. |
 | `shopping_list_items` request lines | **5**, **0** notes | Single name/quantity text/notes; RequestScreen and library add write original; photo-only app default is English `Photo request` | My list, On the way and PA queue all show raw row fields. Quiet drafts/send-list behavior does not imply translation. No translation consumer. |
 | Reusable shopping lists / order snapshots | **6** `order_list_items`; **2** `order_list_submissions` containing **4** immutable JSON lines; **0** order_list_draft_lines | Template/items and JSON lines carry original text. No dual-language line snapshot mechanism found. | Original shopping-list instructions, names/comments and issued snapshot fields. Do not rewrite historical snapshots as a translation side effect. |
 | `calendar_events` | **26**, **24** descriptions, **9** notes | Single title/description/notes/location; no translation consumer | Original external iCal content and custom entries. Calendar also generates English birthday/status/recurrence labels. External read-only events must stay immutable. |
-| Care guides | **5** templates categorized care_guide (included above); no independent care_guides table | Actual guides use checklist_templates/items/JSON metadata, not manuals bilingual fields. extract-care-guide explicitly generates English; CareGuideScanModal constructs English Composition/Fabric/Care symbols/Ratings labels. | Guide editor/print uses original strings; shared checklist translations are not a universal guide translation path. Per-guide item count not separately measured. |
+| Care guides | **5** templates categorized care_guide (included above); no independent care_guides table | Actual guides use checklist_templates/items/JSON metadata, not manuals bilingual fields. extract-care-guide explicitly generates English; CareGuideScanModal constructs English Composition/Fabric/Care symbols/Ratings labels. | Guide editor/print uses original strings; shared checklist translations are not a universal guide translation path. The five guides contain **37** checklist-item rows in total, **0** populated item notes; JSON instructions/products were not separately counted. |
 | `manuals` | **0** | title_en/title_es + content_en/content_es exist | No populated bilingual manuals to verify. Column presence must not be conflated with the actual five checklist-based care guides. Uploaded PDF/video/image prose is not translated by changing a title. |
 | `property_rules` | **2** | Single title/description, keywords/rejection_reason; no translation consumer | RulesSection, RulesManager, PendingRulesWidget, Alerts and Dashboard show original rule content. **“Parking restriction”** was visible in the Spanish Home card. |
 | `vendors` / `vendor_contacts` | **50** vendors, **6** notes; **0** vendor_contacts | Single notes/services/company/contact fields; no translation consumer | Original service description/notes; company/person names should remain unchanged. English vendor UI is an independent issue. |
@@ -208,7 +208,7 @@ Do not confuse locale presentation with date storage or house time. Preserve the
 | OrdersSection:128,243,349,437 | Date strings forced en-US in order views | Pass selected locale, keep plain-date helpers. |
 | requests/logic:49,76 | Sent/delivery dates explicitly es-ES/en-US using local/plain helpers | Positive; avoid rewriting date semantics. |
 | RequestsQueue:36,39 | Sent/created time localized es-ES/en-US; count always `artículos` | Correct locale branch, but `1 artículos` possible; singular artículo/item. |
-| RequesterOrders:72; counts/buttons | N añadido(s)/added-style pills and counts scattered | Prefer complete singular/plural messages; inspect quantity versus row-count semantics before changing. |
+| RequesterOrders:72; counts/buttons | `1 añadidos` possible in the current library pill; counts scattered | Select “1 añadido” / “2 añadidos”; inspect quantity versus row-count semantics before changing. |
 | CalendarSection:787,789 and date-fns format sites | `h:mm a` / default date-fns weekday/month names with no Spanish locale | Selected locale for displayed text, consistent house-zone/viewer-zone rule. |
 | calendar/staff/constants:52–53 | English short/full weekdays | Localized display labels; retain numeric day IDs. |
 | PlannedMaintenanceList:10–11,364,578 | English month labels, Weekly/Monthly/Every Nmo | Translate month names and recurrence grammar. |
@@ -278,7 +278,7 @@ These are **planning ranges, not quotations, measured credit consumption or plat
 - **Not verified:** real installed iPhone/PWA caching/session state, every permission-specific daily/admin view, live AI translation output/latency/cost, anonymous share translation call, actual push/email/reminder delivery, hosted email-template language, every historical attachment/JSON snapshot’s language, all third-party control translations, ongoing translation credit usage.
 - No tests were changed or run for code changes because there are no code changes. The static dictionary-key scan and controlled read-only browser observations are audit checks, not a new localization test suite.
 - The owner’s five English-only database-function findings were preserved and cross-checked for language_pref references; no database function was executed or modified.
-- Approximate session counts are labeled as approximate. All other headline table/field totals in §3 came from exact aggregates. Counts can change after the audit as ordinary users work.
+- All headline table/field/session totals in §3 came from exact aggregates; the preliminary statistics snapshot was not used as the final count. Counts can change after the audit as ordinary users work.
 - Existing code’s English dictionary fallback conflicts with the standing Spanish-placeholder preference. The report flags the difference; **neither fallback was changed**, and no approval pause was introduced.
 
 ---
@@ -287,7 +287,7 @@ These are **planning ranges, not quotations, measured credit consumption or plat
 
 Read the “Evidence and completeness” section before treating a count as a defect total. Counts mean source entries in this ledger; same text at multiple lines is one row with an occurrence count. Templates retain interpolation syntax; JSX fragments may need joining with adjacent content. Some source entries are internal exceptions or generated sample data rather than normal visible UI. Confirmed supporting omissions are included. Names/neutral abbreviations and correctly selected bilingual pairs were excluded where identifiable; some ambiguous candidates remain deliberately flagged for review.
 
-**Ledger coverage:** 1,658 source entries across 111 files after filtering; this is **not an exact English-defect total**.
+**Ledger coverage:** 1,711 source entries across 111 files after filtering; this is **not an exact English-defect total**.
 
 | File | Priority | Ledger entries | Distinct strings/templates |
 |---|---|---:|---:|
@@ -304,7 +304,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 | `src/components/orders/PropertyShoppingLists.tsx` | P0 | 1 | 1 |
 | `src/components/orders/library/LibraryItemCard.tsx` | P0 | 1 | 1 |
 | `src/components/orders/library/LibraryItemRow.tsx` | P0 | 1 | 1 |
-| `src/components/orders/library/libraryExportPDF.ts` | P0 | 20 | 18 |
+| `src/components/orders/library/libraryExportPDF.ts` | P0 | 27 | 25 |
 | `src/components/sections/OrdersSection.tsx` | P0 | 2 | 2 |
 | `src/components/checklists/OrderListDetailPage.tsx` | P0 | 13 | 13 |
 | `src/components/tasks/FamilyTasksView.tsx` | P0 | 2 | 2 |
@@ -325,18 +325,18 @@ Read the “Evidence and completeness” section before treating a count as a de
 | `src/components/maintenance/IssueStatusBadge.tsx` | P0 | 10 | 9 |
 | `src/components/maintenance/PlannedMaintenanceList.tsx` | P0 | 60 | 45 |
 | `src/components/maintenance/PlannedMaintenanceModal.tsx` | P0 | 55 | 54 |
-| `src/components/maintenance/plannedExportPDF.ts` | P0 | 26 | 25 |
-| `src/components/maintenance/repairsExportPDF.ts` | P0 | 16 | 16 |
+| `src/components/maintenance/plannedExportPDF.ts` | P0 | 39 | 36 |
+| `src/components/maintenance/repairsExportPDF.ts` | P0 | 35 | 33 |
 | `src/components/sections/MaintenanceSection.tsx` | P0 | 29 | 25 |
 | `src/components/calendar/StaffCalendarTab.tsx` | P0 | 19 | 18 |
-| `src/components/calendar/staff/CalculatorPanel.tsx` | P0 | 1 | 1 |
+| `src/components/calendar/staff/CalculatorPanel.tsx` | P0 | 4 | 4 |
 | `src/components/calendar/staff/CalendarToolbar.tsx` | P0 | 12 | 12 |
 | `src/components/calendar/staff/FamilyOverlayBand.tsx` | P0 | 1 | 1 |
 | `src/components/calendar/staff/LeaveCard.tsx` | P0 | 5 | 5 |
 | `src/components/calendar/staff/LeaveModal.tsx` | P0 | 23 | 23 |
 | `src/components/calendar/staff/LeavePanel.tsx` | P0 | 4 | 4 |
 | `src/components/calendar/staff/MobileStaffWeek.tsx` | P0 | 16 | 15 |
-| `src/components/calendar/staff/PdfExportModal.tsx` | P0 | 13 | 13 |
+| `src/components/calendar/staff/PdfExportModal.tsx` | P0 | 19 | 19 |
 | `src/components/calendar/staff/PropertyLegend.tsx` | P0 | 2 | 2 |
 | `src/components/calendar/staff/ScheduleManagerDrawer.tsx` | P0 | 24 | 22 |
 | `src/components/calendar/staff/ShareWeekDialog.tsx` | P0 | 19 | 19 |
@@ -351,9 +351,9 @@ Read the “Evidence and completeness” section before treating a count as a de
 | `src/components/calendar/staff/schedulePdfExport.ts` | P0 | 7 | 7 |
 | `src/components/sections/CalendarSection.tsx` | P0 | 143 | 111 |
 | `src/components/messaging/AddressBook.tsx` | P0 | 3 | 3 |
-| `src/components/messaging/ChatInfoPanel.tsx` | P0 | 14 | 13 |
+| `src/components/messaging/ChatInfoPanel.tsx` | P0 | 17 | 16 |
 | `src/components/messaging/ChatView.tsx` | P0 | 3 | 3 |
-| `src/components/messaging/MessageBubble.tsx` | P0 | 15 | 15 |
+| `src/components/messaging/MessageBubble.tsx` | P0 | 22 | 22 |
 | `src/components/sections/PropertySection.tsx` | P0 | 84 | 67 |
 | `src/components/sections/ProfileSection.tsx` | P0 | 7 | 6 |
 | `src/components/NotificationsPanel.tsx` | P0 | 5 | 5 |
@@ -364,7 +364,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 | `src/components/TextSizeControl.tsx` | P1/P2 | 2 | 1 |
 | `src/components/checklists/SectionsManager.tsx` | P1/P2 | 9 | 8 |
 | `src/components/manuals/CareGuideCard.tsx` | P1/P2 | 10 | 10 |
-| `src/components/manuals/CareGuideScanModal.tsx` | P1/P2 | 26 | 26 |
+| `src/components/manuals/CareGuideScanModal.tsx` | P1/P2 | 32 | 32 |
 | `src/components/manuals/RulesManager.tsx` | P1/P2 | 21 | 21 |
 | `src/components/sections/AchievementsSection.tsx` | P1/P2 | 1 | 1 |
 | `src/components/sections/CarWashSection.tsx` | P1/P2 | 86 | 75 |
@@ -375,7 +375,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 | `src/components/sections/MemorySection.tsx` | P1/P2 | 3 | 3 |
 | `src/components/sections/RulesSection.tsx` | P1/P2 | 32 | 30 |
 | `src/components/sections/VendorsSection.tsx` | P1/P2 | 20 | 19 |
-| `src/components/team/ArchiveMember.tsx` | P1/P2 | 12 | 12 |
+| `src/components/team/ArchiveMember.tsx` | P1/P2 | 1 | 1 |
 | `src/components/team/MemberEditDrawer.tsx` | P1/P2 | 3 | 3 |
 | `src/components/team/teamSharedComponents.tsx` | P1/P2 | 1 | 1 |
 | `src/components/timesheets/excel.ts` | P1/P2 | 17 | 17 |
@@ -562,10 +562,17 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/orders/library/libraryExportPDF.ts`
 
-20 ledger entries; 18 distinct strings/templates. Priority P0 — daily/supporting.
+27 ledger entries; 25 distinct strings/templates. Priority P0 — daily/supporting.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
+| Food & Drink | 103 | 1 | confirmed supplemental copy |
+| Cleaning | 104 | 1 | confirmed supplemental copy |
+| Supplies | 105 | 1 | confirmed supplemental copy |
+| Personal Care | 106 | 1 | confirmed supplemental copy |
+| Laundry | 107 | 1 | confirmed supplemental copy |
+| Tech & Electronics | 108 | 1 | confirmed supplemental copy |
+| Other | 109 | 1 | confirmed supplemental copy |
 | Order Library | 145 | 1 | message / validation / export |
 | item | 150, 311 | 2 | message / validation / export |
 | items | 150, 311 | 2 | message / validation / export |
@@ -998,7 +1005,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/maintenance/plannedExportPDF.ts`
 
-26 ledger entries; 25 distinct strings/templates. Priority P0 — daily/supporting.
+39 ledger entries; 36 distinct strings/templates. Priority P0 — daily/supporting.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
@@ -1014,6 +1021,17 @@ Read the “Evidence and completeness” section before treating a count as a de
 | Oct | 16 | 1 | display-array candidate; check consumer/reachability |
 | Nov | 16 | 1 | display-array candidate; check consumer/reachability |
 | Dec | 16 | 1 | display-array candidate; check consumer/reachability |
+| Future (Too Early) | 20 | 1 | confirmed supplemental copy |
+| To Be Booked | 21 | 1 | confirmed supplemental copy |
+| Booked | 22 | 1 | confirmed supplemental copy |
+| Initiated by Vendor | 23 | 1 | confirmed supplemental copy |
+| Recurring | 24 | 1 | confirmed supplemental copy |
+| As Needed | 25 | 1 | confirmed supplemental copy |
+| Completed | 26 | 1 | confirmed supplemental copy |
+| Cancelled | 27 | 1 | confirmed supplemental copy |
+| Weekly | 51, 68 | 2 | confirmed supplemental copy |
+| Monthly | 52, 69 | 2 | confirmed supplemental copy |
+| Every ${entry.recurrence_months} mo | 70 | 1 | confirmed supplemental copy |
 | Planned Maintenance | 104 | 1 | message / validation / export |
 | Ronin · Planned Maintenance | 141 | 1 | message / validation / export |
 | Title | 157 | 1 | confirmed supplemental copy |
@@ -1030,15 +1048,32 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/maintenance/repairsExportPDF.ts`
 
-16 ledger entries; 16 distinct strings/templates. Priority P0 — daily/supporting.
+35 ledger entries; 33 distinct strings/templates. Priority P0 — daily/supporting.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
+| Reported | 93, 299 | 2 | confirmed supplemental copy |
+| Under Investigation | 94 | 1 | confirmed supplemental copy |
+| On hold | 95 | 1 | confirmed supplemental copy |
+| Scheduled/In Progress | 96, 97 | 2 | confirmed supplemental copy |
+| Resolved | 98 | 1 | confirmed supplemental copy |
+| Urgent | 102 | 1 | confirmed supplemental copy |
+| High | 103 | 1 | confirmed supplemental copy |
+| Medium | 104 | 1 | confirmed supplemental copy |
+| Low | 105 | 1 | confirmed supplemental copy |
 | NEW | 152 | 1 | display copy |
 | UPDATED | 153 | 1 | display copy |
 | Repairs | 233 | 1 | message / validation / export |
 | &#96;Highlighting ${changedCount} change${changedCount === 1 ? "" : "s"} since last family report (${sinceDate})&#96; | 262 | 1 | message / validation / export |
 | Ronin · Repairs | 283 | 1 | message / validation / export |
+| Title | 299 | 1 | confirmed supplemental copy |
+| Status | 299 | 1 | confirmed supplemental copy |
+| Priority | 299 | 1 | confirmed supplemental copy |
+| Category | 299 | 1 | confirmed supplemental copy |
+| Property | 299 | 1 | confirmed supplemental copy |
+| Location | 299 | 1 | confirmed supplemental copy |
+| Scheduled | 299 | 1 | confirmed supplemental copy |
+| Assigned | 299 | 1 | confirmed supplemental copy |
 | No photo | 491 | 1 | message / validation / export |
 | center | 491 | 1 | message / validation / export |
 | reported | 519 | 1 | display-array candidate; check consumer/reachability |
@@ -1110,11 +1145,14 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/calendar/staff/CalculatorPanel.tsx`
 
-1 ledger entries; 1 distinct strings/templates. Priority P0 — daily/supporting.
+4 ledger entries; 4 distinct strings/templates. Priority P0 — daily/supporting.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
 | · This month | 22 | 1 | visible text |
+| Days worked | 26 | 1 | accessibility / placeholder |
+| Hours worked | 31 | 1 | accessibility / placeholder |
+| Annual leave | 35 | 1 | accessibility / placeholder |
 
 ## `src/components/calendar/staff/CalendarToolbar.tsx`
 
@@ -1220,7 +1258,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/calendar/staff/PdfExportModal.tsx`
 
-13 ledger entries; 13 distinct strings/templates. Priority P0 — daily/supporting.
+19 ledger entries; 19 distinct strings/templates. Priority P0 — daily/supporting.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
@@ -1233,6 +1271,12 @@ Read the “Evidence and completeness” section before treating a count as a de
 | This year | 114 | 1 | visible text |
 | Start date must be before end date. | 117 | 1 | visible text |
 | Layout | 124 | 1 | visible text |
+| Weekly stacked | 127 | 1 | accessibility / placeholder |
+| Portrait pages, ~4 weeks per page. Detailed shift times and properties — best for posting/staff reference. | 127 | 1 | accessibility / placeholder |
+| Monthly overview | 128 | 1 | accessibility / placeholder |
+| Landscape pages, ~4 months per page. Compact day-by-day color grid — best for coverage planning. | 128 | 1 | accessibility / placeholder |
+| Both | 129 | 1 | accessibility / placeholder |
+| Weekly pages first, followed by monthly overview pages. | 129 | 1 | accessibility / placeholder |
 | Include staff hours tracking | 137 | 1 | visible text |
 | Appends a compact summary table (days, hours, leave) after the calendars. | 140 | 1 | visible text |
 | Cancel | 152 | 1 | visible text |
@@ -1590,7 +1634,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/messaging/ChatInfoPanel.tsx`
 
-14 ledger entries; 13 distinct strings/templates. Priority P0 — daily/supporting.
+17 ledger entries; 16 distinct strings/templates. Priority P0 — daily/supporting.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
@@ -1607,6 +1651,9 @@ Read the “Evidence and completeness” section before treating a count as a de
 | No contacts to add | 304 | 1 | visible text |
 | Unknown | 320, 340 | 2 | rendered expression |
 | You | 342 | 1 | visible text |
+| No media shared yet | 377 | 1 | accessibility / placeholder |
+| No links shared yet | 399 | 1 | accessibility / placeholder |
+| No documents shared yet | 428 | 1 | accessibility / placeholder |
 
 ## `src/components/messaging/ChatView.tsx`
 
@@ -1620,7 +1667,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/messaging/MessageBubble.tsx`
 
-15 ledger entries; 15 distinct strings/templates. Priority P0 — daily/supporting.
+22 ledger entries; 22 distinct strings/templates. Priority P0 — daily/supporting.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
@@ -1634,6 +1681,13 @@ Read the “Evidence and completeness” section before treating a count as a de
 | people | 183 | 1 | rendered expression |
 | Duration | 188 | 1 | visible text |
 | Type | 194 | 1 | visible text |
+| Reply | 451 | 1 | confirmed supplemental copy |
+| Forward | 456 | 1 | confirmed supplemental copy |
+| Copy | 463 | 1 | confirmed supplemental copy |
+| Info | 470 | 1 | confirmed supplemental copy |
+| Unstar | 476 | 1 | confirmed supplemental copy |
+| Star | 476 | 1 | confirmed supplemental copy |
+| Delete | 483 | 1 | confirmed supplemental copy |
 | · WhatsApp | 562 | 1 | visible text |
 | Action: | 587 | 1 | visible text |
 | Confirm | 595 | 1 | visible text |
@@ -1935,7 +1989,7 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/manuals/CareGuideScanModal.tsx`
 
-26 ledger entries; 26 distinct strings/templates. Priority P1/P2 — admin/secondary/supporting; see surface.
+32 ledger entries; 32 distinct strings/templates. Priority P1/P2 — admin/secondary/supporting; see surface.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
@@ -1945,6 +1999,10 @@ Read the “Evidence and completeness” section before treating a count as a de
 | Add a title | 78 | 1 | message / validation / export |
 | Care guide was not saved | 92 | 1 | message / validation / export |
 | &#96;Composition: ${draft.composition}&#96; | 95 | 1 | display copy |
+| Composition: ${draft.composition} | 95 | 1 | stored English generated guide text |
+| Fabric | 95 | 1 | stored English generated guide text |
+| Care symbols | 97 | 1 | stored English generated guide text |
+| Ratings | 98 | 1 | stored English generated guide text |
 | Guide created but some lines failed to save | 102 | 1 | message / validation / export |
 | Draft care guide created — add the item photo for the back | 104 | 1 | message / validation / export |
 | Scan manufacturer sheet | 113 | 1 | visible text |
@@ -1961,6 +2019,8 @@ Read the “Evidence and completeness” section before treating a count as a de
 | Title | 141 | 1 | visible text |
 | Fabric code | 146 | 1 | visible text |
 | Composition | 150 | 1 | visible text |
+| Daily care (Basic column) | 154 | 1 | accessibility / placeholder |
+| Care symbols (Deep column) | 155 | 1 | accessibility / placeholder |
 | Ratings line | 157 | 1 | visible text |
 | Cancel | 164 | 1 | visible text |
 | Saving… | 165 | 1 | rendered expression |
@@ -2265,22 +2325,11 @@ Read the “Evidence and completeness” section before treating a count as a de
 
 ## `src/components/team/ArchiveMember.tsx`
 
-12 ledger entries; 12 distinct strings/templates. Priority P1/P2 — admin/secondary/supporting; see surface.
+1 ledger entries; 1 distinct strings/templates. Priority P1/P2 — admin/secondary/supporting; see surface.
 
 | Exact source string/template | Line(s) | Count | Classification / exposure |
 |---|---|---:|---|
-| Sun | 208 | 1 | display-array candidate; check consumer/reachability |
-| Mon | 208 | 1 | display-array candidate; check consumer/reachability |
-| Tue | 208 | 1 | display-array candidate; check consumer/reachability |
-| Wed | 208 | 1 | display-array candidate; check consumer/reachability |
-| Thu | 208 | 1 | display-array candidate; check consumer/reachability |
-| Fri | 208 | 1 | display-array candidate; check consumer/reachability |
-| Sat | 208 | 1 | display-array candidate; check consumer/reachability |
-| Dom | 209 | 1 | display-array candidate; check consumer/reachability |
-| Lun | 209 | 1 | display-array candidate; check consumer/reachability |
-| Mar | 209 | 1 | display-array candidate; check consumer/reachability |
-| Jue | 209 | 1 | display-array candidate; check consumer/reachability |
-| Vie | 209 | 1 | display-array candidate; check consumer/reachability |
+| Something went wrong | 39 | 1 | raw error fallback; other normal controls are bilingual |
 
 ## `src/components/team/MemberEditDrawer.tsx`
 
