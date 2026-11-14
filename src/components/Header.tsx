@@ -20,10 +20,29 @@ export function Header({ title }: HeaderProps) {
   useLayoutEffect(() => {
     const header = headerRef.current;
     if (!header) return;
-    const measure = () => document.documentElement.style.setProperty("--app-header-h", `${header.getBoundingClientRect().height}px`);
-    const observer = new ResizeObserver(measure); observer.observe(header); measure();
+    const row = header.querySelector<HTMLElement>(".app-header-row");
+    const titleContent = header.querySelector<HTMLElement>(".app-header-title > *");
+    const left = row?.firstElementChild;
+    const right = row?.lastElementChild;
+    const measure = () => {
+      document.documentElement.style.setProperty("--app-header-h", `${header.getBoundingClientRect().height}px`);
+      if (!row || !titleContent || !left || !right) return;
+      const bounds = row.getBoundingClientRect();
+      const centre = bounds.left + bounds.width / 2;
+      const halfTitle = titleContent.getBoundingClientRect().width / 2;
+      // Test the true-centred position even when the title is currently in flow.
+      const overlaps = centre - halfTitle < left.getBoundingClientRect().right + 4
+        || centre + halfTitle > right.getBoundingClientRect().left - 4;
+      const flow = String(overlaps);
+      if (row.dataset.titleFlow !== flow) row.dataset.titleFlow = flow;
+    };
+    const observer = new ResizeObserver(measure);
+    [header, row, titleContent, left, right].forEach(element => {
+      if (element) observer.observe(element);
+    });
+    measure();
     return () => observer.disconnect();
-  }, []);
+  }, [title]);
 
   return (
     <>

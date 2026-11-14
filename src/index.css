@@ -223,7 +223,8 @@ html { font-size: calc(100% * var(--text-scale, 1)); }
 .text-size-sample-xlarge { font-size: 1.4rem; }
 @media (max-width: 639px) {
   .app-header-row { padding-inline: 8px; }
-  .app-header-title { position: static; transform: none; min-width: 0; flex: 1; padding-inline: 4px; }
+  html[data-enlarged-text="true"] .app-header-title,
+  .app-header-row[data-title-flow="true"] .app-header-title { position: static; transform: none; min-width: 0; flex: 1; padding-inline: 4px; }
   .app-header-title h1 { overflow-wrap: normal; text-align: center; font-size: 1rem; }
   .app-header-title img, .app-header-title svg { max-width: 100%; }
   .header-text-size { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }

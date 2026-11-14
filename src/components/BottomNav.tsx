@@ -37,7 +37,7 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-40 bg-charcoal border-t border-charcoal-light"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center h-16 px-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
 
@@ -46,7 +46,7 @@ export function BottomNav() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab("home")}
-                className="flex flex-col items-center justify-center gap-0.5 w-11 h-full px-2"
+                className="flex flex-col items-center justify-center gap-0.5 flex-1 basis-0 min-w-0 min-h-14 h-full px-1"
                 aria-label="Home"
               >
                 <RoninR size={26} className={isActive ? "ring-2 ring-gold ring-offset-1 ring-offset-charcoal rounded-sm" : "opacity-70"} />
@@ -59,7 +59,7 @@ export function BottomNav() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex flex-col items-center justify-center gap-0.5 w-11 h-full px-2"
+                className="flex flex-col items-center justify-center gap-0.5 flex-1 basis-0 min-w-0 min-h-14 h-full px-1"
                 aria-label={tab.label}
               >
                 <div className={`relative w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all ${
@@ -81,7 +81,7 @@ export function BottomNav() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 min-h-14 px-1 transition-colors ${
+              className={`flex flex-col items-center justify-center gap-0.5 flex-1 basis-0 min-w-0 min-h-14 px-1 transition-colors ${
                 isActive ? "text-gold" : "text-cream/50"
               }`}
               aria-label={tab.label}
