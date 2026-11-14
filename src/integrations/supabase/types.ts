@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_check_log: {
+        Row: {
+          admin_id: string
+          checked_at: string
+          id: string
+          target_id: string
+        }
+        Insert: {
+          admin_id: string
+          checked_at?: string
+          id?: string
+          target_id: string
+        }
+        Update: {
+          admin_id?: string
+          checked_at?: string
+          id?: string
+          target_id?: string
+        }
+        Relationships: []
+      }
+      access_scan_findings: {
+        Row: {
+          detail: Json
+          first_seen: string
+          id: string
+          last_seen: string
+          person_id: string
+          person_name: string | null
+          resolved_at: string | null
+          rule: string
+          signature: string
+          status: string
+        }
+        Insert: {
+          detail: Json
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          person_id: string
+          person_name?: string | null
+          resolved_at?: string | null
+          rule: string
+          signature: string
+          status?: string
+        }
+        Update: {
+          detail?: Json
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          person_id?: string
+          person_name?: string | null
+          resolved_at?: string | null
+          rule?: string
+          signature?: string
+          status?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           category: string
@@ -2963,6 +3023,7 @@ export type Database = {
       }
     }
     Functions: {
+      access_issues_from_report: { Args: { r: Json }; Returns: Json }
       acknowledge_entry: {
         Args: { _id: string; _kind: string; _note?: string }
         Returns: Json
@@ -2990,6 +3051,11 @@ export type Database = {
           _why: string
         }
         Returns: string
+      }
+      admin_access_overview: { Args: never; Returns: Json }
+      admin_visibility_report: {
+        Args: { _log?: boolean; _target: string }
+        Returns: Json
       }
       approve_time_entries: { Args: { _ids: string[] }; Returns: number }
       archive_blockers: { Args: { _profile_id: string }; Returns: Json }
@@ -3141,6 +3207,7 @@ export type Database = {
       my_clock_status: { Args: never; Returns: Json }
       notify_ronin_overdue_tasks: { Args: never; Returns: undefined }
       notify_todays_birthdays: { Args: never; Returns: number }
+      people_with_login: { Args: never; Returns: string[] }
       profile_ids_who_can_see: {
         Args: { _sections: string[] }
         Returns: string[]
@@ -3156,6 +3223,7 @@ export type Database = {
         Args: { _minutes: number; _step?: number }
         Returns: number
       }
+      run_access_scan: { Args: never; Returns: number }
       safe_tz: { Args: { _tz: string }; Returns: string }
       send_request_list: {
         Args: { _ids?: string[]; _property_id: string }
