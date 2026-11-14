@@ -52,7 +52,7 @@ function Field({ label, children, wide }: { label: string; children: React.React
   );
 }
 
-export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted, onArchive }: {
+export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted, onArchive, initialTab = "details" }: {
   member: TeamMember;
   properties: Property[];
   isEN: boolean;
@@ -62,8 +62,9 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   onSaved: (updated: TeamMember) => void;
   onDeleted: () => void;
   onArchive?: () => void;
+  initialTab?: TabKey;
 }) {
-  const [tab, setTab] = useState<TabKey>("details");
+  const [tab, setTab] = useState<TabKey>(initialTab);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

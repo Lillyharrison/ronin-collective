@@ -299,7 +299,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     }
 
     // Notify task completion
-    await notifySection("tasks", {
+    await notifyUsers(task.created_by ? [task.created_by] : [], {
       title: `✅ Task completed: ${task.title_en}`,
       ...(note ? { body: note } : {}),
       type: "success",
@@ -307,7 +307,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
       entity_id: task.id,
       entity_type: "task",
       property_id: task.property_id ?? undefined,
-    }, userId ?? undefined);
+    }, userId, { audience: "task_completion" });
 
     if (isOrderTask) {
       const linked = await findLinkedOrder(task.id);

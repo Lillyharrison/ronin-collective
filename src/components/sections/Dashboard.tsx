@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { orderNotificationPath } from "@/components/orders/requests/logic";
+import { accessNotificationPath } from "@/components/team/accessCheckLogic";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
@@ -402,6 +403,7 @@ export function Dashboard() {
       void supabase.from("notifications").update({ is_read: true }).eq("id", n.id).then(({ error }) => { if (error) console.error("Mark read failed", error); });
     }
     const orderPath = orderNotificationPath(n.entity_type,n.entity_id,isAdmin || isMasterAdmin || isManager,n.property_id);
+    if (n.entity_type === "access_check") { const path = accessNotificationPath(n.entity_type, isMasterAdmin); if (path) { setActiveSection("meet-team"); navigate(path); } return; }
     if (orderPath) { setActiveSection('orders'); navigate(orderPath); return; }
     if (openDetails(n)) return;
     const targetSection: ActiveSection | undefined =

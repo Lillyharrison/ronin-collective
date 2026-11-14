@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { AccessCheckPage } from "@/components/team/AccessCheckPage";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { imageUrl } from "@/lib/imageUrl";
 import { normalizeTextSize } from "@/lib/textSize";
@@ -9,7 +11,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import {
   UsersRound, Plus, Search, ChevronRight,
   X, Check, ChevronDown,
-  Eye, Pencil, Bell, Loader2, Zap,
+  Eye, Pencil, Bell, Loader2, Zap, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +35,10 @@ export function MeetTeamSection() {
   const { isMasterAdmin, isAdmin } = usePermissions();
   const { registerBackHandler } = useNavigation();
   const isEN = language === "en";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const accessOpen = isMasterAdmin && searchParams.get("view") === "access-check";
+  const [editorTab, setEditorTab] = useState<"details" | "houses">("details");
+  const closeAccess = () => { setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete("view"); return next; }); };
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -71,6 +77,7 @@ export function MeetTeamSection() {
 
   // Register back handler when a member detail panel is open
   useEffect(() => {
+    if (accessOpen && !selectedMember) return;
     if (selectedMember) {
       registerBackHandler(() => {
         setSelectedMember(null);
@@ -80,7 +87,7 @@ export function MeetTeamSection() {
       registerBackHandler(null);
     }
     return () => { registerBackHandler(null); };
-  }, [selectedMember, registerBackHandler]);
+  }, [selectedMember, registerBackHandler, accessOpen]);
 
   async function loadMembers() {
     const { data: profiles } = await supabase
@@ -215,6 +222,8 @@ export function MeetTeamSection() {
 
   return (
     <div className="animate-fade-in pb-6">
+      {accessOpen ? <AccessCheckPage suspended={!!selectedMember} onClose={closeAccess} onEditHouses={id => { const member = members.find(m => m.id === id); if (member) { setEditorTab("houses"); setSelectedMember(member); } }} /> : <>
+      {isMasterAdmin && <div className="px-4 pt-4"><Button variant="outline" onClick={() => setSearchParams({ view: "access-check" })}><ShieldCheck/>{isEN ? "Access check" : "Comprobar acceso"}</Button></div>}
       {/* Header bar */}
       <div className="px-4 pt-4 pb-3 flex items-center gap-3">
         <div className="relative flex-1">
@@ -301,7 +310,7 @@ export function MeetTeamSection() {
                   {group.map(m => (
                      <button
                        key={m.id}
-                       onClick={() => setSelectedMember(m)}
+                       onClick={() => { setEditorTab("details"); setSelectedMember(m); }}
                        className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 hover:border-gold/30 transition-all text-left"
                      >
                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${LEVEL_COLORS[m.role === "master_admin" ? "master_admin" : (m.level || "staff")]}`}>
@@ -349,6 +358,7 @@ export function MeetTeamSection() {
         )}
       </div>
 
+      </>}
       {archiveTarget && (
         <ArchiveMemberDialog
           member={archiveTarget}
@@ -377,6 +387,7 @@ export function MeetTeamSection() {
       {/* ── Member Edit Drawer ─────────────────────────────────────────────── */}
       {selectedMember && (
       <MemberEditDrawer
+          initialTab={editorTab}
           member={selectedMember}
           properties={properties}
           isEN={isEN}

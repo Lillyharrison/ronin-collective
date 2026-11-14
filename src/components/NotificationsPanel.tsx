@@ -7,6 +7,7 @@ import { X, Bell, CheckCheck, Trash2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveSection } from "@/contexts/NavigationContext";
 import { orderNotificationPath } from "@/components/orders/requests/logic";
+import { accessNotificationPath } from "@/components/team/accessCheckLogic";
 import { useNavigate } from "react-router-dom";
 import { NotificationRecordDialog } from "@/components/NotificationRecordDialog";
 import { isNotificationDetailType } from "@/lib/notificationDetail";
@@ -160,6 +161,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
   };
 
   const handleNotificationClick = async (n: Notification) => {
+    if (n.entity_type === "access_check") { const path = accessNotificationPath(n.entity_type, isMasterAdmin); if (path) { if (!n.is_read) void markRead(n.id); onClose(); setActiveSection("meet-team"); navigate(path); } return; }
     const orderPath = orderNotificationPath(n.entity_type,n.entity_id,isAdmin || isMasterAdmin || isManager,n.property_id);
     if (orderPath) { if (!n.is_read) markRead(n.id); onClose(); setActiveSection('orders'); navigate(orderPath); return; }
     if (isNotificationDetailType(n.entity_type)) {

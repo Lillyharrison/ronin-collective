@@ -1,5 +1,8 @@
 # Architecture rules
 
+- Access checks use the owner visibility/overview RPCs under the caller session, never an impersonated login; findings dismissal persists before refreshing.
+- Task completion supplies an explicit audience mode to notify-section, which reads the creator under caller RLS and resolves admin roles server-side before existing house/login filters and push.
+
 - Baseline readability is owned by shared Tailwind text tokens, global minimum-text utilities and shared UI hit areas so it can be reverted independently of personal enlargement.
 - Personal text enlargement uses one root rem scale, an early user-keyed cache and the signed-in profile query; shared Aa/Profile controls persist the same setting and remeasure iOS text on foregrounding. PDF API font sizes remain numerical points, never CSS units.
 - Bottom navigation uses equal-width slots with matching horizontal padding; the header title is screen-centred unless enlarged text or measured control overlap requires flow layout, preventing asymmetric controls from shifting the logo.

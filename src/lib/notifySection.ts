@@ -22,6 +22,7 @@ export interface NotifyPayload {
 
 export interface NotifyOptions {
   excludeUserIds?: string[];
+  audience?: "task_completion";
 }
 
 export async function notifySection(
@@ -79,7 +80,7 @@ export async function notifyUsers(
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ userIds, payload, excludeUserId, excludeUserIds: options?.excludeUserIds }),
+      body: JSON.stringify({ userIds, payload, excludeUserId, excludeUserIds: options?.excludeUserIds, audience: options?.audience }),
     });
 
     if (!res.ok) {

@@ -5,6 +5,7 @@ import { z } from "npm:zod@3";
 import { eligibleNotificationRecipients } from "../_shared/notificationAudience.ts";
 import { notificationActor } from "../_shared/notificationActor.ts";
 import { entityHouse, houseScopedRecipients } from "../_shared/houseAccess.ts";
+import { taskCompletionRecipients } from "../_shared/taskCompletionAudience.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -50,18 +51,27 @@ serve(async (req) => {
       excludeUserId: z.string().uuid().nullable().optional(),
       excludeUserIds: z.array(z.string().uuid()).max(1000).optional(),
       idempotencyKey: z.string().nullable().optional(),
+      audience: z.literal("task_completion").optional(),
       payload: z.object({ title: z.string().min(1).max(1000), body: z.string().max(10000).optional(), type: z.string().max(100).optional(), action_url: z.string().max(2000).optional(), entity_id: z.string().uuid().optional(), entity_type: z.string().max(100).optional(), property_id: z.string().uuid().optional() }),
     });
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return new Response(JSON.stringify({ error: parsed.error.flatten() }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    const { section, userIds, payload, excludeUserId, excludeUserIds } = parsed.data;
+    const { section, userIds, payload, excludeUserId, excludeUserIds, audience } = parsed.data;
+    let completionCreator: string | null = null;
+    if (audience === "task_completion") {
+      if (!user || payload.entity_type !== "task" || !payload.entity_id) return new Response(JSON.stringify({ error: "Task completion requires a signed-in caller and task" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: task, error } = await supabaseUser.from("tasks").select("created_by, property_id, status").eq("id", payload.entity_id).maybeSingle();
+      if (error || !task || task.status !== "completed") return new Response(JSON.stringify({ error: "Completed task not available" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      completionCreator = task.created_by;
+      payload.property_id = task.property_id ?? undefined;
+    }
     const sections = Array.isArray(section)
       ? section.filter(Boolean)
       : section
         ? [section]
         : [];
 
-    if ((!sections.length && !(userIds && userIds.length > 0)) || !payload?.title) {
+    if ((!audience && !sections.length && !(userIds && userIds.length > 0)) || !payload?.title) {
       return new Response(JSON.stringify({ error: "Missing section/userIds or payload.title" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -95,7 +105,11 @@ serve(async (req) => {
 
     let recipients: string[];
 
-    if (userIds && userIds.length > 0) {
+    if (audience === "task_completion" && user) {
+      const { data: roles, error } = await supabaseAdmin.from("user_roles").select("user_id, role").in("role", ["master_admin", "admin"]).limit(1000);
+      if (error) throw error;
+      recipients = taskCompletionRecipients(completionCreator, user.id, roles ?? []);
+    } else if (userIds && userIds.length > 0) {
       // Direct targeting: notify the specified users only, bypassing the
       // admin-role and section-permission lookup (used for assignment
       // notifications where only the assignee should be notified).

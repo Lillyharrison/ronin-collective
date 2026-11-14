@@ -1,5 +1,11 @@
 # Notification receipts
 
+# Access checks and completion audience
+- [x] Add master-admin Access check, person reports, hourly findings, editor links and notification routing without database changes.
+- [x] Restrict completed-task notices to creator and admins, excluding completer; preserve server house filtering and push.
+- [x] Full suite 484 passed before final refinements; final focused 37 passed. Signed-in page and controlled populated phone/desktop layouts checked; notify-section deployed and unsigned HTTP returned 401. No real findings dismissed, tasks completed or alerts sent.
+- [ ] Live populated Access overview/detail verification blocked: admin_access_overview returns HTTP 500 / statement timeout; owner database remains untouched. Real dismissal and completion push delivery intentionally not exercised on production records.
+
 # Accessible text sizing replacement
 - [x] Commit 1: gentle shared baseline lift, 13px text floor, larger control targets and contrast; no database changes.
 - [x] Commit 2: root/device scaling, persisted Aa/Profile controls and admin member setting; no database changes.
