@@ -64,7 +64,7 @@ export default function AuthPage() {
       {/* Logo */}
       <div className="mb-10 flex flex-col items-center gap-3">
         <img src={roninLogo} alt="Ronin Collective" className="h-10 object-contain invert-0 brightness-0" />
-        <p className="text-muted-foreground text-sm tracking-widest uppercase font-light">
+        <p className="text-muted-foreground text-sm tracking-widest uppercase font-normal">
           Property Management
         </p>
       </div>

@@ -303,7 +303,7 @@ function SortableGuideItem({
               className="w-full text-sm bg-muted/50 border border-border rounded-lg px-2.5 py-1.5 outline-none focus:border-primary"
             />
           ) : (
-            <p className="text-sm text-foreground leading-relaxed font-light">{item.title}</p>
+            <p className="text-sm text-foreground leading-relaxed font-normal">{item.title}</p>
           )}
 
           {item.photo_url && (

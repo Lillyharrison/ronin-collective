@@ -1,5 +1,10 @@
 # Notification receipts
 
+# Accessible text sizing replacement
+- [x] Commit 1: gentle shared baseline lift, 13px text floor, larger control targets and contrast; no database changes.
+- [ ] Commit 2: root/device scaling, persisted Aa/Profile controls and admin member setting; no database changes.
+- [ ] Test guards/settings and check named phone screens at 1.2/1.4; report two commit ids and real-iPhone limitations.
+
 # Admin login-email change
 - [x] Add protected same-account email change, masked lookup and bilingual member-editor dialog; no database changes.
 - [x] Test access, validation, masking and consent (29 focused tests); deploy admin-change-email and shared-recovery ronin-ai; verify unauthenticated 401 and signed-in Joselita masked lookup/consent on phone/desktop. No real accounts changed; live update, revocation, email delivery and audit remain intentionally unverified.

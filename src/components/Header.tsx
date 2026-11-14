@@ -32,7 +32,7 @@ export function Header({ title }: HeaderProps) {
             {canGoBack && activeSection !== "dashboard" && (
               <button
                 onClick={goBack}
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors"
+                className="w-11 h-11 flex items-center justify-center rounded-lg text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors"
                 aria-label="Go back"
               >
                 <ArrowLeft size={18} />
@@ -53,7 +53,7 @@ export function Header({ title }: HeaderProps) {
           <div className="flex items-center gap-1">
             <button
               onClick={() => setLanguage(language === "en" ? "es" : "en")}
-              className="h-8 px-2.5 rounded-md border border-gold/40 text-gold text-xs font-semibold tracking-widest hover:bg-gold/10 transition-colors"
+              className="min-w-11 h-11 px-2.5 rounded-md border border-gold/40 text-gold text-xs font-semibold tracking-widest hover:bg-gold/10 transition-colors"
             >
               {language === "en" ? "ES" : "EN"}
             </button>
