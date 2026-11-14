@@ -1,12 +1,15 @@
 import { signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import { TRANSLATION_PROMPT, validTexts } from "./rules.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (!(await signedInUserId(req))) return unauthorized(corsHeaders);
 
   try {
-    const { texts } = await req.json() as { texts: string[] };
+    const body = await req.json().catch(() => null);
+    if (!validTexts(body?.texts)) return new Response(JSON.stringify({error: "Expected at most 50 strings, each at most 2000 characters"}), {status: 400, headers: {...corsHeaders, "Content-Type": "application/json"}});
+    const texts = body.texts as string[];
     if (!texts || texts.length === 0) {
       return new Response(JSON.stringify({ translations: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -17,7 +20,7 @@ Deno.serve(async (req: Request) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
 
     // Build a compact numbered list so the model returns a matching list
-    const numbered = texts.map((t, i) => `${i + 1}. ${t}`).join("\n");
+    const numbered = JSON.stringify(texts);
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -30,10 +33,7 @@ Deno.serve(async (req: Request) => {
         messages: [
           {
             role: "system",
-            content:
-              "You are a professional translator. Translate each numbered item from English to Spanish. " +
-              "Return ONLY a JSON array of translated strings in the same order, e.g. [\"...\",\"...\"]. " +
-              "Do not include explanations, numbering, or any other text — only the JSON array.",
+            content: TRANSLATION_PROMPT,
           },
           { role: "user", content: numbered },
         ],
@@ -42,8 +42,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(`AI gateway error: ${resp.status} ${err}`);
+      throw new Error(`AI gateway error: ${resp.status}`);
     }
 
     const data = await resp.json();
@@ -55,15 +54,16 @@ Deno.serve(async (req: Request) => {
     try {
       translations = JSON.parse(cleaned);
     } catch {
-      translations = texts;
+      throw new Error("Invalid translation response");
     }
 
+    if (!validTexts(translations) || translations.length !== texts.length) throw new Error("Invalid translation response");
     return new Response(JSON.stringify({ translations }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[translate-entries]", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    console.error("[translate-entries] translation failed");
+    return new Response(JSON.stringify({ error: "Translation unavailable" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

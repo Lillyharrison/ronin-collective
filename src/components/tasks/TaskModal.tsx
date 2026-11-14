@@ -1,3 +1,4 @@
+import { useContentTranslation, TranslationNotice } from "@/components/ContentTranslation";
 import { EntryAcknowledgement } from "@/components/EntryAcknowledgement";
 import type { AcknowledgementFields } from "@/lib/entryAcknowledgement";
 import { plainDateToLocal, plainDateKey, dateInputToPlainDate, comparePlainCalendarDate } from "@/lib/calendarTime";
@@ -34,6 +35,7 @@ export interface FullTask extends AcknowledgementFields {
   title_en: string;
   title_es?: string | null;
   description_en?: string | null;
+  description_es?: string | null;
   status: "pending" | "in_progress" | "completed" | "urgent";
   priority: number;
   due_date?: string | null;
@@ -101,6 +103,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
   // editMode: new tasks start in edit mode; existing tasks start in view mode
   const [editMode, setEditMode] = useState(!task?.id);
+  const content=useContentTranslation(task?.id && !editMode ? [task.title_es?.trim()?"":task.title_en,task.description_es?.trim()?"":task.description_en??""] : []);
 
   // ── Edit state ───────────────────────────────────────────────────────────────
   const [title, setTitle]               = useState(task?.title_en ?? "");
@@ -428,7 +431,8 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-            <h2 className="font-display text-lg font-semibold text-foreground leading-snug">{task.title_en}</h2>
+            <TranslationNotice value={content}/>
+            <h2 className="font-display text-lg font-semibold text-foreground leading-snug">{isL && task.title_es?.trim() ? task.title_es : content.text(task.title_en)}</h2>
             {task.id && <EntryAcknowledgement kind="task" entry={{ ...task, id: task.id }} />}
 
             {task.category === "order" && (
@@ -438,7 +442,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             )}
 
             {task.description_en && (
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{task.description_en}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{isL && task.description_es?.trim() ? task.description_es : content.text(task.description_en)}</p>
             )}
 
             <div className="flex flex-wrap gap-2">

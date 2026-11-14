@@ -1,3 +1,4 @@
+import { activeCount } from "@/lib/spanishDisplay";
 import { useNavigate } from "react-router-dom";
 import { orderNotificationPath } from "@/components/orders/requests/logic";
 import { accessNotificationPath } from "@/components/team/accessCheckLogic";
@@ -501,15 +502,15 @@ export function Dashboard() {
               ref={taglineInputRef}
               value={taglineDraft}
               onChange={e => setTaglineDraft(e.target.value)}
-              placeholder="Type a message…"
+              placeholder={t("typeMessage")}
               className="w-full bg-charcoal-light border border-gold/30 rounded-lg px-3 py-2 text-cream text-sm outline-none focus:border-gold/60"
               onKeyDown={e => { if (e.key === "Enter") saveTaglineOverride(); if (e.key === "Escape") setEditingTagline(false); }}
             />
             <div className="flex gap-2 flex-wrap">
               {[
-                { value: "today" as const,    label: "Today only" },
-                { value: "date" as const,     label: "Until date" },
-                { value: "permanent" as const,label: "Until I clear it" },
+                { value: "today" as const,    label: t("todayOnly") },
+                { value: "date" as const,     label: t("untilDate") },
+                { value: "permanent" as const,label: t("untilClear") },
               ].map(opt => (
                 <button
                   key={opt.value}
@@ -535,10 +536,10 @@ export function Dashboard() {
             )}
             <div className="flex gap-2">
               <button onClick={saveTaglineOverride} className="flex items-center gap-1 px-3 py-1.5 bg-gold/20 border border-gold/40 rounded-lg text-gold text-xs font-semibold hover:bg-gold/30 transition-colors">
-                <Check size={12} /> Save
+                <Check size={12} /> {t("save")}
               </button>
               <button onClick={() => setEditingTagline(false)} className="flex items-center gap-1 px-3 py-1.5 border border-charcoal-light rounded-lg text-cream/50 text-xs hover:border-gold/30 transition-colors">
-                <X size={12} /> Cancel
+                <X size={12} /> {t("cancel")}
               </button>
             </div>
           </div>
@@ -549,13 +550,13 @@ export function Dashboard() {
               <button
                 onClick={startEditTagline}
                 className="opacity-0 group-hover:opacity-100 transition-opacity text-gold/50 hover:text-gold"
-                title="Edit message"
+                title={t("editMessage")}
               >
                 <Pencil size={10} />
               </button>
             )}
             {isMasterAdmin && taglineOverride && (
-              <button onClick={clearTaglineOverride} className="opacity-0 group-hover:opacity-100 transition-opacity text-cream/30 hover:text-cream/70" title="Clear override">
+              <button onClick={clearTaglineOverride} className="opacity-0 group-hover:opacity-100 transition-opacity text-cream/30 hover:text-cream/70" title={t("clearOverride")}>
                 <X size={10} />
               </button>
             )}
@@ -586,7 +587,7 @@ export function Dashboard() {
             <p className="text-sm font-medium text-foreground">
               {pendingCount === null ? "—" : pendingCount === 0
                 ? (language === "es" ? "Al día" : "All clear")
-                : `${pendingCount} ${language === "es" ? "activas" : "active"}`}
+                : activeCount(pendingCount,language === "es")}
             </p>
           </button>
           {/* Alerts tile — replaces Properties, navigates to Manuals > Rules */}
@@ -608,7 +609,7 @@ export function Dashboard() {
             <p className="text-sm font-medium text-foreground">
               {activeRules.length === 0
                 ? (language === "es" ? "Sin alertas" : "No alerts")
-                : `${activeRules.length} ${language === "es" ? "activa(s)" : "active"}`}
+                : activeCount(activeRules.length,language === "es")}
             </p>
             {activeRules.length > 0 && (
               <p className="text-[0.625rem] text-muted-foreground mt-0.5 truncate">
@@ -715,7 +716,7 @@ export function Dashboard() {
                       {n.title}
                     </p>
                     <p className="text-[0.625rem] text-muted-foreground leading-none mt-0.5 truncate">
-                      {n.body ? `${n.body} · ` : ""}Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {n.body ? `${n.body} · ` : ""}{t("added")} {new Date(n.created_at).toLocaleDateString(language === "es" ? "es-ES" : "en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </p>
                     <NotificationAcknowledgement notification={n} hideAction />
                   </div>

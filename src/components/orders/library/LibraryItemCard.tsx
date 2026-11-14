@@ -1,3 +1,4 @@
+import { useContentText } from "@/components/ContentTranslation";
 /**
  * LibraryItemCard — compact tile for an order library item.
  *
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function LibraryItemCard({ item, onOpen }: Props) {
+  const text=useContentText();
   const { language } = useLanguage();
   const isL = language === "es";
   const isDeprecated = item.status === "no_longer_preferred";
@@ -40,7 +42,7 @@ export function LibraryItemCard({ item, onOpen }: Props) {
         {item.image_url ? (
           <img
             src={item.image_url}
-            alt={item.name}
+            alt={text(item.name)}
             loading="lazy"
             className={cn(
               "h-full w-full object-contain",
@@ -107,7 +109,7 @@ export function LibraryItemCard({ item, onOpen }: Props) {
             isDeprecated && "line-through",
           )}
         >
-          {item.name}
+          {text(item.name)}
         </span>
         {item.asin && <span className="self-start text-[0.5625rem] font-bold px-1 rounded border border-border text-muted-foreground">Amazon</span>}
         {item.default_quantity && (
@@ -115,9 +117,10 @@ export function LibraryItemCard({ item, onOpen }: Props) {
             {isL ? "Cant" : "Qty"}: {item.default_quantity}
           </span>
         )}
+        {item.size && <span className="text-xs text-muted-foreground break-words">{text(item.size)}</span>}
         {item.notes && (
           <span className="line-clamp-2 text-[0.5625rem] text-muted-foreground/80 leading-snug whitespace-pre-wrap">
-            {item.notes}
+            {text(item.notes)}
           </span>
         )}
       </div>

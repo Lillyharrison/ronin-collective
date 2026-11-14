@@ -1,3 +1,4 @@
+import { useContentTranslation, TranslationNotice } from "@/components/ContentTranslation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -571,7 +572,11 @@ function ManagementOrders() {
   }, []);
 
   // pending = not_placed + placed + pending_delivery (legacy)
-  const { pending, delivered, notPlaced: notPlacedCount } = orderCounts(filterOrdersByHouse(orders, houseId));
+  const filteredOrders=filterOrdersByHouse(orders,houseId);
+  const content=useContentTranslation(activeTab === "pending" || activeTab === "delivered" ? filteredOrders.flatMap(o=>[o.title,o.description??"",o.notes??"",o.packing_list??""]) : []);
+  const displayOrders=filteredOrders.map(o=>({...o,title:content.text(o.title),description:content.text(o.description),notes:content.text(o.notes),packing_list:content.text(o.packing_list)}));
+  const openOriginal=(o:Order)=>setModalOrder(orders.find(original=>original.id===o.id)??o);
+  const { pending, delivered, notPlaced: notPlacedCount } = orderCounts(displayOrders);
 
   const tableHeaders = [
     { label: isL ? "Artículo" : "Item", w: "28%" },
@@ -690,6 +695,7 @@ function ManagementOrders() {
         </div>
       )}
 
+      <div className="px-4"><TranslationNotice value={content}/></div>
       {/* Delivery table */}
       {(activeTab === "pending" || activeTab === "delivered") && (
         <div className="overflow-x-auto">
@@ -720,12 +726,12 @@ function ManagementOrders() {
                       <PendingTile
                         key={o.id}
                         order={o}
-                        onOpen={setModalOrder}
+                        onOpen={openOriginal}
                         onMarkDelivered={() => fetchOrders()}
                       />
                     ))
                   : delivered.map(o => (
-                      <DeliveredTile key={o.id} order={o} onOpen={setModalOrder} />
+                      <DeliveredTile key={o.id} order={o} onOpen={openOriginal} />
                     ))
                 }
               </div>
@@ -750,12 +756,12 @@ function ManagementOrders() {
                         <PendingRow
                           key={o.id}
                           order={o}
-                          onOpen={setModalOrder}
+                          onOpen={openOriginal}
                           onMarkDelivered={() => fetchOrders()}
                         />
                       ))
                     : delivered.map(o => (
-                        <DeliveredRow key={o.id} order={o} onOpen={setModalOrder} />
+                        <DeliveredRow key={o.id} order={o} onOpen={openOriginal} />
                       ))
                   }
                 </tbody>

@@ -1,0 +1,11 @@
+import {renderHook,waitFor} from '@testing-library/react';
+import {beforeEach,it,expect,vi} from 'vitest';
+import {clearTranslations,readTranslation} from '@/lib/translationCache';
+const m=vi.hoisted(()=>({invoke:vi.fn()}));
+vi.mock('@/contexts/AuthContext',()=>({useAuth:()=>({user:{id:'self'}})}));
+vi.mock('@/integrations/supabase/client',()=>({supabase:{auth:{getSession:async()=>({data:{session:{user:{id:'self'}}}})},functions:{invoke:m.invoke}}}));
+import {useEntryTranslation} from './useEntryTranslation';
+beforeEach(()=>{clearTranslations();m.invoke.mockReset();Object.defineProperty(navigator,'onLine',{configurable:true,value:true});});
+it('shows originals then swaps, debounce/dedupe and cache prevent second call',async()=>{m.invoke.mockResolvedValue({data:{translations:['Jabón 12 ml']},error:null});const h=renderHook(()=>useEntryTranslation('es',['Soap 12 ml','Soap 12 ml']));expect(h.result.current.translated).toEqual(['Soap 12 ml','Soap 12 ml']);await waitFor(()=>expect(h.result.current.translated).toEqual(['Jabón 12 ml','Jabón 12 ml']));expect(m.invoke).toHaveBeenCalledExactlyOnceWith('translate-entries',{body:{texts:['Soap 12 ml']}});h.unmount();renderHook(()=>useEntryTranslation('es',['Soap 12 ml']));await new Promise(r=>setTimeout(r,400));expect(m.invoke).toHaveBeenCalledTimes(1);});
+it('failure keeps originals and is not cached',async()=>{m.invoke.mockResolvedValue({data:{translations:['Jabón']},error:{message:'failed'}});const h=renderHook(()=>useEntryTranslation('es',['Soap']));await waitFor(()=>expect(m.invoke).toHaveBeenCalled());await waitFor(()=>expect(h.result.current.translating).toBe(false));expect(h.result.current.translated).toEqual(['Soap']);expect(readTranslation('self','Soap')).toBeUndefined();});
+it('English and offline never invoke',async()=>{renderHook(()=>useEntryTranslation('en',['Soap']));Object.defineProperty(navigator,'onLine',{configurable:true,value:false});renderHook(()=>useEntryTranslation('es',['Soap']));await new Promise(r=>setTimeout(r,400));expect(m.invoke).not.toHaveBeenCalled();});

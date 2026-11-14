@@ -4,6 +4,8 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/lib/i18n";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { Sidebar } from "@/components/Sidebar";
@@ -57,30 +59,30 @@ function SectionSkeleton() {
   );
 }
 
-const sectionTitles: Record<string, string> = {
+const sectionTitles: Record<string, TranslationKey | ""> = {
   dashboard:       "",
-  property:        "Properties",
-  maintenance:     "Maintenance",
-  messages:        "Messages",
-  profile:         "Profile",
-  manuals:         "Manuals",
-  checklists:      "Checklists",
-  tasks:           "Tasks",
-  contacts:        "Contacts",
-  vendors:         "Vendors",
-  inventory:       "Inventory & Assets",
-  laundry:         "Laundry",
-  orders:          "Orders",
-  "meet-team":     "Meet the Team",
-  travel:          "Travel",
-  calendar:        "Calendar",
-  achievements:    "Achievements",
-  "master-import": "Master Import",
-  alerts:          "Alerts",
-  rules:           "Property Rules",
-  "car-wash":      "Car Wash",
-  "staff-schedule":"Staff Schedule",
-  timeline:        "Construction Timeline",
+  property:        "property",
+  maintenance:     "maintenance",
+  messages:        "messages",
+  profile:         "profile",
+  manuals:         "manuals",
+  checklists:      "checklists",
+  tasks:           "tasks",
+  contacts:        "contacts",
+  vendors:         "vendors",
+  inventory:       "inventory",
+  laundry:         "laundry",
+  orders:          "orders",
+  "meet-team":     "meetTeam",
+  travel:          "travel",
+  calendar:        "calendar",
+  achievements:    "achievements",
+  "master-import": "masterImport",
+  alerts:          "alerts",
+  rules:           "rules",
+  "car-wash":      "carWash",
+  "staff-schedule":"staffSchedule",
+  timeline:        "propertyTimeline",
 };
 
 function ActiveSection() {
@@ -132,6 +134,7 @@ function ActiveSection() {
 const PUSH_BANNER_HEIGHT = 40; // px
 
 function PushPromptBanner({ userId }: { userId: string }) {
+  const {t} = useLanguage();
   const { supported, permission, subscribed, requestAndSubscribe } = usePushNotifications(userId);
   const [dismissed, setDismissed] = useState(() => localStorage.getItem("push-prompt-dismissed") === "1");
   const [requesting, setRequesting] = useState(false);
@@ -165,7 +168,7 @@ function PushPromptBanner({ userId }: { userId: string }) {
     >
       <Bell size={16} className="shrink-0" />
       <p className="flex-1 text-xs font-medium leading-snug">
-        Enable notifications to get alerts for new messages even when the app is closed.
+        {t("enableNotificationsBanner")}
       </p>
       <button
         onClick={async () => {
@@ -178,7 +181,7 @@ function PushPromptBanner({ userId }: { userId: string }) {
         disabled={requesting}
         className="shrink-0 text-xs font-bold underline underline-offset-2"
       >
-        {requesting ? "…" : "Enable"}
+        {requesting ? "…" : t("enable")}
       </button>
       <button onClick={() => { setDismissed(true); localStorage.setItem("push-prompt-dismissed", "1"); }}
         className="shrink-0 p-0.5">
@@ -189,6 +192,7 @@ function PushPromptBanner({ userId }: { userId: string }) {
 }
 
 export function AppShell() {
+  const {t} = useLanguage();
   const { activeSection, checklistDetailId, checklistDetailPropId, isChatOpen } = useNavigation();
   const { user } = useAuth();
   const { isMasterAdmin } = usePermissions();
@@ -202,7 +206,8 @@ export function AppShell() {
     next.delete("entryKind"); next.delete("entryId");
     setEntryParams(next, { replace: true });
   };
-  const title = activeSection === "dashboard" ? undefined : sectionTitles[activeSection];
+  const titleKey = sectionTitles[activeSection];
+  const title = titleKey ? t(titleKey) : undefined;
 
   // React Query: dedupes & caches the checklist template across navigations.
   // Switching back to the same checklist is now instant (served from cache).

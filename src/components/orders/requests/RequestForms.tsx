@@ -1,3 +1,5 @@
+import {newRequestName,photoRequestName} from "@/lib/spanishDisplay";
+import { useContentTranslation, TranslationNotice } from "@/components/ContentTranslation";
 import './requests.css';
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Minus, Plus } from 'lucide-react';
@@ -42,13 +44,13 @@ export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string
         }
       }
       if (!pendingId.current) {
-        const payload = requestPayload({ houseId,userId,name,quantity,notes,urgent,photoUrl });
+        const payload = requestPayload({ houseId,userId,name:newRequestName(name,es),quantity,notes,urgent,photoUrl });
         const { data, error: insertError } = await supabase.from('shopping_list_items').insert(payload).select('id').single();
         if (insertError || !data) throw insertError ?? new Error('Not saved');
         pendingId.current = data.id;
       } else {
         // A failed urgent send may be retried after edits without duplicating its draft.
-        const { data, error: updateError } = await supabase.from('shopping_list_items').update(requestPayload({ houseId,userId,name,quantity,notes,urgent,photoUrl })).eq('id',pendingId.current).eq('created_by',userId).eq('status','draft').select('id').single();
+        const { data, error: updateError } = await supabase.from('shopping_list_items').update(requestPayload({ houseId,userId,name:newRequestName(name,es),quantity,notes,urgent,photoUrl })).eq('id',pendingId.current).eq('created_by',userId).eq('status','draft').select('id').single();
         if (updateError || !data) throw updateError ?? new Error('Not saved');
       }
       if (urgent) {
@@ -77,6 +79,7 @@ export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string
 export function RequestEditSheet({ item, row, houseId, userId, es, onClose, onSaved }: {
   item?: RequestLibraryItem; row?: HouseRequest; houseId:string; userId:string; es:boolean; onClose:()=>void; onSaved:()=>void;
 }) {
+  const content=useContentTranslation(es ? [row?.name??item?.name??'', item?.notes??'', item?.size??''] : []);
   const [quantity,setQuantity] = useState(defaultQuantity(row?.quantity ?? item?.default_quantity ?? null));
   const [notes,setNotes] = useState(row?.notes ?? ''); const [busy,setBusy] = useState(false); const [error,setError] = useState('');
   const save = async () => {
@@ -90,7 +93,8 @@ export function RequestEditSheet({ item, row, houseId, userId, es, onClose, onSa
     } catch { setError(failure(es)); } finally {setBusy(false);}
   };
   return <Dialog open onOpenChange={open=>{if(!open && !busy) onClose();}}><DialogContent className="request-sheet h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col max-w-lg">
-    <DialogHeader><DialogTitle className="break-words">{row?.name ?? item?.name}</DialogTitle></DialogHeader>
+    <DialogHeader><DialogTitle className="break-words">{content.text(photoRequestName(row?.name ?? item?.name ?? "",es))}</DialogTitle></DialogHeader>
+    <TranslationNotice value={content}/>{item?.notes&&<p className="text-muted-foreground break-words">{content.text(item.notes)}</p>}{item?.size&&<p className="text-muted-foreground break-words">{content.text(item.size)}</p>}
     <div className="space-y-5 py-4"><QuantityStepper value={quantity} onChange={setQuantity} es={es}/><label className="block space-y-2">{es ? 'Nota (opcional)' : 'Note (optional)'}<Textarea className="text-base" value={notes} onChange={e=>setNotes(e.target.value)} /></label>{error && <p role="alert" className="text-destructive">{error}</p>}</div>
     <div className="mt-auto border-t border-border pt-3"><Button className="w-full min-h-14 text-base" disabled={busy} onClick={save}>{busy ? (es ? 'Guardando…' : 'Saving…') : row ? (es ? 'Guardar' : 'Save') : (es ? 'Añadir a mi lista' : 'Add to my list')}</Button></div>
   </DialogContent></Dialog>;

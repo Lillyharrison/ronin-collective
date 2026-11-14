@@ -12,7 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ title }: HeaderProps) {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const { setSidebarOpen, canGoBack, goBack, activeSection } = useNavigation();
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = useNotificationCount();
@@ -53,7 +53,7 @@ export function Header({ title }: HeaderProps) {
             <button
               onClick={() => setSidebarOpen(true)}
               className="w-11 h-11 flex items-center justify-center rounded-lg text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors"
-              aria-label="Open menu"
+              aria-label={t("openMenu")}
             >
               <Menu size={22} />
             </button>
@@ -61,7 +61,7 @@ export function Header({ title }: HeaderProps) {
               <button
                 onClick={goBack}
                 className="w-11 h-11 flex items-center justify-center rounded-lg text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors"
-                aria-label="Go back"
+                aria-label={t("goBack")}
               >
                 <ArrowLeft size={18} />
               </button>
@@ -94,7 +94,7 @@ export function Header({ title }: HeaderProps) {
                   ? "text-cream bg-charcoal-light"
                   : "text-cream/70 hover:text-cream hover:bg-charcoal-light"
               )}
-              aria-label="Notifications"
+              aria-label={t("notificationsLabel")}
             >
               <Bell size={20} />
               {unreadCount > 0 && (

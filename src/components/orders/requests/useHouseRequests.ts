@@ -49,7 +49,7 @@ export function useRequestLibrary(userId: string | null) {
   return useQuery({ queryKey: ['request-library', userId], enabled: !!userId, queryFn: async () => {
     const rows: RequestLibraryItem[] = [];
     for (let from = 0; ; from += 100) {
-      const { data, error } = await supabase.from('order_library_items').select('id,name,category,image_url,size,default_quantity').neq('status', 'no_longer_preferred').order('name').order('id').range(from, from + 99);
+      const { data, error } = await supabase.from('order_library_items').select('id,name,category,image_url,size,default_quantity,notes').neq('status', 'no_longer_preferred').order('name').order('id').range(from, from + 99);
       if (error) throw error; rows.push(...(data ?? [])); if ((data?.length ?? 0) < 100) break;
     } return rows;
   }});

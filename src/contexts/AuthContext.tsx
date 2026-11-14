@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
+import { clearTranslations } from "@/lib/translationCache";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // onAuthStateChange is the single source of truth — fires immediately
     // with the current session on mount (no extra getSession round-trip needed).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (_event === "SIGNED_OUT") clearTranslations();
       setSession(newSession);
       setLoading(false);
     });

@@ -1,3 +1,4 @@
+import { ContentTranslationScope, TranslationNotice } from "@/components/ContentTranslation";
 /**
  * OrderLibraryTab — top-level container for the library grid/list.
  *
@@ -147,7 +148,8 @@ export function OrderLibraryTab() {
   };
 
   return (
-    <div className="px-3 sm:px-4 py-3">
+    <ContentTranslationScope texts={filtered.flatMap(i=>[i.name,i.notes??"",i.size??""])}><div className="px-3 sm:px-4 py-3">
+      <TranslationNotice/>
       {/* Search + add */}
       <div className="flex items-center gap-2 mb-3">
         <div className="relative flex-1">
@@ -220,7 +222,7 @@ export function OrderLibraryTab() {
       </div>
 
       {/* Status pill filter */}
-      <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex flex-wrap items-center gap-2 mb-3 pb-1 -mx-1 px-1">
         {(["preferred", "all", "no_longer_preferred"] as StatusFilter[]).map((s) => (
           <button
             key={s}
@@ -419,7 +421,7 @@ export function OrderLibraryTab() {
           }}
         />
       )}
-    </div>
+    </div></ContentTranslationScope>
   );
 }
 

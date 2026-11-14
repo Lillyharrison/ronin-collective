@@ -1,3 +1,4 @@
+import { useContentTranslation, TranslationNotice } from "@/components/ContentTranslation";
 import { EntryAcknowledgement, ENTRY_ACK_CHANGED } from "@/components/EntryAcknowledgement";
 import type { AcknowledgementFields } from "@/lib/entryAcknowledgement";
 import { plainDateToLocal, plainDateKey, dateInputToPlainDate } from "@/lib/calendarTime";
@@ -18,6 +19,9 @@ interface SimpleTask extends AcknowledgementFields {
   created_by?: string | null;
   id: string;
   title_en: string;
+  title_es?: string | null;
+  description_en?: string | null;
+  description_es?: string | null;
   status: string;
   due_date: string | null;
   assigned_to: string | null;
@@ -41,6 +45,7 @@ export function FamilyTasksView() {
   const [staff, setStaff] = useState<{ id: string; full_name: string | null }[]>([]);
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
   const [tasks, setTasks] = useState<SimpleTask[]>([]);
+  const content=useContentTranslation(tasks.flatMap(t=>[t.title_es?.trim()?"":t.title_en,t.description_es?.trim()?"":t.description_en??""]));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [highlightId, setHighlightId] = useState<string | null>(null);
@@ -124,7 +129,7 @@ export function FamilyTasksView() {
     setLoading(true);
     const { data } = await supabase
       .from("tasks")
-      .select("id, title_en, status, due_date, assigned_to, property_id, created_at, created_by, ack_required, acknowledged_at, acknowledged_by, acknowledged_note")
+      .select("id, title_en, title_es, description_en, description_es, status, due_date, assigned_to, property_id, created_at, created_by, ack_required, acknowledged_at, acknowledged_by, acknowledged_note")
       .eq("created_by", userId)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -253,6 +258,7 @@ export function FamilyTasksView() {
         </button>
       </div>
 
+      <TranslationNotice value={content}/>
       {/* Sent tasks */}
       <div>
         <p className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
@@ -279,11 +285,12 @@ export function FamilyTasksView() {
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground leading-snug">{t.title_en}</p>
+                    <p className="text-sm font-medium text-foreground leading-snug">{isL && t.title_es?.trim() ? t.title_es : content.text(t.title_en)}</p>
                     <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap", st.cls)}>
                       {isL ? st.es : st.en}
                     </span>
                   </div>
+                  {(t.description_en || t.description_es) && <p className="text-sm text-muted-foreground whitespace-pre-line break-words">{isL && t.description_es?.trim() ? t.description_es : content.text(t.description_en)}</p>}
                   <EntryAcknowledgement kind="task" entry={t} compact />
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                     <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">

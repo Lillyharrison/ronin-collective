@@ -135,3 +135,8 @@
 - [x] Add requester Orders, photo requests, library, shared list and receipts; preserve management Orders.
 - [x] Add PA queue, single-house order creation, shortcut and notification routing; no database changes.
 - [x] Add regression tests and phone/desktop checks; 400 tests passed; signed-in queue read checked, requester layout checked with controlled data. Real camera/phone compression and live create/receive RPCs are unverified (would change real requests/orders).
+
+## Lean Spanish follow-up
+- [x] Named quick wins and own-account language persistence.
+- [x] Screen-only translation, user-scoped successful cache, original toggle and validation.
+- [x] Focused tests, deployment/401, fixture phone/desktop checks and credit report; live signed-in and real phone quality/latency unavailable.

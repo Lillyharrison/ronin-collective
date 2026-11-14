@@ -1,3 +1,4 @@
+import { useContentText } from "@/components/ContentTranslation";
 import { EntryAcknowledgement } from "@/components/EntryAcknowledgement";
 import type { AcknowledgementFields } from "@/lib/entryAcknowledgement";
 import { plainDateToLocal, comparePlainCalendarDate } from "@/lib/calendarTime";
@@ -13,6 +14,7 @@ export interface KanbanTask extends AcknowledgementFields {
   title_en: string;
   title_es?: string | null;
   description_en?: string | null;
+  description_es?: string | null;
   status: TaskStatus;
   priority: number;
   due_date?: string | null;
@@ -46,7 +48,8 @@ export const STATUS_CONFIG: Record<TaskStatus, { label: string; labelEs: string;
 export function TaskCard({ task, onClick }: Props) {
   const { language } = useLanguage();
   const isL = language === "es";
-  const title = isL && task.title_es ? task.title_es : task.title_en;
+  const text=useContentText();
+  const title = isL && task.title_es?.trim() ? task.title_es : text(task.title_en);
   const isOverdue = task.due_date && comparePlainCalendarDate(task.due_date) < 0 && task.status !== "completed";
   const hasAttachments = (task.attachments?.length ?? 0) > 0;
 
@@ -87,6 +90,7 @@ export function TaskCard({ task, onClick }: Props) {
         {title}
       </p>
 
+      {(task.description_en || task.description_es) && <p className="text-xs text-muted-foreground whitespace-pre-line break-words line-clamp-2 mb-2">{isL && task.description_es?.trim() ? task.description_es : text(task.description_en)}</p>}
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
         {task.due_date && (

@@ -1,3 +1,4 @@
+import { useContentText } from "@/components/ContentTranslation";
 /**
  * LibraryItemRow — sortable list row.
  *
@@ -17,9 +18,10 @@ interface Props {
 
 /** Shared grid template — KEEP IN SYNC with LibraryListHeader. */
 export const LIBRARY_ROW_GRID =
-  "grid-cols-[16px_36px_minmax(140px,1.4fr)_70px_80px_44px_minmax(110px,0.9fr)_minmax(140px,1.6fr)_36px]";
+  "grid-cols-[16px_36px_minmax(0,1fr)] sm:grid-cols-[16px_36px_minmax(140px,1.4fr)_70px_80px_44px_minmax(110px,0.9fr)_minmax(140px,1.6fr)_36px]";
 
 export function LibraryItemRow({ item, onOpen }: Props) {
+  const text=useContentText();
   const { language } = useLanguage();
   const isL = language === "es";
   const isDeprecated = item.status === "no_longer_preferred";
@@ -75,29 +77,29 @@ export function LibraryItemRow({ item, onOpen }: Props) {
       {/* Name */}
       <span
         className={cn(
-          "min-w-0 self-center text-sm font-medium text-foreground truncate",
+          "min-w-0 self-center text-sm font-medium text-foreground break-words sm:truncate",
           isDeprecated && "line-through",
         )}
-        title={item.name}
+        title={text(item.name)}
       >
-        {item.name}
+        {text(item.name)}
         {item.asin && <span className="ml-1.5 align-middle text-[0.5625rem] font-bold px-1 py-0.5 rounded border border-border text-muted-foreground">Amazon</span>}
       </span>
 
       {/* Quantity */}
-      <span className="self-center text-[0.75rem] text-muted-foreground tabular-nums truncate">
+      <span className="col-start-3 sm:col-start-auto self-center text-[0.75rem] text-muted-foreground tabular-nums break-words">
         {item.default_quantity ?? "—"}
       </span>
 
       {/* Size */}
-      <span className="self-center text-[0.75rem] text-muted-foreground truncate" title={item.size ?? undefined}>
-        {item.size ?? "—"}
+      <span className="col-start-3 sm:col-start-auto self-center text-[0.75rem] text-muted-foreground break-words" title={text(item.size) || undefined}>
+        {text(item.size) || "—"}
       </span>
 
       {/* Substitution */}
       <span
         className={cn(
-          "self-center inline-flex items-center justify-center",
+          "col-start-3 sm:col-start-auto self-center inline-flex items-center sm:justify-center",
           item.substitutions_allowed
             ? "text-blue-600 dark:text-blue-400"
             : "text-amber-600 dark:text-amber-400",
@@ -112,17 +114,17 @@ export function LibraryItemRow({ item, onOpen }: Props) {
       </span>
 
       {/* Purchase */}
-      <span className="self-center text-[0.6875rem] text-muted-foreground/90 truncate" title={item.purchase ?? undefined}>
+      <span className="col-start-3 sm:col-start-auto self-center text-[0.6875rem] text-muted-foreground/90 break-words" title={item.purchase ?? undefined}>
         {item.purchase ?? "—"}
       </span>
 
       {/* Notes */}
-      <span className="text-[0.6875rem] text-muted-foreground/90 leading-snug whitespace-pre-wrap line-clamp-3">
-        {item.notes ?? ""}
+      <span className="col-start-3 sm:col-start-auto text-[0.6875rem] text-muted-foreground/90 leading-snug whitespace-pre-wrap break-words line-clamp-3">
+        {text(item.notes)}
       </span>
 
       {/* Link */}
-      <span className="flex h-5 items-center justify-center">
+      <span className="col-start-3 sm:col-start-auto flex h-5 items-center sm:justify-center">
         {item.website_url ? (
           <a
             href={item.website_url}

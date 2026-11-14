@@ -10,7 +10,7 @@ export interface HouseRequest {
 }
 export interface RequestLibraryItem {
   id: string; name: string; category: string; image_url: string | null; size: string | null;
-  default_quantity: string | null;
+  default_quantity: string | null; notes?: string | null;
 }
 export const managementView = (role: string | null) => ['admin', 'master_admin', 'manager'].includes(role ?? '');
 export const validRequest = (name: string, photo: unknown) => !!name.trim() || !!photo;

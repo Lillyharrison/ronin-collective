@@ -1,3 +1,4 @@
+import { useContentTranslation, TranslationNotice } from "@/components/ContentTranslation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -43,6 +44,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
   const { isAdmin, isMasterAdmin, isManager } = usePermissions();
   const isL = language === "es";
   const canEdit = isAdmin || isMasterAdmin || isManager;
+  const content=useContentTranslation([order.title,order.description??"",order.notes??"",order.packing_list??""]);
 
   const [carrier, setCarrier]               = useState(order.carrier ?? "");
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number ?? "");
@@ -130,7 +132,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
             )}>
               {stage === "not_placed" ? (isL ? "NO COLOCADO" : "NOT PLACED") : isPending ? (isL ? "PENDIENTE" : "PENDING DELIVERY") : (isL ? "ENTREGADO" : "DELIVERED")}
             </span>
-            <h2 className="font-display text-base font-semibold text-foreground truncate">{order.title}</h2>
+            <h2 className="font-display text-base font-semibold text-foreground truncate">{content.text(order.title)}</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors flex-shrink-0">
             <X size={16} className="text-muted-foreground" />
@@ -139,8 +141,9 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <TranslationNotice value={content}/>
           {order.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed">{order.description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{content.text(order.description)}</p>
           )}
 
           {/* Meta pills */}
@@ -240,6 +243,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                   <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
                     <FileText size={9} /> {isL ? "Lista de empaque" : "Packing list"}
                   </label>
+                  {content.available && !content.original && <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{content.text(order.packing_list)}</p>}
                   <textarea
                     value={packingList}
                     onChange={e => setPackingList(e.target.value)}
@@ -252,6 +256,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                   <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
                     {isL ? "Notas de entrega" : "Delivery notes"}
                   </label>
+                  {content.available && !content.original && <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{content.text(order.notes)}</p>}
                   <textarea
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
@@ -267,8 +272,8 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                 {order.carrier && <p><span className="font-medium text-foreground">{isL ? "Transportista:" : "Carrier:"}</span> {order.carrier}</p>}
                 {order.tracking_number && <p><span className="font-medium text-foreground">{isL ? "N° seguimiento:" : "Tracking #:"}</span> {order.tracking_number}</p>}
                 {order.tracking_url && <a href={order.tracking_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-accent underline"><ExternalLink size={10} /> {isL ? "Ver seguimiento" : "Track shipment"}</a>}
-                {order.packing_list && <p className="whitespace-pre-line"><span className="font-medium text-foreground">{isL ? "Empaque:" : "Packing list:"}</span> {order.packing_list}</p>}
-                {order.notes && <p className="whitespace-pre-line"><span className="font-medium text-foreground">{isL ? "Notas:" : "Notes:"}</span> {order.notes}</p>}
+                {order.packing_list && <p className="whitespace-pre-line"><span className="font-medium text-foreground">{isL ? "Empaque:" : "Packing list:"}</span> {content.text(order.packing_list)}</p>}
+                {order.notes && <p className="whitespace-pre-line"><span className="font-medium text-foreground">{isL ? "Notas:" : "Notes:"}</span> {content.text(order.notes)}</p>}
               </div>
             )}
           </div>

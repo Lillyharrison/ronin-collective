@@ -1,3 +1,4 @@
+import { ContentTranslationScope, TranslationNotice } from "@/components/ContentTranslation";
 import { localDateKey } from "@/lib/calendarTime";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -204,7 +205,7 @@ export function TasksSection() {
     let query = supabase
       .from("tasks")
       .select(`
-        id, title_en, title_es, description_en, status, priority, due_date,
+        id, title_en, title_es, description_en, description_es, status, priority, due_date,
         assigned_to, property_id, assigned_department, assigned_role,
         linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category, created_by, ack_required, acknowledged_at, acknowledged_by, acknowledged_note,
         property:properties(name),
@@ -279,7 +280,7 @@ export function TasksSection() {
       const { data } = await supabase
         .from("tasks")
         .select(`
-          id, title_en, title_es, description_en, status, priority, due_date,
+          id, title_en, title_es, description_en, description_es, status, priority, due_date,
           assigned_to, property_id, assigned_department, assigned_role,
           linked_checklist_id, is_draft, ai_suggested, attachments, created_at, category, created_by, ack_required, acknowledged_at, acknowledged_by, acknowledged_note
         `)
@@ -351,6 +352,7 @@ export function TasksSection() {
       title_en: task.title_en,
       title_es: task.title_es,
       description_en: task.description_en,
+      description_es: task.description_es,
       status: task.status,
       priority: task.priority,
       due_date: task.due_date,
@@ -385,7 +387,7 @@ export function TasksSection() {
   }
 
   return (
-    <div className="animate-fade-in pb-6">
+    <ContentTranslationScope texts={[...visibleLiveTasks,...(showDrafts?visibleDraftTasks:[])].flatMap(t=>[t.title_es?.trim()?"":t.title_en,t.description_es?.trim()?"":t.description_en??""])}><div className="animate-fade-in pb-6">
       {/* Header */}
       <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light">
         <h1 className="font-display text-3xl text-cream leading-tight">
@@ -426,6 +428,7 @@ export function TasksSection() {
         )}
       </div>
 
+      <div className="px-4"><TranslationNotice/></div>
       {/* Draft tasks banner */}
       {visibleDraftTasks.length > 0 && (isAdmin || isMasterAdmin) && (
         <button
@@ -516,6 +519,6 @@ export function TasksSection() {
           onSaved={fetchTasks}
         />
       )}
-    </div>
+    </div></ContentTranslationScope>
   );
 }

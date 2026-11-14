@@ -11,9 +11,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { WifiOff, RefreshCw, CheckCircle2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 export function OfflineBanner() {
+  const {t} = useLanguage();
   const { isOnline, pendingCount, isSyncing } = useOfflineSync();
   const [showSynced, setShowSynced] = useState(false);
   const prevSyncingRef = useRef(isSyncing);
@@ -46,25 +48,25 @@ export function OfflineBanner() {
       bg:   "bg-amber-500/95",
       text: "text-amber-950",
       icon: <WifiOff size={13} className="shrink-0" />,
-      msg:  "You're offline — changes will sync when you reconnect",
+      msg:  t("offlineSentence"),
     },
     syncing: {
       bg:   "bg-blue-500/95",
       text: "text-blue-950",
       icon: <RefreshCw size={13} className="shrink-0 animate-spin" />,
-      msg:  `Syncing${pendingCount > 0 ? ` ${pendingCount} item${pendingCount !== 1 ? "s" : ""}` : ""}…`,
+      msg:  pendingCount > 0 ? t(pendingCount === 1 ? "syncingOne" : "syncingMany").replace("{count}", String(pendingCount)) : t("syncingSentence"),
     },
     synced: {
       bg:   "bg-emerald-500/95",
       text: "text-emerald-950",
       icon: <CheckCircle2 size={13} className="shrink-0" />,
-      msg:  "All changes synced ✓",
+      msg:  t("syncedSentence"),
     },
     pending: {
       bg:   "bg-amber-400/95",
       text: "text-amber-950",
       icon: <RefreshCw size={13} className="shrink-0" />,
-      msg:  `${pendingCount} change${pendingCount !== 1 ? "s" : ""} waiting to sync`,
+      msg:  t(pendingCount === 1 ? "pendingOne" : "pendingMany").replace("{count}", String(pendingCount)),
     },
   };
 

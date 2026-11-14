@@ -41,7 +41,7 @@ export function LibraryListHeader({ sortKey, sortDir, onSort }: Props) {
   return (
     <div
       className={cn(
-        "grid items-center gap-2 px-2 py-1.5 border-b border-border bg-muted/40 sticky top-0 z-[1]",
+        "hidden sm:grid items-center gap-2 px-2 py-1.5 border-b border-border bg-muted/40 sticky top-0 z-[1]",
         LIBRARY_ROW_GRID,
       )}
     >

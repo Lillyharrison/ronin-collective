@@ -1,3 +1,4 @@
+import { useContentTranslation, TranslationNotice } from "@/components/ContentTranslation";
 /**
  * AddToShoppingListSheet — confirms quantity + notes before adding a
  * library item to the global shopping list. Stores `library_item_id`
@@ -25,6 +26,7 @@ interface Props {
 export function AddToShoppingListSheet({ item, open, onClose, onAdded }: Props) {
   const { language } = useLanguage();
   const isL = language === "es";
+  const content=useContentTranslation(open ? [item.name,item.notes??"",item.size??""] : []);
 
   const [quantity, setQuantity] = useState(item.default_quantity ?? "");
   const [notes, setNotes] = useState("");
@@ -68,10 +70,12 @@ export function AddToShoppingListSheet({ item, open, onClose, onAdded }: Props) 
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 pt-2">
+          <TranslationNotice value={content}/>
+          {item.size&&<p className="text-sm text-muted-foreground">{content.text(item.size)}</p>}
           <div className="rounded-xl border border-border bg-muted/30 p-3 text-sm">
-            <p className="font-semibold text-foreground">{item.name}</p>
+            <p className="font-semibold text-foreground">{content.text(item.name)}</p>
             {item.notes && (
-              <p className="mt-1 text-xs text-muted-foreground">{item.notes}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{content.text(item.notes)}</p>
             )}
           </div>
 
