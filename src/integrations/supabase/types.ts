@@ -74,6 +74,33 @@ export type Database = {
         }
         Relationships: []
       }
+      access_scan_snapshot: {
+        Row: {
+          checked_at: string
+          is_admin_level: boolean
+          issues: Json
+          ok: boolean
+          person: Json
+          person_id: string
+        }
+        Insert: {
+          checked_at?: string
+          is_admin_level?: boolean
+          issues?: Json
+          ok?: boolean
+          person: Json
+          person_id: string
+        }
+        Update: {
+          checked_at?: string
+          is_admin_level?: boolean
+          issues?: Json
+          ok?: boolean
+          person?: Json
+          person_id?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           category: string
@@ -3024,6 +3051,10 @@ export type Database = {
     }
     Functions: {
       access_issues_from_report: { Args: { r: Json }; Returns: Json }
+      access_snapshot_save: {
+        Args: { _report: Json; _target: string }
+        Returns: Json
+      }
       acknowledge_entry: {
         Args: { _id: string; _kind: string; _note?: string }
         Returns: Json
@@ -3052,6 +3083,7 @@ export type Database = {
         }
         Returns: string
       }
+      admin_access_check_person: { Args: { _target: string }; Returns: Json }
       admin_access_overview: { Args: never; Returns: Json }
       admin_visibility_report: {
         Args: { _log?: boolean; _target: string }
