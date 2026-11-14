@@ -1,6 +1,6 @@
 export interface AccessPerson { id: string; name: string; level: string | null; role: string | null; sections_on: number; alerts_on: number; houses: string[]; }
 export interface AccessIssue { rule: string; what: string; count: number; why?: string; when?: string; }
-export interface AccessOverview { person: AccessPerson; is_admin_level: boolean; issues: AccessIssue[]; ok: boolean; }
+export interface AccessOverview { person: AccessPerson; is_admin_level: boolean; issues: AccessIssue[]; ok: boolean; checked_at?: string | null; }
 export interface AccessAlert { when: string; title: string; house?: string | null; from?: string | null; read?: boolean; why?: string; }
 export interface AccessReport {
   person: AccessPerson; is_admin_level: boolean;
@@ -41,4 +41,14 @@ export const MAIN_ACCESS_TABLES: Record<string, [string, string]> = {
 const OTHER_TABLES: Record<string, [string, string]> = { profiles: ["People", "Personas"], staff_shifts: ["Shifts", "Turnos"], staff_schedules: ["Weekly patterns", "Horarios semanales"], staff_leave_requests: ["Leave requests", "Permisos"], vehicles: ["Vehicles", "Vehículos"], car_wash_bookings: ["Car washes", "Lavados de autos"], assets: ["Assets", "Inventario"], vendors: ["Vendors", "Proveedores"], property_rules: ["House rules", "Reglas de la casa"], checklist_items: ["Checklist items", "Elementos de listas"], checklist_sessions: ["Completed checklists", "Listas completadas"], notifications: ["Alerts", "Alertas"], messages: ["Messages", "Mensajes"], chat_threads: ["Conversations", "Conversaciones"] };
 export function accessTableName(key: string, en: boolean): string { return (MAIN_ACCESS_TABLES[key] ?? OTHER_TABLES[key])?.[en ? 0 : 1] ?? key.replace(/_/g, " "); }
 export function accessTime(value: string | null | undefined, en: boolean): string { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat(en ? "en-US" : "es", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(date); }
+export function newestAccessCheck(rows: AccessOverview[]): string | null {
+  return rows.reduce<string | null>((latest, row) => {
+    const time = row.checked_at ? Date.parse(row.checked_at) : NaN;
+    return Number.isFinite(time) && (!latest || time > Date.parse(latest)) ? row.checked_at ?? null : latest;
+  }, null);
+}
+export const ACCESS_REFRESH_COPY = {
+  en: { empty: "No checks stored yet. Press Check now.", progress: (current: number, total: number) => `Checking ${current} of ${total}` },
+  es: { empty: "Todavía no hay comprobaciones guardadas. Pulsa Comprobar ahora.", progress: (current: number, total: number) => `Comprobando ${current} de ${total}` },
+};
 export function wrongAlertReason(alert: AccessAlert, wrong: AccessAlert[]): string | null { const match = wrong.find(a => a.when === alert.when && a.title === alert.title); return match ? match.why || "wrong_alert" : null; }

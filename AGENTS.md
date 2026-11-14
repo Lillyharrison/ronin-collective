@@ -1,6 +1,6 @@
 # Architecture rules
 
-- Access checks use the owner visibility/overview RPCs under the caller session, never an impersonated login; findings dismissal persists before refreshing.
+- Access checks load stored overview timestamps and refresh via sequential single-person owner RPCs under the caller session, never an impersonated login; this avoids request timeouts, and findings dismissal persists before refreshing.
 - Task completion supplies an explicit audience mode to notify-section, which reads the creator under caller RLS and resolves admin roles server-side before existing house/login filters and push.
 
 - Baseline readability is owned by shared Tailwind text tokens, global minimum-text utilities and shared UI hit areas so it can be reverted independently of personal enlargement.
