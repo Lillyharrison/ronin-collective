@@ -81,15 +81,15 @@ export function StaffDaysSummary({
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="bg-primary/10 border-b border-border px-3 py-1.5 flex items-center justify-between gap-2 flex-wrap">
         <p className="text-xs font-semibold text-primary">Days Tracking</p>
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        <p className="text-[0.625rem] uppercase tracking-wider text-muted-foreground font-semibold">
           {rangeLabel}
         </p>
       </div>
 
       {/* Compact table layout — one row per staff member */}
       <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
-          <thead className="bg-muted/30 text-[9px] uppercase tracking-wider text-muted-foreground">
+        <table className="w-full text-[0.6875rem]">
+          <thead className="bg-muted/30 text-[0.5625rem] uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left font-semibold px-2 py-1.5">Staff</th>
               <th className="text-center font-semibold px-1.5 py-1.5 w-[68px]">
@@ -112,7 +112,7 @@ export function StaffDaysSummary({
                 <td className="px-2 py-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <div className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-semibold",
+                      "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[0.5625rem] font-semibold",
                       r.person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
                     )}>
                       {getDisplayName(r.person, "?").charAt(0).toUpperCase()}
@@ -125,7 +125,7 @@ export function StaffDaysSummary({
                         {getDisplayName(r.person)}
                       </p>
                       {r.person.job_title && (
-                        <p className="text-[9px] text-muted-foreground truncate leading-tight">{r.person.job_title}</p>
+                        <p className="text-[0.5625rem] text-muted-foreground truncate leading-tight">{r.person.job_title}</p>
                       )}
                     </div>
                   </div>
@@ -150,7 +150,7 @@ function Delta({ value, unit }: { value: number; unit: string }) {
   const positive = value > 0;
   return (
     <span className={cn(
-      "inline-flex items-center gap-0.5 text-[10px] font-semibold tabular-nums",
+      "inline-flex items-center gap-0.5 text-[0.625rem] font-semibold tabular-nums",
       positive ? "text-emerald-500" : "text-amber-500"
     )}>
       {positive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}

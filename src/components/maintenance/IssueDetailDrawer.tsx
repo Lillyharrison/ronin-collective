@@ -71,7 +71,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
               <IssueStatusBadge status={issue.status} />
               <IssuePriorityBadge priority={issue.priority} />
               {issue.is_archived && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5">
+                <span className="inline-flex items-center gap-1 text-[0.625rem] font-semibold uppercase tracking-wider rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5">
                   <Archive size={9} /> {isL ? "Archivado" : "Archived"}
                 </span>
               )}
@@ -119,7 +119,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
           <div className="grid grid-cols-2 gap-3">
             {issue.property_name && (
               <div className="bg-muted/40 rounded-xl p-3">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="text-[0.625rem] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                   <MapPin size={9}/> {t("propertyLabel")}
                 </p>
                 <p className="text-sm font-medium text-foreground">{issue.property_name}</p>
@@ -127,29 +127,29 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
               </div>
             )}
             <div className="bg-muted/40 rounded-xl p-3">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("category")}</p>
+              <p className="text-[0.625rem] text-muted-foreground uppercase tracking-wider mb-1">{t("category")}</p>
               <p className="text-sm font-medium text-foreground">{issue.category}</p>
             </div>
             {issue.reporter_name && (
               <div className="bg-muted/40 rounded-xl p-3">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="text-[0.625rem] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                   <User size={9}/> {t("reportedBy")}
                 </p>
                 <p className="text-sm font-medium text-foreground">{issue.reporter_name}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
+                <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                   {formatDistanceToNow(new Date(issue.created_at), { addSuffix: true })}
                 </p>
               </div>
             )}
             {issue.assignee_name && (
               <div className="bg-muted/40 rounded-xl p-3">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="text-[0.625rem] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                   <User size={9}/> {t("assignedTo")}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
                   {issue.assignee_avatar
                     ? <img src={imageUrl(issue.assignee_avatar, 40, 40)} alt={issue.assignee_name} loading="lazy" className="w-5 h-5 rounded-full object-cover" />
-                    : <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                    : <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[0.5625rem] font-bold text-muted-foreground">
                         {issue.assignee_name.charAt(0)}
                       </div>
                   }
@@ -159,7 +159,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
             )}
             {issue.scheduled_date && (
               <div className="bg-muted/40 rounded-xl p-3">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="text-[0.625rem] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                   <Calendar size={9}/> {t("scheduledLabel")}
                 </p>
                 <p className="text-sm font-medium text-foreground">
@@ -169,7 +169,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
             )}
             {issue.resolved_at && (
               <div className="bg-[hsl(var(--status-done)/0.08)] border border-[hsl(var(--status-done)/0.2)] rounded-xl p-3">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("resolvedLabel")}</p>
+                <p className="text-[0.625rem] text-muted-foreground uppercase tracking-wider mb-1">{t("resolvedLabel")}</p>
                 <p className="text-sm font-medium text-[hsl(var(--status-done))]">
                   {format(new Date(issue.resolved_at), "MMM d, yyyy")}
                 </p>
@@ -182,7 +182,7 @@ export function IssueDetailDrawer({ issue, onClose, onEdit, onStatusChange, onAr
             <div className="flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 rounded-xl px-4 py-3">
               <LinkIcon size={14} className="text-amber-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground">{t("recurringLinked")}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t("recurringLinked")}</p>
                 <p className="text-xs font-medium text-foreground truncate">{issue.related_issue_title}</p>
               </div>
             </div>

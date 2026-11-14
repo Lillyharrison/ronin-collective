@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TextSizeControl } from "@/components/TextSizeControl";
 
 
 type EditField = "name" | "email" | "phone" | "birthday" | "password" | null;
@@ -196,7 +197,7 @@ export function ProfileSection() {
             className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           >
             {uploading ? (
-              <span className="text-[10px] text-white font-medium">
+              <span className="text-[0.625rem] text-white font-medium">
                 {t("Uploading…", "Subiendo…")}
               </span>
             ) : (
@@ -213,7 +214,7 @@ export function ProfileSection() {
         </div>
 
         <h1 className="font-display text-2xl text-cream">{displayName}</h1>
-        <span className="mt-1 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[10px] tracking-widest uppercase font-semibold">
+        <span className="mt-1 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[0.625rem] tracking-widest uppercase font-semibold">
           {role ? role.replace("_", " ") : "Staff"}
         </span>
 
@@ -225,7 +226,7 @@ export function ProfileSection() {
                 <Star size={12} />
                 <span className="text-cream font-semibold text-base">0</span>
               </div>
-              <span className="text-cream/40 text-[9px] uppercase tracking-wider">
+              <span className="text-cream/40 text-[0.5625rem] uppercase tracking-wider">
                 {t("Points", "Puntos")}
               </span>
             </div>
@@ -235,7 +236,7 @@ export function ProfileSection() {
                 <Flame size={12} />
                 <span className="text-cream font-semibold text-base">0</span>
               </div>
-              <span className="text-cream/40 text-[9px] uppercase tracking-wider">
+              <span className="text-cream/40 text-[0.5625rem] uppercase tracking-wider">
                 {t("Streak", "Racha")}
               </span>
             </div>
@@ -245,7 +246,7 @@ export function ProfileSection() {
                 <Trophy size={12} />
                 <span className="text-cream font-semibold text-base">0</span>
               </div>
-              <span className="text-cream/40 text-[9px] uppercase tracking-wider">
+              <span className="text-cream/40 text-[0.5625rem] uppercase tracking-wider">
                 {t("Badges", "Logros")}
               </span>
             </div>
@@ -253,6 +254,7 @@ export function ProfileSection() {
         )}
       </div>
 
+      {!isPreviewing && <TextSizeControl profile />}
       {/* ── Personal Information ─────────────────────────────────────── */}
       <div className="px-4 mt-5">
         <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3">
@@ -486,7 +488,7 @@ export function ProfileSection() {
                 </Button>
               )}
               {pushSubscribed && (
-                <span className="text-[10px] text-[hsl(var(--status-done))] font-semibold uppercase tracking-wider">
+                <span className="text-[0.625rem] text-[hsl(var(--status-done))] font-semibold uppercase tracking-wider">
                   {t("On", "Activo")}
                 </span>
               )}

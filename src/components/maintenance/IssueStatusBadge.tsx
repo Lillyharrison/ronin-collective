@@ -22,7 +22,7 @@ export function IssueStatusBadge({ status, size = "sm" }: { status: IssueStatus;
   return (
     <span className={cn(
       "inline-flex items-center gap-1 rounded-full border font-semibold",
-      size === "xs" ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5",
+      size === "xs" ? "text-[0.5625rem] px-1.5 py-0.5" : "text-[0.625rem] px-2 py-0.5",
       cfg.className
     )}>
       <span className={cn("rounded-full flex-shrink-0", size === "xs" ? "w-1 h-1" : "w-1.5 h-1.5", cfg.dot)} />
@@ -34,7 +34,7 @@ export function IssueStatusBadge({ status, size = "sm" }: { status: IssueStatus;
 export function IssuePriorityBadge({ priority }: { priority: IssuePriority }) {
   const cfg = PRIORITY_CONFIG[priority];
   return (
-    <span className={cn("text-[10px] font-semibold", cfg.className)}>{cfg.label}</span>
+    <span className={cn("text-[0.625rem] font-semibold", cfg.className)}>{cfg.label}</span>
   );
 }
 

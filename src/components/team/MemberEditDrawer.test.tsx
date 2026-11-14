@@ -29,6 +29,16 @@ function show() {
 }
 
 describe("member editor", () => {
+  it("saves the admin-selected text size with the existing profile save", async () => {
+    updates.length = 0; show();
+    fireEvent.change(screen.getByRole("combobox", { name: "Text size" }), { target: { value: "xlarge" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Save/ }));
+    await vi.waitFor(() => expect(updates.some(v => (v as { text_size?: string }).text_size === "xlarge")).toBe(true));
+  });
+  it("hides the text size select from non-admin readers", () => {
+    render(<MemberEditDrawer member={draft} properties={[]} isEN canEdit={false} isMasterAdmin={false} onClose={vi.fn()} onSaved={vi.fn()} onDeleted={vi.fn()} />);
+    expect(screen.queryByRole("combobox", { name: "Text size" })).not.toBeInTheDocument();
+  });
   it("keeps a rejected password open for retry and closes only after success", async () => {
     render(<MemberEditDrawer member={{ ...draft, is_draft: false }} properties={[]} isEN canEdit isMasterAdmin onClose={vi.fn()} onSaved={vi.fn()} onDeleted={vi.fn()} />);
     fireEvent.keyDown(screen.getByRole("button", { name: "More" }), { key: "ArrowDown" });
@@ -124,6 +134,6 @@ describe("contract tab", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
     await vi.waitFor(() => expect(invoke).toHaveBeenCalled());
     expect(invoke.mock.calls[0][1].body.quick_actions).toEqual(["clock"]);
-    await vi.waitFor(() => expect(updates.at(-1)).toEqual({ contracted_days_per_week: null, contracted_hours_per_week: null, annual_leave_days: null }));
+    await vi.waitFor(() => expect(updates.at(-1)).toMatchObject({ contracted_days_per_week: null, contracted_hours_per_week: null, annual_leave_days: null }));
   });
 });

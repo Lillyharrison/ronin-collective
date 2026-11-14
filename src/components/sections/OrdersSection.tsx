@@ -36,14 +36,14 @@ function StatusBadge({ status }: { status: string }) {
 
   if (status === "not_placed") {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase tracking-wide whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 text-[0.5625rem] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 uppercase tracking-wide whitespace-nowrap">
         <Clock size={8} /> {isL ? "No colocado" : "Not placed"}
       </span>
     );
   }
   if (status === "placed") {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 uppercase tracking-wide whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 text-[0.5625rem] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 uppercase tracking-wide whitespace-nowrap">
         <Package size={8} /> {isL ? "Colocado" : "Placed"}
       </span>
     );
@@ -51,7 +51,7 @@ function StatusBadge({ status }: { status: string }) {
   // Legacy: pending_delivery
   if (status === "pending_delivery") {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 uppercase tracking-wide whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 text-[0.5625rem] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 uppercase tracking-wide whitespace-nowrap">
         <Truck size={8} /> {isL ? "En tránsito" : "In transit"}
       </span>
     );
@@ -104,7 +104,7 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
           <StatusBadge status={order.status} />
         </div>
         {order.description && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate pl-5">{order.description}</p>
+          <p className="text-[0.625rem] text-muted-foreground mt-0.5 truncate pl-5">{order.description}</p>
         )}
       </td>
 
@@ -189,13 +189,13 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
               onClick={handleDeliver}
               disabled={delivering}
               title={isL ? "Marcar como entregado" : "Mark as delivered"}
-              className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg bg-[hsl(var(--status-done)/0.1)] text-status-done border border-[hsl(var(--status-done)/0.25)] hover:bg-[hsl(var(--status-done)/0.2)] transition-colors active:scale-95 disabled:opacity-50 whitespace-nowrap"
+              className="flex items-center gap-1 text-[0.625rem] font-semibold px-2 py-1 rounded-lg bg-[hsl(var(--status-done)/0.1)] text-status-done border border-[hsl(var(--status-done)/0.25)] hover:bg-[hsl(var(--status-done)/0.2)] transition-colors active:scale-95 disabled:opacity-50 whitespace-nowrap"
             >
               <Check size={10} /> {delivering ? "…" : (isL ? "Entregar" : "Deliver")}
             </button>
           )}
           {isNotPlaced && (
-            <span className="text-[10px] text-amber-500/70 italic whitespace-nowrap">
+            <span className="text-[0.625rem] text-amber-500/70 italic whitespace-nowrap">
               {isL ? "Tarea abierta" : "Task open"}
             </span>
           )}
@@ -223,7 +223,7 @@ function DeliveredRow({ order, onOpen }: { order: Order; onOpen: (o: Order) => v
           <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{order.title}</span>
         </div>
         {order.description && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{order.description}</p>
+          <p className="text-[0.625rem] text-muted-foreground mt-0.5 truncate">{order.description}</p>
         )}
       </td>
       <td className="px-4 py-3">
@@ -398,7 +398,7 @@ function PendingTile({ order, onOpen, onMarkDelivered }: {
             </button>
           )}
           {isNotPlaced && (
-            <span className="text-[10px] text-amber-500/80 italic">
+            <span className="text-[0.625rem] text-amber-500/80 italic">
               {isL ? "Tarea abierta" : "Task open"}
             </span>
           )}
@@ -621,7 +621,7 @@ function ManagementOrders() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 px-4 py-3 border-b border-border">
+      <div className="orders-management-tabs flex gap-1 px-4 py-3 border-b border-border">
         <button
           onClick={() => selectTab("pending")}
           className={cn("flex-1 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
@@ -632,7 +632,7 @@ function ManagementOrders() {
           {isL ? "Pedidos" : "Orders"}
           {pending.length > 0 && (
             <span className={cn(
-              "ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold",
+              "ml-0.5 px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold",
               activeTab === "pending" ? "bg-charcoal/20 text-charcoal" : "bg-muted-foreground/20 text-muted-foreground"
             )}>
               {pending.length}
@@ -684,7 +684,7 @@ function ManagementOrders() {
 
       {/* Legend for pending tab */}
       {activeTab === "pending" && !loading && pending.length > 0 && (
-        <div className="flex items-center gap-4 px-4 py-2 bg-muted/30 border-b border-border text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-4 px-4 py-2 bg-muted/30 border-b border-border text-[0.625rem] text-muted-foreground">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> {isL ? "No colocado (tarea abierta)" : "Not placed (task open)"}</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> {isL ? "Colocado / en tránsito" : "Placed / in transit"}</span>
         </div>
@@ -738,7 +738,7 @@ function ManagementOrders() {
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     {tableHeaders.map((h, i) => (
-                      <th key={i} className="px-4 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                      <th key={i} className="px-4 py-2.5 text-left text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                         {h.label}
                       </th>
                     ))}

@@ -60,12 +60,12 @@ export function CalendarToolbar({
         <div className="text-center min-w-[160px]">
           <p className="text-sm font-semibold">{weekLabel}</p>
           {calView === "week" && !isCurrentWeek && (
-            <button onClick={onToday} className="text-[10px] text-muted-foreground hover:text-foreground underline">
+            <button onClick={onToday} className="text-[0.625rem] text-muted-foreground hover:text-foreground underline">
               This week
             </button>
           )}
           {calView === "month" && !isCurrentMonth && (
-            <button onClick={onToday} className="text-[10px] text-muted-foreground hover:text-foreground underline">
+            <button onClick={onToday} className="text-[0.625rem] text-muted-foreground hover:text-foreground underline">
               This month
             </button>
           )}
@@ -102,7 +102,7 @@ export function CalendarToolbar({
 
         {showRangePickers && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-muted-foreground">From</span>
+            <span className="text-[0.6875rem] text-muted-foreground">From</span>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal">
@@ -120,7 +120,7 @@ export function CalendarToolbar({
                 />
               </PopoverContent>
             </Popover>
-            <span className="text-[11px] text-muted-foreground">To</span>
+            <span className="text-[0.6875rem] text-muted-foreground">To</span>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal">

@@ -262,7 +262,7 @@ function EventChip({
       onClick={onClick}
       title={ev.calendar_source === "ical" ? "Synced from iCal · read-only" : ev.title}
       className={cn(
-        "text-[10px] font-medium px-1 py-0.5 rounded truncate flex items-center gap-0.5 border transition-opacity select-none",
+        "text-[0.625rem] font-medium px-1 py-0.5 rounded truncate flex items-center gap-0.5 border transition-opacity select-none",
         isDraggable ? "cursor-grab active:cursor-grabbing hover:opacity-80" : "cursor-pointer hover:opacity-80",
         isRoninMode ? `${cfg.bg} ${cfg.color}` : `${cfg.bg} ${cfg.color}`
       )}
@@ -403,7 +403,7 @@ function DayCell({
           />
         ))}
         {filtered.length > 2 && (
-          <div className="text-[10px] text-muted-foreground px-1">+{filtered.length - 2}</div>
+          <div className="text-[0.625rem] text-muted-foreground px-1">+{filtered.length - 2}</div>
         )}
       </div>
     </div>
@@ -486,7 +486,7 @@ function WeekRow({
                 onClick={(e) => { e.stopPropagation(); onEventClick(bar.ev, e); }}
                 title={bar.ev.title}
                 className={cn(
-                  "h-full flex items-center px-1.5 text-white text-[10px] font-medium overflow-hidden select-none",
+                  "h-full flex items-center px-1.5 text-white text-[0.625rem] font-medium overflow-hidden select-none",
                   bar.isStart ? "rounded-l-full" : "",
                   bar.isEnd ? "rounded-r-full" : "",
                   isDraggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
@@ -1214,7 +1214,7 @@ function RightPanel({
                   style={{ background: getEventBarColor(ev, mode === "ronin") }}
                 />
                 <div className="text-center w-9 flex-shrink-0">
-                  <p className="text-[10px] text-muted-foreground uppercase font-medium">{format(start, "MMM")}</p>
+                  <p className="text-[0.625rem] text-muted-foreground uppercase font-medium">{format(start, "MMM")}</p>
                   <p className="text-lg font-bold leading-none text-foreground">{format(start, "d")}</p>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1229,16 +1229,16 @@ function RightPanel({
                   })()}
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     {mode === "ronin" ? (
-                      <Badge variant="outline" className={cn("text-[10px] border px-1 py-0", roninCfg.bg, roninCfg.color)}>
+                      <Badge variant="outline" className={cn("text-[0.625rem] border px-1 py-0", roninCfg.bg, roninCfg.color)}>
                         {roninCfg.label}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className={cn("text-[10px] border px-1 py-0", familyCfg.bg, familyCfg.color)}>
+                      <Badge variant="outline" className={cn("text-[0.625rem] border px-1 py-0", familyCfg.bg, familyCfg.color)}>
                         {familyCfg.label}
                       </Badge>
                     )}
                     {end && !isSameDay(start, end) && (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-[0.625rem] text-muted-foreground">
                         → {format(end, "MMM d")}
                       </span>
                     )}
@@ -1581,7 +1581,7 @@ export function CalendarSection() {
       </div>
 
       {/* Mode toggle + property filter */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted w-fit">
           {canSeeFamilyCal && (
             <button
@@ -1623,7 +1623,7 @@ export function CalendarSection() {
 
       {/* Ronin category tabs — staff excluded here, lives in the header button */}
       {mode === "ronin" && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex flex-wrap items-center gap-2 pb-1">
           {(Object.entries(RONIN_TAB_CONFIG) as [RoninTab, typeof RONIN_TAB_CONFIG[RoninTab]][])
             .filter(([key]) => {
               if ((key as string) === "staff") return false; // staff moved to header
@@ -1660,7 +1660,7 @@ export function CalendarSection() {
               >
                 {cfg.icon} {cfg.label}
                 {count > 0 && (
-                  <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", roninTab === key ? "bg-background/50" : "bg-muted")}>
+                  <span className={cn("rounded-full px-1.5 py-0.5 text-[0.625rem] font-bold", roninTab === key ? "bg-background/50" : "bg-muted")}>
                     {count}
                   </span>
                 )}
@@ -1696,7 +1696,7 @@ export function CalendarSection() {
           {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-border">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <div key={d} className="text-center text-[11px] text-muted-foreground font-medium py-2">{d}</div>
+              <div key={d} className="text-center text-[0.6875rem] text-muted-foreground font-medium py-2">{d}</div>
             ))}
           </div>
 

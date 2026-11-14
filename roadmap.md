@@ -2,8 +2,8 @@
 
 # Accessible text sizing replacement
 - [x] Commit 1: gentle shared baseline lift, 13px text floor, larger control targets and contrast; no database changes.
-- [ ] Commit 2: root/device scaling, persisted Aa/Profile controls and admin member setting; no database changes.
-- [ ] Test guards/settings and check named phone screens at 1.2/1.4; report two commit ids and real-iPhone limitations.
+- [x] Commit 2: root/device scaling, persisted Aa/Profile controls and admin member setting; no database changes.
+- [x] Test guards/settings (469 tests passed) and signed-in main phone screens at 1.2/1.4, plus read-only staff requester views/library sheet. Aa save survived reload; original setting restored. Live iPhone Dynamic Type remains unverified; PA queue and requester lists were empty in checked data.
 
 # Admin login-email change
 - [x] Add protected same-account email change, masked lookup and bilingual member-editor dialog; no database changes.

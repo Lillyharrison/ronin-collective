@@ -114,7 +114,7 @@ export function PdfExportModal({
               <QuickBtn onClick={() => setQuickRange("thisYear")}>This year</QuickBtn>
             </div>
             {start > end && (
-              <p className="text-[11px] text-destructive">Start date must be before end date.</p>
+              <p className="text-[0.6875rem] text-destructive">Start date must be before end date.</p>
             )}
           </div>
 
@@ -136,7 +136,7 @@ export function PdfExportModal({
               <Label htmlFor="include-tracking" className="text-sm font-medium cursor-pointer">
                 Include staff hours tracking
               </Label>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-[0.6875rem] text-muted-foreground mt-0.5">
                 Appends a compact summary table (days, hours, leave) after the calendars.
               </p>
             </div>
@@ -162,7 +162,7 @@ function QuickBtn({ children, onClick }: { children: React.ReactNode; onClick: (
     <button
       type="button"
       onClick={onClick}
-      className="px-2 py-1 text-[11px] rounded-md border border-border bg-background hover:bg-muted transition-colors"
+      className="px-2 py-1 text-[0.6875rem] rounded-md border border-border bg-background hover:bg-muted transition-colors"
     >
       {children}
     </button>
@@ -184,7 +184,7 @@ function LayoutOption({
       <RadioGroupItem value={value} id={`layout-${value}`} className="mt-0.5" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium leading-tight">{label}</p>
-        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{description}</p>
+        <p className="text-[0.6875rem] text-muted-foreground mt-0.5 leading-snug">{description}</p>
       </div>
     </label>
   );

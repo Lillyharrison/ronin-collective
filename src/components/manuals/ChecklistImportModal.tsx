@@ -222,7 +222,7 @@ export function ChecklistImportModal({ open, onClose, propertyId, onImported }: 
               <h2 className="font-semibold text-foreground text-sm truncate">
                 {language === "es" ? "Importar Lista" : "Import Checklist"}
               </h2>
-              <p className="text-[11px] text-muted-foreground truncate">
+              <p className="text-[0.6875rem] text-muted-foreground truncate">
                 {language === "es"
                   ? "Word, Excel, CSV o PDF · Ronin AI extrae los ítems"
                   : "Word, Excel, CSV, or PDF · Ronin AI extracts the items"}
@@ -265,7 +265,7 @@ export function ChecklistImportModal({ open, onClose, propertyId, onImported }: 
                     {language === "es" ? "Ronin AI está leyendo tu archivo…" : "Ronin AI is reading your file…"}
                   </p>
                   <p className="text-xs text-muted-foreground">{fileName}</p>
-                  <p className="text-[10px] text-muted-foreground/70 uppercase tracking-widest">
+                  <p className="text-[0.625rem] text-muted-foreground/70 uppercase tracking-widest">
                     {language === "es" ? "Esto puede tomar 10–30 segundos" : "This may take 10–30 seconds"}
                   </p>
                 </>
@@ -275,7 +275,7 @@ export function ChecklistImportModal({ open, onClose, propertyId, onImported }: 
                   <p className="text-sm text-foreground text-center font-medium">
                     {language === "es" ? "Arrastra tu archivo aquí, o toca para elegir" : "Drag your file here, or tap to choose"}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/70 uppercase tracking-widest">
+                  <p className="text-[0.625rem] text-muted-foreground/70 uppercase tracking-widest">
                     .docx · .xlsx · .csv · .pdf · 15 MB max
                   </p>
                 </>
@@ -348,13 +348,13 @@ export function ChecklistImportModal({ open, onClose, propertyId, onImported }: 
                     ))}
                     <button
                       onClick={() => addItem(dIdx)}
-                      className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-gold pl-7 pt-1"
+                      className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground hover:text-gold pl-7 pt-1"
                     >
                       <Plus size={11} /> {language === "es" ? "Agregar ítem" : "Add item"}
                     </button>
                   </div>
 
-                  <p className="text-[10px] text-muted-foreground/70 pl-6">
+                  <p className="text-[0.625rem] text-muted-foreground/70 pl-6">
                     {draft.items.length} {language === "es" ? "ítems" : "items"}
                     {draft.category === "activity" && draft.subcategory && ` · ${draft.subcategory}`}
                   </p>

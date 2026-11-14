@@ -26,6 +26,8 @@ import {
 import { ALL_QUICK_ACTIONS } from "./teamConstants";
 import { cn } from "@/lib/utils";
 import { LoginEmailRow, canChangeLoginEmail } from "./LoginEmailRow";
+import { TEXT_SIZES, TEXT_SIZE_LABELS, normalizeTextSize } from "@/lib/textSize";
+import { textSizeQueryKey } from "@/hooks/useTextSize";
 
 type TabKey = "details" | "contract" | "houses" | "access" | "home";
 
@@ -44,7 +46,7 @@ const inputCls = "h-10 bg-charcoal-light border-charcoal-light text-cream text-b
 function Field({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
     <label className={cn("block min-w-0", wide && "col-span-full")}>
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">{label}</span>
+      <span className="block text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground mb-1">{label}</span>
       {children}
     </label>
   );
@@ -77,6 +79,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const [draftEmail, setDraftEmail] = useState("");
 
   const [fullName, setFullName] = useState(member.full_name || "");
+  const [textSize, setTextSize] = useState(() => normalizeTextSize(member.text_size));
   const [jobTitle, setJobTitle] = useState(member.job_title || "");
   const [phone, setPhone] = useState(member.phone || "");
   const [level, setLevel] = useState<Level | "">(member.level as Level || "");
@@ -133,6 +136,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     invalidateTimeSettings(queryClient);
   }
   const contractValues = () => ({
+    ...(canEdit || isMasterAdmin ? { text_size: textSize } : {}),
     contracted_days_per_week: parseContractNumber(contractDays),
     contracted_hours_per_week: parseContractNumber(contractHours),
     annual_leave_days: parseContractNumber(leaveDays),
@@ -245,6 +249,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
         await writeClockSetting(member.id);
       }
       toast.success(isEN ? "Saved" : "Guardado");
+      void queryClient?.invalidateQueries({ queryKey: textSizeQueryKey(member.id) });
       onSaved({
         ...member, full_name: fullName, job_title: jobTitle, phone, level, department, notes,
         assigned_property_ids: assignedProps, section_permissions: perms, quick_actions: savedQuickActions, ...contractValues(),
@@ -375,7 +380,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   return (
     <div className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-stretch sm:items-center justify-center sm:p-4">
       <div role="dialog" aria-modal="true" aria-label={fullName || (isEN ? "Team member" : "Miembro del equipo")}
-        className="relative bg-charcoal w-full h-[100dvh] sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-2xl flex flex-col shadow-2xl sm:border border-charcoal-light overflow-hidden">
+        className="member-editor relative bg-charcoal w-full h-[90dvh] sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-2xl flex flex-col shadow-2xl sm:border border-charcoal-light overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-2 border-b border-charcoal-light shrink-0">
@@ -387,9 +392,9 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 min-w-0">
               <p className="text-cream font-semibold text-base leading-tight truncate">{fullName || (isDraft ? (isEN ? "Draft account" : "Cuenta borrador") : "—")}</p>
-              {isDraft && <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">{isEN ? "Draft" : "Borrador"}</span>}
+              {isDraft && <span className="shrink-0 px-1.5 py-0.5 rounded text-[0.625rem] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">{isEN ? "Draft" : "Borrador"}</span>}
             </div>
-            <p className="text-[11px] tracking-widest uppercase text-muted-foreground truncate">{isEN ? roleLabel.en : roleLabel.es}</p>
+            <p className="text-[0.6875rem] tracking-widest uppercase text-muted-foreground truncate">{isEN ? roleLabel.en : roleLabel.es}</p>
           </div>
           {isMasterAdmin && !isDraft && (
             <ViewAsButton targetUserId={member.id} targetName={member.full_name || "User"} onAfter={onClose} isEN={isEN} />
@@ -405,7 +410,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
         <div role="tablist" className="grid grid-cols-5 border-b border-charcoal-light shrink-0">
           {TABS.map(t => (
             <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-              className={cn("min-w-0 min-h-11 px-1 py-1.5 text-[13px] font-semibold leading-tight transition-colors border-b-2",
+              className={cn("min-w-0 min-h-11 px-1 py-1.5 text-[0.8125rem] font-semibold leading-tight transition-colors border-b-2",
                 tab === t.key ? "text-gold border-gold" : "text-muted-foreground border-transparent hover:text-cream")}>
               {t.label}{t.count !== undefined && <span className="ml-1 tabular-nums opacity-80">({t.count})</span>}
             </button>
@@ -475,6 +480,12 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                 <Input value={notes} onChange={e => setNotes(e.target.value)} disabled={!canEdit} className={inputCls} />
               </Field>
               {canChangeLoginEmail(canEdit || isMasterAdmin, isDraft, member.role) && <LoginEmailRow userId={member.id} isEN={isEN} />}
+              {(canEdit || isMasterAdmin) && <Field label={isEN ? "Text size" : "Tamaño del texto"} wide>
+                <select aria-label={isEN ? "Text size" : "Tamaño del texto"} value={textSize} onChange={e => setTextSize(normalizeTextSize(e.target.value))}
+                  className={cn(inputCls, "w-full rounded-md border px-2")}>
+                  {TEXT_SIZES.map(size => <option key={size} value={size}>{TEXT_SIZE_LABELS[size][isEN ? "en" : "es"]}</option>)}
+                </select>
+              </Field>}
             </div>
           )}
 
@@ -482,7 +493,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
             <div className="px-4 py-3 space-y-3">
               {showClock && (
                 <section aria-label={isEN ? "Pay" : "Pago"} className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{isEN ? "Paid" : "Pago"}</p>
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">{isEN ? "Paid" : "Pago"}</p>
                   <div role="radiogroup" aria-label={isEN ? "Paid" : "Pago"} className="grid grid-cols-3 rounded-lg border border-charcoal-light overflow-hidden">
                     {([["hourly", "By the hour", "Por hora"], ["daily", "By the day", "Por día"], ["payroll", "Through TriNet payroll", "Nómina TriNet"]] as [PayBasis, string, string][]).map(([k, en, es]) => (
                       <button key={k} role="radio" aria-checked={pay.pay_basis === k} disabled={!canEdit} onClick={() => editPay({ pay_basis: k })}
@@ -532,7 +543,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                 </section>
               )}
               <section aria-label={isEN ? "Contract" : "Contrato"} className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{isEN ? "Contract" : "Contrato"}</p>
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">{isEN ? "Contract" : "Contrato"}</p>
                 <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-x-3 gap-y-2 items-end">
                   <Field label={isEN ? "Days per week" : "Días por semana"}>
                   <Input type="number" inputMode="decimal" min={0} step="0.5" value={contractDays} onChange={e => setContractDays(e.target.value)} disabled={!canEdit} className={inputCls} />
@@ -601,7 +612,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                       <button aria-expanded={open} onClick={() => setOpenGroup(open ? null : g.key)}
                         className="flex-1 min-w-0 min-h-11 flex flex-col justify-center pl-2.5 text-left">
                         <span className={cn("text-sm font-semibold truncate", open ? "text-gold" : "text-cream")}>{isEN ? g.label : g.labelEs}</span>
-                        <span className="text-[11px] text-muted-foreground truncate">{isEN ? `${on} of ${total} on` : `${on} de ${total}`}</span>
+                        <span className="text-[0.6875rem] text-muted-foreground truncate">{isEN ? `${on} of ${total} on` : `${on} de ${total}`}</span>
                       </button>
                       <Switch checked={on > 0} disabled={!canEdit} aria-label={isEN ? `All of ${g.label}` : `Todo ${g.labelEs}`}
                         className={switchCls} onCheckedChange={v => setPerms(prev => setGroup(prev, g.sections, v))} />
@@ -609,7 +620,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                   );
                 })}
               </div>
-              <div className="flex items-center px-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <div className="flex items-center px-1 text-[0.625rem] uppercase tracking-wider text-muted-foreground">
                 <span className="flex-1 normal-case tracking-normal text-xs">{isEN ? "Home and Profile: always on" : "Inicio y Perfil: siempre activo"}</span>
                 {current && [isEN ? "See" : "Ver", isEN ? "Change" : "Editar", isEN ? "Alerts" : "Alertas"].map(h => <span key={h} className="w-12 text-center">{h}</span>)}
               </div>
@@ -825,7 +836,7 @@ function ViewAsButton({ targetUserId, targetName, onAfter, isEN }: {
         }
       }}
       title={isEN ? `View the app as ${targetName}` : `Ver la app como ${targetName}`}
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-gold/10 hover:bg-gold/20 text-gold border border-gold/40 transition-colors disabled:opacity-50"
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[0.6875rem] font-semibold uppercase tracking-wider bg-gold/10 hover:bg-gold/20 text-gold border border-gold/40 transition-colors disabled:opacity-50"
     >
       <Eye size={12} />
       {busy ? "…" : (isEN ? "View as" : "Ver como")}

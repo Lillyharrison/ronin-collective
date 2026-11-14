@@ -249,7 +249,7 @@ export default function SharedChecklist() {
             <button
               type="button"
               onClick={() => setLanguage(language === "es" ? "en" : "es")}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors border border-charcoal-light"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[0.6875rem] font-semibold uppercase tracking-wider text-cream/70 hover:text-cream hover:bg-charcoal-light transition-colors border border-charcoal-light"
               aria-label="Toggle language"
             >
               <Globe size={12} />

@@ -133,7 +133,7 @@ function SwipeRow({
           {isMuted
             ? <Bell size={20} className="text-white" />
             : <BellOff size={20} className="text-white" />}
-          <span className="text-[11px] text-white font-medium">
+          <span className="text-[0.6875rem] text-white font-medium">
             {isMuted
               ? (language === "es" ? "Activar" : "Unmute")
               : (language === "es" ? "Silenciar" : "Mute")}
@@ -149,7 +149,7 @@ function SwipeRow({
           {isArchived
             ? <ArchiveRestore size={20} className="text-white" />
             : <Archive size={20} className="text-white" />}
-          <span className="text-[11px] text-white font-medium">
+          <span className="text-[0.6875rem] text-white font-medium">
             {isArchived
               ? (language === "es" ? "Restaurar" : "Unarchive")
               : (language === "es" ? "Archivar" : "Archive")}
@@ -165,7 +165,7 @@ function SwipeRow({
           {isPinned
             ? <PinOff size={20} className="text-white" />
             : <Pin size={20} className="text-white" />}
-          <span className="text-[11px] text-white font-medium">
+          <span className="text-[0.6875rem] text-white font-medium">
             {isPinned
               ? (language === "es" ? "Desanclar" : "Unpin")
               : (language === "es" ? "Anclar" : "Pin")}
@@ -180,7 +180,7 @@ function SwipeRow({
             style={{ width: ACTION_WIDTH }}
           >
             <Trash2 size={20} className="text-destructive-foreground" />
-            <span className="text-[11px] text-destructive-foreground font-medium">
+            <span className="text-[0.6875rem] text-destructive-foreground font-medium">
               {language === "es" ? "Eliminar" : "Delete"}
             </span>
           </button>
@@ -229,7 +229,7 @@ function SwipeRow({
                 {getThreadName(thread)}
               </span>
               {thread.last_message_at && (
-                <span className={`text-[11px] whitespace-nowrap flex-shrink-0 leading-tight ${
+                <span className={`text-[0.6875rem] whitespace-nowrap flex-shrink-0 leading-tight ${
                   thread.unread_count > 0 && !isMuted ? "text-accent font-medium" : "text-muted-foreground"
                 }`}>
                   {formatThreadTime(thread.last_message_at, locale)}
@@ -243,12 +243,12 @@ function SwipeRow({
                   : (language === "es" ? "Sin mensajes" : "No messages yet")}
               </p>
               {thread.unread_count > 0 && !isMuted && (
-                <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-accent text-accent-foreground text-[0.625rem] font-bold flex items-center justify-center px-1">
                   {thread.unread_count > 99 ? "99+" : thread.unread_count}
                 </span>
               )}
               {thread.unread_count > 0 && isMuted && (
-                <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-muted-foreground/30 text-muted-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                <span className="flex-shrink-0 min-w-[20px] h-5 rounded-full bg-muted-foreground/30 text-muted-foreground text-[0.625rem] font-bold flex items-center justify-center px-1">
                   {thread.unread_count > 99 ? "99+" : thread.unread_count}
                 </span>
               )}

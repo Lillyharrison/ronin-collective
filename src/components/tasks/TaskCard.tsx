@@ -63,17 +63,17 @@ export function TaskCard({ task, onClick }: Props) {
       {/* Top row: badges */}
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         {task.ai_suggested && (
-          <span className="text-[9px] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-1.5 py-0.5 rounded-full leading-none">
+          <span className="text-[0.5625rem] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-1.5 py-0.5 rounded-full leading-none">
             ✦ RONIN
           </span>
         )}
         {task.is_draft && (
-          <span className="text-[9px] font-bold bg-muted text-muted-foreground border border-border px-1.5 py-0.5 rounded-full leading-none">
+          <span className="text-[0.5625rem] font-bold bg-muted text-muted-foreground border border-border px-1.5 py-0.5 rounded-full leading-none">
             DRAFT
           </span>
         )}
         {task.priority === 1 && (
-          <span className="flex items-center gap-0.5 text-[9px] font-bold text-status-urgent">
+          <span className="flex items-center gap-0.5 text-[0.5625rem] font-bold text-status-urgent">
             <AlertTriangle size={9} /> {isL ? "URGENTE" : "URGENT"}
           </span>
         )}
@@ -90,33 +90,33 @@ export function TaskCard({ task, onClick }: Props) {
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
         {task.due_date && (
-          <span className={cn("flex items-center gap-0.5 text-[10px]", isOverdue ? "text-status-urgent" : "text-muted-foreground")}>
+          <span className={cn("flex items-center gap-0.5 text-[0.625rem]", isOverdue ? "text-status-urgent" : "text-muted-foreground")}>
             <Clock size={9} />
             {plainDateToLocal(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </span>
         )}
         {task.property?.name && (
-          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-0.5 text-[0.625rem] text-muted-foreground">
             <MapPin size={9} /> {task.property.name}
           </span>
         )}
         {task.assignee?.full_name && (
-          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-0.5 text-[0.625rem] text-muted-foreground">
             <User size={9} /> {task.assignee.full_name.split(" ")[0]}
           </span>
         )}
         {(task.assigned_department || task.assigned_role) && !task.assignee?.full_name && (
-          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-0.5 text-[0.625rem] text-muted-foreground">
             <User size={9} /> {task.assigned_department || task.assigned_role}
           </span>
         )}
         {task.linked_checklist && (
-          <span className="flex items-center gap-0.5 text-[10px] text-[hsl(var(--gold))]">
+          <span className="flex items-center gap-0.5 text-[0.625rem] text-[hsl(var(--gold))]">
             <BookOpen size={9} /> {task.linked_checklist.title}
           </span>
         )}
         {hasAttachments && (
-          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-0.5 text-[0.625rem] text-muted-foreground">
             <Paperclip size={9} /> {task.attachments?.length}
           </span>
         )}

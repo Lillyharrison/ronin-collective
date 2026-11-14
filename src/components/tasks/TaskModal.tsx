@@ -404,12 +404,12 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
             <div className="flex items-center gap-2">
               {task.ai_suggested && (
-                <span className="text-[10px] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-2 py-0.5 rounded-full">
+                <span className="text-[0.625rem] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-2 py-0.5 rounded-full">
                   ✦ RONIN
                 </span>
               )}
               <span className={cn(
-                "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                "text-[0.625rem] font-semibold px-2 py-0.5 rounded-full border",
                 task.status === "urgent"    ? "bg-[hsl(var(--status-urgent)/0.12)] text-status-urgent border-status-urgent/30" :
                 task.status === "completed" ? "bg-[hsl(var(--status-done)/0.12)] text-status-done border-[hsl(var(--status-done)/0.3)]" :
                 task.status === "in_progress" ? "bg-accent/10 text-accent border-accent/30" :
@@ -432,7 +432,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             {task.id && <EntryAcknowledgement kind="task" entry={{ ...task, id: task.id }} />}
 
             {task.category === "order" && (
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[hsl(var(--gold))]">
+              <div className="flex items-center gap-1.5 text-[0.625rem] font-semibold text-[hsl(var(--gold))]">
                 <ShoppingCart size={11} /> {isL ? "PEDIDO / ENTREGA" : "ORDER / DELIVERY"}
               </div>
             )}
@@ -469,7 +469,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
             {(task.attachments ?? []).filter((a: any) => a.type !== "tracking").length > 0 && (
               <div>
-                <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
+                <p className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
                   {isL ? "Adjuntos" : "Attachments"}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -479,7 +479,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                       : <a key={i} href={a.url} target="_blank" rel="noreferrer"
                           className="w-16 h-16 rounded-xl border border-border bg-muted flex flex-col items-center justify-center gap-1">
                           <Paperclip size={16} className="text-muted-foreground" />
-                          <span className="text-[8px] text-muted-foreground truncate w-12 text-center">{a.name}</span>
+                          <span className="text-[0.5rem] text-muted-foreground truncate w-12 text-center">{a.name}</span>
                         </a>
                   ))}
                 </div>
@@ -505,13 +505,13 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                     {isL ? "Confirmar pedido colocado" : "Confirm order placed"}
                   </p>
                 </div>
-                <p className="text-[11px] text-muted-foreground -mt-1">
+                <p className="text-[0.6875rem] text-muted-foreground -mt-1">
                   {isL ? "Añade los detalles de envío (opcional pero recomendado)" : "Add shipping details — optional but recommended"}
                 </p>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
+                    <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
                       {isL ? "Transportista" : "Carrier"}
                     </label>
                     <input
@@ -522,7 +522,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
+                    <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
                       {isL ? "N° Seguimiento" : "Tracking #"}
                     </label>
                     <input
@@ -535,7 +535,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
+                  <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
                     {isL ? "Enlace de seguimiento" : "Tracking link"}
                   </label>
                   <input
@@ -548,7 +548,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
+                    <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
                       {isL ? "Entrega estimada" : "Est. Delivery"}
                     </label>
                     <input
@@ -559,7 +559,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
+                    <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1 block">
                       {isL ? "Lista de empaque" : "Packing list"}
                     </label>
                     <input
@@ -653,12 +653,12 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
               </button>
             )}
             {task?.ai_suggested && (
-              <span className="text-[10px] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-2 py-0.5 rounded-full">
+              <span className="text-[0.625rem] font-bold bg-[hsl(var(--gold)/0.15)] text-[hsl(var(--gold))] border border-[hsl(var(--gold)/0.3)] px-2 py-0.5 rounded-full">
                 ✦ RONIN
               </span>
             )}
             {isDraft && (
-              <span className="text-[10px] font-bold bg-muted text-muted-foreground border border-border px-2 py-0.5 rounded-full">
+              <span className="text-[0.625rem] font-bold bg-muted text-muted-foreground border border-border px-2 py-0.5 rounded-full">
                 DRAFT
               </span>
             )}
@@ -697,7 +697,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
           {/* Priority + Due Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 block">
+              <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 block">
                 {isL ? "Prioridad" : "Priority"}
               </label>
               <div className="flex gap-1">
@@ -706,7 +706,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                     key={p.value}
                     onClick={() => setPriority(p.value)}
                     className={cn(
-                      "flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border text-[10px] font-medium transition-all",
+                      "flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border text-[0.625rem] font-medium transition-all",
                       priority === p.value
                         ? p.value === 1
                           ? "bg-[hsl(var(--status-urgent)/0.15)] border-status-urgent/40 text-status-urgent"
@@ -720,7 +720,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
               </div>
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 block">
+              <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 block">
                 {isL ? "Vence" : "Due Date"}
               </label>
               <div className="relative">
@@ -740,7 +740,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             <ShoppingCart size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
             <div className="flex-1">
               <p className="text-xs font-semibold text-foreground">{isL ? "Es un pedido / compra" : "This is an order / purchase"}</p>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[0.625rem] text-muted-foreground">
                 {isOrder
                   ? (isL ? "Aparecerá en Pedidos como 'No colocado'" : "Will appear in Orders as 'Not placed'")
                   : (isL ? "Activa para rastrear en la sección Pedidos" : "Enable to track in the Orders section")}
@@ -758,7 +758,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
           {/* Property */}
           <div>
-            <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
               <MapPin size={10} /> {isL ? "Propiedad" : "Property"}
             </label>
             <select
@@ -773,7 +773,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
           {/* Assign to */}
           <div className="space-y-2">
-            <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1">
+            <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1">
               <User size={10} /> {isL ? "Asignar a" : "Assign to"}
             </label>
             <select
@@ -810,7 +810,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
           {/* Link checklist */}
           <div>
-            <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5 flex items-center gap-1">
               <BookOpen size={10} /> {isL ? "Lista vinculada" : "Linked Checklist"}
             </label>
             <select
@@ -822,7 +822,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
               {checklists.map(c => <option key={c.id} value={c.id}>{c.icon} {c.title}</option>)}
             </select>
             {selectedChecklist && (
-              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-[hsl(var(--gold))]">
+              <div className="mt-1.5 flex items-center gap-1.5 text-[0.6875rem] text-[hsl(var(--gold))]">
                 <BookOpen size={10} /> Linked: {selectedChecklist.icon} {selectedChecklist.title}
               </div>
             )}
@@ -838,7 +838,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
           {/* Attachments */}
           <div>
-            <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2 flex items-center gap-1">
+            <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-2 flex items-center gap-1">
               <Paperclip size={10} /> {isL ? "Adjuntos" : "Attachments"}
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -849,7 +849,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                   ) : (
                     <div className="w-16 h-16 rounded-xl border border-border bg-muted flex flex-col items-center justify-center gap-1">
                       <Paperclip size={16} className="text-muted-foreground" />
-                      <span className="text-[8px] text-muted-foreground truncate w-12 text-center">{a.name}</span>
+                      <span className="text-[0.5rem] text-muted-foreground truncate w-12 text-center">{a.name}</span>
                     </div>
                   )}
                   <button
@@ -866,7 +866,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
                 className="w-16 h-16 rounded-xl border border-dashed border-border bg-muted flex flex-col items-center justify-center gap-1 hover:border-primary/50 transition-colors"
               >
                 <ImageIcon size={16} className="text-muted-foreground" />
-                <span className="text-[9px] text-muted-foreground">{uploading ? "…" : isL ? "Añadir" : "Add"}</span>
+                <span className="text-[0.5625rem] text-muted-foreground">{uploading ? "…" : isL ? "Añadir" : "Add"}</span>
               </button>
             </div>
             <input
@@ -883,7 +883,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
             <div className="flex items-center justify-between px-3 py-2.5 bg-muted/50 border border-border rounded-xl">
               <div>
                 <p className="text-xs font-medium text-foreground">{isL ? "Guardar como borrador" : "Save as draft"}</p>
-                <p className="text-[10px] text-muted-foreground">{isL ? "No visible para el equipo hasta publicar" : "Not visible to staff until published"}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{isL ? "No visible para el equipo hasta publicar" : "Not visible to staff until published"}</p>
               </div>
               <button
                 onClick={() => setIsDraft(v => !v)}

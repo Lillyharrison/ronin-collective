@@ -183,7 +183,7 @@ export default function SharedStaffSchedule() {
             </div>
           </div>
           {data.label && <p className="text-sm text-muted-foreground">{data.label}</p>}
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             Editable range: {format(parseISO(data.range_start), "d MMM yyyy")} – {format(parseISO(data.range_end), "d MMM yyyy")}
           </p>
         </header>
@@ -203,7 +203,7 @@ export default function SharedStaffSchedule() {
                       isToday(day) && "bg-primary/5"
                     )}
                   >
-                    <p className={cn("text-[10px] font-medium text-muted-foreground uppercase tracking-wide", isToday(day) && "text-primary")}>
+                    <p className={cn("text-[0.625rem] font-medium text-muted-foreground uppercase tracking-wide", isToday(day) && "text-primary")}>
                       {format(day, "EEE")}
                     </p>
                     <p className={cn(
@@ -223,7 +223,7 @@ export default function SharedStaffSchedule() {
                     <div className="grid" style={{ gridTemplateColumns: gridTemplate }}>
                       <div className="px-1.5 py-2 border-r border-border flex items-center gap-1.5 min-w-0">
                         <div className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
+                          "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[0.625rem] font-semibold",
                           person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
                         )}>
                           {getDisplayName(person, "?").charAt(0).toUpperCase()}
@@ -233,7 +233,7 @@ export default function SharedStaffSchedule() {
                             {getDisplayName(person)}
                           </p>
                           {person.job_title && (
-                            <p className="text-[9px] text-muted-foreground truncate">{person.job_title}</p>
+                            <p className="text-[0.5625rem] text-muted-foreground truncate">{person.job_title}</p>
                           )}
                         </div>
                       </div>
@@ -268,7 +268,7 @@ export default function SharedStaffSchedule() {
                               ))}
                               <button
                                 onClick={() => setEditing({ staff_id: person.id, shift_date: dateStr })}
-                                className="rounded px-1 py-0.5 text-[10px] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-colors"
+                                className="rounded px-1 py-0.5 text-[0.625rem] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-colors"
                               >
                                 <Plus size={9} />
                               </button>

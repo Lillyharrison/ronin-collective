@@ -204,7 +204,7 @@ export function ChatInfoPanel({
                     onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setRenaming(false); }}
                     className="text-base font-semibold text-foreground bg-muted/50 border border-border rounded-lg px-3 py-1 outline-none focus:border-accent text-center"
-                    style={{ fontSize: "16px", maxWidth: "200px" }}
+                    style={{ fontSize: "1rem", maxWidth: "200px" }}
                   />
                   <button
                     onClick={handleRename}
@@ -269,7 +269,7 @@ export function ChatInfoPanel({
           {/* ── Participants (group & system_ai threads) ── */}
           {(threadType === "group" || threadType === "system_ai") && (
             <div className="border-b border-border">
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground px-4 pt-4 pb-2">
+              <p className="text-[0.625rem] font-semibold tracking-widest uppercase text-muted-foreground px-4 pt-4 pb-2">
                 Members
               </p>
 
@@ -314,7 +314,7 @@ export function ChatInfoPanel({
                             <img src={p.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
                           ) : (
                             <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                              <span className="text-[9px] font-semibold text-muted-foreground">{getInitials(p.full_name)}</span>
+                              <span className="text-[0.5625rem] font-semibold text-muted-foreground">{getInitials(p.full_name)}</span>
                             </div>
                           )}
                           <span className="text-sm text-foreground truncate">{p.full_name || "Unknown"}</span>
@@ -339,7 +339,7 @@ export function ChatInfoPanel({
                   )}
                   <span className="text-sm text-foreground">{p.full_name ?? "Unknown"}</span>
                   {p.id === currentUserId && (
-                    <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">You</span>
+                    <span className="ml-auto text-[0.625rem] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">You</span>
                   )}
                 </div>
               ))}
@@ -414,7 +414,7 @@ export function ChatInfoPanel({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs text-accent truncate group-hover:underline">{url}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                             {getParticipantName(m.sender_id)} · {format(new Date(m.created_at), "d MMM")}
                           </p>
                         </div>
@@ -443,7 +443,7 @@ export function ChatInfoPanel({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium text-foreground truncate">{fileName}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                             {getParticipantName(m.sender_id)} · {format(new Date(m.created_at), "d MMM")}
                           </p>
                         </div>

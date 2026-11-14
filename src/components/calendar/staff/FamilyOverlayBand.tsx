@@ -33,7 +33,7 @@ export function FamilyOverlayBand({
         style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
       >
         <div
-          className="px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground border-r border-border flex items-center gap-1 sticky left-0 bg-card z-10"
+          className="px-3 py-1.5 text-[0.5625rem] font-semibold uppercase tracking-wider text-muted-foreground border-r border-border flex items-center gap-1 sticky left-0 bg-card z-10"
           style={{ gridRow: `1 / span ${groups.size}` }}
         >
           <PlaneTakeoff size={10} /> Family

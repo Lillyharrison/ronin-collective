@@ -57,7 +57,7 @@ export function LeavePanel({
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
             All Leave Requests
             {pending.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px]">
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[0.625rem]">
                 {pending.length} pending
               </span>
             )}

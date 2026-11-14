@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { OfflineSyncProvider } from "@/hooks/useOfflineSync";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { TextSizeProvider } from "@/hooks/useTextSize";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -70,6 +71,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <TextSizeProvider>
           {/* PermissionsProvider inside AuthProvider — runs ONE set of DB queries
               and shares results via context to all 30+ consuming components. */}
           <OfflineSyncProvider>
@@ -95,6 +97,7 @@ const App = () => (
             </LanguageProvider>
           </PermissionsProvider>
           </OfflineSyncProvider>
+          </TextSizeProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

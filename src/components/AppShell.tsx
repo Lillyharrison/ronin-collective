@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -135,10 +135,17 @@ function PushPromptBanner({ userId }: { userId: string }) {
   const { supported, permission, subscribed, requestAndSubscribe } = usePushNotifications(userId);
   const [dismissed, setDismissed] = useState(() => localStorage.getItem("push-prompt-dismissed") === "1");
   const [requesting, setRequesting] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   const visible = supported && permission !== "denied" && permission !== "granted" && !subscribed && !dismissed;
 
   useEffect(() => {
+    const banner = bannerRef.current;
+    if (visible && banner) {
+      const measure = () => document.documentElement.style.setProperty("--push-banner-h", `${banner.getBoundingClientRect().height}px`);
+      const observer = new ResizeObserver(measure); observer.observe(banner); measure();
+      return () => { observer.disconnect(); document.documentElement.style.setProperty("--push-banner-h", "0px"); };
+    }
     document.documentElement.style.setProperty(
       "--push-banner-h",
       visible ? `${PUSH_BANNER_HEIGHT}px` : "0px",
@@ -150,10 +157,10 @@ function PushPromptBanner({ userId }: { userId: string }) {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-[70] flex items-center gap-3 px-4 bg-gold/95 text-charcoal"
+      ref={bannerRef}
+      className="fixed top-0 left-0 right-0 z-[70] flex items-center gap-3 px-4 py-2 min-h-10 bg-gold/95 text-charcoal"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
-        height: `calc(${PUSH_BANNER_HEIGHT}px + env(safe-area-inset-top, 0px))`,
       }}
     >
       <Bell size={16} className="shrink-0" />
@@ -259,7 +266,7 @@ export function AppShell() {
       <main
         className={activeSection === "messages" ? "h-[100dvh] overflow-hidden" : "min-h-screen pb-20"}
         style={{
-          paddingTop: "calc(56px + env(safe-area-inset-top, 0px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))",
+          paddingTop: "calc(var(--app-header-h, 56px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))",
         }}
       >
         <Suspense fallback={<SectionSkeleton />}>

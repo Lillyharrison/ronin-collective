@@ -513,7 +513,7 @@ export function Dashboard() {
                   key={opt.value}
                   onClick={() => setTaglineDuration(opt.value)}
                   className={cn(
-                    "px-2 py-1 rounded-md text-[10px] font-semibold border transition-colors",
+                    "px-2 py-1 rounded-md text-[0.625rem] font-semibold border transition-colors",
                     taglineDuration === opt.value
                       ? "bg-gold/20 border-gold/50 text-gold"
                       : "border-charcoal-light text-cream/50 hover:border-gold/30"
@@ -570,14 +570,14 @@ export function Dashboard() {
           </span>
           <Activity size={14} className="text-gold" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="dashboard-snapshot-grid grid grid-cols-2 gap-3">
           <button
             onClick={() => setActiveSection("tasks")}
             className="rounded-lg bg-[hsl(var(--status-done)/0.08)] border border-[hsl(var(--status-done)/0.2)] px-3 py-2.5 text-left hover:bg-[hsl(var(--status-done)/0.14)] transition-colors active:scale-95"
           >
             <div className="flex items-center gap-2 mb-1">
               <CheckSquare size={14} className="text-status-done" />
-              <span className="text-[10px] uppercase tracking-wider text-status-done font-semibold">
+              <span className="text-[0.625rem] uppercase tracking-wider text-status-done font-semibold">
                 {language === "es" ? "Pendientes" : "My Tasks"}
               </span>
             </div>
@@ -594,11 +594,11 @@ export function Dashboard() {
           >
             <div className="flex items-center gap-2 mb-1">
               <Shield size={14} className="text-[hsl(var(--status-urgent))]" />
-              <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--status-urgent))] font-semibold">
+              <span className="text-[0.625rem] uppercase tracking-wider text-[hsl(var(--status-urgent))] font-semibold">
                 {language === "es" ? "Alertas" : "Alerts"}
               </span>
               {activeRules.length > 0 && (
-                <span className="ml-auto text-[9px] font-bold bg-[hsl(var(--status-urgent))] text-white px-1.5 py-0.5 rounded-full">
+                <span className="ml-auto text-[0.5625rem] font-bold bg-[hsl(var(--status-urgent))] text-white px-1.5 py-0.5 rounded-full">
                   {activeRules.length}
                 </span>
               )}
@@ -609,7 +609,7 @@ export function Dashboard() {
                 : `${activeRules.length} ${language === "es" ? "activa(s)" : "active"}`}
             </p>
             {activeRules.length > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5 truncate">
                 {activeRules[0].icon} {activeRules[0].title}
                 {activeRules.length > 1 ? ` +${activeRules.length - 1}` : ""}
               </p>
@@ -662,7 +662,7 @@ export function Dashboard() {
               {language === "es" ? "Notificaciones" : "Notifications"}
             </span>
             {dashNotifs.length > 0 && (
-              <span className="text-[10px] bg-status-urgent text-white font-bold px-1.5 py-0.5 rounded-full">
+              <span className="text-[0.625rem] bg-status-urgent text-white font-bold px-1.5 py-0.5 rounded-full">
                 {dashNotifs.length}
               </span>
             )}
@@ -670,7 +670,7 @@ export function Dashboard() {
           {dashNotifs.length > 0 && (
             <button
               onClick={() => dashNotifs.forEach(n => dismissNotif(n.id, n.user_id))}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[0.625rem] text-muted-foreground hover:text-foreground transition-colors"
             >
               {language === "es" ? "Limpiar todas" : "Clear all"}
             </button>
@@ -712,7 +712,7 @@ export function Dashboard() {
                       )}
                       {n.title}
                     </p>
-                    <p className="text-[10px] text-muted-foreground leading-none mt-0.5 truncate">
+                    <p className="text-[0.625rem] text-muted-foreground leading-none mt-0.5 truncate">
                       {n.body ? `${n.body} · ` : ""}Added {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </p>
                     <NotificationAcknowledgement notification={n} hideAction />
@@ -800,7 +800,7 @@ export function Dashboard() {
                 {language === "es" ? "Feed Global" : "Global Feed"}
               </span>
             </div>
-            <span className="text-cream/30 text-[10px] flex items-center gap-1">
+            <span className="text-cream/30 text-[0.625rem] flex items-center gap-1">
               <Zap size={10} /> {language === "es" ? "En vivo" : "Live"}
             </span>
           </div>
@@ -820,7 +820,7 @@ export function Dashboard() {
                   <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${eventDotColor(event.event_type)}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-cream/80 text-xs truncate">{friendlyEventLabel(event, language)}</p>
-                    <p className="text-cream/30 text-[10px] mt-0.5">
+                    <p className="text-cream/30 text-[0.625rem] mt-0.5">
                       {new Date(event.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>

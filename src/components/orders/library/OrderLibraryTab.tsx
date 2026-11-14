@@ -197,7 +197,7 @@ export function OrderLibraryTab() {
       </div>
 
       {/* Legend */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 text-[0.6875rem] text-muted-foreground">
         <span className="font-semibold uppercase tracking-wider text-muted-foreground/80">
           {isL ? "Clave" : "Key"}:
         </span>
@@ -226,7 +226,7 @@ export function OrderLibraryTab() {
             key={s}
             onClick={() => setStatusFilter(s)}
             className={cn(
-              "whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold border transition-colors",
+              "whitespace-nowrap rounded-full px-3 py-1.5 text-[0.6875rem] font-semibold border transition-colors",
               statusFilter === s
                 ? "bg-foreground text-background border-foreground"
                 : "bg-muted/40 text-muted-foreground border-border hover:bg-muted",
@@ -368,7 +368,7 @@ export function OrderLibraryTab() {
               if (selectedIds.size === filtered.length) setSelectedIds(new Set());
               else setSelectedIds(new Set(filtered.map((i) => i.id)));
             }}
-            className="text-[11px] font-semibold px-2 py-1 rounded-full hover:bg-accent text-muted-foreground"
+            className="text-[0.6875rem] font-semibold px-2 py-1 rounded-full hover:bg-accent text-muted-foreground"
           >
             {selectedIds.size === filtered.length && filtered.length > 0
               ? isL ? "Ninguno" : "None"

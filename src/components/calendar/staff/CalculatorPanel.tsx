@@ -11,14 +11,14 @@ export function CalculatorPanel({
   const leaveRemaining = Math.max(0, stats.leaveAllowance - stats.leaveTakenYTD);
   const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
     <div className="flex-1 min-w-[120px] rounded-lg border border-border bg-card px-3 py-2">
-      <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
+      <p className="text-[0.5625rem] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
       <p className="text-sm font-bold text-foreground mt-0.5">{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground leading-tight">{sub}</p>}
+      {sub && <p className="text-[0.625rem] text-muted-foreground leading-tight">{sub}</p>}
     </div>
   );
   return (
     <div className="rounded-2xl border border-border bg-muted/10 px-3 py-2.5 mb-2">
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">
+      <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground font-semibold mb-2">
         {personName} · This month
       </p>
       <div className="flex flex-wrap gap-2">

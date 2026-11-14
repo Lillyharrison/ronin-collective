@@ -85,7 +85,7 @@ export function EntryAcknowledgement({ kind, entry, compact = false }: Props) {
   if (!needsAcknowledgement(current)) return null;
   if (sender === viewer.userId) return <p className="text-xs text-muted-foreground">{es ? "Enviado. Esperando a que el equipo lo vea" : "Sent. Waiting for the team to see it"}</p>;
   if (!allowed) return null;
-  if (compact) return <span className="inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-[hsl(var(--timesheet-review-tint))] text-[hsl(var(--timesheet-review-text))]">{es ? "Nuevo" : "New"}</span>;
+  if (compact) return <span className="inline-flex rounded-full px-1.5 py-0.5 text-[0.625rem] font-medium bg-[hsl(var(--timesheet-review-tint))] text-[hsl(var(--timesheet-review-text))]">{es ? "Nuevo" : "New"}</span>;
   return <div className="space-y-2" onClick={e => e.stopPropagation()}>
     <div className="flex flex-wrap items-center gap-2">
       <Button variant="outline" className="min-h-11" disabled={busy} onClick={acknowledge}>{es ? "Enterado" : "Acknowledge"}</Button>

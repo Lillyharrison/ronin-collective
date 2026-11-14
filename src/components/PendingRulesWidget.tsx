@@ -163,7 +163,7 @@ export function PendingRulesWidget() {
         {count > 0 ? (
           <>
             <span className="text-xs font-bold">{count} pending rule{count !== 1 ? "s" : ""}</span>
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive rounded-full text-[9px] text-white font-bold flex items-center justify-center">
+            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive rounded-full text-[0.5625rem] text-white font-bold flex items-center justify-center">
               {count}
             </span>
           </>
@@ -184,14 +184,14 @@ export function PendingRulesWidget() {
                 <Clock size={14} className="text-[hsl(var(--status-pending))]" />
                 <span className="text-sm font-semibold">Pending Approvals</span>
                 {count > 0 && (
-                  <span className="bg-[hsl(var(--status-pending))] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  <span className="bg-[hsl(var(--status-pending))] text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full">
                     {count}
                   </span>
                 )}
               </div>
               <button
                 onClick={() => { setOpen(false); setActiveSection("rules"); }}
-                className="text-[10px] text-gold hover:underline"
+                className="text-[0.625rem] text-gold hover:underline"
               >
                 View all rules →
               </button>
@@ -225,20 +225,20 @@ export function PendingRulesWidget() {
                           )}
                           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                             {rule.submitterName && (
-                              <span className="text-[10px] text-muted-foreground">
+                              <span className="text-[0.625rem] text-muted-foreground">
                                 From {rule.submitterName}
                               </span>
                             )}
-                            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                            <span className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
                               {SOURCE_LABEL[rule.submitted_source] ?? rule.submitted_source}
                             </span>
                             {rule.propertyName && (
-                              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                              <span className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
                                 {rule.propertyName}
                               </span>
                             )}
                             {rule.is_universal && (
-                              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                              <span className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
                                 Universal
                               </span>
                             )}

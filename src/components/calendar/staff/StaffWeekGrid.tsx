@@ -65,7 +65,7 @@ export function StaffWeekGrid({
               isToday(day) && "bg-primary/5"
             )}
           >
-            <p className={cn("text-[10px] font-medium text-muted-foreground uppercase tracking-wide", isToday(day) && "text-primary")}>
+            <p className={cn("text-[0.625rem] font-medium text-muted-foreground uppercase tracking-wide", isToday(day) && "text-primary")}>
               {format(day, "EEE")}
             </p>
             <p className={cn(
@@ -75,7 +75,7 @@ export function StaffWeekGrid({
               {format(day, "d")}
             </p>
             {getPublicHoliday(day) && (
-              <p className="text-[10px] leading-tight text-amber-400 mt-0.5 px-0.5" title={HOLIDAY_HINT}>🎉 {getPublicHoliday(day)}</p>
+              <p className="text-[0.625rem] leading-tight text-amber-400 mt-0.5 px-0.5" title={HOLIDAY_HINT}>🎉 {getPublicHoliday(day)}</p>
             )}
           </div>
         ))}
@@ -126,7 +126,7 @@ export function StaffWeekGrid({
                     </div>
                   )}
                   <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
+                    "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[0.625rem] font-semibold",
                     person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
                   )}>
                     {getDisplayName(person, "?").charAt(0).toUpperCase()}
@@ -141,7 +141,7 @@ export function StaffWeekGrid({
                       </p>
                     </div>
                     {person.job_title && (
-                      <p className="text-[9px] text-muted-foreground truncate">{person.job_title}</p>
+                      <p className="text-[0.5625rem] text-muted-foreground truncate">{person.job_title}</p>
                     )}
                   </div>
                   {canEdit && (

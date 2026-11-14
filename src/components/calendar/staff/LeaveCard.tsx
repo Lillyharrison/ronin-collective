@@ -61,7 +61,7 @@ export function LeaveCard({
             )}
           </div>
         </div>
-        <span className={cn("flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize flex-shrink-0", statusStyle)}>
+        <span className={cn("flex items-center gap-1 text-[0.625rem] font-medium px-2 py-0.5 rounded-full border capitalize flex-shrink-0", statusStyle)}>
           {statusIcon}
           {req.status}
         </span>

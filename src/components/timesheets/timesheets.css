@@ -1,21 +1,21 @@
-.timesheet-input { display: block; width: 100%; min-height: 44px; border: 1px solid hsl(var(--input)); background: hsl(var(--background)); color: hsl(var(--foreground)); border-radius: 6px; padding: 8px 12px; font-size: 16px; margin-top: 4px; }
+.timesheet-input { display: block; width: 100%; min-height: 44px; border: 1px solid hsl(var(--input)); background: hsl(var(--background)); color: hsl(var(--foreground)); border-radius: 6px; padding: 8px 12px; font-size: 1rem; margin-top: 4px; }
 .timesheets-surface { background: hsl(var(--background)); color: hsl(var(--foreground)); }
 .timesheet-green { color: hsl(var(--timesheet-fine-text)); }
 .timesheet-attention { color: hsl(var(--timesheet-review-text)); }
 .timesheet-issued { color: hsl(var(--timesheet-blue-text)); }
-.timesheet-month { border-radius: 999px; min-height: 44px; background: hsl(var(--card)); font-size: 14px; padding-inline: 12px; }
+.timesheet-month { border-radius: 999px; min-height: 44px; background: hsl(var(--card)); font-size: 0.875rem; padding-inline: 12px; }
 .timesheet-summary { background: hsl(var(--card)); color: hsl(var(--card-foreground)); border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 20px; }
-.timesheet-status { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; line-height: 18px; font-weight: 500; border-radius: 999px; padding: 4px 8px; max-width: 100%; white-space: normal; }
+.timesheet-status { display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.75rem; line-height: 1.125rem; font-weight: 500; border-radius: 999px; padding: 4px 8px; max-width: 100%; white-space: normal; }
 .timesheet-status-review, .timesheet-warning { background: hsl(var(--timesheet-review-tint)); color: hsl(var(--timesheet-review-text)); }
 .timesheet-status-ready, .timesheet-status-payroll { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
 .timesheet-status-issued { background: hsl(var(--timesheet-blue-tint)); color: hsl(var(--timesheet-blue-text)); }
 .timesheet-status-paid { background: hsl(var(--timesheet-fine-tint)); color: hsl(var(--timesheet-fine-text)); }
-.timesheet-warning { display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; font-size: 12px; line-height: 18px; padding: 4px 7px; max-width: 100%; }
-.timesheet-visit { display: flex; width: 100%; align-items: center; gap: 8px; height: auto; min-height: 82px; padding: 14px 12px; text-align: left; white-space: normal; font-size: 16px; font-weight: 400; background: hsl(var(--card)); color: hsl(var(--card-foreground)); border: 1px solid hsl(var(--border)); border-left-width: 5px; border-radius: 6px; }
+.timesheet-warning { display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; font-size: 0.75rem; line-height: 1.125rem; padding: 4px 7px; max-width: 100%; }
+.timesheet-visit { display: flex; width: 100%; align-items: center; gap: 8px; height: auto; min-height: 82px; padding: 14px 12px; text-align: left; white-space: normal; font-size: 1rem; font-weight: 400; background: hsl(var(--card)); color: hsl(var(--card-foreground)); border: 1px solid hsl(var(--border)); border-left-width: 5px; border-radius: 6px; }
 .timesheet-visit-green { border-left-color: hsl(var(--timesheet-fine)); }
 .timesheet-visit-amber { border-left-color: hsl(var(--timesheet-review)); }
 .timesheet-visit-grey { border-left-color: hsl(var(--timesheet-approved)); }
-.timesheet-person { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(70px, 110px); align-items: center; width: 100%; gap: 10px; min-height: 76px; height: auto; padding: 14px 12px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--card)); color: hsl(var(--card-foreground)); white-space: normal; font-weight: 400; font-size: 14px; }
+.timesheet-person { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(70px, 110px); align-items: center; width: 100%; gap: 10px; min-height: 76px; height: auto; padding: 14px 12px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--card)); color: hsl(var(--card-foreground)); white-space: normal; font-weight: 400; font-size: 0.875rem; }
 .timesheet-person:hover, .timesheet-visit:hover { background: hsl(var(--muted)); }
 .timesheet-quiet-row { display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid hsl(var(--border)); padding: 4px 8px; border-radius: 0; }
 .timesheet-add { border: 1px dashed hsl(var(--border)); border-radius: 6px; }

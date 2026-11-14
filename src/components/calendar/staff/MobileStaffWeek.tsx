@@ -83,7 +83,7 @@ export function MobileStaffWeek({ weekDays, staffToShow, displayShifts, properti
                         const color = propColor(shift.property_id, properties);
                         const label = shiftLabel(shift, properties);
                         return (
-                          <Button key={shift.key} variant="outline" title={`${label} ${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`} onClick={() => setSelected(shift)} className={cn("w-full h-auto min-h-11 whitespace-normal font-normal", canEdit ? "px-0 py-1 flex-col gap-0 justify-center leading-tight text-[11px]" : "items-start text-left px-2 py-2 flex-col gap-1 text-base", shift.is_leave ? "bg-muted text-muted-foreground border-border" : `${color.bg} ${color.text}`)}>
+                          <Button key={shift.key} variant="outline" title={`${label} ${formatTime(shift.start_time)}–${formatTime(shift.end_time)}`} onClick={() => setSelected(shift)} className={cn("w-full h-auto min-h-11 whitespace-normal font-normal", canEdit ? "px-0 py-1 flex-col gap-0 justify-center leading-tight text-[0.6875rem]" : "items-start text-left px-2 py-2 flex-col gap-1 text-base", shift.is_leave ? "bg-muted text-muted-foreground border-border" : `${color.bg} ${color.text}`)}>
                             {(!canEdit || shift.is_leave || !shift.property_id) && <span className="block truncate max-w-full font-medium">{label}</span>}
                             {shift.start_time && (canEdit
                               ? <>

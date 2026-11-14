@@ -18,7 +18,7 @@ export function PropertyLegend({ properties }: { properties: Property[] }) {
     <div className="space-y-1.5 pt-1">
       {groupEntries.map(([city, props]) => (
         <div key={city} className="flex items-center gap-3 flex-wrap">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide w-24 flex-shrink-0">
+          <span className="text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wide w-24 flex-shrink-0">
             {city}
           </span>
           <div className="flex items-center gap-3 flex-wrap">
@@ -35,7 +35,7 @@ export function PropertyLegend({ properties }: { properties: Property[] }) {
         </div>
       ))}
       <div className="flex items-center gap-3 flex-wrap pt-1">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide w-24 flex-shrink-0">
+        <span className="text-[0.6875rem] font-semibold text-muted-foreground uppercase tracking-wide w-24 flex-shrink-0">
           Other
         </span>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

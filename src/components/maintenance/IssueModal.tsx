@@ -235,7 +235,7 @@ function ModalContent({
             </label>
             <input value={title} onChange={e => setTitle(e.target.value)}
               placeholder={isL ? "ej. Grifo de cocina gotea, Aire sin enfriar…" : "e.g. Kitchen tap dripping, A/C not cooling…"}
-              style={{ fontSize: "16px" }}
+              style={{ fontSize: "1rem" }}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
           </div>
 
@@ -246,7 +246,7 @@ function ModalContent({
             </label>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
               placeholder={isL ? "Contexto adicional — cuándo empezó, qué tan grave es…" : "Any additional context — when did it start, how severe, etc."}
-              rows={3} style={{ fontSize: "16px" }}
+              rows={3} style={{ fontSize: "1rem" }}
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)] resize-none" />
           </div>
 
@@ -319,11 +319,11 @@ function ModalContent({
                 <p className="text-xs font-semibold text-foreground">{t("newCategory")}</p>
                 <div className="flex gap-2">
                   <input value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)} placeholder="🔧"
-                    style={{ fontSize: "16px" }}
+                    style={{ fontSize: "1rem" }}
                     className="w-12 rounded-lg border border-input bg-background px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
                   <input value={newCatName} onChange={e => setNewCatName(e.target.value)}
                     placeholder={isL ? "Nombre de categoría…" : "Category name…"}
-                    style={{ fontSize: "16px" }}
+                    style={{ fontSize: "1rem" }}
                     className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
                 </div>
                 <div className="flex gap-2">
@@ -347,7 +347,7 @@ function ModalContent({
                 {t("propertyLabel")}
               </label>
               <select value={propertyId} onChange={e => { setPropertyId(e.target.value); setRoom(""); }}
-                style={{ fontSize: "16px" }}
+                style={{ fontSize: "1rem" }}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]">
                 <option value="">{isL ? "Todas / Desconocida" : "All / Unknown"}</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -359,7 +359,7 @@ function ModalContent({
               </label>
               {rooms.length > 0 ? (
                 <select value={room} onChange={e => setRoom(e.target.value)}
-                  style={{ fontSize: "16px" }}
+                  style={{ fontSize: "1rem" }}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]">
                   <option value="">{isL ? "Seleccionar habitación…" : "Select room…"}</option>
                   {rooms.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
@@ -367,7 +367,7 @@ function ModalContent({
               ) : (
                 <input value={room} onChange={e => setRoom(e.target.value)}
                   placeholder={isL ? "ej. Cocina, Baño principal" : "e.g. Kitchen, Master bath"}
-                  style={{ fontSize: "16px" }}
+                  style={{ fontSize: "1rem" }}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
               )}
             </div>
@@ -380,7 +380,7 @@ function ModalContent({
                 {t("assignTo")}
               </label>
               <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)}
-                style={{ fontSize: "16px" }}
+                style={{ fontSize: "1rem" }}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]">
                 <option value="">{isL ? "Sin asignar" : "Unassigned"}</option>
                 {assignees.missingCurrent && initial.assigned_to && <option value={initial.assigned_to}>{initial.assignee_name || (isL ? "Persona asignada actualmente" : "Current assignee")}{assignees.unavailableCurrent ? assigneeAccessNote(isL) : ""}</option>}
@@ -398,7 +398,7 @@ function ModalContent({
               </label>
               <div className="flex items-center gap-2">
                 <input type="date" value={scheduledDate} onChange={e => setScheduled(e.target.value)}
-                  style={{ fontSize: "16px" }}
+                  style={{ fontSize: "1rem" }}
                   className="flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
                 {scheduledDate && (
                   <button type="button" onClick={() => setScheduled("")}
@@ -421,7 +421,7 @@ function ModalContent({
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 <input value={relatedSearch} onChange={e => setRelatedSch(e.target.value)}
                   placeholder={isL ? "Buscar problema…" : "Search issue…"}
-                  style={{ fontSize: "16px" }}
+                  style={{ fontSize: "1rem" }}
                   className="w-full pl-8 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold)/0.4)]" />
               </div>
               {relatedSearch && (

@@ -141,7 +141,7 @@ export function MessagesSection() {
   };
 
   return (
-    <div className={view === "chat" ? "overflow-hidden" : "animate-fade-in"} style={view === "chat" ? { height: "calc(100dvh - 3.5rem - env(safe-area-inset-top, 0px))" } : undefined}>
+    <div className={view === "chat" ? "overflow-hidden" : "animate-fade-in"} style={view === "chat" ? { height: "calc(100dvh - var(--app-header-h, 3.5rem) - var(--push-banner-h, 0px) - var(--preview-banner-h, 0px))" } : undefined}>
       {view === "threads" && (
         <ThreadList
           threads={threads}

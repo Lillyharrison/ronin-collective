@@ -121,7 +121,7 @@ export function CopyChecklistButton({ template, onCopied }: Props) {
               ))}
             </div>
             <div className="p-3 border-t border-border flex-shrink-0">
-              <p className="text-[11px] text-muted-foreground text-center">
+              <p className="text-[0.6875rem] text-muted-foreground text-center">
                 The copy will be saved as a Draft on the target property so you can review before publishing.
               </p>
             </div>

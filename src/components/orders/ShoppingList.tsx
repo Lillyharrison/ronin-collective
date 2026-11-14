@@ -173,7 +173,7 @@ export function ShoppingList() {
             {isL ? "Lista de compras" : "Shopping List"}
           </span>
           {items.length > 0 && (
-            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">
+            <span className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">
               {items.length - checkedCount} {isL ? "pendiente" : "pending"}
             </span>
           )}
@@ -182,7 +182,7 @@ export function ShoppingList() {
           {checkedCount > 0 && canDelete && (
             <button
               onClick={clearChecked}
-              className="text-[10px] text-muted-foreground hover:text-destructive transition-colors underline"
+              className="text-[0.625rem] text-muted-foreground hover:text-destructive transition-colors underline"
             >
               {isL ? `Limpiar ${checkedCount} marcado(s)` : `Clear ${checkedCount} checked`}
             </button>
@@ -190,7 +190,7 @@ export function ShoppingList() {
           <button
             onClick={() => setFilterChecked(v => !v)}
             className={cn(
-              "text-[10px] px-2.5 py-1 rounded-lg border transition-colors font-medium",
+              "text-[0.625rem] px-2.5 py-1 rounded-lg border transition-colors font-medium",
               filterChecked ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted border-border text-muted-foreground"
             )}
           >
@@ -235,7 +235,7 @@ export function ShoppingList() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
                   {item.default_quantity && (
-                    <p className="text-[10px] text-muted-foreground truncate">{item.default_quantity}{item.size ? ` · ${item.size}` : ""}</p>
+                    <p className="text-[0.625rem] text-muted-foreground truncate">{item.default_quantity}{item.size ? ` · ${item.size}` : ""}</p>
                   )}
                 </div>
                 <Plus size={14} className="text-[hsl(var(--gold))] flex-shrink-0" />
@@ -271,7 +271,7 @@ export function ShoppingList() {
                 key={cat.key}
                 onClick={() => setNewCat(cat.key)}
                 className={cn(
-                  "flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-colors",
+                  "flex items-center gap-1 text-[0.625rem] font-semibold px-2.5 py-1 rounded-full border transition-colors",
                   newCat === cat.key ? cat.color : "bg-muted text-muted-foreground border-border"
                 )}
               >
@@ -316,10 +316,10 @@ export function ShoppingList() {
             <div key={group.key}>
               {/* Category header */}
               <div className="flex items-center gap-2 mb-2">
-                <span className={cn("flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border", group.color)}>
+                <span className={cn("flex items-center gap-1 text-[0.625rem] font-bold px-2 py-0.5 rounded-full border", group.color)}>
                   {group.emoji} {isL ? group.labelEs : group.label}
                 </span>
-                <span className="text-[10px] text-muted-foreground">({group.items.length})</span>
+                <span className="text-[0.625rem] text-muted-foreground">({group.items.length})</span>
               </div>
               {/* Items */}
               <div className="space-y-1.5">
@@ -364,20 +364,20 @@ export function ShoppingList() {
                           {item.name}
                         </span>
                         {isApproved && (
-                          <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] border border-[hsl(var(--status-done)/0.3)]">
+                          <span className="inline-flex items-center gap-1 text-[0.5625rem] font-bold px-1.5 py-0.5 rounded-full bg-[hsl(var(--status-done)/0.15)] text-[hsl(var(--status-done))] border border-[hsl(var(--status-done)/0.3)]">
                             <Check size={9} strokeWidth={3} />
                             {isL ? "Aprobado" : "Approved"}
                           </span>
                         )}
                       </div>
                       {(item.quantity || item.notes) && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                        <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                           {item.quantity && <span className="font-medium">{item.quantity}</span>}
                           {item.quantity && item.notes && " · "}
                           {item.notes}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 flex-wrap mt-1 text-[10px] text-muted-foreground">
+                      <div className="flex items-center gap-2 flex-wrap mt-1 text-[0.625rem] text-muted-foreground">
                         {addedBy && (
                           <span className="inline-flex items-center gap-1">
                             <UserCircle2 size={10} />

@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { canChangeRequest, compressRequestPhoto, defaultQuantity, requestPayload, requestPhotoPath, sendListArgs, validRequest, type HouseRequest, type RequestLibraryItem } from './logic';
 
 export function QuantityStepper({ value, onChange, es }: { value: number; onChange: (n:number) => void; es: boolean }) {
-  return <div className="flex items-center justify-between gap-4"><span>{es ? 'Cantidad' : 'Quantity'}</span><div className="flex items-center gap-4">
+  return <div className="request-quantity-stepper flex items-center justify-between gap-4"><span>{es ? 'Cantidad' : 'Quantity'}</span><div className="flex items-center gap-4">
     <Button type="button" variant="outline" size="icon" className="h-14 w-14" aria-label={es ? 'Menos' : 'Decrease quantity'} disabled={value <= 1} onClick={() => onChange(Math.max(1,value-1))}><Minus /></Button>
     <output className="w-10 text-center text-xl tabular-nums">{value}</output>
     <Button type="button" variant="outline" size="icon" className="h-14 w-14" aria-label={es ? 'Más' : 'Increase quantity'} onClick={() => onChange(value+1)}><Plus /></Button>

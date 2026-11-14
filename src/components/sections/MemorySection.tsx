@@ -235,10 +235,10 @@ export default function MemorySection() {
               <div key={memory.id} className="bg-card border border-border rounded-xl p-4 space-y-2.5 hover:border-primary/20 transition-colors group">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full border ${meta.color}`}>
+                    <span className={`flex-shrink-0 text-[0.6875rem] font-medium px-2 py-0.5 rounded-full border ${meta.color}`}>
                       {meta.icon} {language === "es" ? meta.labelEs : meta.label}
                     </span>
-                    <span className="text-[11px] text-muted-foreground/60 flex-shrink-0">
+                    <span className="text-[0.6875rem] text-muted-foreground/60 flex-shrink-0">
                       {"⭐".repeat(memory.importance)}
                     </span>
                   </div>
@@ -255,21 +255,21 @@ export default function MemorySection() {
 
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   {propName && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                    <span className="flex items-center gap-1 text-[0.625rem] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
                       <Building2 size={9} /> {propName}
                     </span>
                   )}
                   {profileName && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                    <span className="flex items-center gap-1 text-[0.625rem] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
                       <User size={9} /> {profileName}
                     </span>
                   )}
                   {memory.tags.map(tag => (
-                    <span key={tag} className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                    <span key={tag} className="flex items-center gap-1 text-[0.625rem] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
                       <Tag size={9} /> {tag}
                     </span>
                   ))}
-                  <span className="text-[10px] text-muted-foreground/50 ml-auto">
+                  <span className="text-[0.625rem] text-muted-foreground/50 ml-auto">
                     {SOURCE_LABELS[memory.source] ?? memory.source}
                     {memory.reference_count > 0 ? ` · referenced ${memory.reference_count}×` : ""}
                   </span>

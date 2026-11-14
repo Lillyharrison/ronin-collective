@@ -54,7 +54,7 @@ export function StaffDayCell({
             {canEdit && !shift.is_leave && (
               <button
                 onClick={(e) => { e.stopPropagation(); onDeleteShift(shift); }}
-                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-3.5 h-3.5 items-center justify-center text-[8px] hidden group-hover:flex z-10"
+                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-3.5 h-3.5 items-center justify-center text-[0.5rem] hidden group-hover:flex z-10"
               >
                 ×
               </button>
@@ -64,7 +64,7 @@ export function StaffDayCell({
         {canEdit && (
           <button
             onClick={onCellClick}
-            className="rounded px-1 py-0.5 text-[10px] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-colors"
+            className="rounded px-1 py-0.5 text-[0.625rem] text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-colors"
           >
             <Plus size={9} />
           </button>

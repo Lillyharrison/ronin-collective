@@ -140,18 +140,18 @@ export function RulesManager({ rules, propertyId, onReload }: Props) {
               {rule.description && <p className="text-xs mt-0.5 opacity-80">{rule.description}</p>}
               <div className="flex flex-wrap gap-1 mt-2">
                 {rule.enacted_event_types.map(t => (
-                  <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">{t}</span>
+                  <span key={t} className="text-[0.625rem] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">{t}</span>
                 ))}
                 {rule.enacted_keywords.map(k => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">"{k}"</span>
+                  <span key={k} className="text-[0.625rem] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">"{k}"</span>
                 ))}
                 {(rule.enacted_occupant_ids ?? []).map((id: string) => (
-                  <span key={id} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">
+                  <span key={id} className="inline-flex items-center gap-0.5 text-[0.625rem] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">
                     <User size={9} /> {occupantNameMap[id] ?? id}
                   </span>
                 ))}
                 {rule.is_universal && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">All properties</span>
+                  <span className="text-[0.625rem] px-1.5 py-0.5 rounded-full bg-black/10 font-medium">All properties</span>
                 )}
               </div>
             </div>

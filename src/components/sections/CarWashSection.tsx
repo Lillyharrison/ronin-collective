@@ -122,12 +122,12 @@ function VehicleCard({
         )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {owner && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+            <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground truncate">
               <User size={9} className="shrink-0" /> {owner}
             </span>
           )}
           {location && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+            <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground truncate">
               <MapPin size={9} className="shrink-0" /> {location}
             </span>
           )}
@@ -149,7 +149,7 @@ function VehicleCard({
           className={`flex flex-col items-center px-2.5 py-1.5 rounded-lg border transition-colors text-xs font-semibold leading-tight ${btnStyle}`}
         >
           <span className="flex items-center gap-1"><Droplets size={12} /> Wash</span>
-          {washLabel && <span className="text-[10px] font-normal opacity-80">{washLabel}</span>}
+          {washLabel && <span className="text-[0.625rem] font-normal opacity-80">{washLabel}</span>}
         </button>
       </div>
     </div>
@@ -241,7 +241,7 @@ function BookWashDrawer({
                     <span className="flex items-center gap-1.5 font-semibold text-sm">
                       {wt.icon} {wt.label}
                     </span>
-                    <span className="text-[11px] opacity-70">{wt.desc}</span>
+                    <span className="text-[0.6875rem] opacity-70">{wt.desc}</span>
                   </button>
                 ))}
               </div>
@@ -474,7 +474,7 @@ function BookAllDrawer({
                     }`}
                   >
                     <span className="flex items-center gap-1.5 font-semibold text-sm">{wt.icon} {wt.label}</span>
-                    <span className="text-[11px] opacity-70">{wt.desc}</span>
+                    <span className="text-[0.6875rem] opacity-70">{wt.desc}</span>
                   </button>
                 ))}
               </div>
@@ -902,23 +902,23 @@ function ScheduleView({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-foreground font-semibold text-sm truncate">{vehicleName}</p>
-                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${scfg.bg} ${scfg.text}`}>
+                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-semibold ${scfg.bg} ${scfg.text}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${scfg.dot}`} />
                               {scfg.label}
                             </span>
                           </div>
                           <div className="flex items-center gap-3 mt-1 flex-wrap">
-                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                               {WASH_TYPES.find(w => w.key === booking.wash_type)?.icon}
                               {WASH_TYPES.find(w => w.key === booking.wash_type)?.label}
                             </span>
                             {booking.requested_time && (
-                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                                 <Clock size={10} /> {fmtTime(booking.requested_time)}
                               </span>
                             )}
                             {booking.locationProperty && (
-                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                                 <MapPin size={10} /> {booking.locationProperty.name}
                               </span>
                             )}
@@ -965,7 +965,7 @@ function ScheduleView({
                       {booking.status === "completed" && booking.assignedStaff && (
                         <div className="border-t border-border px-4 py-2 flex items-center gap-2 bg-green-500/5">
                           <CheckCircle2 size={12} className="text-green-400" />
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[0.6875rem] text-muted-foreground">
                             Completed by <span className="text-foreground font-medium">{booking.assignedStaff.full_name}</span>
                           </p>
                         </div>
@@ -1105,7 +1105,7 @@ export function CarWashSection() {
             <Calendar size={14} />
             Schedule
             {upcomingCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gold text-charcoal text-[9px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gold text-charcoal text-[0.5625rem] font-bold flex items-center justify-center">
                 {upcomingCount}
               </span>
             )}

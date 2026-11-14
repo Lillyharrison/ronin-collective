@@ -75,12 +75,12 @@ export function CareGuideCard({ template, onOpen, onChanged }: Props) {
               {template.title}
             </p>
             {isDraft && isMasterAdmin && (
-              <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
+              <span className="text-[0.5625rem] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
                 DRAFT
               </span>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+          <p className="text-[0.6875rem] text-muted-foreground mt-0.5 flex items-center gap-1">
             {template.location
               ? <><span>📍</span> {template.location}</>
               : <><BookOpen size={9} /> Tap to view care guide</>}
@@ -93,7 +93,7 @@ export function CareGuideCard({ template, onOpen, onChanged }: Props) {
               onClick={togglePublish}
               title={isDraft ? "Publish this care guide" : "Unpublish (hide from staff)"}
               className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold tracking-wide transition-all",
+                "flex items-center gap-1 px-2 py-1 rounded-lg border text-[0.625rem] font-semibold tracking-wide transition-all",
                 isDraft
                   ? "border-[hsl(var(--gold)/0.5)] bg-[hsl(var(--gold)/0.1)] text-[hsl(var(--gold))] hover:bg-[hsl(var(--gold)/0.2)]"
                   : "border-[hsl(var(--status-done)/0.3)] text-[hsl(var(--status-done))] hover:border-[hsl(var(--status-done)/0.6)]"

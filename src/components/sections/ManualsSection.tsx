@@ -118,7 +118,7 @@ export function ManualsSection() {
             key={tab_.id}
             onClick={() => setTab(tab_.id)}
             className={cn(
-              "flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-medium tracking-wide transition-all border-b-2",
+              "flex-1 flex flex-col items-center gap-0.5 py-3 text-[0.625rem] font-medium tracking-wide transition-all border-b-2",
               tab === tab_.id
                 ? "border-[hsl(var(--gold))] text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"

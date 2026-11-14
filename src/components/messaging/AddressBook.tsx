@@ -197,7 +197,7 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Agent Ronin</p>
-            <p className="text-[11px] text-accent">
+            <p className="text-[0.6875rem] text-accent">
               {language === "es" ? "Agente IA · Siempre en línea" : "AI Agent · Always online"}
             </p>
           </div>
@@ -252,13 +252,13 @@ export function AddressBook({ currentUserId, currentUserLevel, isMasterAdmin = f
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{contact.full_name || "Unknown"}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p className="text-[0.6875rem] text-muted-foreground truncate">
                     {contact.job_title || contact.department || contact.level || ""}
                   </p>
                 </div>
 
                 {!canMessage && mode === "list" && (
-                  <span className="text-[9px] text-muted-foreground italic">
+                  <span className="text-[0.5625rem] text-muted-foreground italic">
                     {language === "es" ? "Solo familia puede iniciar" : "Family must initiate"}
                   </span>
                 )}

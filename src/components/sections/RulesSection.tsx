@@ -287,20 +287,20 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
           <div className="flex items-center gap-2 flex-wrap">
             <p className={cn("text-sm font-semibold", s.text)}>{rule.title}</p>
             {rule.is_universal && (
-              <span className="flex items-center gap-0.5 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+              <span className="flex items-center gap-0.5 text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
                 <Globe size={9} />Universal
               </span>
             )}
             {rule.propertyName && (
-              <span className="flex items-center gap-0.5 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+              <span className="flex items-center gap-0.5 text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
                 <Building2 size={9} />{rule.propertyName}
               </span>
             )}
             {!rule.is_active && (
-              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">Inactive</span>
+              <span className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">Inactive</span>
             )}
             {(rule as any).only_when_occupied && (
-              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+              <span className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                 🏠 Occupancy-linked
               </span>
             )}
@@ -312,10 +312,10 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
           {(rule.enacted_event_types.length > 0 || rule.enacted_keywords.length > 0) && (
             <div className="flex gap-1 mt-2 flex-wrap">
               {rule.enacted_event_types.map(t => (
-                <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 text-foreground/70 font-medium">{t}</span>
+                <span key={t} className="text-[0.625rem] px-1.5 py-0.5 rounded-full bg-black/10 text-foreground/70 font-medium">{t}</span>
               ))}
               {rule.enacted_keywords.map(k => (
-                <span key={k} className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/10 text-foreground/70 font-medium">"{k}"</span>
+                <span key={k} className="text-[0.625rem] px-1.5 py-0.5 rounded-full bg-black/10 text-foreground/70 font-medium">"{k}"</span>
               ))}
             </div>
           )}
@@ -327,7 +327,7 @@ function RuleCard({ rule, isAdmin, isMasterAdmin, onEdit, onDelete, onToggleActi
               onClick={() => onToggleActive(rule)}
               title={rule.is_active ? "Deactivate rule" : "Activate rule"}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all",
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-semibold border transition-all",
                 rule.is_active
                   ? "bg-[hsl(var(--status-urgent)/0.12)] border-[hsl(var(--status-urgent)/0.4)] text-[hsl(var(--status-urgent))] hover:bg-[hsl(var(--status-urgent)/0.22)]"
                   : "bg-[hsl(var(--status-done)/0.12)] border-[hsl(var(--status-done)/0.4)] text-[hsl(var(--status-done))] hover:bg-[hsl(var(--status-done)/0.22)]"
@@ -575,7 +575,7 @@ export function RulesSection() {
                 <div className="flex items-center gap-2 mb-3">
                   <Globe size={12} className="text-muted-foreground" />
                   <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Universal</p>
-                  <span className="text-[10px] text-muted-foreground/50 bg-muted px-1.5 py-0.5 rounded-full">{universalRules.length}</span>
+                  <span className="text-[0.625rem] text-muted-foreground/50 bg-muted px-1.5 py-0.5 rounded-full">{universalRules.length}</span>
                 </div>
                 <div className="space-y-2">
                   {universalRules.map(rule => (
@@ -599,7 +599,7 @@ export function RulesSection() {
                 <div className="flex items-center gap-2 mb-3">
                   <Building2 size={12} className="text-muted-foreground" />
                   <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">{propName}</p>
-                  <span className="text-[10px] text-muted-foreground/50 bg-muted px-1.5 py-0.5 rounded-full">{propRules.length}</span>
+                  <span className="text-[0.625rem] text-muted-foreground/50 bg-muted px-1.5 py-0.5 rounded-full">{propRules.length}</span>
                 </div>
                 <div className="space-y-2">
                   {propRules.map(rule => (

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useLayoutEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { RoninWordmark } from "@/components/RoninLogo";
 import { Bell, Menu, ArrowLeft } from "lucide-react";
 import { NotificationsPanel, useNotificationCount } from "@/components/NotificationsPanel";
 import { cn } from "@/lib/utils";
+import { TextSizeControl } from "@/components/TextSizeControl";
 
 interface HeaderProps {
   title?: string;
@@ -15,11 +16,19 @@ export function Header({ title }: HeaderProps) {
   const { setSidebarOpen, canGoBack, goBack, activeSection } = useNavigation();
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = useNotificationCount();
+  const headerRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const measure = () => document.documentElement.style.setProperty("--app-header-h", `${header.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(measure); observer.observe(header); measure();
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <>
-      <header className="fixed left-0 right-0 z-50 bg-charcoal border-b border-charcoal-light" style={{ top: "calc(var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}>
-        <div className="relative flex items-center justify-between px-4 h-14">
+      <header ref={headerRef} className="fixed left-0 right-0 z-50 bg-charcoal border-b border-charcoal-light" style={{ top: "calc(var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}>
+        <div className="app-header-row relative flex items-center justify-between px-4 h-14">
           {/* Left — hamburger always visible; back arrow shown alongside when applicable */}
           <div className="flex items-center gap-0.5">
             <button
@@ -41,7 +50,7 @@ export function Header({ title }: HeaderProps) {
           </div>
 
           {/* Center — absolutely positioned so it's always truly centred */}
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+          <div className="app-header-title absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
             {title ? (
               <h1 className="font-display text-xl text-cream tracking-wide">{title}</h1>
             ) : (
@@ -51,6 +60,7 @@ export function Header({ title }: HeaderProps) {
 
           {/* Right — language toggle + bell */}
           <div className="flex items-center gap-1">
+            <TextSizeControl />
             <button
               onClick={() => setLanguage(language === "en" ? "es" : "en")}
               className="min-w-11 h-11 px-2.5 rounded-md border border-gold/40 text-gold text-xs font-semibold tracking-widest hover:bg-gold/10 transition-colors"
@@ -69,7 +79,7 @@ export function Header({ title }: HeaderProps) {
             >
               <Bell size={20} />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 min-w-[16px] h-4 bg-status-urgent rounded-full flex items-center justify-center text-[9px] font-bold text-white px-0.5">
+                <span className="absolute top-2 right-2 min-w-[16px] h-4 bg-status-urgent rounded-full flex items-center justify-center text-[0.5625rem] font-bold text-white px-0.5">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}

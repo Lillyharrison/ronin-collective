@@ -1021,7 +1021,7 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: stri
       className={`w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center justify-between ${tz === value ? "bg-accent text-accent-foreground font-medium" : "text-foreground"}`}
     >
       <span>{label || (US_TZ_LABELS[tz] ? `${US_TZ_LABELS[tz]}` : tz.replace(/_/g, " "))}</span>
-      <span className="text-muted-foreground text-[10px]">{
+      <span className="text-muted-foreground text-[0.625rem]">{
         (() => { try { return new Intl.DateTimeFormat("en", { timeZone: tz, timeZoneName: "short" }).formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value ?? ""; } catch { return ""; } })()
       }</span>
     </button>
@@ -1049,10 +1049,10 @@ function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: stri
               <>
                 {filtered.us.length > 0 && (
                   <>
-                    <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50 border-b">United States</div>
+                    <div className="px-3 py-1.5 text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50 border-b">United States</div>
                     {filtered.us.map(tz => renderItem(tz))}
                     {filtered.other.length > 0 && (
-                      <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50 border-y">All Timezones</div>
+                      <div className="px-3 py-1.5 text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50 border-y">All Timezones</div>
                     )}
                   </>
                 )}
@@ -1202,7 +1202,7 @@ function PropertyRoomsManager({ property, onBack }: { property: Property; onBack
             onChange={e => setNewRoom(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") handleAdd(); }}
             placeholder="e.g. Master Bedroom, Kitchen, Pool…"
-            style={{ fontSize: "16px" }}
+            style={{ fontSize: "1rem" }}
             className="flex-1 rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
           />
           <button

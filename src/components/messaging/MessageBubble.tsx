@@ -88,7 +88,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
     if (match.index > last) parts.push(...linkify(text.slice(last, match.index)));
     if (match[2]) parts.push(<strong key={`md${key++}`} className="font-semibold">{match[2]}</strong>);
     else if (match[3]) parts.push(<em key={`md${key++}`}>{match[3]}</em>);
-    else if (match[4]) parts.push(<code key={`md${key++}`} className="text-[11px] bg-muted px-1 py-0.5 rounded font-mono">{match[4]}</code>);
+    else if (match[4]) parts.push(<code key={`md${key++}`} className="text-[0.6875rem] bg-muted px-1 py-0.5 rounded font-mono">{match[4]}</code>);
     last = match.index + match[0].length;
   }
   if (last < text.length) parts.push(...linkify(text.slice(last)));
@@ -161,7 +161,7 @@ function MessageInfoModal({ message, onClose }: { message: Message; onClose: () 
         <div className="p-4 space-y-3">
           {message.content_text && (
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Content</p>
+              <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground mb-1">Content</p>
               <p className="text-sm text-foreground line-clamp-4 bg-muted/40 rounded-lg px-3 py-2">
                 {message.content_text}
               </p>
@@ -169,29 +169,29 @@ function MessageInfoModal({ message, onClose }: { message: Message; onClose: () 
           )}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
+              <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
               <p className="text-xs text-foreground">{sentAt}</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Status</p>
+              <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground mb-1">Status</p>
               <p className="text-xs text-foreground capitalize">{message.delivery_status}</p>
             </div>
           </div>
           {seenBy.length > 0 && (
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Read by</p>
+              <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground mb-1">Read by</p>
               <p className="text-xs text-foreground">{seenBy.length} {seenBy.length === 1 ? "person" : "people"}</p>
             </div>
           )}
           {message.audio_duration_sec != null && (
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Duration</p>
+              <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground mb-1">Duration</p>
               <p className="text-xs text-foreground">{formatDuration(message.audio_duration_sec)}</p>
             </div>
           )}
           {message.media_type && (
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Type</p>
+              <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground mb-1">Type</p>
               <p className="text-xs text-foreground capitalize">{message.media_type}</p>
             </div>
           )}
@@ -286,7 +286,7 @@ function VoiceNote({
           );
         })}
       </div>
-      <span className="text-[10px] opacity-70 tabular-nums w-8 text-left">{displayTime}</span>
+      <span className="text-[0.625rem] opacity-70 tabular-nums w-8 text-left">{displayTime}</span>
     </button>
   );
 }
@@ -522,7 +522,7 @@ export function MessageBubble({
           >
             {/* Sender name for groups */}
             {!isOwn && !isAI && message.sender_profile?.full_name && (
-              <p className="text-[11px] font-semibold text-accent mb-0.5">
+              <p className="text-[0.6875rem] font-semibold text-accent mb-0.5">
                 {message.sender_profile.full_name}
               </p>
             )}
@@ -558,7 +558,7 @@ export function MessageBubble({
                     {/* Forwarded header */}
                     <div className="flex items-center gap-1 mb-1 pb-1 border-b border-[hsl(25,100%,50%)]/25">
                       <Share2 size={11} className="text-[hsl(25,100%,50%)] flex-shrink-0" />
-                      <span className="text-[10px] text-[hsl(25,100%,50%)] font-semibold uppercase tracking-wide truncate">
+                      <span className="text-[0.625rem] text-[hsl(25,100%,50%)] font-semibold uppercase tracking-wide truncate">
                         {fwd.sender} · WhatsApp
                       </span>
                     </div>
@@ -583,7 +583,7 @@ export function MessageBubble({
             {/* Pending tool confirmation */}
             {pendingTool && !toolExecuted && (
               <div className="mt-3 pt-2 border-t border-accent/20">
-                <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
+                <p className="text-[0.625rem] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
                   Action: {TOOL_LABELS[pendingTool.name] ?? pendingTool.name}
                 </p>
                 <div className="flex gap-2">
@@ -607,7 +607,7 @@ export function MessageBubble({
 
             {pendingTool && toolExecuted && (
               <div className="mt-2 pt-2 border-t border-border">
-                <p className="text-[10px] text-muted-foreground italic">Action confirmed — executing…</p>
+                <p className="text-[0.625rem] text-muted-foreground italic">Action confirmed — executing…</p>
               </div>
             )}
 
@@ -617,7 +617,7 @@ export function MessageBubble({
               isOwn ? "justify-end" : "justify-start",
               message.media_type === "image" && !message.content_text && "px-2 pb-1"
             )}>
-              <span className={`text-[9px] ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{time}</span>
+              <span className={`text-[0.5625rem] ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{time}</span>
               {isOwn && (() => {
                 const isOptimistic = message.id.startsWith("optimistic-");
                 const isReadMsg = status === "read" || isRead;
@@ -649,7 +649,7 @@ export function MessageBubble({
                     )}
                   >
                     <span>{emoji}</span>
-                    <span className="text-[9px] font-medium">{(users as string[]).length}</span>
+                    <span className="text-[0.5625rem] font-medium">{(users as string[]).length}</span>
                   </button>
                 );
               })}

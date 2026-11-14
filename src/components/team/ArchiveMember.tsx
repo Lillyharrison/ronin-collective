@@ -166,11 +166,11 @@ export function ArchivedMembersList({ members, isEN, onRestored }: {
       {members.map(m => (
         <div key={m.id} className="bg-card border border-border rounded-xl px-4 py-3">
           <p className="text-foreground text-sm font-medium">{m.full_name || "—"}</p>
-          <p className="text-muted-foreground text-[11px]">{[m.job_title, m.department].filter(Boolean).join(" · ") || "—"}</p>
-          <p className="text-muted-foreground text-[11px] mt-1">
+          <p className="text-muted-foreground text-[0.6875rem]">{[m.job_title, m.department].filter(Boolean).join(" · ") || "—"}</p>
+          <p className="text-muted-foreground text-[0.6875rem] mt-1">
             {isEN ? "Left" : "Salió"}: {fmt(m.left_on)}{m.keep_until ? ` · ${isEN ? "Keep until" : "Conservar hasta"}: ${fmt(m.keep_until)}` : ""}
           </p>
-          {m.archive_note && <p className="text-[12px] text-foreground/80 mt-1 whitespace-pre-wrap">{m.archive_note}</p>}
+          {m.archive_note && <p className="text-[0.75rem] text-foreground/80 mt-1 whitespace-pre-wrap">{m.archive_note}</p>}
           <div className="flex gap-2 mt-2">
             <Button size="sm" variant="outline" onClick={() => setHistoryFor(m)}><History size={14} className="mr-1" />{isEN ? "View history" : "Ver historial"}</Button>
             <Button size="sm" variant="outline" onClick={() => setRestoreFor(m)}><RotateCcw size={14} className="mr-1" />{isEN ? "Restore" : "Restaurar"}</Button>
@@ -256,7 +256,7 @@ function ArchivedHistoryPanel({ member, isEN, onClose }: { member: ArchivedMembe
           {loading ? <Loader2 className="animate-spin mx-auto" /> : (
             <>
               <section>
-                <p className="text-[10px] font-bold tracking-widest uppercase text-gold mb-1">{isEN ? "Weekly patterns" : "Patrones semanales"}</p>
+                <p className="text-[0.625rem] font-bold tracking-widest uppercase text-gold mb-1">{isEN ? "Weekly patterns" : "Patrones semanales"}</p>
                 {patterns.length === 0 ? <p className="text-muted-foreground">—</p> : (
                   <ul className="space-y-1">
                     {patterns.map(p => (
@@ -268,7 +268,7 @@ function ArchivedHistoryPanel({ member, isEN, onClose }: { member: ArchivedMembe
                 )}
               </section>
               <section>
-                <p className="text-[10px] font-bold tracking-widest uppercase text-gold mb-1">
+                <p className="text-[0.625rem] font-bold tracking-widest uppercase text-gold mb-1">
                   {isEN ? "Shifts" : "Turnos"} ({count}){range[0] ? ` · ${fmt(range[0])} – ${fmt(range[1])}` : ""}
                 </p>
                 {shifts.length === 0 ? <p className="text-muted-foreground">—</p> : (
@@ -281,7 +281,7 @@ function ArchivedHistoryPanel({ member, isEN, onClose }: { member: ArchivedMembe
                     ))}
                   </ul>
                 )}
-                {count > shifts.length && <p className="text-muted-foreground text-[12px] mt-1">{isEN ? `Showing newest ${shifts.length}` : `Mostrando ${shifts.length} más recientes`}</p>}
+                {count > shifts.length && <p className="text-muted-foreground text-[0.75rem] mt-1">{isEN ? `Showing newest ${shifts.length}` : `Mostrando ${shifts.length} más recientes`}</p>}
               </section>
             </>
           )}

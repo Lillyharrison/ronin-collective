@@ -32,6 +32,7 @@ export interface TeamMember {
   contracted_days_per_week?: number | null;
   contracted_hours_per_week?: number | null;
   annual_leave_days?: number | null;
+  text_size?: "auto" | "normal" | "large" | "xlarge";
 }
 
 export interface Property {

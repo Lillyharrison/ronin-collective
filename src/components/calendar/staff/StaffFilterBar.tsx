@@ -64,7 +64,7 @@ export function StaffFilterBar({
           <X size={13} /> Clear
         </Button>
       )}
-      <span className="text-[11px] text-muted-foreground ml-auto">
+      <span className="text-[0.6875rem] text-muted-foreground ml-auto">
         {staffCount} {staffCount === 1 ? "person" : "people"}
       </span>
     </div>

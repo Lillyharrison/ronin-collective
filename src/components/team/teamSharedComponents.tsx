@@ -78,7 +78,7 @@ export function QuickActionToggles({ isEN, enabledKeys, onChange, disabled = fal
 
 // ─── Small helpers ─────────────────────────────────────────────────────────────
 export function FieldLabel({ label }: { label: string }) {
-  return <label className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5 block">{label}</label>;
+  return <label className="text-[0.6875rem] font-semibold tracking-widest uppercase text-muted-foreground mb-1.5 block">{label}</label>;
 }
 
 export function EditField({ label, value, onChange, disabled, type = "text" }: {

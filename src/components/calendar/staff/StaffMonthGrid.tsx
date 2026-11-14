@@ -86,7 +86,7 @@ export function StaffMonthGrid({
         className="grid border-b border-border bg-muted/30"
         style={{ gridTemplateColumns: `180px repeat(${monthDays.length}, minmax(28px, 1fr))` }}
       >
-        <div className="px-3 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border sticky left-0 bg-muted/30 z-10">
+        <div className="px-3 py-2 text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-wider border-r border-border sticky left-0 bg-muted/30 z-10">
           {format(monthStart, "MMMM yyyy")}
         </div>
         {monthDays.map((day) => {
@@ -102,18 +102,18 @@ export function StaffMonthGrid({
               )}
             >
               <p className={cn(
-                "text-[9px] font-medium text-muted-foreground uppercase leading-none",
+                "text-[0.5625rem] font-medium text-muted-foreground uppercase leading-none",
                 isToday(day) && "text-primary"
               )}>
                 {format(day, "EEE")}
               </p>
               <p className={cn(
-                "text-[11px] font-bold mt-0.5 w-5 h-5 rounded-full flex items-center justify-center mx-auto",
+                "text-[0.6875rem] font-bold mt-0.5 w-5 h-5 rounded-full flex items-center justify-center mx-auto",
                 isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
               )}>
                 {format(day, "d")}
               </p>
-              {getPublicHoliday(day) && <p className="text-[9px] leading-none" title={`${getPublicHoliday(day)} · ${HOLIDAY_HINT}`}>🎉</p>}
+              {getPublicHoliday(day) && <p className="text-[0.5625rem] leading-none" title={`${getPublicHoliday(day)} · ${HOLIDAY_HINT}`}>🎉</p>}
             </div>
           );
         })}
@@ -129,20 +129,20 @@ export function StaffMonthGrid({
           >
             <div className="px-2 py-2 border-r border-border flex items-center gap-1.5 min-w-0 sticky left-0 bg-card z-10">
               <div className={cn(
-                "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-semibold",
+                "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[0.5625rem] font-semibold",
                 person.is_draft ? "bg-amber-500/20 text-amber-400" : "bg-primary/10 text-primary"
               )}>
                 {getDisplayName(person, "?").charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
                 <p className={cn(
-                  "text-[11px] font-medium truncate leading-tight",
+                  "text-[0.6875rem] font-medium truncate leading-tight",
                   person.is_draft && "italic text-muted-foreground"
                 )}>
                   {getDisplayName(person)}
                 </p>
                 {person.job_title && (
-                  <p className="text-[9px] text-muted-foreground truncate leading-tight">{person.job_title}</p>
+                  <p className="text-[0.5625rem] text-muted-foreground truncate leading-tight">{person.job_title}</p>
                 )}
               </div>
             </div>
@@ -188,9 +188,9 @@ export function StaffMonthGrid({
                           "border"
                         )}
                       >
-                        <div className="text-[8px] font-semibold leading-tight truncate">{label}</div>
+                        <div className="text-[0.5rem] font-semibold leading-tight truncate">{label}</div>
                         {time && (
-                          <div className="text-[7px] opacity-80 leading-tight truncate">{time}</div>
+                          <div className="text-[0.4375rem] opacity-80 leading-tight truncate">{time}</div>
                         )}
                       </div>
                     );

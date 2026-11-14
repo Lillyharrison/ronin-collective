@@ -29,7 +29,7 @@ function RuleCard({ rule }: { rule: PropertyRule & { propertyName?: string } }) 
           <div className="flex items-center gap-2 flex-wrap">
             <p className={cn("text-sm font-semibold", s.text)}>{rule.title}</p>
             {rule.is_universal && (
-              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">
+              <span className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">
                 Universal
               </span>
             )}
@@ -43,7 +43,7 @@ function RuleCard({ rule }: { rule: PropertyRule & { propertyName?: string } }) 
           {rule.applies_to_roles.length > 0 && (
             <div className="flex gap-1 mt-2 flex-wrap">
               {rule.applies_to_roles.map(r => (
-                <span key={r} className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full capitalize">
+                <span key={r} className="text-[0.625rem] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full capitalize">
                   {r}
                 </span>
               ))}

@@ -255,7 +255,7 @@ export function FamilyTasksView() {
 
       {/* Sent tasks */}
       <div>
-        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
+        <p className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
           {isL ? "Tareas enviadas" : "Tasks you've sent"}
         </p>
         {loading ? (
@@ -280,22 +280,22 @@ export function FamilyTasksView() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-foreground leading-snug">{t.title_en}</p>
-                    <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap", st.cls)}>
+                    <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap", st.cls)}>
                       {isL ? st.es : st.en}
                     </span>
                   </div>
                   <EntryAcknowledgement kind="task" entry={t} compact />
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                       <User size={10} /> {nameOf(t.assigned_to)}
                     </span>
                     {t.property_id && (
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                         <MapPin size={10} /> {properties.find(p => p.id === t.property_id)?.name ?? ""}
                       </span>
                     )}
                     {t.due_date && (
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                         <Clock size={10} />
                         {plainDateToLocal(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>

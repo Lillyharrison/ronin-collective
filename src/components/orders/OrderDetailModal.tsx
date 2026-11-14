@@ -123,7 +123,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <span className={cn(
-              "text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0",
+              "text-[0.625rem] font-bold px-2 py-0.5 rounded-full border flex-shrink-0",
               isPending
                 ? "bg-[hsl(var(--gold)/0.12)] text-[hsl(var(--gold))] border-[hsl(var(--gold)/0.3)]"
                 : "bg-[hsl(var(--status-done)/0.12)] text-status-done border-[hsl(var(--status-done)/0.3)]"
@@ -164,14 +164,14 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
 
           {/* Tracking section */}
           <div className="space-y-3 px-3 py-3 bg-[hsl(var(--gold)/0.05)] border border-[hsl(var(--gold)/0.2)] rounded-xl">
-            <p className="text-[10px] font-semibold text-[hsl(var(--gold))] uppercase tracking-wider flex items-center gap-1.5">
+            <p className="text-[0.625rem] font-semibold text-[hsl(var(--gold))] uppercase tracking-wider flex items-center gap-1.5">
               <Truck size={11} /> {isL ? "Detalles de envío" : "Shipping & Tracking"}
             </p>
 
             {canEdit ? (
               <>
                 <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                  <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
                     <Calendar size={9} /> {isL ? "Fecha estimada de entrega" : "Expected delivery date"}
                   </label>
                   <input
@@ -182,7 +182,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                  <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
                     <UserCircle2 size={9} /> {isL ? "Asignado a" : "Assigned to"}
                   </label>
                   <select
@@ -198,7 +198,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
+                    <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
                       {isL ? "N° de seguimiento" : "Tracking #"}
                     </label>
                     <input
@@ -209,7 +209,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
+                    <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
                       {isL ? "Transportista" : "Carrier"}
                     </label>
                     <input
@@ -221,7 +221,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                  <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
                     <LinkIcon size={9} /> {isL ? "Enlace de seguimiento" : "Tracking link"}
                   </label>
                   <input
@@ -237,7 +237,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                   </a>
                 )}
                 <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                  <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1 flex items-center gap-1">
                     <FileText size={9} /> {isL ? "Lista de empaque" : "Packing list"}
                   </label>
                   <textarea
@@ -249,7 +249,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
+                  <label className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider block mb-1">
                     {isL ? "Notas de entrega" : "Delivery notes"}
                   </label>
                   <textarea

@@ -77,7 +77,7 @@ export function MasterImportSection() {
             <h2 className="text-cream font-semibold text-sm">
               {language === "es" ? "Importación Maestra" : "Master Import"}
             </h2>
-            <p className="text-cream/50 text-[11px]">
+            <p className="text-cream/50 text-[0.6875rem]">
               {language === "es" ? "Carga masiva de tareas vía CSV · Impulsado por Ronin AI" : "Bulk task upload via CSV · Powered by Ronin AI"}
             </p>
           </div>
@@ -123,7 +123,7 @@ export function MasterImportSection() {
               ? "Arrastra tu CSV aquí, o toca para seleccionar"
               : "Drag your CSV here, or tap to select"}
           </p>
-          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-widest">
+          <span className="text-[0.625rem] text-muted-foreground/60 uppercase tracking-widest">
             {language === "es" ? "Solo archivos .csv" : ".csv files only"}
           </span>
           <input
@@ -200,13 +200,13 @@ export function MasterImportSection() {
         <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
           {language === "es" ? "Formato CSV esperado" : "Expected CSV Format"}
         </p>
-        <pre className="text-[10px] text-muted-foreground bg-background rounded-lg p-3 overflow-x-auto">
+        <pre className="text-[0.625rem] text-muted-foreground bg-background rounded-lg p-3 overflow-x-auto">
 {`title,description,category,priority,property
 "Deep clean kitchen","All surfaces",housekeeping,urgent,Malibu
 "Fix heating unit","HVAC issue",maintenance,normal,Montana
 "Restock pantry","Order supplies",housekeeping,low,`}
         </pre>
-        <p className="text-[10px] text-muted-foreground/70">
+        <p className="text-[0.625rem] text-muted-foreground/70">
           {language === "es"
             ? "Ronin AI inferirá los campos faltantes automáticamente."
             : "Ronin AI will infer missing fields automatically."}

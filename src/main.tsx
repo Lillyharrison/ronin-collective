@@ -1,8 +1,11 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { applyEarlyTextSize } from "./lib/textSize";
 
-createRoot(document.getElementById("root")!).render(<App />);
+applyEarlyTextSize();
+const rootElement = document.getElementById("root");
+if (rootElement) createRoot(rootElement).render(<App />);
 
 // ── Service Worker registration ──────────────────────────────────────────────
 // Strategy for iOS Safari PWA reliability:

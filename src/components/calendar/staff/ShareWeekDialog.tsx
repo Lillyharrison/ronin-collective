@@ -182,8 +182,8 @@ export function ShareWeekDialog({
                           {s.label || "Untitled link"}
                           {revoked && <span className="ml-2 text-xs text-destructive">(revoked)</span>}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">{rangeLabel(s.week_start, s.week_end)}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{url}</p>
+                        <p className="text-[0.6875rem] text-muted-foreground">{rangeLabel(s.week_start, s.week_end)}</p>
+                        <p className="text-[0.6875rem] text-muted-foreground truncate">{url}</p>
                       </div>
                     </div>
                     {!revoked && (

@@ -28,7 +28,7 @@ export function LibraryListHeader({ sortKey, sortDir, onSort }: Props) {
       type="button"
       onClick={() => onSort(key)}
       className={cn(
-        "flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors",
+        "flex items-center gap-1 text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors",
         align === "center" && "justify-center",
       )}
     >

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { sortProperties } from "@/hooks/useScopedProperties";
 import { imageUrl } from "@/lib/imageUrl";
+import { normalizeTextSize } from "@/lib/textSize";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -84,9 +85,9 @@ export function MeetTeamSection() {
   async function loadMembers() {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days")
+      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days, text_size")
       .eq("is_archived", false)
-      .order("full_name");
+      .order("full_name").limit(500);
 
     if (!profiles) return;
 
@@ -112,6 +113,7 @@ export function MeetTeamSection() {
     const roleMap = Object.fromEntries((roles || []).map(r => [r.user_id, r.role as AppRole]));
     setMembers(profiles.map(p => ({
       ...p,
+      text_size: normalizeTextSize(p.text_size),
       section_permissions: permsByUser[p.id] || null,
       quick_actions: ((p as { quick_actions?: string[] }).quick_actions) ?? [],
       role: roleMap[p.id] || null,
@@ -237,12 +239,12 @@ export function MeetTeamSection() {
       </div>
 
       {/* Level filter chips */}
-      <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
+      <div className="team-filter-chips flex flex-wrap gap-2 px-4 pb-3">
         {[{ value: "all" as const, label: isEN ? "All" : "Todos" }, ...LEVEL_OPTIONS.map(l => ({ value: l.value, label: isEN ? l.label : l.labelEs }))].map(opt => (
           <button
             key={opt.value}
             onClick={() => setFilterLevel(opt.value as Level | "all")}
-            className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+            className={`shrink-0 px-3 py-1 rounded-full text-[0.6875rem] font-semibold border transition-all ${
               filterLevel === opt.value
                 ? "bg-gold/20 border-gold/50 text-gold"
                 : "border-border text-muted-foreground bg-card hover:border-gold/30"
@@ -259,7 +261,7 @@ export function MeetTeamSection() {
             type="button"
             onClick={() => setShowArchived(v => !v)}
             aria-pressed={showArchived}
-            className={`text-[11px] font-semibold ${showArchived ? "text-gold" : "text-muted-foreground"}`}
+            className={`text-[0.6875rem] font-semibold ${showArchived ? "text-gold" : "text-muted-foreground"}`}
           >
             {showArchived ? (isEN ? "← Back to team" : "← Volver al equipo") : `${isEN ? "Archived" : "Archivados"} (${archived.length})`}
           </button>
@@ -289,7 +291,7 @@ export function MeetTeamSection() {
                   size={12}
                   className={`text-muted-foreground transition-transform ${collapsedGroups[lvl] ? "-rotate-90" : ""}`}
                 />
-                <p className={`text-[10px] font-bold tracking-widest uppercase ${LEVEL_COLORS[lvl].split(" ")[0]}`}>
+                <p className={`text-[0.625rem] font-bold tracking-widest uppercase ${LEVEL_COLORS[lvl].split(" ")[0]}`}>
                   {isEN ? lvlLabel.en : lvlLabel.es}
                   <span className="ml-2 opacity-50">{group.length}</span>
                 </p>
@@ -313,20 +315,20 @@ export function MeetTeamSection() {
                          <div className="flex items-center gap-2">
                            <p className="text-foreground text-sm font-medium truncate">{m.full_name || (m.is_draft ? "Draft Account" : "—")}</p>
                            {m.is_draft && (
-                             <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                             <span className="shrink-0 px-1.5 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-400">
                                Draft
                              </span>
                            )}
                          </div>
                          <div className="flex items-center gap-2 mt-0.5">
-                           {m.job_title && <span className="text-muted-foreground text-[11px] truncate">{m.job_title}</span>}
+                           {m.job_title && <span className="text-muted-foreground text-[0.6875rem] truncate">{m.job_title}</span>}
                            {m.department && (
-                             <span className={`text-[10px] font-semibold ${DEPT_COLORS[m.department] || "text-cream/50"}`}>
+                             <span className={`text-[0.625rem] font-semibold ${DEPT_COLORS[m.department] || "text-cream/50"}`}>
                                · {m.department}
                              </span>
                            )}
                            {m.is_draft && !m.full_name && (
-                             <span className="text-muted-foreground text-[11px]">Add name to send invitation</span>
+                             <span className="text-muted-foreground text-[0.6875rem]">Add name to send invitation</span>
                            )}
                          </div>
                        </div>
@@ -544,7 +546,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
         <div className="flex border-b border-charcoal-light shrink-0">
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex-1 py-3 text-[11px] font-semibold tracking-widest uppercase transition-colors ${tab === t.key ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
+              className={`flex-1 py-3 text-[0.6875rem] font-semibold tracking-widest uppercase transition-colors ${tab === t.key ? "text-gold border-b-2 border-gold" : "text-muted-foreground hover:text-cream"}`}>
               {t.label}
             </button>
           ))}
@@ -664,15 +666,15 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                 <div className="flex-1" />
                 <div className="w-10 flex flex-col items-center gap-0.5">
                   <Eye size={12} className="text-blue-400" />
-                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "View" : "Ver"}</span>
+                  <span className="text-[0.5rem] text-muted-foreground uppercase tracking-wider">{isEN ? "View" : "Ver"}</span>
                 </div>
                 <div className="w-10 flex flex-col items-center gap-0.5">
                   <Pencil size={12} className="text-green-400" />
-                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "Edit" : "Editar"}</span>
+                  <span className="text-[0.5rem] text-muted-foreground uppercase tracking-wider">{isEN ? "Edit" : "Editar"}</span>
                 </div>
                 <div className="w-10 flex flex-col items-center gap-0.5">
                   <Bell size={12} className="text-gold" />
-                  <span className="text-[8px] text-muted-foreground uppercase tracking-wider">{isEN ? "Alerts" : "Alertas"}</span>
+                  <span className="text-[0.5rem] text-muted-foreground uppercase tracking-wider">{isEN ? "Alerts" : "Alertas"}</span>
                 </div>
               </div>
 
@@ -687,7 +689,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                       {showDashSubDivider && (
                         <div className="flex items-center gap-2 mt-1 mb-1">
                           <div className="flex-1 h-px bg-charcoal-light" />
-                          <span className="text-[9px] uppercase tracking-widest text-gold/50 font-semibold">
+                          <span className="text-[0.5625rem] uppercase tracking-widest text-gold/50 font-semibold">
                             {isEN ? "Dashboard Features" : "Funciones del panel"}
                           </span>
                           <div className="flex-1 h-px bg-charcoal-light" />
@@ -696,7 +698,7 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                       {showCalSubDivider && (
                         <div className="flex items-center gap-2 mt-3 mb-1.5">
                           <div className="flex-1 h-px bg-charcoal-light" />
-                          <span className="text-[9px] uppercase tracking-widest text-blue-400/60 font-semibold">
+                          <span className="text-[0.5625rem] uppercase tracking-widest text-blue-400/60 font-semibold">
                             {isEN ? "Calendar Tabs" : "Pestañas del calendario"}
                           </span>
                           <div className="flex-1 h-px bg-charcoal-light" />
@@ -728,11 +730,11 @@ function AddUserModal({ isEN, jobTitles, properties, onClose, onSaved }: {
                         </div>
                         {section.hasScope && sp.view && (
                           <div className="flex items-center gap-2 pl-2">
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{isEN ? "Visibility" : "Visibilidad"}</span>
+                            <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wider">{isEN ? "Visibility" : "Visibilidad"}</span>
                             <select
                               value={sp.scope ?? "own"}
                               onChange={(e) => setScope(section.key, e.target.value as "own" | "department" | "all")}
-                              className="text-[11px] bg-charcoal border border-charcoal-light rounded px-1.5 py-0.5 text-cream focus:outline-none focus:border-gold/50"
+                              className="text-[0.6875rem] bg-charcoal border border-charcoal-light rounded px-1.5 py-0.5 text-cream focus:outline-none focus:border-gold/50"
                             >
                               <option value="own">{isEN ? "Own only" : "Solo propio"}</option>
                               <option value="department">{isEN ? "Their department" : "Su departamento"}</option>

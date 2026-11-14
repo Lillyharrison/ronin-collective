@@ -70,7 +70,7 @@ export function SectionsManager({ template, items, isAdmin, onTemplateChange, on
   return (
     <div className="px-4 mt-3">
       <div className="flex items-center justify-between mb-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Sections</p>
+        <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-muted-foreground">Sections</p>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {sections.map(s => (
@@ -136,7 +136,7 @@ export function ItemSectionPicker({
       value={item.section ?? ""}
       onChange={e => onChange(e.target.value || null)}
       onClick={e => e.stopPropagation()}
-      className="text-[10px] bg-transparent border border-border rounded px-1.5 py-0.5 text-muted-foreground hover:text-foreground hover:border-[hsl(var(--gold))] outline-none cursor-pointer"
+      className="text-[0.625rem] bg-transparent border border-border rounded px-1.5 py-0.5 text-muted-foreground hover:text-foreground hover:border-[hsl(var(--gold))] outline-none cursor-pointer"
     >
       <option value="">— Ungrouped —</option>
       {sections.map(s => <option key={s} value={s}>{s}</option>)}

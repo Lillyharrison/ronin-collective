@@ -210,16 +210,16 @@ export function NotificationsPanel({ open, onClose }: Props) {
 
       {/* Panel */}
       <div
-        className="fixed top-14 right-0 z-50 w-full max-w-sm bg-card border-l border-b border-border shadow-2xl animate-slide-in-right"
-        style={{ maxHeight: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}
+        className="fixed right-0 z-50 w-full max-w-sm bg-card border-l border-b border-border shadow-2xl animate-slide-in-right"
+        style={{ top: "calc(var(--app-header-h, 56px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))", maxHeight: "calc(100dvh - var(--app-header-h, 56px) - var(--push-banner-h, 0px) - var(--preview-banner-h, 0px))", display: "flex", flexDirection: "column" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card flex-shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border bg-card flex-shrink-0">
           <div className="flex items-center gap-2">
             <Bell size={16} className="text-[hsl(var(--gold))]" />
             <span className="font-semibold text-sm text-foreground">Notifications</span>
             {unreadCount > 0 && (
-              <span className="bg-status-urgent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              <span className="bg-status-urgent text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full">
                 {unreadCount}
               </span>
             )}
@@ -228,7 +228,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors"
+                className="flex items-center gap-1 text-[0.625rem] text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors"
               >
                 <CheckCheck size={12} />
                 Mark all read
@@ -292,25 +292,25 @@ export function NotificationsPanel({ open, onClose }: Props) {
                         {n.title}
                       </p>
                       {n.property?.name && (
-                        <p className="text-[11px] font-bold text-foreground mt-0.5 leading-relaxed">
+                        <p className="text-[0.6875rem] font-bold text-foreground mt-0.5 leading-relaxed">
                           {n.property.name}
                         </p>
                       )}
                       {n.body && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
+                        <p className="text-[0.6875rem] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
                           {n.body}
                         </p>
                       )}
                       <NotificationAcknowledgement notification={n} hideAction />
                       <div className="flex items-center gap-2 mt-1">
-                        <p className="text-[10px] text-muted-foreground/50">
+                        <p className="text-[0.625rem] text-muted-foreground/50">
                           {new Date(n.created_at).toLocaleString("en-US", {
                             month: "short", day: "numeric",
                             hour: "numeric", minute: "2-digit",
                           })}
                         </p>
                         {clickable && (
-                          <span className="text-[10px] text-[hsl(var(--gold)/0.7)] flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-[0.625rem] text-[hsl(var(--gold)/0.7)] flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <ExternalLink size={9} /> View
                           </span>
                         )}

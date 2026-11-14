@@ -81,16 +81,16 @@ export function LibraryItemRow({ item, onOpen }: Props) {
         title={item.name}
       >
         {item.name}
-        {item.asin && <span className="ml-1.5 align-middle text-[9px] font-bold px-1 py-0.5 rounded border border-border text-muted-foreground">Amazon</span>}
+        {item.asin && <span className="ml-1.5 align-middle text-[0.5625rem] font-bold px-1 py-0.5 rounded border border-border text-muted-foreground">Amazon</span>}
       </span>
 
       {/* Quantity */}
-      <span className="self-center text-[12px] text-muted-foreground tabular-nums truncate">
+      <span className="self-center text-[0.75rem] text-muted-foreground tabular-nums truncate">
         {item.default_quantity ?? "—"}
       </span>
 
       {/* Size */}
-      <span className="self-center text-[12px] text-muted-foreground truncate" title={item.size ?? undefined}>
+      <span className="self-center text-[0.75rem] text-muted-foreground truncate" title={item.size ?? undefined}>
         {item.size ?? "—"}
       </span>
 
@@ -112,12 +112,12 @@ export function LibraryItemRow({ item, onOpen }: Props) {
       </span>
 
       {/* Purchase */}
-      <span className="self-center text-[11px] text-muted-foreground/90 truncate" title={item.purchase ?? undefined}>
+      <span className="self-center text-[0.6875rem] text-muted-foreground/90 truncate" title={item.purchase ?? undefined}>
         {item.purchase ?? "—"}
       </span>
 
       {/* Notes */}
-      <span className="text-[11px] text-muted-foreground/90 leading-snug whitespace-pre-wrap line-clamp-3">
+      <span className="text-[0.6875rem] text-muted-foreground/90 leading-snug whitespace-pre-wrap line-clamp-3">
         {item.notes ?? ""}
       </span>
 

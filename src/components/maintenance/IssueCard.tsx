@@ -133,7 +133,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
+            <div className="flex items-center gap-2 text-[0.625rem] text-muted-foreground flex-wrap">
               {issue.property_name && (
                 <span className="flex items-center gap-1"><MapPin size={9} /> {issue.property_name}</span>
               )}
@@ -150,7 +150,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
             {issue.scheduled_date && (
               <div className="flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 rounded-md px-1.5 py-0.5 w-fit">
                 <CalendarClock size={9} className="text-blue-400 flex-shrink-0" />
-                <span className="text-[10px] font-medium text-blue-400">
+                <span className="text-[0.625rem] font-medium text-blue-400">
                   {format(plainDateToLocal(issue.scheduled_date), "MMM d, yyyy")}
                 </span>
               </div>
@@ -175,7 +175,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
           <div className="flex flex-wrap items-center gap-1.5">
             <IssueStatusBadge status={issue.status} />
             <IssuePriorityBadge priority={issue.priority} />
-            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+            <span className="text-[0.625rem] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
               {issue.category}
             </span>
             {onArchiveToggle && issue.status === "resolved" && (
@@ -196,14 +196,14 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
           {issue.scheduled_date && (
             <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1.5 w-fit">
               <CalendarClock size={11} className="text-blue-400 flex-shrink-0" />
-              <span className="text-[11px] font-medium text-blue-400">
+              <span className="text-[0.6875rem] font-medium text-blue-400">
                 {format(plainDateToLocal(issue.scheduled_date), "MMM d, yyyy")}
               </span>
             </div>
           )}
 
           {/* Meta row */}
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-3 text-[0.625rem] text-muted-foreground flex-wrap">
             {issue.property_name && (
               <span className="flex items-center gap-1"><MapPin size={9} /> {issue.property_name}</span>
             )}
@@ -220,7 +220,7 @@ export function IssueCard({ issue, onClick, compact = false, onArchiveToggle }: 
 
           {/* Assignee */}
           {issue.assignee_name && (
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-[0.625rem] text-muted-foreground">
               {issue.assignee_avatar
                 ? <img src={issue.assignee_avatar} alt={issue.assignee_name} className="w-4 h-4 rounded-full object-cover" />
                 : <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center"><User size={8} /></div>

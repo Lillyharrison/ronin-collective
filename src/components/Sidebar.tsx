@@ -84,7 +84,7 @@ export function Sidebar() {
             )}
             <div>
               <p className="text-cream text-sm font-medium leading-none">{displayName}</p>
-              <p className="text-gold text-[10px] tracking-widest uppercase mt-0.5">{displayRole}</p>
+              <p className="text-gold text-[0.625rem] tracking-widest uppercase mt-0.5">{displayRole}</p>
             </div>
           </div>
         </div>
@@ -113,7 +113,7 @@ export function Sidebar() {
         </nav>
 
         <div className="px-5 py-4 border-t border-charcoal-light">
-          <p className="text-cream/30 text-[10px] tracking-widest uppercase">
+          <p className="text-cream/30 text-[0.625rem] tracking-widest uppercase">
             Ronin Collective © 2025
           </p>
         </div>

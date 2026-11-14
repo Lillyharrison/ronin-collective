@@ -103,20 +103,20 @@ export function LibraryItemCard({ item, onOpen }: Props) {
       <div className="flex flex-col gap-0.5 px-2 py-1.5 border-t border-border/50">
         <span
           className={cn(
-            "line-clamp-2 text-[11px] font-semibold leading-tight text-foreground",
+            "line-clamp-2 text-[0.6875rem] font-semibold leading-tight text-foreground",
             isDeprecated && "line-through",
           )}
         >
           {item.name}
         </span>
-        {item.asin && <span className="self-start text-[9px] font-bold px-1 rounded border border-border text-muted-foreground">Amazon</span>}
+        {item.asin && <span className="self-start text-[0.5625rem] font-bold px-1 rounded border border-border text-muted-foreground">Amazon</span>}
         {item.default_quantity && (
-          <span className="text-[10px] text-muted-foreground leading-tight">
+          <span className="text-[0.625rem] text-muted-foreground leading-tight">
             {isL ? "Cant" : "Qty"}: {item.default_quantity}
           </span>
         )}
         {item.notes && (
-          <span className="line-clamp-2 text-[9px] text-muted-foreground/80 leading-snug whitespace-pre-wrap">
+          <span className="line-clamp-2 text-[0.5625rem] text-muted-foreground/80 leading-snug whitespace-pre-wrap">
             {item.notes}
           </span>
         )}

@@ -87,7 +87,7 @@ export function DraftTasksWidget() {
           </div>
           <button
             onClick={() => setActiveSection("tasks")}
-            className="text-[10px] text-[hsl(var(--gold)/0.7)] hover:text-[hsl(var(--gold))] flex items-center gap-0.5 transition-colors"
+            className="text-[0.625rem] text-[hsl(var(--gold)/0.7)] hover:text-[hsl(var(--gold))] flex items-center gap-0.5 transition-colors"
           >
             {isL ? "Ver todas" : "View all"} <ChevronRight size={10} />
           </button>
@@ -122,16 +122,16 @@ export function DraftTasksWidget() {
                 <p className="text-sm font-medium text-foreground truncate">{task.title_en}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   {task.property?.name && (
-                    <span className="text-[10px] text-muted-foreground truncate">{task.property.name}</span>
+                    <span className="text-[0.625rem] text-muted-foreground truncate">{task.property.name}</span>
                   )}
                   {task.due_date && (
-                    <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground flex-shrink-0">
+                    <span className="flex items-center gap-0.5 text-[0.625rem] text-muted-foreground flex-shrink-0">
                       <Clock size={8} />
                       {plainDateToLocal(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </span>
                   )}
                   {task.linked_checklist && (
-                    <span className="text-[10px] text-[hsl(var(--gold)/0.7)] flex-shrink-0">
+                    <span className="text-[0.625rem] text-[hsl(var(--gold)/0.7)] flex-shrink-0">
                       {task.linked_checklist.icon} {task.linked_checklist.title}
                     </span>
                   )}
@@ -143,7 +143,7 @@ export function DraftTasksWidget() {
           {drafts.length > 3 && (
             <button
               onClick={() => setActiveSection("tasks")}
-              className="w-full px-4 py-2.5 text-center text-[11px] text-[hsl(var(--gold)/0.7)] hover:text-[hsl(var(--gold))] transition-colors"
+              className="w-full px-4 py-2.5 text-center text-[0.6875rem] text-[hsl(var(--gold)/0.7)] hover:text-[hsl(var(--gold))] transition-colors"
             >
               +{drafts.length - 3} {isL ? "más" : "more"} →
             </button>

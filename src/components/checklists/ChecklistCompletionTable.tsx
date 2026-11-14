@@ -270,7 +270,7 @@ export function ChecklistCompletionTable() {
             Clear &gt; {d} days
           </button>
         ))}
-        <span className="text-[11px] text-muted-foreground self-center">Applies to public link submissions only</span>
+        <span className="text-[0.6875rem] text-muted-foreground self-center">Applies to public link submissions only</span>
       </div>
 
       {loading ? (
@@ -293,7 +293,7 @@ export function ChecklistCompletionTable() {
                   return (
                     <th key={h}
                       onClick={() => handleSort(h)}
-                      className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
+                      className="px-3 py-2.5 text-left text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
                       <span className={cn("inline-flex items-center gap-1", isPrimary && "text-foreground")}>
                         {h}
                         {active
@@ -302,7 +302,7 @@ export function ChecklistCompletionTable() {
                               : <ArrowDown size={10} className={cn(!isPrimary && "opacity-50")} />)
                           : <ArrowUpDown size={10} className="opacity-30" />}
                         {active && !isPrimary && (
-                          <span className="text-[8px] font-bold opacity-60 leading-none">{stackIdx + 1}</span>
+                          <span className="text-[0.5rem] font-bold opacity-60 leading-none">{stackIdx + 1}</span>
                         )}
                       </span>
                     </th>
@@ -340,12 +340,12 @@ export function ChecklistCompletionTable() {
                       )}
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
-                      <span className={cn("inline-block px-2 py-0.5 rounded-full text-[10px] font-medium border", STATUS_STYLE[r.status])}>
+                      <span className={cn("inline-block px-2 py-0.5 rounded-full text-[0.625rem] font-medium border", STATUS_STYLE[r.status])}>
                         {STATUS_LABEL[r.status]}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                         {r.source === "public_link"
                           ? <><Link2 size={11} /> Public link</>
                           : r.source === "app"

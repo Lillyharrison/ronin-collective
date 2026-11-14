@@ -100,7 +100,7 @@ export function AchievementsSection() {
             <div key={i} className="rounded-xl bg-charcoal-light border border-charcoal-muted p-2.5 flex flex-col items-center gap-1">
               {stat.icon}
               <span className="text-cream font-semibold text-lg leading-none">{stat.value}</span>
-              <span className="text-cream/40 text-[9px] tracking-wide uppercase leading-none">{stat.label}</span>
+              <span className="text-cream/40 text-[0.5625rem] tracking-wide uppercase leading-none">{stat.label}</span>
             </div>
           ))}
         </div>
@@ -165,13 +165,13 @@ export function AchievementsSection() {
                   } ${isNew ? "scale-105 ring-2 ring-gold ring-offset-2 ring-offset-background" : ""}`}
                 >
                   {isNew && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-gold text-charcoal text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                    <span className="absolute -top-1.5 -right-1.5 bg-gold text-charcoal text-[0.5rem] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
                       New!
                     </span>
                   )}
                   <span className="text-3xl leading-none">{a.icon}</span>
-                  <span className="text-[10px] font-semibold text-center leading-tight">{title(a)}</span>
-                  <span className="text-[9px] opacity-70 flex items-center gap-0.5">
+                  <span className="text-[0.625rem] font-semibold text-center leading-tight">{title(a)}</span>
+                  <span className="text-[0.5625rem] opacity-70 flex items-center gap-0.5">
                     <Star size={8} /> {a.points}
                   </span>
                 </button>
@@ -196,7 +196,7 @@ export function AchievementsSection() {
 
       {/* Demo confetti button */}
       <div className="mx-4 mt-6 rounded-xl bg-charcoal border border-charcoal-light p-4">
-        <p className="text-cream/50 text-[10px] tracking-widest uppercase mb-3">
+        <p className="text-cream/50 text-[0.625rem] tracking-widest uppercase mb-3">
           {language === "es" ? "Demo — Animación de Confeti" : "Demo — Confetti Preview"}
         </p>
         <button

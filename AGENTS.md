@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Baseline readability is owned by shared Tailwind text tokens, global minimum-text utilities and shared UI hit areas so it can be reverted independently of personal enlargement.
+- Personal text enlargement uses one root rem scale, an early user-keyed cache and the signed-in profile query; shared Aa/Profile controls persist the same setting and remeasure iOS text on foregrounding. PDF API font sizes remain numerical points, never CSS units.
 
 - Entry acknowledgement UI shares eligibility and status helpers; acknowledge-entry calls the owner RPC under the caller JWT and dispatches push only for the winning acknowledgement, never inserting notifications itself.
 - Notification receipt controls share user-keyed cache and an in-flight lock across rows/pop-ups; acknowledge-notification calls the owner RPC under caller JWT and pushes only winning notified results, independent of dashboard dismissal.

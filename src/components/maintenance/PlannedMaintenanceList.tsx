@@ -326,7 +326,7 @@ export function PlannedMaintenanceList({
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{entry.description}</p>
                   )}
                 </div>
-                <span className={cn("flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                <span className={cn("flex-shrink-0 text-[0.625rem] font-semibold px-2 py-0.5 rounded-full border",
                   getStatusColorClass(entry)
                 )}>
                   {STATUS_LABELS[entry.status] ?? entry.status}
@@ -336,31 +336,31 @@ export function PlannedMaintenanceList({
               {/* Meta row */}
               <div className="flex flex-wrap gap-x-3 gap-y-1">
                 {entry.property_name && (
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                     <Building2 size={10} /> {entry.property_name}
                   </span>
                 )}
                 {entry.vendor_name && (
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                     <Wrench size={10} /> {entry.vendor_name}
                   </span>
                 )}
                 {entry.assignee_name && (
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                     <User size={10} /> {firstName(entry.assignee_name)}
                   </span>
                 )}
-                <span className={cn("flex items-center gap-1 text-[11px]", getDateUrgencyClass(entry))}>
+                <span className={cn("flex items-center gap-1 text-[0.6875rem]", getDateUrgencyClass(entry))}>
                   <Calendar size={10} /> {formatDate(entry)}
                   {entry.date_type === "month_only" && (
-                    <span className="text-[9px] opacity-70 font-medium ml-0.5">(approx.)</span>
+                    <span className="text-[0.5625rem] opacity-70 font-medium ml-0.5">(approx.)</span>
                   )}
                 </span>
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                   <Bell size={10} /> {entry.reminder_days > 0 ? `${entry.reminder_days}d reminder` : "No reminder"}
                 </span>
                 {entry.recurrence_months && (
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                     <RotateCcw size={10} /> {entry.recurrence_months === -1 ? "Weekly" : entry.recurrence_months === -2 ? "Monthly" : `Every ${entry.recurrence_months}mo`}
                   </span>
                 )}
@@ -373,7 +373,7 @@ export function PlannedMaintenanceList({
                     value={entry.status}
                     onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
                     onClick={e => e.stopPropagation()}
-                    className="flex-1 h-7 text-[11px] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="flex-1 h-7 text-[0.6875rem] rounded border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
                   >
                     <option value="future">Future (Too Early)</option>
                     <option value="to_be_booked">To Be Booked</option>
@@ -397,7 +397,7 @@ export function PlannedMaintenanceList({
                     {copyOpen === entry.id && (
                       <div className="absolute right-0 top-full mt-1 z-20 w-52 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg py-1"
                         onClick={e => e.stopPropagation()}>
-                        <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Copy to…</p>
+                        <p className="px-3 py-1.5 text-[0.625rem] uppercase tracking-wider text-muted-foreground font-semibold">Copy to…</p>
                         {properties.filter(p => p.id !== entry.property_id).length === 0 && (
                           <p className="px-3 py-2 text-xs text-muted-foreground/60">No other properties</p>
                         )}
@@ -414,11 +414,11 @@ export function PlannedMaintenanceList({
                   {confirmDelete === entry.id ? (
                     <div className="flex items-center gap-1">
                       <button onClick={(e) => { e.stopPropagation(); onDelete(entry.id); setConfirmDelete(null); }}
-                        className="text-[10px] bg-destructive text-destructive-foreground px-2 py-1 rounded font-medium">
+                        className="text-[0.625rem] bg-destructive text-destructive-foreground px-2 py-1 rounded font-medium">
                         Confirm
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(null); }}
-                        className="text-[10px] text-muted-foreground px-2 py-1 rounded hover:bg-muted">
+                        className="text-[0.625rem] text-muted-foreground px-2 py-1 rounded hover:bg-muted">
                         Cancel
                       </button>
                     </div>
@@ -457,7 +457,7 @@ export function PlannedMaintenanceList({
                   return (
                     <th key={i}
                       onClick={() => handleSort(h)}
-                      className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
+                      className="px-3 py-2.5 text-left text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors">
                       <span className={cn("inline-flex items-center gap-1", isPrimary && "text-foreground")}>
                         {h}
                         {active
@@ -466,7 +466,7 @@ export function PlannedMaintenanceList({
                               : <ArrowDown size={10} className={cn(!isPrimary && "opacity-50")} />)
                           : <ArrowUpDown size={10} className="opacity-30" />}
                         {active && !isPrimary && (
-                          <span className="text-[8px] font-bold opacity-60 leading-none">{stackIdx + 1}</span>
+                          <span className="text-[0.5rem] font-bold opacity-60 leading-none">{stackIdx + 1}</span>
                         )}
                       </span>
                     </th>
@@ -476,7 +476,7 @@ export function PlannedMaintenanceList({
                   {sortStack.length > 1 && (
                     <button
                       onClick={() => setSortStack([{ col: sortStack[0].col, asc: sortStack[0].asc }])}
-                      className="text-[9px] text-muted-foreground hover:text-foreground uppercase tracking-wider"
+                      className="text-[0.5625rem] text-muted-foreground hover:text-foreground uppercase tracking-wider"
                       title="Clear secondary sorts">
                       Clear sort
                     </button>
@@ -490,7 +490,7 @@ export function PlannedMaintenanceList({
                   <td className="px-3 py-2.5">
                     <p className="font-medium text-foreground truncate max-w-[200px]">{entry.title}</p>
                     {entry.description && (
-                      <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">{entry.description}</p>
+                      <p className="text-[0.6875rem] text-muted-foreground truncate max-w-[200px]">{entry.description}</p>
                     )}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
@@ -500,7 +500,7 @@ export function PlannedMaintenanceList({
                         onChange={e => onStatusChange(entry.id, e.target.value as PlannedMaintenanceEntry["status"])}
                         onClick={e => e.stopPropagation()}
                         className={cn(
-                          "h-7 text-[11px] rounded border px-1.5 font-medium focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer",
+                          "h-7 text-[0.6875rem] rounded border px-1.5 font-medium focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer",
                           entry.status === "completed" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10" :
                           entry.status === "cancelled" ? "border-border text-muted-foreground bg-muted" :
                           entry.status === "future" ? "border-slate-500/40 text-slate-400 bg-slate-500/10" :
@@ -531,7 +531,7 @@ export function PlannedMaintenanceList({
                         <option value="cancelled">Cancelled</option>
                       </select>
                     ) : (
-                      <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                      <span className={cn("text-[0.625rem] font-semibold px-2 py-0.5 rounded-full border",
                         getStatusColorClass(entry)
                       )}>
                         {STATUS_LABELS[entry.status] ?? entry.status}
@@ -547,7 +547,7 @@ export function PlannedMaintenanceList({
                     <span className={cn("flex items-center gap-1 text-xs", getDateUrgencyClass(entry))}>
                       <Calendar size={9} /> {formatDate(entry)}
                       {entry.date_type === "month_only" && (
-                        <span className="text-[9px] opacity-70 font-medium ml-0.5">(est.)</span>
+                        <span className="text-[0.5625rem] opacity-70 font-medium ml-0.5">(est.)</span>
                       )}
                     </span>
                   </td>
@@ -593,7 +593,7 @@ export function PlannedMaintenanceList({
                           </button>
                           {copyOpen === entry.id && (
                             <div className="absolute right-0 top-full mt-1 z-20 w-52 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg py-1">
-                              <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Copy to…</p>
+                              <p className="px-3 py-1.5 text-[0.625rem] uppercase tracking-wider text-muted-foreground font-semibold">Copy to…</p>
                               {properties.filter(p => p.id !== entry.property_id).length === 0 && (
                                 <p className="px-3 py-2 text-xs text-muted-foreground/60">No other properties</p>
                               )}
@@ -610,11 +610,11 @@ export function PlannedMaintenanceList({
                         {confirmDelete === entry.id ? (
                           <>
                             <button onClick={() => { onDelete(entry.id); setConfirmDelete(null); }}
-                              className="text-[10px] bg-destructive text-destructive-foreground px-2 py-0.5 rounded font-medium">
+                              className="text-[0.625rem] bg-destructive text-destructive-foreground px-2 py-0.5 rounded font-medium">
                               Confirm
                             </button>
                             <button onClick={() => setConfirmDelete(null)}
-                              className="text-[10px] text-muted-foreground px-1 py-0.5 rounded hover:bg-muted">
+                              className="text-[0.625rem] text-muted-foreground px-1 py-0.5 rounded hover:bg-muted">
                               ✕
                             </button>
                           </>

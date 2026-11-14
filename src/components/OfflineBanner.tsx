@@ -77,7 +77,7 @@ export function OfflineBanner() {
         config.bg,
         config.text,
       )}
-      style={{ top: "calc(56px + env(safe-area-inset-top, 0px))" }}
+      style={{ top: "calc(var(--app-header-h, 56px) + var(--push-banner-h, 0px) + var(--preview-banner-h, 0px))" }}
     >
       {config.icon}
       <span>{config.msg}</span>

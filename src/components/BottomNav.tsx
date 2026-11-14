@@ -68,7 +68,7 @@ export function BottomNav() {
                   <MessageCircle size={24} fill="white" strokeWidth={0} />
                   {/* Unread badge */}
                   {unreadCount > 0 && !isActive && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1 shadow-md border-2 border-charcoal animate-bounce">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[0.5625rem] font-bold flex items-center justify-center px-1 shadow-md border-2 border-charcoal animate-bounce">
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                   )}

@@ -142,7 +142,7 @@ function IconPickerPortal({
           {(["emoji","library"] as const).map(t => (
             <button key={t} onMouseDown={e => { e.preventDefault(); setTab(t); }}
               className={cn(
-                "flex-1 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-1",
+                "flex-1 py-2 text-[0.6875rem] font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-1",
                 tab === t ? "text-foreground border-b-2 border-[hsl(var(--gold))]" : "text-muted-foreground hover:text-foreground"
               )}>
               {t === "emoji" ? <><SmilePlus size={11} /> Emoji</> : <><FolderOpen size={11} /> Library</>}
@@ -320,7 +320,7 @@ function SortableGuideItem({
           )}
           {isAdmin && !item.photo_url && (
             <button onClick={() => fileRef.current?.click()}
-              className="mt-1 text-[10px] text-muted-foreground/40 italic hover:text-muted-foreground transition-colors">
+              className="mt-1 text-[0.625rem] text-muted-foreground/40 italic hover:text-muted-foreground transition-colors">
               + add reference image
             </button>
           )}
@@ -334,13 +334,13 @@ function SortableGuideItem({
             {/* Equipment toggle */}
             <button onClick={() => onUpdate(item.id, { is_required: !isEquipment })}
               title={isEquipment ? "Mark as instruction" : "Mark as equipment"}
-              className={cn("px-1.5 py-0.5 rounded text-[9px] font-semibold border transition-colors",
+              className={cn("px-1.5 py-0.5 rounded text-[0.5625rem] font-semibold border transition-colors",
                 isEquipment ? "border-amber-400/40 text-amber-400 bg-amber-400/10" : "border-muted-foreground/20 text-muted-foreground hover:border-primary")}>
               {isEquipment ? "EQ" : "INST"}
             </button>
             {/* Column toggle */}
             <button onClick={() => onUpdate(item.id, { color: column === "basic" ? "deep" : "basic" })}
-              className="px-1.5 py-0.5 rounded text-[9px] font-semibold border border-muted-foreground/20 text-muted-foreground hover:border-primary transition-colors">
+              className="px-1.5 py-0.5 rounded text-[0.5625rem] font-semibold border border-muted-foreground/20 text-muted-foreground hover:border-primary transition-colors">
               {column === "basic" ? "→D" : "←B"}
             </button>
 
@@ -351,7 +351,7 @@ function SortableGuideItem({
                   onClick={() => setShowContainerPicker(v => !v)}
                   title="Move to container"
                   className={cn(
-                    "px-1.5 py-0.5 rounded text-[9px] font-semibold border transition-colors flex items-center gap-0.5",
+                    "px-1.5 py-0.5 rounded text-[0.5625rem] font-semibold border transition-colors flex items-center gap-0.5",
                     item.container ? "border-blue-400/40 text-blue-400 bg-blue-400/10" : "border-muted-foreground/20 text-muted-foreground hover:border-primary"
                   )}>
                   <Layers size={9} />{item.container ? item.container.slice(0,4) : "GRP"}
@@ -361,7 +361,7 @@ function SortableGuideItem({
                     <div className="fixed inset-0 z-[9998]" onClick={() => setShowContainerPicker(false)} />
                     <div className="fixed z-[9999] bg-card border border-border rounded-xl shadow-xl p-2 min-w-[140px]"
                       style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)" }}>
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Move to container</p>
+                      <p className="text-[0.5625rem] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Move to container</p>
                       <button onClick={() => { onUpdate(item.id, { container: null }); setShowContainerPicker(false); }}
                         className={cn("w-full text-left text-xs px-2 py-1.5 rounded-lg hover:bg-muted transition-colors", !item.container && "bg-muted")}>
                         No container
@@ -426,12 +426,12 @@ function ContainerBlock({
               onBlur={() => { onRename(name, nameDraft.trim() || name); setEditingName(false); }}
               onKeyDown={e => { if (e.key === "Enter") { onRename(name, nameDraft.trim() || name); setEditingName(false); } if (e.key === "Escape") setEditingName(false); }}
               onClick={e => e.stopPropagation()}
-              className="text-[11px] font-bold uppercase tracking-wider bg-transparent border-b border-current outline-none w-24"
+              className="text-[0.6875rem] font-bold uppercase tracking-wider bg-transparent border-b border-current outline-none w-24"
             />
           ) : (
-            <span className={cn("text-[11px] font-bold uppercase tracking-wider", cc.text)}>{name}</span>
+            <span className={cn("text-[0.6875rem] font-bold uppercase tracking-wider", cc.text)}>{name}</span>
           )}
-          <span className={cn("text-[9px] ml-auto", cc.text)}>{items.length}</span>
+          <span className={cn("text-[0.5625rem] ml-auto", cc.text)}>{items.length}</span>
         </button>
         {isAdmin && (
           <div className="flex items-center gap-1">
@@ -501,7 +501,7 @@ function ColumnSection({
       {/* Equipment */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="px-3 py-1.5 bg-muted/30 border-b border-border">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Equipment</p>
+          <p className="text-[0.5625rem] font-bold uppercase tracking-widest text-muted-foreground">Equipment</p>
         </div>
         {equipment.map(item => (
           <SortableGuideItem key={item.id} item={item} isAdmin={isAdmin} column={col}
@@ -511,7 +511,7 @@ function ColumnSection({
         {isAdmin && (
           <div className="border-t border-dashed border-border/40 px-3 py-1.5">
             <button onClick={() => onAddItem(col, true)}
-              className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+              className="text-[0.6875rem] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
               <Plus size={11} /> Add equipment
             </button>
           </div>
@@ -521,7 +521,7 @@ function ColumnSection({
       {/* Instructions */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="px-3 py-1.5 bg-muted/30 border-b border-border">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Instructions</p>
+          <p className="text-[0.5625rem] font-bold uppercase tracking-widest text-muted-foreground">Instructions</p>
         </div>
 
         {/* Uncategorised instructions */}
@@ -552,7 +552,7 @@ function ColumnSection({
         {isAdmin && (
           <div className="border-t border-dashed border-border/40 px-3 py-2 space-y-1.5">
             <button onClick={() => onAddItem(col, false)}
-              className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+              className="text-[0.6875rem] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
               <Plus size={11} /> Add instruction
             </button>
 
@@ -572,7 +572,7 @@ function ColumnSection({
                 <div className="flex flex-wrap gap-1">
                   {PRESET_CONTAINERS.filter(p => !containers.includes(p)).map(p => (
                     <button key={p} onClick={() => commitContainer(p)}
-                      className={cn("text-[10px] px-2 py-0.5 rounded-full border transition-colors", containerColors(p).border, containerColors(p).text, containerColors(p).bg)}>
+                      className={cn("text-[0.625rem] px-2 py-0.5 rounded-full border transition-colors", containerColors(p).border, containerColors(p).text, containerColors(p).bg)}>
                       {p}
                     </button>
                   ))}
@@ -580,7 +580,7 @@ function ColumnSection({
               </div>
             ) : (
               <button onClick={() => setAddingContainer(true)}
-                className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors">
+                className="text-[0.6875rem] text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors">
                 <Layers size={11} /> Add container
               </button>
             )}
@@ -846,9 +846,9 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
           .page:last-child { page-break-after:auto; break-after:auto; }
           .front { display:flex; flex-direction:column; }
           .front-header { display:flex; align-items:center; gap:10px; border-bottom:2.5px solid #111; padding-bottom:8px; margin-bottom:10px; }
-          .guide-icon { font-size:26px; }
+          .guide-icon { font-size:1.625rem; }
           .guide-icon-img { width:30px; height:30px; object-fit:cover; border-radius:3px; }
-          .guide-title { font-size:19px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; line-height:1.15; }
+          .guide-title { font-size:1.1875rem; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; line-height:1.15; }
           .body { flex:1; display:flex; gap:12px; min-height:0; }
           .side { width:42mm; display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
           .side img { width:100%; aspect-ratio:1/1; min-height:0; object-fit:cover; border-radius:4px; border:1px solid #ddd; }
@@ -856,20 +856,20 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
           .col { flex:1; padding:0 10px; min-width:0; }
           .col:first-child { padding-left:0; border-right:1px solid #ccc; }
           .col:last-child { padding-right:0; }
-          .col-title { font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; border-bottom:1.5px solid #111; padding-bottom:4px; margin-bottom:6px; }
-          .section-label { font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#333; margin:8px 0 4px; }
+          .col-title { font-size:0.8125rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; border-bottom:1.5px solid #111; padding-bottom:4px; margin-bottom:6px; }
+          .section-label { font-size:0.625rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#333; margin:8px 0 4px; }
           .equip-grid { display:flex; flex-wrap:wrap; gap:6px 10px; margin-bottom:4px; }
           .equip-item { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:40px; }
-          .eq-icon { font-size:22px; }
+          .eq-icon { font-size:1.375rem; }
           .eq-img { width:30px; height:30px; object-fit:contain; }
-          .eq-label { font-size:9px; text-align:center; color:#222; max-width:52px; line-height:1.2; }
+          .eq-label { font-size:0.5625rem; text-align:center; color:#222; max-width:52px; line-height:1.2; }
           .instr-row { display:flex; align-items:flex-start; gap:7px; padding:4px 0; border-bottom:1px solid #eee; }
           .instr-row:last-child { border-bottom:none; }
-          .instr-icon { font-size:12px; flex-shrink:0; width:14px; text-align:center; margin-top:2px; }
+          .instr-icon { font-size:0.75rem; flex-shrink:0; width:14px; text-align:center; margin-top:2px; }
           .instr-img { width:18px; height:18px; object-fit:contain; flex-shrink:0; margin-top:1px; }
-          .instr-text { font-size:12.5px; line-height:1.35; font-weight:400; color:#111; }
+          .instr-text { font-size:0.8125rem; line-height:1.35; font-weight:400; color:#111; }
           .container-block { margin:6px 0; }
-          .container-label { font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:3px; background:#f0f0f0; color:#222; border:1px solid #ccc; }
+          .container-label { font-size:0.625rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:3px; background:#f0f0f0; color:#222; border:1px solid #ccc; }
           .col-imgs { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
           .col-imgs img { width:100%; max-height:48mm; object-fit:cover; border-radius:4px; border:1px solid #ddd; }
           .back { display:flex; flex-direction:column; }
@@ -883,7 +883,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
           ${isUrl(template.icon) ? `<img src="${template.icon}" class="guide-icon-img" />` : `<span class="guide-icon">${template.icon}</span>`}
           <div>
             <span class="guide-title">${template.title}</span>
-            ${(template as any).location ? `<div style="font-size:11px;font-weight:500;color:#444;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}
+            ${(template as any).location ? `<div style="font-size:0.6875rem;font-weight:500;color:#444;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}
           </div>
         </div>
         <div class="body">
@@ -906,7 +906,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
         </div>
       </div>
 
-      ${backImages.length ? `<div class="page back"><div class="front-header"><div><span class="guide-title">${template.title}</span>${(template as any).location ? `<div style="font-size:11px;font-weight:500;color:#444;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}</div></div><div class="back-imgs">${backImages.map(i => `<img src="${i.url}" />`).join("")}</div></div>` : ""}
+      ${backImages.length ? `<div class="page back"><div class="front-header"><div><span class="guide-title">${template.title}</span>${(template as any).location ? `<div style="font-size:0.6875rem;font-weight:500;color:#444;margin-top:2px;letter-spacing:0.04em;">📍 ${(template as any).location}</div>` : ""}</div></div><div class="back-imgs">${backImages.map(i => `<img src="${i.url}" />`).join("")}</div></div>` : ""}
 
       </body></html>
     `);
@@ -999,7 +999,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
                 <BookOpen size={10} className="inline mr-1" />Care guide
               </span>
               {isDraft && (
-                <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border">DRAFT</span>
+                <span className="text-[0.5625rem] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border">DRAFT</span>
               )}
             </div>
           </div>
@@ -1009,7 +1009,7 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
       {/* ── Admin Panel ─────────────────────────────────────────── */}
       {showAdminPanel && isMasterAdmin && (
         <div className="bg-card border-b border-border px-4 py-4 space-y-4 flex-shrink-0">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Admin Settings</p>
+          <p className="text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-widest">Admin Settings</p>
 
           <div className="flex items-center justify-between">
             <div>
@@ -1142,11 +1142,11 @@ export function CareGuideDetailPage({ template: initialTemplate, onBack, onTempl
       {/* ── Content — 2 column layout ───────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-8">
         <div className="px-4 pt-3 pb-2">
-          <p className="text-[11px] text-muted-foreground/60 uppercase tracking-widest font-medium">
+          <p className="text-[0.6875rem] text-muted-foreground/60 uppercase tracking-widest font-medium">
             {language === "es" ? "Instrucciones de Cuidado" : "Care Instructions"}
           </p>
           {isAdmin && (
-            <p className="text-[10px] text-muted-foreground/40 mt-0.5">
+            <p className="text-[0.625rem] text-muted-foreground/40 mt-0.5">
               Hover items to assign columns, toggle EQ/Instruction, or move to containers
             </p>
           )}

@@ -32,7 +32,7 @@ export function ShiftChip({
         onDoubleClick={onDoubleClick}
         title={`${typeLabel}${pending ? " — awaiting approval" : " — approved"}`}
         className={cn(
-          "rounded px-1.5 py-0.5 text-[10px] font-medium flex items-center gap-0.5 leading-tight",
+          "rounded px-1.5 py-0.5 text-[0.625rem] font-medium flex items-center gap-0.5 leading-tight",
           pending
             ? "bg-amber-500/10 border border-dashed border-amber-500/60 text-amber-700 dark:text-amber-400"
             : "bg-muted border border-border text-muted-foreground",
@@ -69,7 +69,7 @@ export function ShiftChip({
       onDoubleClick={onDoubleClick}
       title={noteBody || "Double-click to edit"}
       className={cn(
-        "rounded px-1.5 py-1 text-[10px] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight w-full",
+        "rounded px-1.5 py-1 text-[0.625rem] font-medium border cursor-grab active:cursor-grabbing select-none hover:opacity-80 transition-opacity leading-tight w-full",
         virtualLoc && !prop
           ? "bg-muted/60 border-border text-muted-foreground"
           : `${col.bg} ${col.text}`
@@ -78,23 +78,23 @@ export function ShiftChip({
       <div className="flex items-center gap-0.5">
         <span className="truncate">{displayLabel}</span>
         {shift.is_virtual && (
-          <span className="opacity-50 flex-shrink-0 text-[8px]">↻</span>
+          <span className="opacity-50 flex-shrink-0 text-[0.5rem]">↻</span>
         )}
       </div>
       {timeLabel && (
-        <div className="opacity-70 text-[9px]">{timeLabel}</div>
+        <div className="opacity-70 text-[0.5625rem]">{timeLabel}</div>
       )}
       {checklistTitle && (
         <div
           title={`Checklist: ${checklistTitle}`}
-          className="flex items-center gap-0.5 opacity-80 text-[9px] mt-0.5"
+          className="flex items-center gap-0.5 opacity-80 text-[0.5625rem] mt-0.5"
         >
           <ClipboardList size={9} className="flex-shrink-0" />
           <span className="truncate">{checklistTitle}</span>
         </div>
       )}
       {noteBody && (
-        <div className="opacity-80 text-[9px] line-clamp-2 break-words mt-0.5">
+        <div className="opacity-80 text-[0.5625rem] line-clamp-2 break-words mt-0.5">
           {noteBody}
         </div>
       )}

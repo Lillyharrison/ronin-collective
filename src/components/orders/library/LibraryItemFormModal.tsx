@@ -340,7 +340,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
                 <p className="text-sm font-medium">
                   {isL ? "Permitir sustituciones" : "Allow substitutions"}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[0.6875rem] text-muted-foreground">
                   {isL
                     ? "Si una marca no está disponible, se puede sustituir."
                     : "If brand is unavailable, a substitute may be used."}
@@ -353,7 +353,7 @@ export function LibraryItemFormModal({ open, item, onClose }: Props) {
               <Label className="text-xs">
                 {isL ? "Propiedades" : "Properties"}
               </Label>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[0.6875rem] text-muted-foreground">
                 {isL
                   ? "Vacío = disponible en todas las propiedades."
                   : "Leave empty to make this item available across all properties."}

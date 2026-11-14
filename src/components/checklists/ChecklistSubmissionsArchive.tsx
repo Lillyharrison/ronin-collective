@@ -155,11 +155,11 @@ export function ChecklistSubmissionsArchive() {
                   <span className="text-base flex-shrink-0">{r.template_icon ?? "✅"}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{r.template_title ?? "Checklist"}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">
+                    <p className="text-[0.6875rem] text-muted-foreground truncate">
                       {r.assignee_name ?? "Anonymous"}{r.property_name ? ` · ${r.property_name}` : ""} · {date}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] text-[hsl(var(--status-done))] flex-shrink-0">
+                  <div className="flex items-center gap-1 text-[0.625rem] text-[hsl(var(--status-done))] flex-shrink-0">
                     <CheckCircle2 size={12} /> {done}/{total}
                   </div>
                 </button>
@@ -183,7 +183,7 @@ export function ChecklistSubmissionsArchive() {
               <span className="text-xl">{detail.template_icon ?? "✅"}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">{detail.template_title}</p>
-                <p className="text-[11px] text-muted-foreground truncate">
+                <p className="text-[0.6875rem] text-muted-foreground truncate">
                   {detail.assignee_name ?? "Anonymous"} · {new Date(detail.submitted_at).toLocaleString()}
                 </p>
               </div>
@@ -205,14 +205,14 @@ export function ChecklistSubmissionsArchive() {
                       </span>
                       <span className="text-base">{it.icon}</span>
                       <span className={cn("flex-1", checked && "line-through opacity-60")}>{it.title}</span>
-                      {it.section && <span className="text-[10px] text-muted-foreground">{it.section}</span>}
+                      {it.section && <span className="text-[0.625rem] text-muted-foreground">{it.section}</span>}
                     </div>
                   );
                 })
               )}
               {detail.notes && (
                 <div className="mt-4 p-3 bg-muted/40 rounded-xl">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Notes</p>
+                  <p className="text-[0.625rem] uppercase tracking-widest text-muted-foreground mb-1">Notes</p>
                   <p className="text-sm whitespace-pre-wrap">{detail.notes}</p>
                 </div>
               )}

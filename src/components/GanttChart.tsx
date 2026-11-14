@@ -200,7 +200,7 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
             <div
               style={{
                 position: "absolute", top: lblTop, left: cs * COL_W + 7,
-                height: 14, lineHeight: "14px", fontSize: 10, fontWeight: 700,
+                height: 14, lineHeight: "0.875rem", fontSize: "0.625rem", fontWeight: 700,
                 color: "#1a1a1a", whiteSpace: "nowrap", zIndex: 4 + lane,
                 pointerEvents: "none", letterSpacing: "0.1px",
               }}
@@ -222,14 +222,14 @@ function BarCanvas({ proj, csy, csm, totalMonths }: { proj: Project; csy: number
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
             <span style={{ width: 10, height: 10, borderRadius: 2, background: (COLORS[hoverItem.ph.type] || COLORS.complete).bar, flexShrink: 0, display: "inline-block" }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.35 }}>{hoverItem.ph.label}</span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1a1a1a", lineHeight: 1.35 }}>{hoverItem.ph.label}</span>
           </div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "#888", letterSpacing: ".4px", marginBottom: hoverItem.ph.notes ? 6 : 0 }}>
+          <div style={{ fontSize: "0.625rem", fontWeight: 600, color: "#888", letterSpacing: ".4px", marginBottom: hoverItem.ph.notes ? 6 : 0 }}>
             {TYPE_LABEL[hoverItem.ph.type]} &bull; {fmtDate(hoverItem.ph.start)} → {fmtDate(hoverItem.ph.end)}
           </div>
           {hoverItem.ph.notes && (
             <div style={{
-              fontSize: 11, color: "#444", lineHeight: 1.55,
+              fontSize: "0.6875rem", color: "#444", lineHeight: 1.55,
               maxHeight: 110, overflowY: "auto", whiteSpace: "pre-wrap",
               borderTop: "1px solid #eee8de", paddingTop: 6,
             }}>
@@ -259,7 +259,7 @@ function PhaseRow({
         { label: "Type", content: (
           <select value={phase.type}
             onChange={(e) => onChange(idx, { ...phase, type: e.target.value as Phase["type"] })}
-            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }}>
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: "0.6875rem", fontFamily: "inherit", background: "#fff" }}>
             {(["construction","install","maintenance","design","complete"] as const).map(t => (
               <option key={t} value={t}>{TYPE_LABEL[t]}</option>
             ))}
@@ -268,34 +268,34 @@ function PhaseRow({
         { label: "Start", content: (
           <input type="month" value={fmtYM(phase.start[0], phase.start[1])}
             onChange={(e) => onChange(idx, { ...phase, start: parseYM(e.target.value) })}
-            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }} />
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: "0.6875rem", fontFamily: "inherit", background: "#fff" }} />
         )},
         { label: "End", content: (
           <input type="month" value={fmtYM(phase.end[0], phase.end[1])}
             onChange={(e) => onChange(idx, { ...phase, end: parseYM(e.target.value) })}
-            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }} />
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: "0.6875rem", fontFamily: "inherit", background: "#fff" }} />
         )},
         { label: "Label", content: (
           <input type="text" value={phase.label}
             onChange={(e) => onChange(idx, { ...phase, label: e.target.value })}
-            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff" }} />
+            style={{ width: "100%", padding: "5px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: "0.6875rem", fontFamily: "inherit", background: "#fff" }} />
         )},
       ]).map(({ label, content }: { label: string; content: React.ReactNode }) => (
         <div key={label}>
-          <div style={{ fontSize: 9, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>{label}</div>
+          <div style={{ fontSize: "0.5625rem", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>{label}</div>
           {content}
         </div>
       ))}
       <div style={{ gridColumn: "1 / -1" }}>
-        <div style={{ fontSize: 9, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>Notes (shown on hover over the bar)</div>
+        <div style={{ fontSize: "0.5625rem", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>Notes (shown on hover over the bar)</div>
         <textarea value={phase.notes || ""}
           onChange={(e) => onChange(idx, { ...phase, notes: e.target.value })}
           rows={2}
           placeholder="Optional — longer details shown when hovering the bar on the timeline"
-          style={{ width: "100%", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, fontFamily: "inherit", background: "#fff", resize: "vertical", minHeight: 40 }} />
+          style={{ width: "100%", padding: "6px 8px", border: "1px solid #ccc", borderRadius: 4, fontSize: "0.6875rem", fontFamily: "inherit", background: "#fff", resize: "vertical", minHeight: 40 }} />
       </div>
       <button onClick={() => onRemove(idx)}
-        style={{ background: "#fde8e6", color: "#c0392b", border: "1px solid #f5c6c2", borderRadius: 4, padding: "5px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700, alignSelf: "flex-end", fontFamily: "inherit" }}>
+        style={{ background: "#fde8e6", color: "#c0392b", border: "1px solid #f5c6c2", borderRadius: 4, padding: "5px 10px", cursor: "pointer", fontSize: "0.6875rem", fontWeight: 700, alignSelf: "flex-end", fontFamily: "inherit" }}>
         Remove
       </button>
     </div>
@@ -496,11 +496,11 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
 
   const inputStyle: React.CSSProperties = {
     padding: "7px 10px", border: "1px solid #ccc", borderRadius: 6,
-    fontSize: 12, fontFamily: "inherit", background: "#fff", color: "#1a1a1a", width: "100%",
+    fontSize: "0.75rem", fontFamily: "inherit", background: "#fff", color: "#1a1a1a", width: "100%",
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 10, fontWeight: 600, color: "#666",
+    fontSize: "0.625rem", fontWeight: 600, color: "#666",
     textTransform: "uppercase", letterSpacing: ".6px", display: "block", marginBottom: 4,
   };
 
@@ -536,11 +536,11 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     let rows = "";
 
     let yc = "";
-    yc += "<th style=\"width:200px;background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Property</th>";
-    yc += "<th style=\"width:96px;background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Status</th>";
-    yc += "<th style=\"width:108px;background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Due</th>";
+    yc += "<th style=\"width:200px;background:#1a1a1a;color:#c9a84c;font-size:0.5625rem;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Property</th>";
+    yc += "<th style=\"width:96px;background:#1a1a1a;color:#c9a84c;font-size:0.5625rem;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Status</th>";
+    yc += "<th style=\"width:108px;background:#1a1a1a;color:#c9a84c;font-size:0.5625rem;font-weight:700;padding:8px 12px;text-align:left;text-transform:uppercase\">Due</th>";
     pSpans.forEach(({ year, span }) => {
-      yc += "<th colspan=\"" + span + "\" style=\"background:#1a1a1a;color:#c9a84c;font-size:9px;font-weight:700;padding:8px 4px;text-align:center;border-left:1px solid #333\">" + year + "</th>";
+      yc += "<th colspan=\"" + span + "\" style=\"background:#1a1a1a;color:#c9a84c;font-size:0.5625rem;font-weight:700;padding:8px 4px;text-align:center;border-left:1px solid #333\">" + year + "</th>";
     });
     rows += "<tr>" + yc + "</tr>";
 
@@ -555,7 +555,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
       const bg = isNow ? "#c9a84c" : "#222";
       const col = isNow ? "#111" : "#666";
       const fw = isNow ? 700 : 500;
-      mc += "<th style=\"background:" + bg + ";color:" + col + ";font-size:9px;padding:5px 2px;text-align:center;font-weight:" + fw + "\">" + MN[mIdx] + "</th>";
+      mc += "<th style=\"background:" + bg + ";color:" + col + ";font-size:0.5625rem;padding:5px 2px;text-align:center;font-weight:" + fw + "\">" + MN[mIdx] + "</th>";
     }
     rows += "<tr>" + mc + "</tr>";
 
@@ -574,7 +574,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     };
 
     locs.forEach((loc: string) => {
-      rows += "<tr><td colspan=\"" + (3 + numMonths) + "\" style=\"background:#222;color:#c9a84c;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:6px 12px;border-top:1px solid #333\">" + loc + "</td></tr>";
+      rows += "<tr><td colspan=\"" + (3 + numMonths) + "\" style=\"background:#222;color:#c9a84c;font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:6px 12px;border-top:1px solid #333\">" + loc + "</td></tr>";
 
       projects.filter((p: Project) => p.location === loc).forEach((proj: Project) => {
         const due = getDue(proj, fy, fm);
@@ -608,16 +608,16 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
         svg += "</svg>";
 
         let dueHtml = due
-          ? "<div style=\"font-size:10px;font-weight:700;color:#1a2e44\">" + due.label + "</div><div style=\"font-size:9px;color:#999\">" + due.desc + "</div>"
+          ? "<div style=\"font-size:0.625rem;font-weight:700;color:#1a2e44\">" + due.label + "</div><div style=\"font-size:0.5625rem;color:#999\">" + due.desc + "</div>"
           : "";
         const undatedMs = (proj.milestones || []).filter((ms: Milestone) => !msHasDate(ms));
         undatedMs.forEach((ms: Milestone, ui: number) => {
-          dueHtml += "<div style=\"margin-top:" + (due || ui > 0 ? "4px" : "0") + ";font-size:10px;font-weight:700;color:#1a2e44\">" + ms.label + "</div>";
+          dueHtml += "<div style=\"margin-top:" + (due || ui > 0 ? "4px" : "0") + ";font-size:0.625rem;font-weight:700;color:#1a2e44\">" + ms.label + "</div>";
         });
 
         rows += "<tr style=\"border-bottom:1px solid #e8e3da\">";
-        rows += "<td style=\"padding:4px 12px;font-size:10px;font-weight:500;color:#222;background:#fbfbfb;border-right:1px solid #ddd\">" + proj.property + "</td>";
-        rows += "<td style=\"padding:3px 8px;text-align:center;background:#fafaf8;border-right:1px solid #ddd\"><span style=\"display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:3px;background:" + c.pill + ";color:" + c.pillText + ";text-transform:uppercase\">" + (TL[proj.status] || proj.status) + "</span></td>";
+        rows += "<td style=\"padding:4px 12px;font-size:0.625rem;font-weight:500;color:#222;background:#fbfbfb;border-right:1px solid #ddd\">" + proj.property + "</td>";
+        rows += "<td style=\"padding:3px 8px;text-align:center;background:#fafaf8;border-right:1px solid #ddd\"><span style=\"display:inline-block;font-size:0.5rem;font-weight:700;padding:2px 7px;border-radius:3px;background:" + c.pill + ";color:" + c.pillText + ";text-transform:uppercase\">" + (TL[proj.status] || proj.status) + "</span></td>";
         rows += "<td style=\"padding:3px 10px;background:#fff;border-right:1px solid #ddd\">" + dueHtml + "</td>";
         rows += "<td colspan=\"" + numMonths + "\" style=\"padding:0\">" + svg + "</td>";
         rows += "</tr>";
@@ -631,7 +631,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
       { color: "#c8b8e8", label: "Design / Planning" },
       { color: "#cccccc", label: "Complete" },
     ].map(x =>
-      "<span style=\"display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#333;margin-right:16px\">" +
+      "<span style=\"display:inline-flex;align-items:center;gap:5px;font-size:0.625rem;color:#333;margin-right:16px\">" +
       "<span style=\"display:inline-block;width:12px;height:12px;border-radius:2px;background:" + x.color + "\"></span>" +
       x.label + "</span>"
     ).join("");
@@ -645,19 +645,19 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
     html += "body{font-family:Arial,sans-serif;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}";
     html += "@page{size:A3 landscape;margin:8mm}";
     html += ".tip{background:#1a2e44;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-radius:6px}";
-    html += ".tip p{font-size:11px;color:#aac4e0;margin:0}";
-    html += ".tip button{background:#c9a84c;color:#111;border:none;padding:8px 20px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700}";
+    html += ".tip p{font-size:0.6875rem;color:#aac4e0;margin:0}";
+    html += ".tip button{background:#c9a84c;color:#111;border:none;padding:8px 20px;border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:700}";
     html += "@media print{.tip{display:none!important}}";
     html += "table{border-collapse:collapse;width:100%}";
     html += "</style></head><body>";
     html += "<div class=\"tip\">";
-    html += "<div><div style=\"font-size:13px;font-weight:700;margin-bottom:2px\">" + titleStr + "</div>";
+    html += "<div><div style=\"font-size:0.8125rem;font-weight:700;margin-bottom:2px\">" + titleStr + "</div>";
     html += "<p>Paper = A3 &bull; Landscape &bull; Minimum margins &bull; Enable Background graphics</p></div>";
     html += "<button onclick=\"window.print()\">Print / Save as PDF</button>";
     html += "</div>";
     html += "<div style=\"padding:4px\">";
     html += "<div style=\"display:flex;flex-wrap:wrap;padding:8px 4px 10px;border-bottom:1px solid #ddd;margin-bottom:6px\">" + leg;
-    html += "<span style=\"margin-left:auto;font-size:10px;color:#999\">As of " + dateStr + "</span></div>";
+    html += "<span style=\"margin-left:auto;font-size:0.625rem;color:#999\">As of " + dateStr + "</span></div>";
     html += "<table><tbody>" + rows + "</tbody></table>";
     html += "</div></body></html>";
 
@@ -669,41 +669,41 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
   }
 
   return (
-    <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: 12, background: "transparent", minHeight: "100vh", color: "#1a1a1a" }}>
+    <div style={{ fontFamily: "'Inter', Arial, sans-serif", fontSize: "0.75rem", background: "transparent", minHeight: "100vh", color: "#1a1a1a" }}>
       {/* LEGEND */}
       <div style={{ background: "#fff", padding: "10px 24px", borderBottom: "1px solid #e8e3da", display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
         {(legendItems).map(({ color, label }) => (
-          <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#444", fontWeight: 500 }}>
+          <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.6875rem", color: "#444", fontWeight: 500 }}>
             <span style={{ width: 13, height: 13, borderRadius: 3, background: color, border: "1px solid rgba(0,0,0,0.12)", flexShrink: 0, display: "inline-block" }} />
             {label}
           </span>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#aaa", letterSpacing: ".3px" }}>{isLoadingBoard ? "Loading timeline..." : "Click any project name to edit"}</span>
+        <span style={{ marginLeft: "auto", fontSize: "0.625rem", color: "#aaa", letterSpacing: ".3px" }}>{isLoadingBoard ? "Loading timeline..." : "Click any project name to edit"}</span>
       </div>
 
       {/* DATE RANGE CONTROLS */}
       <div style={{ background: "#fff", padding: "10px 24px", borderBottom: "1px solid #e8e3da", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
+        <span style={{ fontSize: "0.625rem", fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".6px" }}>View</span>
         <input type="month" value={fmtYM(viewFrom[0], viewFrom[1])}
           onChange={(e) => { const v = parseYM(e.target.value); setViewFrom(v); }}
-          style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 5, fontSize: 11, fontFamily: "inherit", background: "#fff", color: "#1a1a1a" }} />
-        <span style={{ color: "#aaa", fontSize: 12 }}>→</span>
+          style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 5, fontSize: "0.6875rem", fontFamily: "inherit", background: "#fff", color: "#1a1a1a" }} />
+        <span style={{ color: "#aaa", fontSize: "0.75rem" }}>→</span>
         <input type="month" value={fmtYM(viewTo[0], viewTo[1])}
           onChange={(e) => { const v = parseYM(e.target.value); setViewTo(v); }}
-          style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 5, fontSize: 11, fontFamily: "inherit", background: "#fff", color: "#1a1a1a" }} />
+          style={{ padding: "4px 8px", border: "1px solid #ddd", borderRadius: 5, fontSize: "0.6875rem", fontFamily: "inherit", background: "#fff", color: "#1a1a1a" }} />
         <div style={{ display: "flex", gap: 4, marginLeft: 4 }}>
           {[12, 24, 36].map((m) => {
             const active = viewMonths === m;
             return (
               <button key={m} onClick={() => { setViewFrom([CSY, CSM]); const d = new Date(CSY, CSM-1+m, 1); setViewTo([d.getFullYear(), d.getMonth()+1]); }}
-                style={{ padding: "4px 10px", border: `1px solid ${active ? "#1a1a1a" : "#ddd"}`, borderRadius: 5, background: active ? "#1a1a1a" : "#fff", color: active ? "#fff" : "#555", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+                style={{ padding: "4px 10px", border: `1px solid ${active ? "#1a1a1a" : "#ddd"}`, borderRadius: 5, background: active ? "#1a1a1a" : "#fff", color: active ? "#fff" : "#555", cursor: "pointer", fontSize: "0.625rem", fontWeight: 600, fontFamily: "inherit" }}>
                 {m}m
               </button>
             );
           })}
         </div>
         <button onClick={handlePrint}
-          style={{ marginLeft: "auto", padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+          style={{ marginLeft: "auto", padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: "0.625rem", fontWeight: 600, fontFamily: "inherit" }}>
           Export PDF
         </button>
         <button onClick={() => {
@@ -713,7 +713,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
             setTimeout(() => setLinkCopied(false), 2000);
           });
         }}
-          style={{ padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 10, fontWeight: 600, fontFamily: "inherit" }}>
+          style={{ padding: "4px 10px", border: "1px solid #c9a84c", borderRadius: 5, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: "0.625rem", fontWeight: 600, fontFamily: "inherit" }}>
           {linkCopied ? "Link Copied!" : "Share Link"}
         </button>
       </div>
@@ -722,9 +722,9 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
         {/* EDITOR PANEL */}
         {editingId !== null && (
           <div ref={editorRef} style={{ background: "#fff", borderRadius: 10, border: "1px solid #e0dbd2", marginBottom: 20, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
-            <div style={{ background: "#222", color: "#c9a84c", padding: "12px 16px", fontSize: 11, fontWeight: 700, display: "flex", justifyContent: "space-between", alignItems: "center", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>
+            <div style={{ background: "#222", color: "#c9a84c", padding: "12px 16px", fontSize: "0.6875rem", fontWeight: 700, display: "flex", justifyContent: "space-between", alignItems: "center", letterSpacing: 1, textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>
               <span>Editing: {editorProp} — {editorLoc}</span>
-              <button onClick={() => setEditingId(null)} style={{ background: "transparent", border: "1px solid #444", color: "#aaa", borderRadius: 4, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>✕ Close</button>
+              <button onClick={() => setEditingId(null)} style={{ background: "transparent", border: "1px solid #444", color: "#aaa", borderRadius: 4, padding: "3px 10px", cursor: "pointer", fontSize: "0.6875rem", fontFamily: "inherit" }}>✕ Close</button>
             </div>
             <div style={{ padding: 18 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 18 }}>
@@ -746,18 +746,18 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                 ))}
               </div>
 
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Timeline Phases</div>
+              <div style={{ fontSize: "0.625rem", fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Timeline Phases</div>
               {editorPhases.map((ph, i) => (
                 <PhaseRow key={i} phase={ph} idx={i}
                   onChange={(i, p) => { const a = [...editorPhases]; a[i] = p; setEditorPhases(a); }}
                   onRemove={(i) => setEditorPhases(editorPhases.filter((_, j) => j !== i))} />
               ))}
               <button onClick={() => setEditorPhases([...editorPhases, { type: "construction", start: [CSY, CSM], end: [CSY, Math.min(CSM + 5, 12)], label: "New phase" }])}
-                style={{ background: "transparent", color: "#c9a84c", border: "1px solid #c9a84c", borderRadius: 5, padding: "6px 14px", cursor: "pointer", fontSize: 10, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit", marginBottom: 18 }}>
+                style={{ background: "transparent", color: "#c9a84c", border: "1px solid #c9a84c", borderRadius: 5, padding: "6px 14px", cursor: "pointer", fontSize: "0.625rem", fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit", marginBottom: 18 }}>
                 + Add Phase
               </button>
 
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Milestones <span style={{ color: "#999", fontWeight: 500, textTransform: "none", letterSpacing: ".2px" }}>&mdash; leave the date blank for a note-only milestone</span></div>
+              <div style={{ fontSize: "0.625rem", fontWeight: 700, color: "#c9a84c", textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Milestones <span style={{ color: "#999", fontWeight: 500, textTransform: "none", letterSpacing: ".2px" }}>&mdash; leave the date blank for a note-only milestone</span></div>
               {editorMs.map((ms, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
                   <input type="month" value={msHasDate(ms) ? fmtYM(ms.date[0], ms.date[1]) : ""}
@@ -767,18 +767,18 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                     onChange={(e) => { const a = [...editorMs]; a[i] = { ...ms, label: e.target.value }; setEditorMs(a); }}
                     style={inputStyle} placeholder="Milestone description" />
                   <button onClick={() => setEditorMs(editorMs.filter((_, j) => j !== i))}
-                    style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 18, fontWeight: 700, lineHeight: 1 }}>×</button>
+                    style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: "1.125rem", fontWeight: 700, lineHeight: 1 }}>×</button>
                 </div>
               ))}
               <button onClick={() => setEditorMs([...editorMs, { date: [CSY, CSM], label: "Milestone" }])}
-                style={{ background: "transparent", color: "#c9a84c", border: "1px solid #c9a84c", borderRadius: 5, padding: "6px 14px", cursor: "pointer", fontSize: 10, fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit", marginBottom: 18 }}>
+                style={{ background: "transparent", color: "#c9a84c", border: "1px solid #c9a84c", borderRadius: 5, padding: "6px 14px", cursor: "pointer", fontSize: "0.625rem", fontWeight: 600, letterSpacing: ".3px", fontFamily: "inherit", marginBottom: 18 }}>
                 + Add Milestone
               </button>
 
               <div style={{ display: "flex", gap: 10, paddingTop: 16, borderTop: "1px solid #eee", flexWrap: "wrap" }}>
-                <button onClick={saveProject} disabled={isSavingBoard} style={{ padding: "7px 20px", borderRadius: 6, border: "none", background: "#c9a84c", color: "#111", cursor: isSavingBoard ? "default" : "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px", opacity: isSavingBoard ? 0.7 : 1 }}>{isSavingBoard ? "Saving..." : "✓ Save Changes"}</button>
-                <button onClick={deleteProject} disabled={isSavingBoard} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #3a2a2a", background: "transparent", color: "#e05555", cursor: isSavingBoard ? "default" : "pointer", fontSize: 11, fontFamily: "inherit", opacity: isSavingBoard ? 0.7 : 1 }}>Delete</button>
-                <button onClick={() => setEditingId(null)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #ccc", background: "transparent", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
+                <button onClick={saveProject} disabled={isSavingBoard} style={{ padding: "7px 20px", borderRadius: 6, border: "none", background: "#c9a84c", color: "#111", cursor: isSavingBoard ? "default" : "pointer", fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px", opacity: isSavingBoard ? 0.7 : 1 }}>{isSavingBoard ? "Saving..." : "✓ Save Changes"}</button>
+                <button onClick={deleteProject} disabled={isSavingBoard} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #3a2a2a", background: "transparent", color: "#e05555", cursor: isSavingBoard ? "default" : "pointer", fontSize: "0.6875rem", fontFamily: "inherit", opacity: isSavingBoard ? 0.7 : 1 }}>Delete</button>
+                <button onClick={() => setEditingId(null)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #ccc", background: "transparent", color: "#666", cursor: "pointer", fontSize: "0.6875rem", fontFamily: "inherit" }}>Cancel</button>
               </div>
             </div>
           </div>
@@ -796,10 +796,10 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
             <thead>
               <tr>
                 {["Property", "Status", "Due / Milestone"].map((h) => (
-                  <th key={h} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "9px 14px", textAlign: "left", letterSpacing: "1px", textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>{h}</th>
+                  <th key={h} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: "0.625rem", fontWeight: 700, padding: "9px 14px", textAlign: "left", letterSpacing: "1px", textTransform: "uppercase", borderBottom: "1px solid #2a2a2a" }}>{h}</th>
                 ))}
                 {yearSpans.map(({ year, span }, i) => (
-                  <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: 10, fontWeight: 700, padding: "9px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: "1px" }}>{year}</th>
+                  <th key={i} colSpan={span} style={{ background: "#1a1a1a", color: "#c9a84c", fontSize: "0.625rem", fontWeight: 700, padding: "9px 4px", textAlign: "center", borderLeft: "2px solid rgba(255,255,255,0.1)", letterSpacing: "1px" }}>{year}</th>
                 ))}
               </tr>
               <tr>
@@ -811,7 +811,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                   const mIdx = absM % 12;
                   const isToday = viewFrom[0] === CSY && viewFrom[1] === CSM && i === 0;
                   return (
-                    <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: 10, padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 500 }}>
+                    <th key={i} style={{ background: isToday ? "#c9a84c" : "#222", color: isToday ? "#111" : "#666", fontSize: "0.625rem", padding: "5px 2px", textAlign: "center", borderRight: "1px solid #2a2a2a", fontWeight: isToday ? 700 : 500 }}>
                       {MONTHS[mIdx]}
                     </th>
                   );
@@ -822,7 +822,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
               {locations.map((loc) => (
                 <React.Fragment key={loc}>
                   <tr>
-                    <td colSpan={3 + viewMonths} style={{ background: "#222", color: "#c9a84c", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "2px", padding: "7px 14px", borderBottom: "1px solid #2a2a2a", borderTop: "1px solid #2a2a2a" }}>
+                    <td colSpan={3 + viewMonths} style={{ background: "#222", color: "#c9a84c", fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "2px", padding: "7px 14px", borderBottom: "1px solid #2a2a2a", borderTop: "1px solid #2a2a2a" }}>
                       {loc}
                     </td>
                   </tr>
@@ -838,26 +838,26 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                         onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                         onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#faf6f0"; }}
                         onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ""; }}>
-                        <td onClick={() => openEditor(proj.id)} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 500, color: "#222", background: "#fbfbfb", borderRight: "1px solid #ddd", cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle", height: 44 }}>
-                          {canReorder && <span title="Drag to reorder" style={{ cursor: "grab", color: "#bbb", marginRight: 6 }}>⠿</span>}{proj.property} <span style={{ fontSize: 9, color: "#bbb" }}>✏</span>
+                        <td onClick={() => openEditor(proj.id)} style={{ padding: "5px 14px", fontSize: "0.75rem", fontWeight: 500, color: "#222", background: "#fbfbfb", borderRight: "1px solid #ddd", cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle", height: 44 }}>
+                          {canReorder && <span title="Drag to reorder" style={{ cursor: "grab", color: "#bbb", marginRight: 6 }}>⠿</span>}{proj.property} <span style={{ fontSize: "0.5625rem", color: "#bbb" }}>✏</span>
                         </td>
                         <td style={{ padding: "4px 10px", textAlign: "center", background: "#fafaf8", borderRight: "1px solid #ede8e0", verticalAlign: "middle" }}>
-                          <span style={{ display: "inline-block", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 4, background: c.pill, color: c.pillText, textTransform: "uppercase", letterSpacing: ".5px", whiteSpace: "nowrap" }}>
+                          <span style={{ display: "inline-block", fontSize: "0.5625rem", fontWeight: 700, padding: "3px 9px", borderRadius: 4, background: c.pill, color: c.pillText, textTransform: "uppercase", letterSpacing: ".5px", whiteSpace: "nowrap" }}>
                             {TYPE_LABEL[proj.status]}
                           </span>
                         </td>
                         <td style={{ padding: "4px 14px 4px 12px", background: "#fff", borderRight: "1px solid #ede8e0", verticalAlign: "middle" }}>
                           {due && (
                             <>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2e44", lineHeight: 1.4, marginBottom: 2 }}>{due.label}</div>
-                              <div style={{ fontSize: 10, color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>{due.desc}</div>
+                              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1a2e44", lineHeight: 1.4, marginBottom: 2 }}>{due.label}</div>
+                              <div style={{ fontSize: "0.625rem", color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>{due.desc}</div>
                             </>
                           )}
                           {(() => {
                             const undated = proj.milestones.filter((ms) => !msHasDate(ms));
                             return undated.map((ms, i) => (
                               <div key={i} style={{ marginTop: due || i > 0 ? 5 : 0 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2e44", lineHeight: 1.4 }}>{ms.label}</div>
+                                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1a2e44", lineHeight: 1.4 }}>{ms.label}</div>
                               </div>
                             ));
                           })()}
@@ -872,7 +872,7 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                     style={{ cursor: isSavingBoard ? "default" : "pointer", background: "#fafaf8" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f0f7ff"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#fafaf8"; }}>
-                    <td colSpan={3 + viewMonths} style={{ padding: "6px 14px", color: "#aaa", fontSize: 10, fontWeight: 500, letterSpacing: ".3px", borderBottom: "1px solid #ede8e0" }}>
+                    <td colSpan={3 + viewMonths} style={{ padding: "6px 14px", color: "#aaa", fontSize: "0.625rem", fontWeight: 500, letterSpacing: ".3px", borderBottom: "1px solid #ede8e0" }}>
                       + Add project in {loc}
                     </td>
                   </tr>
@@ -888,8 +888,8 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
         <div style={{ display: "flex", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, alignItems: "center", justifyContent: "center" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowPrintModal(false); }}>
           <div style={{ background: "#fff", borderRadius: 10, padding: "28px 32px", width: 460, maxWidth: "95vw", border: "1px solid #e0dbd2", boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1a2e44", marginBottom: 6, letterSpacing: ".5px", textTransform: "uppercase" }}>Print / Export to PDF</h2>
-            <p style={{ fontSize: 11, color: "#666", marginBottom: 18, lineHeight: 1.5 }}>Choose a date range — fewer months gives wider columns and cleaner text.</p>
+            <h2 style={{ fontSize: "0.875rem", fontWeight: 700, color: "#1a2e44", marginBottom: 6, letterSpacing: ".5px", textTransform: "uppercase" }}>Print / Export to PDF</h2>
+            <p style={{ fontSize: "0.6875rem", color: "#666", marginBottom: 18, lineHeight: 1.5 }}>Choose a date range — fewer months gives wider columns and cleaner text.</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
               {([{ label: "From", val: printFrom, set: setPrintFrom }, { label: "To", val: printTo, set: setPrintTo }]).map(({ label, val, set }: { label: string; val: string; set: (v: string) => void }) => (
                 <div key={label}>
@@ -898,25 +898,25 @@ export default function GanttChart(_props?: { onBack?: () => void }) {
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#555", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 8 }}>Quick ranges</div>
+            <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#555", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 8 }}>Quick ranges</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
               {[6, 9, 12, 18, 24].map((m) => (
                 <button key={m} onClick={() => setRange(m)}
-                  style={{ padding: "5px 14px", border: "1px solid #ddd", borderRadius: 5, background: "#f5f0e8", cursor: "pointer", fontSize: 10, fontWeight: 600, color: "#555", fontFamily: "inherit" }}>
+                  style={{ padding: "5px 14px", border: "1px solid #ddd", borderRadius: 5, background: "#f5f0e8", cursor: "pointer", fontSize: "0.625rem", fontWeight: 600, color: "#555", fontFamily: "inherit" }}>
                   {m} months
                 </button>
               ))}
             </div>
-            <div style={{ background: "#f5f0e8", borderRadius: 6, padding: "12px 14px", fontSize: 11, color: "#555", marginBottom: 20, lineHeight: 1.8, border: "1px solid #e0dbd2" }}>
+            <div style={{ background: "#f5f0e8", borderRadius: 6, padding: "12px 14px", fontSize: "0.6875rem", color: "#555", marginBottom: 20, lineHeight: 1.8, border: "1px solid #e0dbd2" }}>
               <strong>In the print dialog:</strong><br />
               Paper → <strong>A3</strong> &bull; Orientation → <strong>Landscape</strong><br />
               Margins → <strong>Minimum</strong> &bull; Enable <strong>Background graphics</strong>
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => setShowPrintModal(false)}
-                style={{ padding: "8px 18px", border: "1px solid #ccc", borderRadius: 6, background: "#fff", color: "#666", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>Cancel</button>
+                style={{ padding: "8px 18px", border: "1px solid #ccc", borderRadius: 6, background: "#fff", color: "#666", cursor: "pointer", fontSize: "0.6875rem", fontFamily: "inherit" }}>Cancel</button>
               <button onClick={() => { handlePrint(); setShowPrintModal(false); }}
-                style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>
+                style={{ padding: "8px 22px", border: "none", borderRadius: 6, background: "#c9a84c", color: "#111", cursor: "pointer", fontSize: "0.6875rem", fontWeight: 700, fontFamily: "inherit", letterSpacing: ".3px" }}>
                 Open Print Preview →
               </button>
             </div>

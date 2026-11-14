@@ -69,7 +69,7 @@ function PartialChecklistsWidget({ mineOnly }: { mineOnly: boolean }) {
   if (!shiftChecklists.length) return null;
   return (
     <div className="mb-3">
-      <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">
+      <p className="text-[0.625rem] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">
         {language === "es" ? "Listas pendientes hoy" : "Pending checklists today"}
       </p>
       {shiftChecklists.map(c => (
@@ -137,7 +137,7 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin, canDrag
           <span className="text-xs font-semibold">
             {language === "es" ? cfg.labelEs : cfg.label}
           </span>
-          <span className="text-[10px] bg-black/10 px-1.5 py-0.5 rounded-full font-bold">
+          <span className="text-[0.625rem] bg-black/10 px-1.5 py-0.5 rounded-full font-bold">
             {tasks.length}
           </span>
         </div>
@@ -160,7 +160,7 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin, canDrag
       >
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center h-16">
-            <p className="text-[10px] text-muted-foreground/50 italic">
+            <p className="text-[0.625rem] text-muted-foreground/50 italic">
               {language === "es" ? "Sin tareas" : "No tasks"}
             </p>
           </div>
@@ -437,11 +437,11 @@ export function TasksSection() {
             <p className="text-xs font-semibold text-[hsl(var(--gold))]">
               {visibleDraftTasks.length} {isL ? "tarea(s) en borrador" : `draft task${visibleDraftTasks.length > 1 ? "s" : ""}`} {isL ? "de Ronin pendientes" : "awaiting review"}
             </p>
-            <p className="text-[10px] text-[hsl(var(--gold)/0.6)]">
+            <p className="text-[0.625rem] text-[hsl(var(--gold)/0.6)]">
               {isL ? "Toca para revisar y publicar" : "Tap to review & publish"}
             </p>
           </div>
-          <span className="text-[10px] text-[hsl(var(--gold)/0.6)]">{showDrafts ? "▲" : "▼"}</span>
+          <span className="text-[0.625rem] text-[hsl(var(--gold)/0.6)]">{showDrafts ? "▲" : "▼"}</span>
         </button>
       )}
 

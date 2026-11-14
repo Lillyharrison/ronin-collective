@@ -701,7 +701,7 @@ export function MaintenanceSection() {
               {/* Include notes toggle (affects PDF download) */}
               <label
                 title={isL ? "Incluir notas en el PDF" : "Include notes in PDF"}
-                className="flex-shrink-0 flex items-center gap-1.5 text-[11px] text-muted-foreground ml-auto cursor-pointer select-none"
+                className="flex-shrink-0 flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground ml-auto cursor-pointer select-none"
               >
                 <input
                   type="checkbox"
@@ -842,7 +842,7 @@ export function MaintenanceSection() {
                       <span className="text-xs font-semibold text-foreground">
                         {isL ? col.labelEs : col.label}
                       </span>
-                      <span className="text-[10px] bg-black/10 text-foreground/60 px-1.5 py-0.5 rounded-full font-bold">
+                      <span className="text-[0.625rem] bg-black/10 text-foreground/60 px-1.5 py-0.5 rounded-full font-bold">
                         {colIssues.length}
                       </span>
                     </div>
@@ -883,7 +883,7 @@ export function MaintenanceSection() {
                         {col.key === "reported" && (isMasterAdmin || isAdmin) && (
                           <button
                             onClick={e => { e.stopPropagation(); handleApprove(issue); }}
-                            className="absolute bottom-2 right-2 opacity-0 group-hover/card:opacity-100 flex items-center gap-1 bg-[hsl(var(--status-done)/0.9)] hover:bg-[hsl(var(--status-done))] text-white text-[10px] font-semibold px-2 py-1 rounded-full transition-all shadow-lg"
+                            className="absolute bottom-2 right-2 opacity-0 group-hover/card:opacity-100 flex items-center gap-1 bg-[hsl(var(--status-done)/0.9)] hover:bg-[hsl(var(--status-done))] text-white text-[0.625rem] font-semibold px-2 py-1 rounded-full transition-all shadow-lg"
                             title="Quick approve"
                           >
                             <CheckCircle2 size={10} /> {isL ? "Aprobar" : "Approve"}
@@ -892,7 +892,7 @@ export function MaintenanceSection() {
                       </div>
                     ))}
                     {colIssues.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground/40 italic text-center py-4">
+                      <p className="text-[0.625rem] text-muted-foreground/40 italic text-center py-4">
                         {isDragOver ? (isL ? "Suelta aquí" : "Drop here") : (isL ? "Sin problemas" : "No issues")}
                       </p>
                     )}
@@ -948,7 +948,7 @@ export function MaintenanceSection() {
                       onClick={() => toggleTableSort(h.key)}
                       onTouchEnd={(e) => { e.preventDefault(); toggleTableSort(h.key); }}
                       className={cn(
-                        "px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors",
+                        "px-3 py-2.5 text-left text-[0.625rem] font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors",
                         active ? "text-foreground" : "text-muted-foreground",
                       )}
                     >

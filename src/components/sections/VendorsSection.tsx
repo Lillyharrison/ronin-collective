@@ -267,7 +267,7 @@ function VendorTable({
             <th
               key={c.key}
               onClick={() => handleSort(c.key)}
-              className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors"
+              className="px-3 py-2.5 text-left text-[0.625rem] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:text-foreground transition-colors"
             >
               <span className="inline-flex items-center gap-1">
                 {c.label}
@@ -295,23 +295,23 @@ function VendorTable({
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-foreground truncate max-w-[180px]">{v.company ?? "—"}</span>
                   {!v.is_active && (
-                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground">Inactive</Badge>
+                    <Badge variant="outline" className="text-[0.625rem] py-0 px-1.5 text-muted-foreground">Inactive</Badge>
                   )}
                 </div>
               </td>
               <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px]">{v.name}</td>
               <td className="px-3 py-2.5 whitespace-nowrap">
-                <Badge variant="secondary" className="text-[11px] py-0 px-1.5 capitalize">{catLabel}</Badge>
+                <Badge variant="secondary" className="text-[0.6875rem] py-0 px-1.5 capitalize">{catLabel}</Badge>
               </td>
               <td className="px-3 py-2.5 whitespace-nowrap">
                 {linkedProps.length === 0 ? (
                   <span className="text-muted-foreground">—</span>
                 ) : linkedProps.length === 1 ? (
-                  <Badge variant="outline" className="text-[10px] py-0 px-1.5">{linkedProps[0]}</Badge>
+                  <Badge variant="outline" className="text-[0.625rem] py-0 px-1.5">{linkedProps[0]}</Badge>
                 ) : (
                   <Badge
                     variant="outline"
-                    className="text-[10px] py-0 px-1.5"
+                    className="text-[0.625rem] py-0 px-1.5"
                     title={linkedProps.join(", ")}
                   >
                     {linkedProps.length} properties

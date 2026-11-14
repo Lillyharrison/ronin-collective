@@ -106,32 +106,32 @@ export const ChecklistCard = forwardRef<HTMLDivElement, Props>(
             {displayTitle}
           </p>
           {isDraft && isMasterAdmin && (
-            <span className="text-[9px] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
+            <span className="text-[0.5625rem] font-semibold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full border border-border flex-shrink-0">
               DRAFT
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           {!isDraft && isAllComplete ? (
-            <span className="text-[10px] font-semibold text-[hsl(var(--status-done))]">
+            <span className="text-[0.625rem] font-semibold text-[hsl(var(--status-done))]">
               ✓ Complete today
             </span>
           ) : !isDraft && hasProgress ? (
-            <span className={cn("text-[10px] font-semibold", colorCls.split(" ").find(c => c.startsWith("text-")))}>
+            <span className={cn("text-[0.625rem] font-semibold", colorCls.split(" ").find(c => c.startsWith("text-")))}>
               {completedCount}/{totalItems} done
             </span>
           ) : (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[0.625rem] text-muted-foreground">
               {totalItems > 0 ? `${totalItems} items` : "Tap to open"}
             </span>
           )}
           {recurrenceLabel && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+            <span className="inline-flex items-center gap-0.5 text-[0.625rem] text-muted-foreground">
               <RefreshCw size={8} /> {recurrenceLabel}
             </span>
           )}
           {template.assigned_department && (
-            <span className="text-[9px] text-accent/70 capitalize font-medium">
+            <span className="text-[0.5625rem] text-accent/70 capitalize font-medium">
               {template.assigned_department}
             </span>
           )}

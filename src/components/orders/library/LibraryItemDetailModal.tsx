@@ -54,7 +54,7 @@ export function LibraryItemDetailModal({ item, onClose, onEdit, canEdit }: Props
             <div className="flex flex-wrap gap-2">
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold border",
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold border",
                   isDeprecated
                     ? "bg-muted text-muted-foreground border-border"
                     : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
@@ -72,7 +72,7 @@ export function LibraryItemDetailModal({ item, onClose, onEdit, canEdit }: Props
               </span>
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold border",
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold border",
                   item.substitutions_allowed
                     ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
                     : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
@@ -120,7 +120,7 @@ export function LibraryItemDetailModal({ item, onClose, onEdit, canEdit }: Props
                   {item.search_aliases.map((a) => (
                     <span
                       key={a}
-                      className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] text-muted-foreground"
+                      className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[0.6875rem] text-muted-foreground"
                     >
                       {a}
                     </span>
@@ -174,7 +174,7 @@ export function LibraryItemDetailModal({ item, onClose, onEdit, canEdit }: Props
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       <div className="text-sm text-foreground">{children}</div>

@@ -379,7 +379,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
                 )}
               </div>
             )}
-            {propertyName && <p className="text-cream/40 text-[10px] truncate">{propertyName}</p>}
+            {propertyName && <p className="text-cream/40 text-[0.625rem] truncate">{propertyName}</p>}
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -444,7 +444,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
               <div className="flex-1 h-1.5 bg-charcoal-light rounded-full overflow-hidden">
                 <div className={cn("h-full rounded-full transition-all duration-500", isAllComplete ? "bg-[hsl(var(--status-done))]" : "bg-[hsl(var(--gold))]")} style={{ width: `${progress}%` }} />
               </div>
-              <span className="text-[11px] text-cream/50 whitespace-nowrap font-mono">{completedIds.size}/{items.length}</span>
+              <span className="text-[0.6875rem] text-cream/50 whitespace-nowrap font-mono">{completedIds.size}/{items.length}</span>
             </div>
           </div>
         )}
@@ -462,7 +462,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
                 <p className="text-xs font-semibold text-foreground">
                   {template.is_published ? "Published" : "Draft"}
                 </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
+                <p className="text-[0.625rem] text-muted-foreground mt-0.5">
                   {template.is_published ? "Visible to assigned staff" : "Only visible to you"}
                 </p>
               </div>
@@ -549,7 +549,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
           <div className="flex items-center justify-between">
             <div>
               <label className="text-xs text-muted-foreground flex items-center gap-1.5">🏠 Only when occupied</label>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5 ml-5">Disables when the property is vacant</p>
+              <p className="text-[0.625rem] text-muted-foreground/60 mt-0.5 ml-5">Disables when the property is vacant</p>
             </div>
             <button onClick={() => setOnlyWhenOccupied(v => !v)} className={cn("w-10 h-5 rounded-full transition-colors relative flex-shrink-0", onlyWhenOccupied ? "bg-gold" : "bg-muted")}>
               <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform", onlyWhenOccupied ? "translate-x-5" : "translate-x-0.5")} />
@@ -567,22 +567,22 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
       {((template.recurrence && template.recurrence !== "none") || template.assigned_role || template.assigned_department) && (
         <div className="px-4 pt-3 flex flex-wrap gap-2">
           {template.recurrence && template.recurrence !== "none" && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
+            <span className="inline-flex items-center gap-1 text-[0.625rem] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
               <RefreshCw size={9} /> {RECURRENCE_LABELS[template.recurrence] ?? template.recurrence}
             </span>
           )}
           {template.recurrence_day !== null && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
+            <span className="inline-flex items-center gap-1 text-[0.625rem] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
               <Calendar size={9} /> Every {DAY_NAMES[template.recurrence_day ?? 0]}
             </span>
           )}
           {template.assigned_role && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
+            <span className="inline-flex items-center gap-1 text-[0.625rem] px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
               <User size={9} /> {template.assigned_role}
             </span>
           )}
           {template.assigned_department && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-accent/10 text-accent border border-accent/20 capitalize">
+            <span className="inline-flex items-center gap-1 text-[0.625rem] px-2 py-1 rounded-full bg-accent/10 text-accent border border-accent/20 capitalize">
               <User size={9} /> {template.assigned_department}
             </span>
           )}
@@ -726,7 +726,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
                                   />
                                 </div>
                               )}
-                              {completedAt && <p className="px-12 pb-1.5 text-[10px] text-[hsl(var(--status-done))] opacity-70">✓ {completedAt}</p>}
+                              {completedAt && <p className="px-12 pb-1.5 text-[0.625rem] text-[hsl(var(--status-done))] opacity-70">✓ {completedAt}</p>}
                             </div>
                           );
                         })}
@@ -862,7 +862,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={14} className="text-muted-foreground" />
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Notes & Comments</p>
-          <span className="text-[10px] text-muted-foreground">({today})</span>
+          <span className="text-[0.625rem] text-muted-foreground">({today})</span>
         </div>
 
         {comments.length === 0 ? (
@@ -873,12 +873,12 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
               <div key={c.id} className="bg-card border border-border rounded-xl px-3 py-2.5">
                 <div className="flex items-start gap-2">
                   <div className="w-6 h-6 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-gold text-[10px] font-semibold">{(c.profile?.full_name ?? "U")[0].toUpperCase()}</span>
+                    <span className="text-gold text-[0.625rem] font-semibold">{(c.profile?.full_name ?? "U")[0].toUpperCase()}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-medium text-foreground">{c.profile?.full_name ?? "Staff"}</span>
-                      <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                      <span className="text-[0.625rem] text-muted-foreground">{new Date(c.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{c.content}</p>
                   </div>
@@ -907,7 +907,7 @@ export function ChecklistDetailPage({ template: initialTemplate, propertyId, pro
 function TranslatedSectionHeader({ label, language }: { label: string; language: string }) {
   const { translated } = useEntryTranslation(language, [label]);
   return (
-    <p className="px-5 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--gold))]">
+    <p className="px-5 mb-1.5 text-[0.625rem] font-semibold uppercase tracking-widest text-[hsl(var(--gold))]">
       {translated[0] || label}
     </p>
   );

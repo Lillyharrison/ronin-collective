@@ -453,7 +453,7 @@ export function ChatView({
           onClick={() => setShowInfoPanel(true)}
         >
           <p className="text-sm font-semibold text-foreground truncate">{localTitle}</p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[0.625rem] text-muted-foreground">
             {isAgentThread
               ? (language === "es" ? "Agente IA · En línea" : "AI Agent · Online")
               : threadType === "group"
@@ -480,7 +480,7 @@ export function ChatView({
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search messages…"
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-            style={{ fontSize: "16px" }}
+            style={{ fontSize: "1rem" }}
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="text-muted-foreground hover:text-foreground">
@@ -533,7 +533,7 @@ export function ChatView({
         {groupedMessages.map((group) => (
           <div key={group.date}>
             <div className="flex justify-center my-3">
-              <span className="text-[10px] text-muted-foreground bg-card/80 backdrop-blur-sm px-3 py-1 rounded-full border border-border/50">
+              <span className="text-[0.625rem] text-muted-foreground bg-card/80 backdrop-blur-sm px-3 py-1 rounded-full border border-border/50">
                 {formatDateLabel(group.date)}
               </span>
             </div>
@@ -587,7 +587,7 @@ export function ChatView({
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-[10px] text-muted-foreground italic">{typingLabel}</span>
+                <span className="text-[0.625rem] text-muted-foreground italic">{typingLabel}</span>
               </div>
             </div>
           </div>
@@ -596,7 +596,7 @@ export function ChatView({
         {(agentTyping || agentAnalyzing) && (
           <div className="flex items-end gap-2 mb-1">
             <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px]">{agentAnalyzing ? "🔍" : "🧠"}</span>
+              <span className="text-[0.625rem]">{agentAnalyzing ? "🔍" : "🧠"}</span>
             </div>
             <div className="bg-card border border-accent/30 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
               {agentAnalyzing ? (
@@ -613,7 +613,7 @@ export function ChatView({
                     <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "150ms" }} />
                     <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[0.625rem] text-muted-foreground">
                     {language === "es" ? "Razonando..." : "Reasoning..."}
                   </span>
                 </div>
@@ -677,10 +677,10 @@ export function ChatView({
           <div className="flex items-center gap-2 mb-2 bg-[hsl(25,100%,50%)]/10 border border-[hsl(25,100%,50%)]/30 rounded-xl px-3 py-2">
             <Share2 size={14} className="text-[hsl(25,100%,50%)] flex-shrink-0" />
             <div className="flex-1 flex items-center gap-1.5 min-w-0">
-              <span className="text-[10px] text-muted-foreground flex-shrink-0 uppercase tracking-wide font-medium">From</span>
+              <span className="text-[0.625rem] text-muted-foreground flex-shrink-0 uppercase tracking-wide font-medium">From</span>
               <input
                 className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none min-w-0"
-                style={{ fontSize: "14px" }}
+                style={{ fontSize: "0.875rem" }}
                 placeholder={language === "es" ? "Nombre (ej. Papá)" : "Name (e.g. Dad)"}
                 value={forwardSender}
                 onChange={e => setForwardSender(e.target.value)}
@@ -722,7 +722,7 @@ export function ChatView({
             </button>
             <input
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none px-1 min-w-0"
-              style={{ fontSize: "16px" }}
+              style={{ fontSize: "1rem" }}
               placeholder={
                 isAgentThread
                   ? (language === "es" ? "Pregunta a Ronin..." : "Ask Ronin...")
