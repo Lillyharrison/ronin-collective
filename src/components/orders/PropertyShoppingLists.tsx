@@ -18,7 +18,7 @@ import { toast } from "sonner";
 type ShoppingTemplate = ChecklistTemplate & { order_recipient_ids: string[] };
 
 export function PropertyShoppingLists({ onSent }: { onSent: (id: string) => void }) {
-  const { userId, isAdmin, isMasterAdmin } = usePermissions();
+  const { userId, canEdit } = usePermissions();
   const { activePropertyId } = useNavigation();
   const { properties } = useScopedProperties();
   const { language } = useLanguage();
@@ -66,7 +66,7 @@ export function PropertyShoppingLists({ onSent }: { onSent: (id: string) => void
         <option value="all">{es ? "Todas las propiedades" : "All properties"}</option>
         {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
-      {(isAdmin || isMasterAdmin) && <Button className="min-h-11" onClick={() => { setCreateProperty(property === "all" ? activePropertyId ?? "" : property); setCreating(true); }}><Plus />{es ? "Nueva lista" : "New shopping list"}</Button>}
+      {canEdit("orders") && <Button className="min-h-11" onClick={() => { setCreateProperty(property === "all" ? activePropertyId ?? "" : property); setCreating(true); }}><Plus />{es ? "Nueva lista" : "New shopping list"}</Button>}
     </div>
     {error ? <p className="text-destructive">{es ? "No se pudieron cargar las listas." : "Could not load shopping lists."}</p> : isLoading ? <div className="h-20 bg-muted animate-pulse rounded-md" /> :
       lists.filter(l => property === "all" || l.property_id === property).map(l => <Button key={l.id} variant="outline" className="w-full h-auto min-h-20 justify-start text-left p-4 whitespace-normal" onClick={() => { const next = new URLSearchParams(params); next.set("list", l.id); setParams(next); }}>

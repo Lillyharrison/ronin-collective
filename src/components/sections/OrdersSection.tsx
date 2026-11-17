@@ -7,7 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import {
   ShoppingCart, Package, Check, ExternalLink, Truck, Calendar,
-  MapPin, ChevronRight, ShoppingBag, Clock, AlertCircle, Plus, UserCircle2,
+  MapPin, ChevronRight, ArrowLeft, ShoppingBag, Clock, AlertCircle, Plus, UserCircle2,
 } from "lucide-react";
 import { OrderDetailModal, Order } from "@/components/orders/OrderDetailModal";
 import { NewOrderModal } from "@/components/orders/NewOrderModal";
@@ -24,8 +24,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 
 export function OrdersSection() {
-  const { isAdmin, isMasterAdmin, isManager } = usePermissions();
-  return isAdmin || isMasterAdmin || isManager ? <ManagementOrders /> : <RequesterOrders />;
+  const { canEdit, userId } = usePermissions();
+  const canChange = canEdit('orders');
+  const [params, setParams] = useSearchParams();
+  const waiting = useQuery({ queryKey: ['request-counts', userId, 'more-badge'], enabled: canChange, refetchInterval: 60000, queryFn: async () => {
+    const { count, error } = await supabase.from('shopping_list_items').select('id', { count: 'exact', head: true }).eq('status', 'requested');
+    if (error) throw error; return count ?? 0;
+  } });
+  if (canChange && params.get('more') === '1') return <ManagementOrders onBack={() => { const q = new URLSearchParams(params); ['more','view','batch','order','list'].forEach(k => q.delete(k)); setParams(q, { replace: true }); }} />;
+  return <RequesterOrders onMore={canChange ? () => { const q = new URLSearchParams(params); q.set('more','1'); q.delete('view'); setParams(q); } : undefined} moreCount={waiting.data ?? 0} />;
 }
 
 type MainTab = "pending" | "delivered" | "shopping" | "library" | "requests";
@@ -69,8 +76,8 @@ function PendingRow({ order, onOpen, onMarkDelivered }: {
   const { language } = useLanguage();
   const isL = language === "es";
   const [delivering, setDelivering] = useState(false);
-  const { isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
-  const canEdit_orders = isAdmin || isMasterAdmin || isManager || canEdit("orders");
+  const { canEdit } = usePermissions();
+  const canEdit_orders = canEdit("orders");
 
   const deliveryDate = order.expected_delivery ? new Date(order.expected_delivery) : null;
   const isOverdue = deliveryDate && deliveryDate < new Date() && order.status !== "not_placed";
@@ -475,11 +482,11 @@ function DeliveredTile({ order, onOpen }: { order: Order; onOpen: (o: Order) => 
 }
 
 /* ─── Main section ───────────────────────────────────────────────────────────── */
-function ManagementOrders() {
+function ManagementOrders({ onBack }: { onBack: () => void }) {
   const { language } = useLanguage();
   const isL = language === "es";
-  const { isAdmin, isMasterAdmin, isManager, canEdit, userId } = usePermissions();
-  const canCreateOrder = isAdmin || isMasterAdmin || isManager || canEdit("orders");
+  const { canEdit, userId } = usePermissions();
+  const canCreateOrder = canEdit("orders");
 
   const PAGE_SIZE = 50;
   const [orders, setOrders]         = useState<Order[]>([]);
@@ -531,10 +538,10 @@ function ManagementOrders() {
       if (modalOrder) { closeOrder(); return true; }
       if (creating) { setCreating(false); return true; }
       if (params.get("list")) { const next = new URLSearchParams(params); next.delete("list"); setParams(next); return true; }
-      return false;
+      onBack(); return true;
     });
     return () => registerBackHandler(null);
-  }, [modalOrder, creating, params, registerBackHandler]);
+  }, [modalOrder, creating, params, registerBackHandler, onBack]);
 
   const selectTab = (tab: MainTab) => {
     const next = new URLSearchParams(params); next.delete("list"); next.delete("order"); next.delete("view"); setParams(next);
@@ -597,6 +604,7 @@ function ManagementOrders() {
       {/* Header */}
       <div className="bg-charcoal px-5 pt-6 pb-4 border-b border-charcoal-light flex items-start justify-between gap-3">
         <div className="min-w-0">
+          <Button variant="ghost" className="min-h-11 -ml-3 mb-1 text-cream" onClick={onBack}><ArrowLeft />{isL ? "Volver" : "Back"}</Button>
           <h1 className="font-display text-3xl text-cream leading-tight">
             {isL ? "Pedidos" : "Orders"} <span className="text-gold">&</span>{" "}
             {isL ? "Entregas" : "Deliveries"}

@@ -45,8 +45,8 @@ type StatusFilter = "preferred" | "all" | "no_longer_preferred";
 export function OrderLibraryTab() {
   const { language } = useLanguage();
   const isL = language === "es";
-  const { isAdmin, isMasterAdmin, canEdit } = usePermissions();
-  const canEditLibrary = isAdmin || isMasterAdmin || canEdit("orders");
+  const { canEdit } = usePermissions();
+  const canEditLibrary = canEdit("orders");
 
   const { items, loading } = useOrderLibrary();
   const { properties } = useScopedProperties();

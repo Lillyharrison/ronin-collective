@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(), deleted: vi.fn(), deleteError: null as unknown, notifications: [] as Record<string, unknown>[],
 }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
-vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isMasterAdmin: true }) }));
+vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isMasterAdmin: true, canEdit: () => true }) }));
 vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
   setActiveSection: mocks.section, setPendingMaintenanceIssueId: mocks.repair,
   setPendingPlannedMaintenanceEntryId: mocks.planned, setPendingTaskId: mocks.task, setPendingTimesheetStaffId: mocks.timesheet,
@@ -81,7 +81,7 @@ describe("notification detail routing", () => {
     expect(close).toHaveBeenCalledOnce();
     expect(mocks.section).toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    if (type === "order") expect(mocks.navigate).toHaveBeenCalledWith("/orders?order=record-id");
+    if (type === "order") expect(mocks.navigate).toHaveBeenCalledWith("/orders?more=1&order=record-id");
   });
   it("navigates only on explicit planned maintenance Edit", async () => {
     notification("planned_maintenance");

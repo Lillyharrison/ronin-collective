@@ -179,7 +179,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingTimesheetStaffId, setClockSheetRequested } = useNavigation();
-  const { isMasterAdmin, isAdmin, isManager, userId, fullName, canSee, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, userId, fullName, canSee, canEdit, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
   const { properties: scopedProperties } = useScopedProperties();
   const [issueAssignees, setIssueAssignees] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
   const { retry: retryPermissions } = usePermissionsControl();
@@ -403,7 +403,7 @@ export function Dashboard() {
     if (n.user_id === userId && !(n as { is_read?: boolean }).is_read) {
       void supabase.from("notifications").update({ is_read: true }).eq("id", n.id).then(({ error }) => { if (error) console.error("Mark read failed", error); });
     }
-    const orderPath = orderNotificationPath(n.entity_type,n.entity_id,isAdmin || isMasterAdmin || isManager,n.property_id);
+    const orderPath = orderNotificationPath(n.entity_type,n.entity_id,canEdit('orders'),n.property_id);
     if (n.entity_type === "access_check") { const path = accessNotificationPath(n.entity_type, isMasterAdmin); if (path) { setActiveSection("meet-team"); navigate(path); } return; }
     if (orderPath) { setActiveSection('orders'); navigate(orderPath); return; }
     if (openDetails(n)) return;

@@ -41,9 +41,9 @@ interface Props {
 
 export function OrderDetailModal({ order, onClose, onSaved }: Props) {
   const { language } = useLanguage();
-  const { isAdmin, isMasterAdmin, isManager } = usePermissions();
+  const perms = usePermissions();
   const isL = language === "es";
-  const canEdit = isAdmin || isMasterAdmin || isManager;
+  const canEdit = perms.canEdit("orders");
   const content=useContentTranslation([order.title,order.description??"",order.notes??"",order.packing_list??""]);
 
   const [carrier, setCarrier]               = useState(order.carrier ?? "");
@@ -295,7 +295,7 @@ export function OrderDetailModal({ order, onClose, onSaved }: Props) {
             </button>
           )}
           <div className="flex gap-2">
-            {(isAdmin || isMasterAdmin || isManager) && (
+            {canEdit && (
               <button
                 onClick={handleDelete}
                 className="p-2.5 rounded-xl border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive transition-colors"

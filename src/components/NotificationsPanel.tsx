@@ -69,7 +69,7 @@ interface Props {
 export function NotificationsPanel({ open, onClose }: Props) {
   const { language } = useLanguage();
   const navigate = useNavigate();
-  const { userId, isMasterAdmin, isAdmin, isManager } = usePermissions();
+  const { userId, isMasterAdmin, isAdmin, isManager, canEdit } = usePermissions();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setPendingTaskId, setPendingTimesheetStaffId, setClockSheetRequested } = useNavigation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -162,7 +162,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
 
   const handleNotificationClick = async (n: Notification) => {
     if (n.entity_type === "access_check") { const path = accessNotificationPath(n.entity_type, isMasterAdmin); if (path) { if (!n.is_read) void markRead(n.id); onClose(); setActiveSection("meet-team"); navigate(path); } return; }
-    const orderPath = orderNotificationPath(n.entity_type,n.entity_id,isAdmin || isMasterAdmin || isManager,n.property_id);
+    const orderPath = orderNotificationPath(n.entity_type,n.entity_id,canEdit('orders'),n.property_id);
     if (orderPath) { if (!n.is_read) markRead(n.id); onClose(); setActiveSection('orders'); navigate(orderPath); return; }
     if (isNotificationDetailType(n.entity_type)) {
       if (!n.is_read) markRead(n.id);

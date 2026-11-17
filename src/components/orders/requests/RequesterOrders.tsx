@@ -4,7 +4,7 @@ import './requests.css';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Camera, Grid2X2, ClipboardList, Truck, MapPin, Package, X, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Camera, Grid2X2, ClipboardList, Truck, MapPin, Package, X, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -26,7 +26,7 @@ export function RequestThumbnail({ row, library, onClick }: {row:HouseRequest;li
   const image = url ? <img src={url} alt={row.name} className="h-16 w-16 object-cover rounded-lg"/> : <Package className="h-8 w-8 text-muted-foreground"/>;
   return onClick && url ? <Button variant="ghost" size="icon" className="h-16 w-16 shrink-0" onClick={onClick} aria-label={row.name}>{image}</Button> : <div className="h-16 w-16 shrink-0 flex items-center justify-center bg-muted rounded-lg">{image}</div>;
 }
-export function RequesterOrders({ management = false, onExit }: { management?: boolean; onExit?:()=>void }) {
+export function RequesterOrders({ management = false, onExit, onMore, moreCount = 0 }: { management?: boolean; onExit?:()=>void; onMore?:()=>void; moreCount?:number }) {
   const { userId } = usePermissions(); const { language } = useLanguage(); const es=language==='es';
   const {properties,loading:housesLoading}=useScopedProperties(); const [params,setParams]=useSearchParams();
   const {registerBackHandler,activePropertyId,setActivePropertyId}=useNavigation();
@@ -65,7 +65,7 @@ export function RequesterOrders({ management = false, onExit }: { management?: b
       {properties.length>1 ? <Button variant="outline" className="min-h-11 h-auto whitespace-normal max-w-[55%] text-base" onClick={()=>setPicker(true)}><MapPin className="shrink-0"/><span className="break-words">{house.name}</span><ChevronDown className="shrink-0"/></Button> : <span className="text-gold flex items-center gap-2 max-w-[50%] break-words"><MapPin className="shrink-0" size={18}/>{house.name}</span>}
     </header>
     <TranslationNotice value={content}/>
-    {view==='home' ? <div className="requester-order-tiles grid grid-cols-2 gap-3">{titles.map(([key,Icon,color,subtitle])=><Button key={key} variant="outline" className={`aspect-square h-auto w-full min-w-0 p-3 flex-col gap-3 whitespace-normal justify-center ${color}`} onClick={()=>go(key)}><Icon className="!h-10 !w-10 shrink-0"/><span className="text-xl font-display">{labels[key]}{(key==='list'||key==='way')&&<span className="ml-2 rounded-full bg-background px-2 text-base">{key==='list'?data.counts.draft:data.counts.way}</span>}</span><span className="text-sm font-normal leading-snug">{subtitle}</span></Button>)}</div> : null}
+    {view==='home' ? <div className="mx-auto w-full max-w-[560px]"><div className="requester-order-tiles grid grid-cols-2 gap-3">{titles.map(([key,Icon,color,subtitle])=><Button key={key} variant="outline" className={`aspect-square h-auto w-full min-w-0 p-3 flex-col gap-3 whitespace-normal justify-center ${color}`} onClick={()=>go(key)}><Icon className="!h-10 !w-10 shrink-0"/><span className="text-xl font-display">{labels[key]}{(key==='list'||key==='way')&&<span className="ml-2 rounded-full bg-background px-2 text-base">{key==='list'?data.counts.draft:data.counts.way}</span>}</span><span className="text-sm font-normal leading-snug">{subtitle}</span></Button>)}</div>{onMore&&<Button variant="outline" className="mt-4 w-full min-h-12 text-lg gap-2" onClick={onMore}><MoreHorizontal className="shrink-0"/>{es?'Más':'More'}{moreCount>0&&<span aria-label={es?`${moreCount} listas esperando`:`${moreCount} lists waiting`} className="ml-1 rounded-full bg-gold text-charcoal px-2 text-base">{moreCount}</span>}</Button>}</div> : null}
     {view==='request'&&<RequestScreen key={house.id} houseId={house.id} userId={userId} es={es} onSent={urgent=>{void data.refresh();if(urgent)go('way');else management?onExit?.():go('home');}}/>}
     {data.isError && view!=='request' && <div role="alert" className="my-4"><p>{es?'No se pudo cargar la lista.':'Could not load the list.'}</p><Button variant="outline" className="min-h-11" onClick={()=>{void data.refetch();}}>{es?'Reintentar':'Retry'}</Button></div>}
     {view==='library'&&<>

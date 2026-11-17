@@ -67,11 +67,11 @@ export function createOrderArgs(ids: string[], rows: HouseRequest[], delivery: s
 }
 export function orderNotificationPath(type: string | null, id: string | null, manager: boolean, house?: string | null) {
   const q = new URLSearchParams();
-  if (type === 'order_request') { q.set('view', manager ? 'requests' : 'way'); if (manager && id) q.set('batch',id); }
-  else if (type === 'order') { if (id) q.set('order', id); if (!manager) q.set('view', 'way'); }
+  if (type === 'order_request') { if (manager) { q.set('more','1'); q.set('view','requests'); if (id) q.set('batch',id); } }
+  else if (type === 'order') { if (manager) q.set('more','1'); if (id) q.set('order', id); if (!manager) q.set('view', 'way'); }
   else return null;
   if (house) q.set('house', house);
-  return `/orders?${q}`;
+  const s = q.toString(); return s ? `/orders?${s}` : "/orders";
 }
 export const displayDelivery = (date: string, es: boolean) => plainDateToLocal(date).toLocaleDateString(es ? 'es-ES' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' });
 export function compressedDimensions(width: number, height: number) {

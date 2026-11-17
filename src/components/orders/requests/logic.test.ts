@@ -11,7 +11,6 @@ describe('house requests',()=>{
 
   it('counts requested and ordered only at selected house',()=>expect(requestCounts([row('1'),row('2','b'),row('3','a',{status:'ordered'}),row('4','a',{status:'received'})] ,'a','me')).toEqual({draft:0,requested:1,ordered:1,way:2}));
   it.each(['staff','principal',null])('requester tiles for %s',role=>expect(managementView(role)).toBe(false));
-  it.each(['manager','admin','master_admin'])('management view for %s',role=>expect(managementView(role)).toBe(true));
   it('requires text or a photo',()=>{expect(validRequest(' ',null)).toBe(false);expect(validRequest('Soap',null)).toBe(true);expect(validRequest('',{})).toBe(true);});
   it('photo-only insert binds house and author, with text quantity and other category',()=>expect(requestPayload({houseId:'a',userId:'me',name:'',quantity:3,notes:' please ',photoUrl:'https://photo',urgent:true})).toEqual({property_id:'a',created_by:'me',name:'Photo request',quantity:'3',notes:'please',photo_url:'https://photo',urgent:true,category:'other',library_item_id:null}));
   it('rejects inserts without a house',()=>expect(()=>requestPayload({houseId:'',userId:'me',name:'Soap',quantity:1,notes:''})).toThrow());
@@ -25,7 +24,7 @@ describe('house requests',()=>{
   it('queue cannot mix houses',()=>expect(toggleQueueSelection(['1'],row('2','b'),[row('1'),row('2','b')])).toEqual(['2']));
   it('create-order arguments contain selected ids, plain delivery date and null title',()=>expect(createOrderArgs(['1'],[row('1')],'2026-11-15')).toEqual({_ids:['1'],_expected_delivery:'2026-11-15',_title:null}));
   it('rejects mixed house order creation',()=>expect(()=>createOrderArgs(['1','2'],[row('1'),row('2','b')],'')).toThrow());
-  it('notification routes queue, requester arrivals, and manager order detail',()=>{expect(orderNotificationPath('order_request','r',true)).toBe('/orders?view=requests&batch=r');expect(orderNotificationPath('order','o',false)).toBe('/orders?order=o&view=way');expect(orderNotificationPath('order','o',true)).toBe('/orders?order=o');});
+  it('notification routes queue, requester arrivals, and manager order detail',()=>{expect(orderNotificationPath('order_request','r',true)).toBe('/orders?more=1&view=requests&batch=r');expect(orderNotificationPath('order_request','r',false)).toBe('/orders');expect(orderNotificationPath('order','o',false)).toBe('/orders?order=o&view=way');expect(orderNotificationPath('order','o',true)).toBe('/orders?more=1&order=o');});
   it('caps phone dimensions at 1600 without upscaling',()=>{expect(compressedDimensions(4032,3024)).toEqual({width:1600,height:1200});expect(compressedDimensions(1200,2400)).toEqual({width:800,height:1600});expect(compressedDimensions(200,100)).toEqual({width:200,height:100});});
   it('produces JPEG at 0.8 and closes bitmap',async()=>{
     const close=vi.fn();vi.stubGlobal('createImageBitmap',vi.fn().mockResolvedValue({width:4032,height:3024,close}));

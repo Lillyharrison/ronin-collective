@@ -14,7 +14,7 @@ vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
   setClockSheetRequested: mocks.clockSheet,
 }) }));
 vi.mock("@/hooks/usePermissions", () => ({
-  usePermissions: () => ({ userId: "tester", fullName: "Tester", isAdmin: false, isMasterAdmin: false,
+  usePermissions: () => ({ userId: "tester", fullName: "Tester", isAdmin: false, isMasterAdmin: false, canEdit: () => false,
     assignedPropertyIds: mocks.assignedPropertyIds, canSee: () => false, loading: false, error: null }),
   usePermissionsControl: () => ({ retry: vi.fn() }),
 }));
