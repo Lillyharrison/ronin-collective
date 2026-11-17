@@ -52,6 +52,9 @@ function Field({ label, children, wide }: { label: string; children: React.React
   );
 }
 
+/** Shared fixed width for the Access tab See/Change/Alerts heading and switch columns. */
+const ACCESS_COL = "w-[4.75rem] shrink-0";
+
 export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted, onArchive, initialTab = "details" }: {
   member: TeamMember;
   properties: Property[];
@@ -621,9 +624,9 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                   );
                 })}
               </div>
-              <div className="flex items-center px-1 text-[0.625rem] uppercase tracking-wider text-muted-foreground">
-                <span className="flex-1 normal-case tracking-normal text-xs">{isEN ? "Home and Profile: always on" : "Inicio y Perfil: siempre activo"}</span>
-                {current && [isEN ? "See" : "Ver", isEN ? "Change" : "Editar", isEN ? "Alerts" : "Alertas"].map(h => <span key={h} className="w-12 text-center">{h}</span>)}
+              <div className="flex items-center gap-x-1 px-2 border-x border-transparent text-[0.8125rem] leading-tight uppercase tracking-normal text-muted-foreground">
+                <span className="flex-1 min-w-0 normal-case tracking-normal text-xs">{isEN ? "Home and Profile: always on" : "Inicio y Perfil: siempre activo"}</span>
+                {current && [isEN ? "See" : "Ver", isEN ? "Change" : "Editar", isEN ? "Alerts" : "Alertas"].map(h => <span key={h} data-testid="access-col-head" className={cn(ACCESS_COL, "text-center break-words")}>{h}</span>)}
               </div>
               {current ? (
                 <div className="rounded-lg border border-charcoal-light px-2">
@@ -633,10 +636,10 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                     const name = isEN ? info.label : info.labelEs;
                     return (
                       <div key={key}>
-                        <div className="flex items-center min-h-10 sm:min-h-8">
+                        <div className="flex items-center gap-x-1 min-h-10 sm:min-h-8">
                           <span className={cn("flex-1 min-w-0 truncate text-sm", sp?.view ? "text-cream" : "text-cream/60")}>{name}</span>
                           {(["view", "edit", "notifications"] as PermField[]).map(f => (
-                            <span key={f} className="w-12 flex justify-center">
+                            <span key={f} data-testid="access-col" className={cn(ACCESS_COL, "flex justify-center")}>
                               <Switch checked={!!sp?.[f]} disabled={!canEdit || (f === "edit" && !info.hasEdit)}
                                 aria-label={`${name} ${f === "view" ? (isEN ? "see" : "ver") : f === "edit" ? (isEN ? "change" : "editar") : (isEN ? "alerts" : "alertas")}`}
                                 className={switchCls} onCheckedChange={v => toggle(key, f, v)} />
@@ -659,9 +662,9 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                   })}
                   {current.key === "schedule" && showClock && (
                     <div data-testid="clock-row" className="border-t border-charcoal-light py-1.5">
-                      <div className="flex items-center min-h-10 sm:min-h-8">
+                      <div className="flex items-center gap-x-1 min-h-10 sm:min-h-8">
                         <span className={cn("flex-1 min-w-0 truncate text-sm", clockOn ? "text-cream" : "text-cream/60")}>{isEN ? "Clock in and out on site" : "Fichar entrada y salida en la casa"}</span>
-                        <span className="w-12 flex justify-center">
+                        <span className={cn(ACCESS_COL, "flex justify-center")}>
                           <Switch checked={clockOn} disabled={!canEdit} aria-label={isEN ? "Clock in and out on site" : "Fichar entrada y salida en la casa"}
                             className={switchCls} onCheckedChange={setClockOn} />
                         </span>
