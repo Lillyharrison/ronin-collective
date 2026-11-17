@@ -1,0 +1,1 @@
+- Orders always opens the tile home; only canEdit('orders') gates More (?more=1) and management controls, never role, matching can_edit_orders in the database.
