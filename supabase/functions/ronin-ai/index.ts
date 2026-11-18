@@ -1,3 +1,4 @@
+import { draftFlagForProfileUpdate } from "./draftInvite.ts";
 import { isInternalCaller, signedInUserId, unauthorized } from "../_shared/internalAuth.ts";
 import { sendPasswordRecovery } from "../_shared/passwordRecovery.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -658,8 +659,8 @@ serve(async (req) => {
         ...("contracted_days_per_week" in body ? { contracted_days_per_week: contracted_days_per_week ?? null } : {}),
         ...("contracted_hours_per_week" in body ? { contracted_hours_per_week: contracted_hours_per_week ?? null } : {}),
         ...("annual_leave_days" in body ? { annual_leave_days: annual_leave_days ?? null } : {}),
-        // Only promote out of draft when sending invitation
-        is_draft: send_invitation ? false : true,
+        // Stays a draft while inviting: activate_draft_profile requires is_draft = true and promotes the new login itself.
+        is_draft: draftFlagForProfileUpdate(!!send_invitation, !!(send_invitation && email && full_name)),
       }).eq("id", profile_id);
       if (updateErr) return new Response(JSON.stringify({ error: updateErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -697,6 +698,7 @@ serve(async (req) => {
           console.log("activate_draft_profile moved", JSON.stringify(moved));
           return new Response(JSON.stringify({ success: true, user_id: inviteData.user.id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
+        await adminDb.from("profiles").update({ is_draft: false }).eq("id", profile_id);
         return new Response(JSON.stringify({ success: true, user_id: profile_id, invited: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
