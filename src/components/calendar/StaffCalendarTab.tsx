@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useStaffSchedules } from "@/hooks/useStaffSchedules";
 import { useVisibleStaffIds } from "@/hooks/useVisibleStaffIds";
 import { rosterVisibleIds } from "@/lib/visibleStaff";
+import { withPublicHolidays, isAutoHolidayLeave } from "@/lib/publicHolidays";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSchedulePublications } from "@/hooks/useSchedulePublications";
 
@@ -216,7 +217,10 @@ export function StaffCalendarTab({
   const profiles = rawProfiles.filter(person => visibleStaffIds.has(person.id));
   const schedules = rawSchedules.filter(row => visibleStaffIds.has(row.staff_id));
   const shifts = rawShifts.filter(row => visibleStaffIds.has(row.staff_id));
-  const leaveRequests = rawLeaveRequests.filter(row => visibleStaffIds.has(row.staff_id));
+  const leaveRequests = withPublicHolidays(
+    rawLeaveRequests.filter(row => visibleStaffIds.has(row.staff_id)), profiles,
+    format(calView === "month" ? monthStart : weekStart, "yyyy-MM-dd"),
+    format(calView === "month" ? monthRangeEnd : endOfWeek(weekStart, { weekStartsOn: 1 }), "yyyy-MM-dd"));
 
   useEffect(() => {
     setProfilesLoading(true);
@@ -454,7 +458,7 @@ export function StaffCalendarTab({
 
   const handleShiftDoubleClick = (shift: DisplayShift) => {
     if (shift.is_leave) {
-      if (!shift.leave_id) return;
+      if (!shift.leave_id || isAutoHolidayLeave(shift.leave_id)) return;
       setEditingLeaveId(shift.leave_id);
       setShowLeaveModal(true);
       return;
@@ -561,6 +565,10 @@ export function StaffCalendarTab({
     }
 
     const exportDays = eachDayOfInterval({ start: opts.rangeStart, end: opts.rangeEnd });
+    const exportLeave = withPublicHolidays(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (leaveRes.data ?? []) as any[], candidates,
+      format(opts.rangeStart, "yyyy-MM-dd"), format(opts.rangeEnd, "yyyy-MM-dd"));
     const exportShifts = buildDisplayShifts(
       exportDays,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -568,7 +576,7 @@ export function StaffCalendarTab({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (shiftRes.data ?? []) as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (leaveRes.data ?? []) as any,
+      exportLeave as any,
       candidates,
     );
 
@@ -589,7 +597,7 @@ export function StaffCalendarTab({
       // Pending leave is provisional — keep it out of printed schedules.
       displayShifts: exportShifts.filter((s) => !(s.is_leave && s.leave_status === "pending")),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      leaveRequests: (leaveRes.data ?? []) as any,
+      leaveRequests: exportLeave as any,
       properties,
       rangeStart: opts.rangeStart,
       rangeEnd: opts.rangeEnd,
@@ -789,7 +797,7 @@ export function StaffCalendarTab({
       )}
 
       <LeavePanel
-        leaveRequests={leaveRequests}
+        leaveRequests={leaveRequests.filter(lr => !isAutoHolidayLeave(lr.id))}
         profiles={profiles}
         onReview={reviewLeaveRequest}
         onDelete={deleteLeaveRequest}
