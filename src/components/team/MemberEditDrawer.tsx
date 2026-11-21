@@ -75,7 +75,7 @@ function AccessLevelControl({ section, name, value, isEN, disabled, onChange }: 
       className="w-full min-h-11 h-auto px-2 py-1 gap-1 whitespace-normal text-sm bg-charcoal-light border-cream/20 text-cream">
       <span className="min-w-0 break-words">{label(value)}</span><ChevronDown size={14} className="shrink-0" />
     </Button>
-  </DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
+  </DropdownMenuTrigger><DropdownMenuContent align="end" className="z-[90] w-80 max-w-[calc(100vw-2rem)]">
     {options.map(v => <DropdownMenuItem key={v} onSelect={() => onChange(v)} className="min-h-11 flex-col items-start whitespace-normal">
       <span className="font-semibold">{label(v)}</span><span className="text-xs text-muted-foreground break-words">{LEVEL_DESCRIPTIONS[v][isEN ? 0 : 1]}</span>
     </DropdownMenuItem>)}
