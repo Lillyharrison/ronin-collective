@@ -4,6 +4,7 @@ import { CalendarOff, Settings2, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { getDisplayName, propColor, formatTime } from "./utils";
+import { LEAVE_TYPE_CONFIG } from "./constants";
 import type { DisplayShift, Profile, Property } from "./types";
 
 /**
@@ -166,11 +167,15 @@ export function StaffMonthGrid({
                     dim && "opacity-40"
                   )}
                 >
-                  {hasLeave && (
-                    <div className="w-full rounded px-0.5 py-0.5 bg-muted/60 border border-border flex items-center justify-center" title="Leave">
-                      <CalendarOff size={9} className="text-muted-foreground" />
-                    </div>
-                  )}
+                  {hasLeave && (() => {
+                    const leaveShift = dayShifts.find((s) => s.is_leave);
+                    const leaveTitle = (LEAVE_TYPE_CONFIG[leaveShift?.leave_type ?? "other"] ?? LEAVE_TYPE_CONFIG.other).label;
+                    return (
+                      <div className="w-full rounded px-0.5 py-0.5 bg-muted/60 border border-border flex items-center justify-center" title={leaveTitle}>
+                        <CalendarOff size={9} className="text-muted-foreground" />
+                      </div>
+                    );
+                  })()}
                   {workShifts.map((s, si) => {
                     const col = propColor(s.property_id, properties);
                     const prop = properties.find((p) => p.id === s.property_id);
