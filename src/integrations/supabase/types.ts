@@ -1484,6 +1484,7 @@ export type Database = {
           id: string
           is_archived: boolean
           is_draft: boolean
+          is_schedulable: boolean
           job_title: string | null
           keep_until: string | null
           language_pref: Database["public"]["Enums"]["language_pref"]
@@ -1513,6 +1514,7 @@ export type Database = {
           id: string
           is_archived?: boolean
           is_draft?: boolean
+          is_schedulable?: boolean
           job_title?: string | null
           keep_until?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
@@ -1542,6 +1544,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_draft?: boolean
+          is_schedulable?: boolean
           job_title?: string | null
           keep_until?: string | null
           language_pref?: Database["public"]["Enums"]["language_pref"]
@@ -2762,6 +2765,7 @@ export type Database = {
           notifications: boolean
           scope: string | null
           section: string
+          see_drafts: boolean
           updated_at: string
           user_id: string
         }
@@ -2772,6 +2776,7 @@ export type Database = {
           notifications?: boolean
           scope?: string | null
           section: string
+          see_drafts?: boolean
           updated_at?: string
           user_id: string
         }
@@ -2782,6 +2787,7 @@ export type Database = {
           notifications?: boolean
           scope?: string | null
           section?: string
+          see_drafts?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -3119,6 +3125,7 @@ export type Database = {
       can_edit_maintenance: { Args: { _user_id: string }; Returns: boolean }
       can_edit_orders: { Args: { _user_id: string }; Returns: boolean }
       can_edit_properties: { Args: { _user_id: string }; Returns: boolean }
+      can_see_schedule_drafts: { Args: { _uid: string }; Returns: boolean }
       can_see_section: {
         Args: { _section: string; _user_id: string }
         Returns: boolean
@@ -3257,6 +3264,7 @@ export type Database = {
       }
       run_access_scan: { Args: never; Returns: number }
       safe_tz: { Args: { _tz: string }; Returns: string }
+      schedule_week_is_draft: { Args: { _d: string }; Returns: boolean }
       send_request_list: {
         Args: { _ids?: string[]; _property_id: string }
         Returns: Json
