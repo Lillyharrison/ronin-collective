@@ -140,6 +140,33 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_action_log: {
+        Row: {
+          action: string
+          admin_id: string
+          at: string
+          detail: Json
+          id: string
+          target_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          at?: string
+          detail?: Json
+          id?: string
+          target_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          at?: string
+          detail?: Json
+          id?: string
+          target_id?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           category: Database["public"]["Enums"]["asset_category"]
@@ -3094,6 +3121,19 @@ export type Database = {
       }
       admin_access_check_person: { Args: { _target: string }; Returns: Json }
       admin_access_overview: { Args: never; Returns: Json }
+      admin_clear_duplicate_notifications: {
+        Args: { _target: string }
+        Returns: number
+      }
+      admin_clear_notifications: {
+        Args: { _only_read?: boolean; _target: string }
+        Returns: number
+      }
+      admin_delete_notifications: {
+        Args: { _ids: string[]; _target: string }
+        Returns: number
+      }
+      admin_their_view: { Args: { _target: string }; Returns: Json }
       admin_visibility_report: {
         Args: { _log?: boolean; _target: string }
         Returns: Json
