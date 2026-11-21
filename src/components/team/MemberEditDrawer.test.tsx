@@ -29,6 +29,10 @@ function show() {
 }
 
 describe("member editor", () => {
+  it("offers no View as entry point for a live member", () => {
+    render(<MemberEditDrawer member={{ ...draft, is_draft: false }} properties={[]} isEN canEdit isMasterAdmin onClose={vi.fn()} onSaved={vi.fn()} onDeleted={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /View as|View the app as/ })).not.toBeInTheDocument();
+  });
   it("saves the admin-selected text size with the existing profile save", async () => {
     updates.length = 0; show();
     fireEvent.change(screen.getByRole("combobox", { name: "Text size" }), { target: { value: "xlarge" } });

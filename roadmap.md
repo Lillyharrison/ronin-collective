@@ -1,3 +1,6 @@
+# Their view
+- [x] Remove preview UI and add master-admin Their view tabs and confirmed selective alert clearing; 38 focused tests passed. Database unchanged; no browser checks or live alert deletion. Clear-action confirmation counts cover the bounded preview and warn that older alerts may also be cleared.
+
 # Access levels and creation controls
 - [x] Add Off/View/Add/Manage levels and dependent child rows; gate creation and Construction visibility. 129 focused tests passed, final 27 level/editor tests passed; one signed-in Spanish 390px/1.4 Access look had no horizontal overflow. Ronin save handling deployed and unauthorized request refused (401); real permission saves were not exercised. Database unchanged.
 

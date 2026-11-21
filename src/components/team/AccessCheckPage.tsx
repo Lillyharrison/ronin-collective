@@ -5,6 +5,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useAccessCheck } from "./useAccessCheck";
+import { TheirView } from "./TheirView";
 import { ACCESS_COPY, ACCESS_REFRESH_COPY, MAIN_ACCESS_TABLES, accessIssueText, accessTableName, accessTime, newestAccessCheck, reportIssues, wrongAlertReason, type AccessReport } from "./accessCheckLogic";
 
 export function AccessCheckPage({ onClose, onEditHouses, suspended = false }: { onClose: () => void; onEditHouses: (id: string) => void; suspended?: boolean }) {
@@ -49,6 +50,7 @@ export function AccessCheckPage({ onClose, onEditHouses, suspended = false }: { 
       </section>
     </> : report.isPending ? <p role="status">{en ? "Checking this person…" : "Comprobando a esta persona…"}</p> : report.isError ? failure(() => { void report.refetch(); }) : r && <>
       <h2 className="font-display text-2xl">{r.person.name}</h2>
+      <TheirView key={target} target={target} name={r.person.name} en={en}/>
       <p className="text-sm text-muted-foreground">{c.last}: {accessTime(personCheck.data?.checked_at ?? overview.data?.find(row => row.person.id === target)?.checked_at, en)}</p>
       {personCheck.isFetching && <p role="status" className="text-sm text-muted-foreground">{refreshCopy.progress(1, 1)}</p>}
       {personCheck.isError && failure(() => { if (target) void refreshPerson(target); })}
@@ -58,7 +60,7 @@ export function AccessCheckPage({ onClose, onEditHouses, suspended = false }: { 
       <section><h3 className="font-semibold mb-2">{c.visible}</h3><TableCounts report={r} en={en} main/><details><summary className="min-h-11 py-3 cursor-pointer">{c.more}</summary><TableCounts report={r} en={en} main={false}/></details></section>
       <section ref={alertsRef} className="scroll-mt-24 space-y-3"><h3 className="font-semibold">{c.recent}</h3>{!(r.alerts_last_14_days?.length || r.alerts_that_look_wrong?.length) && <p className="text-muted-foreground">{c.noAlerts}</p>}{[...(r.alerts_last_14_days ?? []), ...(r.alerts_that_look_wrong ?? []).filter(a => !r.alerts_last_14_days?.some(b => a.when === b.when && a.title === b.title))].map((a, i) => { const why = wrongAlertReason(a, r.alerts_that_look_wrong ?? []); return <div key={i} className={`border-b border-border py-3 space-y-1 ${why ? "border-l-4 border-l-destructive pl-3" : ""} ${why && highlight ? "bg-destructive/10" : ""}`}><p className="font-medium">{a.title}</p><p className="text-sm text-muted-foreground">{accessTime(a.when, en)} · {a.house || c.none} · {a.from || (en ? "System" : "Sistema")}{a.read != null && ` · ${a.read ? c.read : c.unread}`}</p>{why && <p className="text-sm text-destructive">{why === "wrong_alert" ? accessIssueText(why, en) : why}</p>}</div>; })}</section>
     </>}
-    <p className="text-sm text-muted-foreground border-t border-border pt-4">{c.note}</p>
+    {!target && <p className="text-sm text-muted-foreground border-t border-border pt-4">{c.note}</p>}
   </div>;
 }
 function TableCounts({ report, en, main }: { report: AccessReport; en: boolean; main: boolean }) {
