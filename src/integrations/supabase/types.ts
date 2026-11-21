@@ -2759,6 +2759,7 @@ export type Database = {
       }
       user_section_permissions: {
         Row: {
+          can_add: boolean
           can_edit: boolean
           can_view: boolean
           id: string
@@ -2770,6 +2771,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          can_add?: boolean
           can_edit?: boolean
           can_view?: boolean
           id?: string
@@ -2781,6 +2783,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          can_add?: boolean
           can_edit?: boolean
           can_view?: boolean
           id?: string
@@ -3265,6 +3268,10 @@ export type Database = {
       run_access_scan: { Args: never; Returns: number }
       safe_tz: { Args: { _tz: string }; Returns: string }
       schedule_week_is_draft: { Args: { _d: string }; Returns: boolean }
+      section_can_add: {
+        Args: { _section: string; _uid: string }
+        Returns: boolean
+      }
       send_request_list: {
         Args: { _ids?: string[]; _property_id: string }
         Returns: Json
