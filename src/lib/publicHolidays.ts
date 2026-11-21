@@ -8,9 +8,14 @@ export const isAutoHolidayLeave = (id?: string | null) => !!id && id.startsWith(
 type Leave = { id: string; staff_id: string; start_date: string; end_date: string; leave_type: string; status: string; reason: string | null; reviewed_by: string | null; reviewed_at: string | null; created_by: string | null };
 type Person = { id: string; start_date?: string | null };
 
+// Pure string math on the plain YYYY-MM-DD key — no Date parsing, so no timezone can shift it.
 function addDay(d: string): string {
-  const t = new Date(`${d}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + 1);
-  return t.toISOString().slice(0, 10);
+  const [y, m, day] = d.split("-").map(Number);
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const daysInMonth = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let ny = y, nm = m, nd = day + 1;
+  if (nd > daysInMonth[m - 1]) { nd = 1; nm++; if (nm > 12) { nm = 1; ny++; } }
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(nd).padStart(2, "0")}`;
 }
 
 /** Dates (YYYY-MM-DD) in [from, to] that have an approved public-holiday entry for anyone. */

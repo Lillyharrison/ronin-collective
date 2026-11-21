@@ -5,7 +5,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
-import { PROPERTY_COLOR_OVERRIDES, stablePropColorIndex } from "./constants";
+import { PROPERTY_COLOR_OVERRIDES, stablePropColorIndex, LEAVE_TYPE_CONFIG } from "./constants";
 import { getDisplayName, formatTime } from "./utils";
 import { calculateAccruedAnnualLeave, calculateAnnualLeaveTakenYTD, calculateExpectedWork, formatLeaveDays } from "./leaveMath";
 import type { DisplayShift, Profile, Property } from "./types";
@@ -61,8 +61,18 @@ function extractNoteBody(notes: string | null | undefined): string {
   return raw.replace(/^📍 (?:Office|Remote)(?:\s*[–—-]\s*)?/, "").trim();
 }
 
+// Leave cells show the specific leave type (e.g. "Public Holiday"), not a generic label.
+export function leaveLabel(s: DisplayShift): string {
+  return (LEAVE_TYPE_CONFIG[s.leave_type ?? "other"] ?? LEAVE_TYPE_CONFIG.other).label;
+}
+
+// Short form for the cramped month grid.
+function leaveAbbrev(s: DisplayShift): string {
+  return s.leave_type === "public_holiday" ? "PH" : "L";
+}
+
 function shiftCellText(s: DisplayShift, properties: Property[]) {
-  if (s.is_leave) return "Leave";
+  if (s.is_leave) return leaveLabel(s);
   const prop = properties.find((p) => p.id === s.property_id);
   const name = prop?.name ?? "—";
   const timeStr = s.start_time && s.end_time
@@ -467,7 +477,7 @@ function renderMonthlyOverview(
           const dateStr = format(day, "yyyy-MM-dd");
           const ds = displayShifts.filter((s) => s.staff_id === person.id && s.shift_date === dateStr);
           if (ds.length === 0) return "";
-          if (ds[0].is_leave) return "L";
+          if (ds[0].is_leave) return leaveAbbrev(ds[0]);
           const prop = properties.find((p) => p.id === ds[0].property_id);
           return propAbbrev(prop);
         }),

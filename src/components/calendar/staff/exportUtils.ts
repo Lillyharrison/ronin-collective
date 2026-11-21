@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
-import { PROPERTY_COLOR_OVERRIDES, stablePropColorIndex } from "./constants";
+import { PROPERTY_COLOR_OVERRIDES, stablePropColorIndex, LEAVE_TYPE_CONFIG } from "./constants";
 import { getDisplayName, formatTime } from "./utils";
 import type { DisplayShift, Profile, Property } from "./types";
 
@@ -47,7 +47,7 @@ function buildExportRows(
       row[format(day, "EEE d/M")] = dayShifts.length === 0
         ? ""
         : dayShifts.map((s) => {
-            if (s.is_leave) return "Leave";
+            if (s.is_leave) return (LEAVE_TYPE_CONFIG[s.leave_type ?? "other"] ?? LEAVE_TYPE_CONFIG.other).label;
             const prop = properties.find((p) => p.id === s.property_id);
             const name = prop?.name ?? "—";
             const timeStr = s.start_time && s.end_time
