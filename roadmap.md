@@ -1,3 +1,6 @@
+# Profile switches and roster
+- [x] Wire schedulable/draft-week switches, salaried pay and roster eligibility without database changes; 85 focused tests and signed-in 390px Access/Staff Schedule look. Real profile/permission/pay saves were not exercised.
+
 # Notification receipts
 
 # Access checks and completion audience

@@ -34,5 +34,5 @@ export function overviewStatus(row: Overview, basis?: string | null) {
 }
 export function orderOverview(rows: Overview[], bases: Record<string, string | null | undefined> = {}) {
   const rank = { review: 0, ready: 1, payroll: 2, issued: 3, paid: 4 };
-  return [...rows].sort((a, b) => rank[overviewStatus(a, bases[a.staff_id])] - rank[overviewStatus(b, bases[b.staff_id])] || a.full_name.localeCompare(b.full_name));
+  return rows.filter(r => bases[r.staff_id] !== "salaried").sort((a, b) => rank[overviewStatus(a, bases[a.staff_id])] - rank[overviewStatus(b, bases[b.staff_id])] || a.full_name.localeCompare(b.full_name));
 }

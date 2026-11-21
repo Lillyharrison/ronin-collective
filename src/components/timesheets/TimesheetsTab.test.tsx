@@ -42,6 +42,7 @@ vi.mock("./api", () => ({
         eq: () => q,
         is: () => q,
         lt: () => q,
+        in: () => q,
         order: () => q,
         limit: () => {
           m.query();

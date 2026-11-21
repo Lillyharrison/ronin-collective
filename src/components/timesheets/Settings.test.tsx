@@ -53,3 +53,13 @@ it("shows the database rejection message without claiming a save succeeded", asy
   fireEvent.click(await screen.findByRole("button", { name: "Save" }));
   await vi.waitFor(() => expect(m.toast).toHaveBeenCalledWith(m.error?.message));
 });
+it("salaried is selectable and hides tracking and all pay details", async () => {
+  show(); await screen.findByText("Eligible staff");
+  fireEvent.change(screen.getByRole("combobox", { name: "Paid" }), { target: { value: "salaried" } });
+  expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+  expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Paid" }), { target: { value: "hourly" } });
+  expect(screen.getByRole("spinbutton", { name: "Hourly rate" })).toHaveValue(null);
+  expect(screen.getByRole("spinbutton", { name: "Day rate" })).toHaveValue(null);
+});

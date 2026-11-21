@@ -1,7 +1,7 @@
 // Pure access-editing rules for the team member editor (no React, fully testable).
 import { ALL_SECTIONS, ALL_QUICK_ACTIONS, QUICK_ACTION_SECTION, type SectionPerm, type SectionPermissions } from "./teamConstants";
 
-export type PermField = "view" | "edit" | "notifications";
+export type PermField = "view" | "edit" | "notifications" | "see_drafts";
 export const ALWAYS_ON_SECTIONS = ["dashboard", "profile"];
 
 export const ACCESS_GROUPS: { key: string; label: string; labelEs: string; sections: string[] }[] = [
@@ -24,7 +24,7 @@ export function accessGroups(existing: SectionPermissions = {}, allSectionKeys: 
 }
 
 // ── Clock in and out on site + pay (staff_time_settings) ──────────────────────
-export type PayBasis = "hourly" | "daily" | "payroll";
+export type PayBasis = "hourly" | "daily" | "payroll" | "salaried";
 export type TimeSetting = {
   time_tracking: string; payee_name: string | null; hourly_rate: number | null; currency: string; rounding_minutes: number;
   pay_basis?: PayBasis | null; daily_rate?: number | null;
@@ -61,8 +61,9 @@ function hasPayData(p: PayEdit) {
  */
 export function timeSettingWrite(staffId: string, current: TimeSetting, clockOn: boolean, pay: PayEdit | null): TimeSettingRow | null {
   const base = payFromSetting(current);
-  const nextPay = pay ?? base;
-  const tracking = clockOn ? "ronin" : (current?.time_tracking === "ronin" ? "none" : (current?.time_tracking ?? "none"));
+  const chosen = pay ?? base;
+  const nextPay = chosen.pay_basis === "salaried" ? { ...chosen, hourly_rate: null, daily_rate: null } : chosen;
+  const tracking = nextPay.pay_basis === "salaried" ? "none" : clockOn ? "ronin" : (current?.time_tracking === "ronin" ? "none" : (current?.time_tracking ?? "none"));
   if (!current && !clockOn && !hasPayData(nextPay)) return null;
   const row: TimeSettingRow = { staff_id: staffId, time_tracking: tracking, ...nextPay, payee_name: nextPay.payee_name?.trim() || null };
   if (current) {
@@ -79,7 +80,7 @@ export function clockSettingWrite(staffId: string, current: TimeSetting, on: boo
 
 /** The rate the current basis needs is missing (payroll needs none). */
 export function missingRate(pay: PayEdit) {
-  if (pay.pay_basis === "payroll") return false;
+  if (pay.pay_basis === "payroll" || pay.pay_basis === "salaried") return false;
   return pay.pay_basis === "daily" ? pay.daily_rate == null : pay.hourly_rate == null;
 }
 
@@ -108,7 +109,7 @@ const off: SectionPerm = { view: false, edit: false, notifications: false };
 /** Change or Alerts on => See on. See off => Change and Alerts off. */
 export function togglePermission(perm: SectionPerm | undefined, field: PermField, value: boolean): SectionPerm {
   const cur = { ...off, ...perm };
-  if (field === "view") return value ? { ...cur, view: true } : { ...cur, view: false, edit: false, notifications: false };
+  if (field === "view") return value ? { ...cur, view: true } : { ...cur, view: false, edit: false, notifications: false, ...(cur.see_drafts !== undefined ? { see_drafts: false } : {}) };
   return { ...cur, [field]: value, ...(value ? { view: true } : {}) };
 }
 
@@ -127,17 +128,17 @@ export function sectionsOn(perms: SectionPermissions) {
 }
 
 export function switchesOn(perms: SectionPermissions) {
-  return Object.entries(perms).reduce((n, [k, p]) => k === "_quick_actions" || !p ? n : n + (p.view ? 1 : 0) + (p.edit ? 1 : 0) + (p.notifications ? 1 : 0), 0);
+  return Object.entries(perms).reduce((n, [k, p]) => k === "_quick_actions" || !p ? n : n + (p.view ? 1 : 0) + (p.edit ? 1 : 0) + (p.notifications ? 1 : 0) + (k === "staff-schedule" && p.view && p.see_drafts ? 1 : 0), 0);
 }
 
 /** Rows to save: only sections with a switch on; sections with all three off are deleted. */
 export function buildPermissionRows(perms: SectionPermissions) {
-  const upserts: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope: "own" | "department" | "all" | null }[] = [];
+  const upserts: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }[] = [];
   const deletes: string[] = [];
   for (const [section, p] of Object.entries(perms)) {
     if (section === "_quick_actions" || !p || typeof p !== "object") continue;
     if (p.view || p.edit || p.notifications) {
-      upserts.push({ section, can_view: !!p.view, can_edit: !!p.edit, notifications: !!p.notifications, scope: p.scope ?? null });
+      upserts.push({ section, can_view: !!p.view, can_edit: !!p.edit, notifications: !!p.notifications, see_drafts: section === "staff-schedule" && !!p.view && !!p.see_drafts, scope: p.scope ?? null });
     } else deletes.push(section);
   }
   return { upserts, deletes };

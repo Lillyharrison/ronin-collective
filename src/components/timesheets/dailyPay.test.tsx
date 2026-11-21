@@ -110,6 +110,9 @@ describe("people list and sync", () => {
     expect(overviewStatus(row("a"), "daily")).toBe("ready");
     expect(orderOverview([row("a"), row("b"), row("c", 2)], { a: "payroll" }).map(r => r.staff_id)).toEqual(["c", "b", "a"]);
   });
+  it("salaried never appears in the people list, including historical rows", () => {
+    expect(orderOverview([row("salary"), row("hourly")], { salary: "salaried", hourly: "hourly" }).map(r => r.staff_id)).toEqual(["hourly"]);
+  });
   it("editor and Timesheets settings invalidate the same keys", () => {
     const qc = { invalidateQueries: vi.fn() };
     invalidateTimeSettings(qc);

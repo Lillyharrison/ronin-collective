@@ -144,3 +144,29 @@ describe("contract and pay", () => {
     expect(withClockShortcut(["clock", "tasks"], false)).toEqual(["tasks"]);
   });
 });
+
+
+describe("explicit schedule drafts and salaried", () => {
+  it("only admins bypass the draft-week flag; other roles require See and see_drafts", () => {
+    for (const role of ["staff", "manager"] as const) {
+      expect(p(role, null).canSeeScheduleDrafts).toBe(false);
+      expect(p(role, { "staff-schedule": { view: true, edit: false, notifications: false } }).canSeeScheduleDrafts).toBe(false);
+      const rows = { "staff-schedule": { view: true, edit: false, notifications: false, see_drafts: true } };
+      expect(p(role, rows).canSeeScheduleDrafts).toBe(true);
+      expect(p(role, { "staff-schedule": { ...rows["staff-schedule"], view: false } }).canSeeScheduleDrafts).toBe(false);
+    }
+    expect(p("admin", null).canSeeScheduleDrafts).toBe(true);
+    expect(p("master_admin", null).canSeeScheduleDrafts).toBe(true);
+    expect(buildPermissions("family", "principal", "principal", null, [], null, null, null, false, null, preview).canSeeScheduleDrafts).toBe(false);
+  });
+  it("counts draft access once and clears it when See is off", () => {
+    const row = { view: true, edit: false, notifications: false, see_drafts: true };
+    expect(switchesOn({ "staff-schedule": row })).toBe(2);
+    expect(togglePermission(row, "view", false).see_drafts).toBe(false);
+    expect(buildPermissionRows({ "staff-schedule": row }).upserts[0].see_drafts).toBe(true);
+  });
+  it("salaried forces tracking off and clears rates even with the clock previously on", () => {
+    expect(timeSettingWrite("s", { ...PAY_DEFAULTS, time_tracking: "ronin", hourly_rate: 20 }, true, { ...PAY_DEFAULTS, pay_basis: "salaried", hourly_rate: 20, daily_rate: 150 })).toMatchObject({ pay_basis: "salaried", time_tracking: "none", hourly_rate: null, daily_rate: null });
+    expect(missingRate({ ...PAY_DEFAULTS, pay_basis: "salaried" })).toBe(false);
+  });
+});

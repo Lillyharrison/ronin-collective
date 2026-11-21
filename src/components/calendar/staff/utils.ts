@@ -1,7 +1,7 @@
 // Pure helpers for the Staff Calendar feature.
 // Extracted from StaffCalendarTab.tsx (Step 1 refactor) — no behavior changes.
 
-import { format, getDay, eachDayOfInterval, parseISO, isWeekend } from "date-fns";
+import { format, getDay, eachDayOfInterval, parseISO, isWeekend, startOfWeek } from "date-fns";
 import type { StaffSchedule, StaffShift, StaffLeaveRequest } from "@/hooks/useStaffSchedules";
 import { PROPERTY_COLORS, PROPERTY_COLOR_OVERRIDES, stablePropColorIndex } from "./constants";
 import type { Profile, Property, DisplayShift } from "./types";
@@ -177,4 +177,22 @@ export function buildDisplayShifts(
   }
 
   return result;
+}
+
+/** Roster membership uses real work evidence, never leave/public-holiday decoration. */
+export function schedulablePeople(profiles: Profile[]) {
+  return profiles.filter(p => p.is_schedulable === true);
+}
+export function rosterPeople(profiles: Profile[], days: Date[], schedules: StaffSchedule[], shifts: StaffShift[]) {
+  const dates = new Set(days.map(d => format(d, "yyyy-MM-dd")));
+  return schedulablePeople(profiles).filter(p =>
+    shifts.some(s => s.staff_id === p.id && s.status === "scheduled" && dates.has(s.shift_date) && isEmployedOn(p, s.shift_date)) ||
+    schedules.some(s => s.staff_id === p.id && s.is_active && days.some(d => {
+      const date = format(d, "yyyy-MM-dd");
+      return getDay(d) === s.day_of_week && s.effective_from <= date && (!s.effective_to || s.effective_to >= date) && isEmployedOn(p, date);
+    }))
+  );
+}
+export function scheduleDateVisible(date: string, canSeeDrafts: boolean, published: (date: string) => boolean, now = new Date()) {
+  return canSeeDrafts || date < format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd") || published(date);
 }

@@ -14,7 +14,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useSchedulePublications } from "@/hooks/useSchedulePublications";
 
 import type { Profile, Property, DisplayShift, FamilyEvent, RosterStats } from "./staff/types";
-import { getDisplayName, buildDisplayShifts } from "./staff/utils";
+import { getDisplayName, buildDisplayShifts, rosterPeople, schedulablePeople, scheduleDateVisible } from "./staff/utils";
 import {
   calculateAccruedAnnualLeave,
   calculateAnnualLeaveTakenYTD,
@@ -140,7 +140,7 @@ export function StaffCalendarTab({
   const [filterProperty, setFilterProperty] = useState<string>("all");
   const [familyEvents, setFamilyEvents] = useState<FamilyEvent[]>([]);
 
-  const { canSee, isMasterAdmin, isAdmin, isManager, assignedPropertyIds } = usePermissions();
+  const { canSee, isMasterAdmin, canSeeScheduleDrafts, assignedPropertyIds } = usePermissions();
   const canSeeAllProperties = isMasterAdmin;
   const showFamilyOverlay = canSee("family-movements");
 
@@ -227,12 +227,18 @@ export function StaffCalendarTab({
     Promise.all([
       supabase.rpc("get_staff_schedule_profiles"),
       supabase.from("properties").select("id, name, city, country").order("sort_order"),
-    ]).then(([profilesRes, propRes]) => {
+    ]).then(async ([profilesRes, propRes]) => {
       if (profilesRes.error) {
         toast.error("Failed to load staff profiles");
         setProfiles([]);
       } else {
-        setProfiles((profilesRes.data as Profile[]) ?? []);
+        const people = (profilesRes.data as Profile[]) ?? [];
+        const { data: flags, error: flagsError } = people.length
+          ? await supabase.from("profiles").select("id, is_schedulable").in("id", people.map(p => p.id)).limit(people.length)
+          : { data: [], error: null };
+        if (flagsError) toast.error("Failed to load roster setup");
+        const schedulableIds = new Set((flags ?? []).filter(p => p.is_schedulable).map(p => p.id));
+        setProfiles(people.map(p => ({ ...p, is_schedulable: schedulableIds.has(p.id) })));
       }
       const allProps = (propRes.data as Property[]) ?? [];
       const visibleProps = canSeeAllProperties
@@ -279,30 +285,25 @@ export function StaffCalendarTab({
     visibleRangeStart,
     visibleRangeEnd,
   );
-  const canPublish = isMasterAdmin || isAdmin || isManager;
-  const displayShifts = canPublish
-    ? allDisplayShifts
-    : allDisplayShifts.filter((s) => s.is_leave || isPublished(s.shift_date));
+  const canPublish = canEdit && canSeeScheduleDrafts;
+  const displayShifts = allDisplayShifts.filter(s => scheduleDateVisible(s.shift_date, canSeeScheduleDrafts, isPublished));
+  const rosterDays = weekDays.filter(d => scheduleDateVisible(format(d, "yyyy-MM-dd"), canSeeScheduleDrafts, isPublished));
+  const rosterProfiles = rosterPeople(profiles, rosterDays, schedules, shifts);
+  const pickerProfiles = schedulablePeople(profiles);
   const currentWeekPublished = isPublished(weekStart);
 
   const staffToShow = !canEdit && userId && !scopeFilterIds
-    ? profiles.filter((p) => p.id === userId && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd))
+    ? rosterProfiles.filter((p) => p.id === userId && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd))
     : (() => {
-        const activeStaffIds = Array.from(
-          new Set([
-            ...displayShifts.map((s) => s.staff_id),
-            ...(userId ? [userId] : []),
-          ])
-        );
-        let allStaff = profiles.filter((p) =>
-          (filterStaff === "all" ? activeStaffIds.includes(p.id) : p.id === filterStaff)
+        let allStaff = rosterProfiles.filter((p) =>
+          (filterStaff === "all" || p.id === filterStaff)
           && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)
         );
         if (scopeFilterIds) {
           const scopeSet = new Set(scopeFilterIds);
           allStaff = allStaff.filter((p) => scopeSet.has(p.id));
         }
-        let base = allStaff.length > 0 ? allStaff : (filterStaff === "all" ? profiles.slice(0, 10).filter(p => (!scopeFilterIds || scopeFilterIds.includes(p.id)) && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)) : profiles.filter((p) => p.id === filterStaff && isEmployedDuringRange(p, visibleRangeStart, visibleRangeEnd)));
+        let base = allStaff;
 
         const q = filterSearch.trim().toLowerCase();
         if (q) {
@@ -321,8 +322,8 @@ export function StaffCalendarTab({
 
         const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
         return [...base].sort((a, b) => {
-          const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
-          const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+          const ai = orderMap.get(a.id) ?? 9999;
+          const bi = orderMap.get(b.id) ?? 9999;
           return ai - bi;
         });
       })();
@@ -582,20 +583,20 @@ export function StaffCalendarTab({
 
     // Only include people who actually have something in the export range,
     // falling back to the current on-screen list if nothing matches.
-    const activeIds = new Set(exportShifts.map((s) => s.staff_id));
+    const activeIds = new Set(rosterPeople(candidates, exportDays.filter(d => scheduleDateVisible(format(d, "yyyy-MM-dd"), canSeeScheduleDrafts, isPublished)), (schedRes.data ?? []) as never, (shiftRes.data ?? []) as never).map(p => p.id));
     const orderMap = new Map(staffOrder.map((id, i) => [id, i]));
     let exportStaff = candidates.filter((p) => activeIds.has(p.id));
-    if (exportStaff.length === 0) exportStaff = staffToShow;
+
     exportStaff = [...exportStaff].sort((a, b) => {
-      const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
-      const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+      const ai = orderMap.get(a.id) ?? 9999;
+      const bi = orderMap.get(b.id) ?? 9999;
       return ai - bi;
     });
 
     exportSchedulePDFv2({
       staffToShow: exportStaff,
       // Pending leave is provisional — keep it out of printed schedules.
-      displayShifts: exportShifts.filter((s) => !(s.is_leave && s.leave_status === "pending")),
+      displayShifts: exportShifts.filter((s) => scheduleDateVisible(s.shift_date, canSeeScheduleDrafts, isPublished) && !(s.is_leave && s.leave_status === "pending")),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       leaveRequests: exportLeave as any,
       properties,
@@ -604,7 +605,7 @@ export function StaffCalendarTab({
       layout: opts.layout,
       includeTracking: opts.includeTracking,
     });
-  }, [staffToShow, properties, profiles, staffOrder, filterStaff, filterSearch, filterDepartment, filterProperty, scopeFilterIds, canEdit, userId]);
+  }, [staffToShow, properties, profiles, staffOrder, filterStaff, filterSearch, filterDepartment, filterProperty, scopeFilterIds, canEdit, userId, canSeeScheduleDrafts, isPublished]);
 
 
   return (
@@ -744,7 +745,7 @@ export function StaffCalendarTab({
         );
       })()}
 
-      {calView === "week" && canPublish && (
+      {calView === "week" && canSeeScheduleDrafts && (
         <div className={cn(
           "flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2",
           currentWeekPublished
@@ -756,19 +757,13 @@ export function StaffCalendarTab({
               ? "Published — staff & family can see this week."
               : "Draft — this week is hidden from staff & family until you publish it."}
           </p>
-          <Button
+          {canPublish && <Button
             size="sm"
             variant={currentWeekPublished ? "outline" : "default"}
             onClick={() => (currentWeekPublished ? unpublishWeek(weekStart) : publishWeek(weekStart, userId))}
           >
             {currentWeekPublished ? "Unpublish week" : "Publish week"}
-          </Button>
-        </div>
-      )}
-
-      {calView === "week" && !canPublish && !currentWeekPublished && (
-        <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-center text-xs text-muted-foreground">
-          This week's schedule hasn't been published yet.
+          </Button>}
         </div>
       )}
 
@@ -814,7 +809,7 @@ export function StaffCalendarTab({
         onUpdate={updateShift}
         onUpdateSchedule={updateSchedule}
         onSaveSchedule={createSchedule}
-        profiles={profiles}
+        profiles={pickerProfiles}
         properties={properties}
         prefillDate={prefillDate}
         prefillStaff={prefillStaff}
@@ -838,7 +833,7 @@ export function StaffCalendarTab({
         open={showScheduleManager}
         onClose={() => setShowScheduleManager(false)}
         staffId={scheduleManagerStaff}
-        profiles={profiles}
+        profiles={pickerProfiles}
         properties={properties}
         schedules={schedules}
         onDeactivate={deactivateSchedule}

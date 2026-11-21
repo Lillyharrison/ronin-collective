@@ -92,7 +92,7 @@ export function MeetTeamSection() {
   async function loadMembers() {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft, contracted_days_per_week, contracted_hours_per_week, annual_leave_days, text_size")
+      .select("id, full_name, job_title, avatar_url, level, department, start_date, birthday, phone, notes, assigned_property_ids, quick_actions, is_draft, is_schedulable, contracted_days_per_week, contracted_hours_per_week, annual_leave_days, text_size")
       .eq("is_archived", false)
       .order("full_name").limit(500);
 
@@ -102,16 +102,17 @@ export function MeetTeamSection() {
     const userIds = profiles.map(p => p.id);
     const { data: permRows } = await supabase
       .from("user_section_permissions")
-      .select("user_id, section, can_view, can_edit, notifications, scope")
-      .in("user_id", userIds);
+      .select("user_id, section, can_view, can_edit, notifications, see_drafts, scope")
+      .in("user_id", userIds).limit(10000);
 
     const permsByUser: Record<string, SectionPermissions> = {};
-    for (const row of (permRows ?? []) as Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope: "own" | "department" | "all" | null }>) {
+    for (const row of (permRows ?? []) as Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }>) {
       if (!permsByUser[row.user_id]) permsByUser[row.user_id] = {};
       permsByUser[row.user_id][row.section] = {
         view: row.can_view,
         edit: row.can_edit,
         notifications: row.notifications,
+        see_drafts: row.see_drafts,
         ...(row.scope ? { scope: row.scope } : {}),
       };
     }

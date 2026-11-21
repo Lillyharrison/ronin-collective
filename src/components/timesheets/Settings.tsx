@@ -19,7 +19,7 @@ type Pay = {
   payee_name: string;
   hourly_rate: number | null;
   daily_rate: number | null;
-  pay_basis: "hourly" | "daily" | "payroll";
+  pay_basis: "hourly" | "daily" | "payroll" | "salaried";
   currency: string;
   rounding_minutes: number;
 };
@@ -59,7 +59,7 @@ function PayRow({
             db
               .from("staff_time_settings")
               .upsert(
-                { ...v, payee_name: v.payee_name || null },
+                { ...v, payee_name: v.payee_name || null, ...(v.pay_basis === "salaried" ? { time_tracking: "none", hourly_rate: null, daily_rate: null } : {}) },
                 { onConflict: "staff_id" },
               )
               .select("staff_id")
@@ -79,7 +79,7 @@ function PayRow({
     >
       <h3 className="font-semibold">{p.full_name}</h3>
       <div className="grid sm:grid-cols-3 gap-3">
-        <Label>
+        {v.pay_basis !== "salaried" && <><Label>
           {t("Who records time", "Registro de horas")}
           <select
             className="timesheet-input"
@@ -100,7 +100,7 @@ function PayRow({
             onChange={(e) => setV({ ...v, payee_name: e.target.value })}
           />
         </Label>
-        <Label>
+        </>}<Label>
           {t("Paid", "Pago")}
           <select
             className="timesheet-input"
@@ -110,9 +110,10 @@ function PayRow({
             <option value="hourly">{t("By the hour", "Por hora")}</option>
             <option value="daily">{t("By the day", "Por día")}</option>
             <option value="payroll">{t("Through TriNet payroll", "Por nómina TriNet")}</option>
+            <option value="salaried">{t("Salaried", "Asalariado")}</option>
           </select>
         </Label>
-        <Label>
+        {v.pay_basis === "salaried" ? <p className="text-sm text-muted-foreground sm:col-span-3">{t("Salaried. Nothing is recorded: no clock-in, no timesheet.", "Asalariado. No se registra nada: ni fichaje ni hoja de horas.")}</p> : <><Label>
           {t("Hourly rate", "Tarifa por hora")}
           <Input
             type="number"
@@ -169,6 +170,7 @@ function PayRow({
             }
           />
         </Label>
+        </>}
       </div>
       <Button disabled={busy} type="submit">
         {t("Save", "Guardar")}

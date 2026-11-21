@@ -80,6 +80,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const [settingPwd, setSettingPwd] = useState(false);
 
   const [isDraft, setIsDraft] = useState(member.is_draft ?? false);
+  const [isSchedulable, setIsSchedulable] = useState(member.is_schedulable ?? false);
   const [draftEmail, setDraftEmail] = useState("");
 
   const [fullName, setFullName] = useState(member.full_name || "");
@@ -113,7 +114,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
 
   const groups = useMemo(() => accessGroups(member.section_permissions ?? {}), [member.section_permissions]);
   const resolvedRole: AppRole = (member.role === "master_admin" ? "master_admin" : (level ? (ROLE_MAP[level] ?? member.role ?? "staff") : (member.role ?? "staff"))) as AppRole;
-  const isAdminRole = resolvedRole === "admin" || resolvedRole === "master_admin";
+  const isAdminRole = member.role === "admin" || resolvedRole === "admin" || resolvedRole === "master_admin";
   // Clock in and out on site — staff_time_settings, shared with Timesheets "Time and pay".
   const queryClient = useContext(QueryClientContext);
   const [timeSetting, setTimeSetting] = useState<TimeSetting>(null);
@@ -126,12 +127,14 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   const [pay, setPay] = useState<PayEdit>(() => payFromSetting(null));
   const [payEdited, setPayEdited] = useState(false);
   const editPay = (patch: Partial<PayEdit>) => { setPayEdited(true); setPay(p => ({ ...p, ...patch })); };
-  const showClock = canHaveClock(resolvedRole, level);
+  const canHavePay = canHaveClock(resolvedRole, level);
+  const showClock = canHavePay && pay.pay_basis !== "salaried";
+  const draftWeeksOn = isAdminRole || (!!perms["staff-schedule"]?.view && !!perms["staff-schedule"]?.see_drafts);
   const clockCounts = showClock && clockOn ? 1 : 0;
   async function writeClockSetting(staffId: string) {
-    if (!showClock) return;
+    if (!canHavePay) return;
     // ONE upsert: clock switch (time_tracking) + Contract tab pay fields, unedited values preserved.
-    const row = timeSettingWrite(staffId, timeSetting, clockOn, payEdited ? pay : null);
+    const row = timeSettingWrite(staffId, timeSetting, showClock && clockOn, payEdited ? pay : null);
     if (!row) return;
     const { error } = await supabase.from("staff_time_settings").upsert(row as never, { onConflict: "staff_id" });
     if (error) throw error;
@@ -140,6 +143,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     invalidateTimeSettings(queryClient);
   }
   const contractValues = () => ({
+    is_schedulable: isSchedulable,
     ...(canEdit || isMasterAdmin ? { text_size: textSize } : {}),
     contracted_days_per_week: parseContractNumber(contractDays),
     contracted_hours_per_week: parseContractNumber(contractHours),
@@ -150,8 +154,9 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     if (error) throw error;
   }
   const savedQuickActions = withClockShortcut(quickActions, showClock && clockOn);
-  const switchCount = switchesOn(perms) + clockCounts;
-  const accessCount = sectionsOn(perms);
+  const draftCount = draftWeeksOn ? 1 : 0;
+  const switchCount = switchesOn(perms) + clockCounts + (isSchedulable ? 1 : 0) + (isAdminRole && !(perms["staff-schedule"]?.view && perms["staff-schedule"]?.see_drafts) ? 1 : 0);
+  const accessCount = sectionsOn(perms) + (isSchedulable ? 1 : 0) + draftCount;
   const nothingOn = switchCount === 0;
   const canInvite = !!fullName.trim() && isValidEmail(draftEmail);
 
@@ -196,7 +201,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
     const { upserts, deletes } = buildPermissionRows(perms);
     if (upserts.length) {
       const { error } = await supabase.from("user_section_permissions")
-        .upsert(upserts.map(r => ({ ...r, user_id: member.id })), { onConflict: "user_id,section" });
+        .upsert(upserts.map(r => ({ ...r, ...(r.section === "staff-schedule" && isAdminRole ? { see_drafts: true } : {}), user_id: member.id })), { onConflict: "user_id,section" });
       if (error) throw error;
     }
     if (deletes.length) {
@@ -221,7 +226,8 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
       notes: notes || null,
       assigned_property_ids: assignedProps,
       quick_actions: savedQuickActions,
-      section_permissions_rows: upserts,
+      ...contractValues(),
+      section_permissions_rows: upserts.map(r => r.section === "staff-schedule" && isAdminRole ? { ...r, see_drafts: true } : r),
       section_permissions_delete: deletes,
       role: resolvedRole,
       send_invitation: sendInvitation,
@@ -495,11 +501,11 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
 
           {tab === "contract" && (
             <div className="px-4 py-3 space-y-3">
-              {showClock && (
+              {canHavePay && (
                 <section aria-label={isEN ? "Pay" : "Pago"} className="space-y-2">
                   <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted-foreground">{isEN ? "Paid" : "Pago"}</p>
-                  <div role="radiogroup" aria-label={isEN ? "Paid" : "Pago"} className="grid grid-cols-3 rounded-lg border border-charcoal-light overflow-hidden">
-                    {([["hourly", "By the hour", "Por hora"], ["daily", "By the day", "Por día"], ["payroll", "Through TriNet payroll", "Nómina TriNet"]] as [PayBasis, string, string][]).map(([k, en, es]) => (
+                  <div role="radiogroup" aria-label={isEN ? "Paid" : "Pago"} className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-charcoal-light overflow-hidden">
+                    {([["hourly", "By the hour", "Por hora"], ["daily", "By the day", "Por día"], ["payroll", "Through TriNet payroll", "Nómina TriNet"], ["salaried", "Salaried", "Asalariado"]] as [PayBasis, string, string][]).map(([k, en, es]) => (
                       <button key={k} role="radio" aria-checked={pay.pay_basis === k} disabled={!canEdit} onClick={() => editPay({ pay_basis: k })}
                         className={cn("min-h-11 px-1 text-sm leading-tight", pay.pay_basis === k ? "bg-gold text-charcoal font-semibold" : "text-cream/80 hover:bg-charcoal-light")}>
                         {isEN ? en : es}
@@ -519,14 +525,16 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                           onChange={e => editPay({ daily_rate: parseContractNumber(e.target.value) })} />
                       </Field>
                     )}
-                    {pay.pay_basis !== "payroll" && (
+                    {pay.pay_basis !== "payroll" && pay.pay_basis !== "salaried" && (
                       <Field label={isEN ? "Currency" : "Moneda"}>
                         <select value={pay.currency} disabled={!canEdit} onChange={e => editPay({ currency: e.target.value })} className={cn(inputCls, "w-full rounded-md border px-2")}>
                           {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </Field>
                     )}
-                    {pay.pay_basis === "payroll" ? (
+                    {pay.pay_basis === "salaried" ? (
+                      <p className="col-span-full text-sm text-muted-foreground">{isEN ? "Salaried. Nothing is recorded: no clock-in, no timesheet." : "Asalariado. No se registra nada: ni fichaje ni hoja de horas."}</p>
+                    ) : pay.pay_basis === "payroll" ? (
                       <p className="col-span-full text-sm text-muted-foreground">{isEN ? "Paid through TriNet. No timesheet is produced here." : "Se paga por TriNet. Aquí no se genera hoja de horas."}</p>
                     ) : (
                       <>
@@ -607,8 +615,8 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {visible.map(g => {
                   const hasClock = g.key === "schedule" && showClock;
-                  const on = groupOnCount(perms, g.sections) + (hasClock && clockOn ? 1 : 0);
-                  const total = g.sections.length + (hasClock ? 1 : 0);
+                  const on = groupOnCount(perms, g.sections) + (hasClock && clockOn ? 1 : 0) + (g.key === "schedule" ? (isSchedulable ? 1 : 0) + draftCount : 0);
+                  const total = g.sections.length + (hasClock ? 1 : 0) + (g.key === "schedule" ? 1 + (perms["staff-schedule"]?.view || isAdminRole ? 1 : 0) : 0);
                   const open = openGroup === g.key;
                   return (
                     <div key={g.key} className={cn("flex items-center gap-1 rounded-lg border pr-1.5 min-w-0",
@@ -646,6 +654,17 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                             </span>
                           ))}
                         </div>
+                        {key === "staff-schedule" && (sp?.view || isAdminRole) && (
+                          <div className="border-t border-charcoal-light py-1.5">
+                            <div className="flex items-center gap-x-1 min-h-10 sm:min-h-8">
+                              <span className="flex-1 min-w-0 text-sm text-cream">{isEN ? "Can see draft weeks" : "Puede ver semanas en borrador"}</span>
+                              <span className={cn(ACCESS_COL, "flex justify-center")}>
+                                <Switch checked={draftWeeksOn} disabled={!canEdit || isAdminRole} aria-label={isEN ? "Can see draft weeks" : "Puede ver semanas en borrador"} className={switchCls} onCheckedChange={v => toggle(key, "see_drafts", v)} />
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{isEN ? "Weeks not yet published. They only see the people allowed by Shows." : "Semanas aún no publicadas. Solo ve a las personas permitidas por Muestra."}</p>
+                          </div>
+                        )}
                         {info.hasScope && sp?.view && (
                           <div className="flex items-center gap-2 pb-1 pl-2">
                             <span className="text-xs text-muted-foreground">{isEN ? "Shows" : "Muestra"}</span>
@@ -660,6 +679,17 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
                       </div>
                     );
                   })}
+                  {current.key === "schedule" && (
+                    <div className="border-t border-charcoal-light py-1.5">
+                      <div className="flex items-center gap-x-1 min-h-10 sm:min-h-8">
+                        <span className="flex-1 min-w-0 text-sm text-cream">{isEN ? "Appears on the roster" : "Aparece en el horario"}</span>
+                        <span className={cn(ACCESS_COL, "flex justify-center")}>
+                          <Switch checked={isSchedulable} disabled={!canEdit} aria-label={isEN ? "Appears on the roster" : "Aparece en el horario"} className={switchCls} onCheckedChange={setIsSchedulable} />
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{isEN ? "They can be given shifts and show on the roster in weeks where they have one" : "Puede recibir turnos y aparecer en el horario en las semanas en que tenga uno"}</p>
+                    </div>
+                  )}
                   {current.key === "schedule" && showClock && (
                     <div data-testid="clock-row" className="border-t border-charcoal-light py-1.5">
                       <div className="flex items-center gap-x-1 min-h-10 sm:min-h-8">

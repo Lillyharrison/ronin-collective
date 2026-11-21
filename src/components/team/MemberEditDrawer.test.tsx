@@ -86,16 +86,16 @@ describe("clock row in Schedule", () => {
   it("shows for staff and counts in the group", () => {
     openSchedule(draft);
     expect(screen.getByTestId("clock-row")).toHaveTextContent("Clock in and out on site");
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 2 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 3 on");
     fireEvent.click(screen.getByRole("switch", { name: "Clock in and out on site" }));
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("1 of 2 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("1 of 3 on");
     expect(screen.getByTestId("member-status")).toHaveTextContent("1 switch on");
     expect(screen.getByTestId("clock-no-rate")).toBeTruthy();
   });
   it("is hidden for managers", () => {
     openSchedule({ ...draft, level: "manager", role: "manager" as never });
     expect(screen.queryByTestId("clock-row")).toBeNull();
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 1 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 2 on");
   });
 });
 
@@ -134,6 +134,58 @@ describe("contract tab", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
     await vi.waitFor(() => expect(invoke).toHaveBeenCalled());
     expect(invoke.mock.calls[0][1].body.quick_actions).toEqual(["clock"]);
+    await vi.waitFor(() => expect(updates.at(-1)).toMatchObject({ contracted_days_per_week: null, contracted_hours_per_week: null, annual_leave_days: null }));
+  });
+});
+
+
+describe("roster setup", () => {
+  function open(member = draft) {
+    render(<MemberEditDrawer member={member} properties={[]} isEN canEdit isMasterAdmin onClose={vi.fn()} onSaved={vi.fn()} onDeleted={vi.fn()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Access/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Schedule/ }));
+  }
+  it("defaults roster off and saves the explicit profile flag", async () => {
+    updates.length = 0; open();
+    expect(screen.getByRole("switch", { name: "Appears on the roster" })).not.toBeChecked();
+    fireEvent.click(screen.getByRole("switch", { name: "Appears on the roster" }));
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("1 of 3 on");
+    expect(screen.getByTestId("member-status")).toHaveTextContent("1 switch on");
+    fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
+    await vi.waitFor(() => expect(updates.some(v => (v as { is_schedulable?: boolean }).is_schedulable === true)).toBe(true));
+  });
+  it("only shows draft-week switch with See, counts and saves it on the schedule row", async () => {
+    invoke.mockClear(); open();
+    expect(screen.queryByRole("switch", { name: "Can see draft weeks" })).toBeNull();
+    fireEvent.click(screen.getByRole("switch", { name: "Staff Schedule see" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Can see draft weeks" }));
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("2 of 4 on");
+    expect(screen.getByTestId("member-status")).toHaveTextContent("2 switches on");
+    fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalled());
+    expect(invoke.mock.calls[0][1].body.section_permissions_rows).toEqual([expect.objectContaining({ section: "staff-schedule", see_drafts: true })]);
+  });
+  it.each(["admin", "master_admin"])("%s draft-week switch is on and disabled", role => {
+    open({ ...draft, role: role as typeof draft.role });
+    expect(screen.getByRole("switch", { name: "Can see draft weeks" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Can see draft weeks" })).toBeDisabled();
+    expect(screen.getByTestId("member-status")).toHaveTextContent("1 switch on");
+  });
+  it("salaried hides pay fields and clock, keeps every contract box empty through pay changes", async () => {
+    updates.length = 0; open();
+    fireEvent.click(screen.getByRole("switch", { name: "Clock in and out on site" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Contract" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Salaried" }));
+    for (const label of ["Hourly rate", "Day rate", "Currency", "Name on timesheet", "Round times to"]) expect(screen.queryByText(label)).toBeNull();
+    expect(screen.getAllByRole("spinbutton").map(i => (i as HTMLInputElement).value)).toEqual(["", "", ""]);
+    fireEvent.click(screen.getByRole("tab", { name: /Access/ }));
+    expect(screen.queryByTestId("clock-row")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Contract" }));
+    for (const basis of ["By the hour", "By the day", "Through TriNet payroll", "Salaried"]) {
+      fireEvent.click(screen.getByRole("radio", { name: basis }));
+      expect(screen.getAllByRole("spinbutton").every(i => (i as HTMLInputElement).value === "")).toBe(true);
+    }
+    fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
     await vi.waitFor(() => expect(updates.at(-1)).toMatchObject({ contracted_days_per_week: null, contracted_hours_per_week: null, annual_leave_days: null }));
   });
 });

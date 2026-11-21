@@ -9,6 +9,7 @@ export interface Profile {
   department: string | null;
   assigned_property_ids?: string[] | null;
   is_draft?: boolean;
+  is_schedulable?: boolean;
   start_date?: string | null;
   contracted_days_per_week?: number | null;
   contracted_hours_per_week?: number | null;

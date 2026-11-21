@@ -21,7 +21,7 @@ async function writeSectionPermissionRows(
   // deno-lint-ignore no-explicit-any
   client: any,
   userId: string,
-  rows: Array<{ section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope?: "own" | "department" | "all" | null }> | null | undefined,
+  rows: Array<{ section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts?: boolean; scope?: "own" | "department" | "all" | null }> | null | undefined,
   deleteSections?: unknown,
 ): Promise<void> {
   // Sections with every switch off are removed rather than stored as empty rows.
@@ -38,6 +38,7 @@ async function writeSectionPermissionRows(
     can_view: r.can_view === true,
     can_edit: r.can_edit === true,
     notifications: r.notifications === true,
+    see_drafts: r.section === "staff-schedule" && r.can_view === true && r.see_drafts === true,
     scope: ["own", "department", "all"].includes(r.scope ?? "") ? r.scope : null,
   }));
   const { error } = await client.from("user_section_permissions").upsert(payload, { onConflict: "user_id,section" });
@@ -655,6 +656,7 @@ serve(async (req) => {
         phone: phone || null,
         assigned_property_ids: assigned_property_ids || [],
         quick_actions: Array.isArray(quick_actions) ? quick_actions : [],
+        ...("is_schedulable" in body ? { is_schedulable: body.is_schedulable === true } : {}),
         // Fields omitted from the request keep their saved values (the invite form doesn't send them)
         ...("contracted_days_per_week" in body ? { contracted_days_per_week: contracted_days_per_week ?? null } : {}),
         ...("contracted_hours_per_week" in body ? { contracted_hours_per_week: contracted_hours_per_week ?? null } : {}),

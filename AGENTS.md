@@ -44,3 +44,5 @@
 - Login email changes use a caller-JWT admin check, Auth's same-id update and the owner session-revocation RPC; shared recovery handling and masked-only audit records preserve account history without profile writes.
 
 - Screen content translation batches source strings without changing edit models; successful changed translations are cached by user/source hash/language and cleared on sign-out to avoid repeat charges and cross-account reuse.
+
+- Roster work evidence excludes leave; draft visibility is separate from publishing. Saves carry see_drafts; salaried pay disables tracking per owner rules.

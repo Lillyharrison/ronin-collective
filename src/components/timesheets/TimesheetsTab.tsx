@@ -144,7 +144,7 @@ export function TimesheetsTab() {
             </p>
           )}
           <div className="space-y-2">
-            {orderOverview(overview.data || [], bases.data).map(row => (
+            {(ids.length === 0 || bases.isSuccess ? orderOverview(overview.data || [], bases.data) : []).map(row => (
               <Button key={row.staff_id} variant="ghost" className="timesheet-person" onClick={() => setStaff(row.staff_id)}>
                 <span className="min-w-0 flex-1 text-left break-words font-medium">{row.full_name}</span>
                 <span className="tabular-nums text-muted-foreground shrink-0">{Number(row.total_hours).toFixed(2)} h</span>

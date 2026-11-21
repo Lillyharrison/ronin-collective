@@ -9,6 +9,7 @@ export interface SectionPermEntry {
   view: boolean;
   edit: boolean;
   notifications: boolean;
+  see_drafts?: boolean;
   scope?: "own" | "department" | "all";
 }
 
@@ -28,6 +29,7 @@ export interface UserPermissions {
   canSee: (section: string) => boolean;
   canEdit: (section: string) => boolean;
   wantsAlerts: (section: string) => boolean;
+  canSeeScheduleDrafts: boolean;
   loading: boolean;
   /** Non-null when the permissions fetch failed. Null on the happy path. */
   error: string | null;
@@ -48,7 +50,7 @@ export const BASELINE_SECTIONS = ["dashboard", "profile"] as const;
 const SECTION_ALIASES: Record<string, string> = { vendors: "contacts" };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────
-const CACHE_VERSION = "v5"; // v5: role fallback removed
+const CACHE_VERSION = "v6"; // v6: explicit draft-week visibility
 const CACHE_TTL_MS  = 5 * 60 * 1000;
 
 interface PermissionsCache {
@@ -122,6 +124,7 @@ const defaultPermissions: UserPermissions = {
   canSee: () => false,
   canEdit: () => false,
   wantsAlerts: () => false,
+  canSeeScheduleDrafts: false,
   loading: true,
   error: null,
   isPreviewing: false,
@@ -204,6 +207,7 @@ export function buildPermissions(
     canSee,
     canEdit,
     wantsAlerts,
+    canSeeScheduleDrafts: isAdmin || (!!userId && canSee("staff-schedule") && explicit("staff-schedule")?.see_drafts === true),
     loading,
     error,
     ...preview,
@@ -218,12 +222,12 @@ async function fetchPermissionsSnapshot(userId: string) {
   const [{ data: roleRow }, { data: profile }, rowPermsResult] = await Promise.all([
     supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
     supabase.from("profiles")
-      .select("level, department, assigned_property_ids, full_name, avatar_url")
+      .select("level, department, assigned_property_ids, full_name, avatar_url, is_schedulable")
       .eq("id", userId).maybeSingle(),
     (supabase.from("user_section_permissions" as never)
-      .select("section, can_view, can_edit, notifications, scope")
-      .eq("user_id", userId)) as unknown as Promise<{
-        data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean; scope: "own" | "department" | "all" | null }[] | null
+      .select("section, can_view, can_edit, notifications, see_drafts, scope")
+      .eq("user_id", userId).limit(200)) as unknown as Promise<{
+        data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }[] | null
       }>,
   ]);
 
@@ -243,6 +247,7 @@ async function fetchPermissionsSnapshot(userId: string) {
         view: row.can_view,
         edit: row.can_edit,
         notifications: row.notifications,
+        see_drafts: row.see_drafts,
         ...(row.scope ? { scope: row.scope } : {}),
       };
     }
