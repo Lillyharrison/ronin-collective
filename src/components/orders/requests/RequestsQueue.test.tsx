@@ -7,6 +7,7 @@ vi.mock('./RequesterOrders',()=>({RequestThumbnail:()=>null}));
 vi.mock('@/integrations/supabase/client',()=>({supabase:{rpc:mocks.rpc}}));
 vi.mock('./useHouseRequests',()=>({useHouseRequests:()=>({rows:[{id:'1',property_id:'h',name:'Soap',status:'requested',batch_id:'b1',created_by:'me',sent_at:'2026-11-13T10:00:00Z',urgent:false,quantity:'1',created_at:'2026-11-13T10:00:00Z'},{id:'2',property_id:'h',name:'Towels',status:'requested',batch_id:'b2',created_by:'me',sent_at:'2026-11-13T11:00:00Z',urgent:true,quantity:'2',created_at:'2026-11-13T11:00:00Z'},{id:'3',property_id:'h2',name:'Milk',status:'requested',urgent:false,quantity:'1',created_at:'2026-11-13T11:00:00Z'}],names:new Map(),counts:{requested:3},refresh:mocks.refresh})}));
 vi.mock('react-router-dom',()=>({useLocation:()=>({search:mocks.search})}));
+vi.mock('@/hooks/usePermissions',()=>({usePermissions:()=>({canAdd:()=>true,canEdit:()=>true})}));
 import { RequestsQueue } from './RequestsQueue';
 beforeEach(()=>{vi.clearAllMocks();mocks.search='';mocks.rpc.mockResolvedValue({data:'new-order',error:null});});
 describe('PA queue',()=>{

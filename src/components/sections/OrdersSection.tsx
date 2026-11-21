@@ -309,7 +309,7 @@ function PendingTile({ order, onOpen, onMarkDelivered }: {
   const isL = language === "es";
   const [delivering, setDelivering] = useState(false);
   const { isAdmin, isMasterAdmin, isManager, canEdit } = usePermissions();
-  const canEdit_orders = isAdmin || isMasterAdmin || isManager || canEdit("orders");
+  const canEdit_orders = canEdit("orders");
 
   const deliveryDate = order.expected_delivery ? new Date(order.expected_delivery) : null;
   const isOverdue = deliveryDate && deliveryDate < new Date() && order.status !== "not_placed";
@@ -485,7 +485,7 @@ function DeliveredTile({ order, onOpen }: { order: Order; onOpen: (o: Order) => 
 function ManagementOrders({ onBack }: { onBack: () => void }) {
   const { language } = useLanguage();
   const isL = language === "es";
-  const { canEdit, userId } = usePermissions();
+  const { canEdit, canAdd, userId } = usePermissions();
   const canCreateOrder = canEdit("orders");
 
   const PAGE_SIZE = 50;
@@ -630,7 +630,7 @@ function ManagementOrders({ onBack }: { onBack: () => void }) {
 
       <div className="px-4 pt-3 flex flex-wrap gap-2">
         <Button variant={activeTab==='requests'?'default':'outline'} className="min-h-11" onClick={()=>selectTab('requests')}>{isL?'Solicitudes':'Requests'} ({requestCount.data??0})</Button>
-        <Button variant="outline" className="min-h-11" onClick={()=>setRequesting(true)}>{isL?'Pedir algo':'Request something'}</Button>
+        {canAdd("orders") && <Button variant="outline" className="min-h-11" onClick={()=>setRequesting(true)}>{isL?'Pedir algo':'Request something'}</Button>}
       </div>
 
       {/* Tabs */}

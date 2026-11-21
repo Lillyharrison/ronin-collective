@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from 'sonner';
 import { canChangeRequest, compressRequestPhoto, defaultQuantity, requestPayload, requestPhotoPath, sendListArgs, validRequest, type HouseRequest, type RequestLibraryItem } from './logic';
 
@@ -22,6 +23,8 @@ export function QuantityStepper({ value, onChange, es }: { value: number; onChan
 const failure = (es: boolean) => es ? 'No se pudo guardar. Comprueba tu conexión y vuelve a intentarlo; tu solicitud sigue aquí.' : 'Could not save. Check your connection and try again; your request is still here.';
 
 export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string; userId: string; es: boolean; onSent: (urgent: boolean) => void }) {
+  const { canAdd } = usePermissions();
+  const allowed = canAdd('orders');
   const [name,setName] = useState(''); const [notes,setNotes] = useState(''); const [quantity,setQuantity] = useState(1);
   const [urgent,setUrgent] = useState(false); const [file,setFile] = useState<File|null>(null); const [preview,setPreview] = useState('');
   const [busy,setBusy] = useState(false); const [error,setError] = useState('');
@@ -29,7 +32,7 @@ export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string
   const uploaded = useRef<{ file: File; url: string }|null>(null); const input = useRef<HTMLInputElement>(null);
   useEffect(() => { if (!file) { setPreview(''); return; } const url = URL.createObjectURL(file); setPreview(url); return () => URL.revokeObjectURL(url); }, [file]);
   const send = async () => {
-    if (busy || !validRequest(name,file)) return;
+    if (!allowed || busy || !validRequest(name,file)) return;
     setBusy(true); setError('');
     try {
       let photoUrl: string|null = null;
@@ -60,6 +63,7 @@ export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string
       toast.success(urgent ? (es ? 'Enviado. La PA tiene tu solicitud.' : 'Sent. The PA has your request.') : (es ? 'Añadido a tu lista' : 'Added to your list')); onSent(urgent);
     } catch { setError(failure(es)); } finally { setBusy(false); }
   };
+  if (!allowed) return null;
   return <div className="space-y-5 text-base">
     <input ref={input} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const next = e.target.files?.[0]; if (next) {setFile(next); setError('');} e.target.value=''; }} />
     <Button variant="outline" disabled={busy} className="w-full h-auto min-h-48 border-2 border-dashed border-gold/50 bg-gold/5 flex flex-col gap-3 py-5 whitespace-normal" onClick={() => input.current?.click()}>
@@ -79,11 +83,13 @@ export function RequestScreen({ houseId, userId, es, onSent }: { houseId: string
 export function RequestEditSheet({ item, row, houseId, userId, es, onClose, onSaved }: {
   item?: RequestLibraryItem; row?: HouseRequest; houseId:string; userId:string; es:boolean; onClose:()=>void; onSaved:()=>void;
 }) {
+  const { canAdd } = usePermissions();
+  const allowed = !!row || canAdd('orders');
   const content=useContentTranslation(es ? [row?.name??item?.name??'', item?.notes??'', item?.size??''] : []);
   const [quantity,setQuantity] = useState(defaultQuantity(row?.quantity ?? item?.default_quantity ?? null));
   const [notes,setNotes] = useState(row?.notes ?? ''); const [busy,setBusy] = useState(false); const [error,setError] = useState('');
   const save = async () => {
-    if (busy || (row && !canChangeRequest(row,userId))) return;
+    if (!allowed || busy || (row && !canChangeRequest(row,userId))) return;
     setBusy(true); setError('');
     try {
       const result = row ? await supabase.from('shopping_list_items').update({quantity:String(quantity),notes:notes.trim() || null}).eq('id',row.id).eq('created_by',userId).eq('status',row.status).select('id').single()
@@ -92,6 +98,7 @@ export function RequestEditSheet({ item, row, houseId, userId, es, onClose, onSa
       toast.success(es ? 'Guardado en tu lista' : 'Saved to your list'); onSaved(); onClose();
     } catch { setError(failure(es)); } finally {setBusy(false);}
   };
+  if (!allowed) return null;
   return <Dialog open onOpenChange={open=>{if(!open && !busy) onClose();}}><DialogContent className="request-sheet h-[90dvh] sm:h-auto sm:max-h-[90dvh] overflow-hidden flex flex-col max-w-lg">
     <DialogHeader><DialogTitle className="break-words">{content.text(photoRequestName(row?.name ?? item?.name ?? "",es))}</DialogTitle></DialogHeader>
     <TranslationNotice value={content}/>{item?.notes&&<p className="text-muted-foreground break-words">{content.text(item.notes)}</p>}{item?.size&&<p className="text-muted-foreground break-words">{content.text(item.size)}</p>}

@@ -179,7 +179,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingTimesheetStaffId, setClockSheetRequested } = useNavigation();
-  const { isMasterAdmin, isAdmin, isManager, userId, fullName, canSee, canEdit, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
+  const { isMasterAdmin, isAdmin, isManager, userId, fullName, canSee, canEdit, canAdd, assignedPropertyIds, sectionPermissions, loading: permLoading, error: permError } = usePermissions();
   const { properties: scopedProperties } = useScopedProperties();
   const [issueAssignees, setIssueAssignees] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
   const { retry: retryPermissions } = usePermissionsControl();
@@ -470,12 +470,12 @@ export function Dashboard() {
   return (
     <div className="animate-fade-in pb-4">
       {/* Quick-log Report Issue modal — triggered from dashboard quick action */}
-      {reportIssueOpen && (
+      {reportIssueOpen && canAdd("maintenance") && (
         <IssueModal
           open={reportIssueOpen}
           onClose={() => setReportIssueOpen(false)}
           onSave={async (payload) => {
-            if (!userId) return;
+            if (!userId || !canAdd("maintenance")) return;
             const { data: issue, error } = await createIssue({ ...payload, reported_by: userId } as Parameters<typeof createIssue>[0]);
             if (error || !issue) return false;
             if (navigator.onLine) await notifyRepairCreated(issue, userId, language);
@@ -754,7 +754,7 @@ export function Dashboard() {
           </div>
         ) : (
         (() => {
-          const shown = selectShortcuts(ALL_QUICK_ACTIONS_DASHBOARD, userQuickActions, canSee, isMasterAdmin);
+          const shown = selectShortcuts(ALL_QUICK_ACTIONS_DASHBOARD, userQuickActions, canSee, isMasterAdmin).filter(a => a.key === "reportIssue" ? canAdd("maintenance") : a.key === "requestItem" ? canAdd("orders") : true);
           const hasClockTile = Array.isArray(userQuickActions) && userQuickActions.includes("clock");
           if (shown.length === 0 && !hasClockTile) {
             const hasAnyAccess = isAdmin || Object.values(sectionPermissions ?? {}).some(p => p?.view);

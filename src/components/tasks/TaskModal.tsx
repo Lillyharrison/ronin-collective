@@ -82,7 +82,7 @@ async function findLinkedOrder(taskId: string): Promise<{ id: string; status: st
 
 export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Props) {
   const { language } = useLanguage();
-  const { userId, isAdmin, isMasterAdmin, isManager, department, assignedPropertyIds } = usePermissions();
+  const { userId, isAdmin, isMasterAdmin, isManager, department, assignedPropertyIds, canAdd, canEdit: sectionCanEdit } = usePermissions();
   const syncCtx = useContext(OfflineSyncContext);
   const isL = language === "es";
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,15 +91,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
   // Master admin / admin: always can edit
   // Manager: can edit if task belongs to their department (or no dept set)
   // Staff / assignee: read-only view
-  const canEdit = (() => {
-    if (!task?.id) return true; // new task — always edit mode
-    if (isMasterAdmin || isAdmin) return true;
-    if (isManager) {
-      const taskDept = task?.assigned_department;
-      return !taskDept || (!!department && taskDept.toLowerCase() === department.toLowerCase());
-    }
-    return false;
-  })();
+  const canEdit = task?.id ? sectionCanEdit("tasks") : canAdd("tasks");
 
   // editMode: new tasks start in edit mode; existing tasks start in view mode
   const [editMode, setEditMode] = useState(!task?.id);
@@ -176,6 +168,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
    * with status = "not_placed" so it immediately appears in Orders section.
    */
   const handleSave = async (publishNow = false) => {
+    if (!task?.id && !canAdd("tasks")) return;
     if (!title.trim() || !userId) return;
     setSaving(true);
 
@@ -388,6 +381,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
     onClose();
   };
 
+  if (!task?.id && !canAdd("tasks")) return null;
   const isEditing = !!task?.id;
   const selectedChecklist = checklists.find(c => c.id === linkedChecklist);
   const assigneeName = profiles.find(p => p.id === (task?.assigned_to ?? assignedTo))?.full_name ?? null;
@@ -904,7 +898,7 @@ export function TaskModal({ task, onClose, onSaved, defaultDraft = false }: Prop
 
         {/* Footer */}
         <div className="border-t border-border px-5 py-4 flex gap-2 flex-shrink-0">
-          {isEditing && (isAdmin || isMasterAdmin || isManager) && (
+          {isEditing && canEdit && (
             <button
               onClick={handleDelete}
               className="p-2.5 rounded-xl border border-border text-muted-foreground hover:border-destructive/50 hover:text-destructive transition-colors"

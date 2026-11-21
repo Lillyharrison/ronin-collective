@@ -33,7 +33,7 @@ function ModalContent({
   const isL = language === "es";
   const allowedAssigneeIds = useAssignableProfileIds(["maintenance"]);
   const assignees = selectAssignableProfiles(profiles, allowedAssigneeIds, initial.assigned_to);
-  const canManageCategories = isMasterAdmin || isAdmin || isManager;
+  const canManageCategories = canEdit("maintenance");
 
   const PRIORITIES: { value: IssuePriority; label: string; labelEs: string; color: string }[] = [
     { value: "urgent", label: "🔴 Urgent",  labelEs: "🔴 Urgente", color: "border-[hsl(var(--status-urgent))] bg-[hsl(var(--status-urgent)/0.08)] text-[hsl(var(--status-urgent))]" },
@@ -373,8 +373,8 @@ function ModalContent({
             </div>
           </div>
 
-          {/* Assign to — always shown so reporters can suggest an assignee from step one */}
-          {(profiles.length > 0 || initial.assigned_to) && (
+          {/* Assigning requires Maintenance Manage. */}
+          {canEdit("maintenance") && (profiles.length > 0 || initial.assigned_to) && (
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                 {t("assignTo")}
@@ -391,7 +391,7 @@ function ModalContent({
           )}
 
           {/* Scheduled date */}
-          {(isAdmin || isManager || isMasterAdmin || canEdit("maintenance")) && (
+          {canEdit("maintenance") && (
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
                 {t("scheduledDate")}
@@ -507,6 +507,7 @@ function ModalContent({
 }
 
 export function IssueModal({ open, ...rest }: Props) {
-  if (!open) return null;
+  const { canAdd, canEdit } = usePermissions();
+  if (!open || (rest.mode === "edit" ? !canEdit("maintenance") : !canAdd("maintenance"))) return null;
   return createPortal(<ModalContent {...rest} />, document.body);
 }

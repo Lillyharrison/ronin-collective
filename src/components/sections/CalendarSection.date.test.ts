@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ update: vi.fn(), eq: vi.fn(async () => ({ error: null })) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: () => ({ update: mocks.update }) } }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-import { rescheduleEvent } from "./CalendarSection";
+import { rescheduleEvent, canSeeConstruction } from "./CalendarSection";
 const originalTZ = process.env.TZ;
 afterEach(() => { process.env.TZ = originalTZ; vi.clearAllMocks(); });
 it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("repair drag writes the target plain day in %s", async zone => {
@@ -12,4 +12,9 @@ it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auck
   expect(await rescheduleEvent(event, new Date(2026, 10, 23))).toBe(true);
   expect(mocks.update).toHaveBeenCalledWith({ scheduled_date: "2026-11-23" });
   expect(mocks.eq).toHaveBeenCalledWith("id", "repair-id");
+});
+
+it('Construction visibility checks timeline, never the removed calendar layer',()=>{
+ const canSee=vi.fn((section:string)=>section==='timeline');expect(canSeeConstruction(canSee)).toBe(true);expect(canSee).toHaveBeenCalledExactlyOnceWith('timeline');
+ expect(canSeeConstruction(section=>section==='calendar-construction')).toBe(false);
 });

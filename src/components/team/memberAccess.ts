@@ -1,5 +1,7 @@
 // Pure access-editing rules for the team member editor (no React, fully testable).
 import { ALL_SECTIONS, ALL_QUICK_ACTIONS, QUICK_ACTION_SECTION, type SectionPerm, type SectionPermissions } from "./teamConstants";
+import { accessLevelOf, accessSwitchesFor, allowsAdd, ADD_SECTIONS, CHILD_SECTIONS, type AccessLevel } from "@/lib/accessLevels";
+export { accessLevelOf, type AccessLevel } from "@/lib/accessLevels";
 
 export type PermField = "view" | "edit" | "notifications" | "see_drafts";
 export const ALWAYS_ON_SECTIONS = ["dashboard", "profile"];
@@ -9,7 +11,7 @@ export const ACCESS_GROUPS: { key: string; label: string; labelEs: string; secti
   { key: "houses", label: "Houses", labelEs: "Casas", sections: ["property", "manuals", "inventory", "laundry", "car-wash", "orders", "contacts", "rules"] },
   { key: "maintenance", label: "Maintenance", labelEs: "Mantenimiento", sections: ["maintenance", "maintenance-repairs", "maintenance-planned"] },
   { key: "tasks", label: "Tasks", labelEs: "Tareas", sections: ["tasks", "checklists"] },
-  { key: "calendar", label: "Calendar", labelEs: "Calendario", sections: ["calendar", "calendar-travel", "calendar-birthdays", "calendar-maintenance", "calendar-deliveries", "calendar-construction", "calendar-staff"] },
+  { key: "calendar", label: "Calendar", labelEs: "Calendario", sections: ["calendar", "calendar-travel", "calendar-birthdays", "calendar-maintenance", "calendar-deliveries", "calendar-staff"] },
   { key: "family", label: "Family", labelEs: "Familia", sections: ["family-calendar", "family-movements", "principal-location", "travel"] },
   { key: "schedule", label: "Schedule", labelEs: "Horario", sections: ["staff-schedule"] },
   { key: "construction", label: "Construction", labelEs: "Construcción", sections: ["timeline"] },
@@ -19,7 +21,7 @@ export const ACCESS_GROUPS: { key: string; label: string; labelEs: string; secti
 export function accessGroups(existing: SectionPermissions = {}, allSectionKeys: string[] = ALL_SECTIONS.map(s => s.key)) {
   const mapped = new Set([...ACCESS_GROUPS.flatMap(g => g.sections), ...ALWAYS_ON_SECTIONS]);
   const more = [...allSectionKeys, ...Object.keys(existing)]
-    .filter((k, i, a) => !mapped.has(k) && k !== "_quick_actions" && a.indexOf(k) === i);
+    .filter((k, i, a) => !mapped.has(k) && k !== "_quick_actions" && k !== "calendar-construction" && a.indexOf(k) === i);
   return more.length ? [...ACCESS_GROUPS, { key: "more", label: "More", labelEs: "Más", sections: more }] : [...ACCESS_GROUPS];
 }
 
@@ -106,25 +108,40 @@ export function sectionInfo(key: string) {
 
 const off: SectionPerm = { view: false, edit: false, notifications: false };
 
+export function levelsForSection(section: string): AccessLevel[] {
+  if (CHILD_SECTIONS[section]) return [];
+  const manage = section !== "meet-team" && section !== "messages" && sectionInfo(section).hasEdit;
+  return ["off", "view", ...(ADD_SECTIONS.includes(section) ? ["add" as const] : []), ...(manage ? ["manage" as const] : [])];
+}
+export function setSectionLevel(perms: SectionPermissions, section: string, level: AccessLevel): SectionPermissions {
+  const row = { ...off, ...perms[section], ...accessSwitchesFor(level) };
+  if (level === "off") { row.notifications = false; row.see_drafts = false; }
+  const next = { ...perms, [section]: row };
+  if (level === "off") for (const [child, parent] of Object.entries(CHILD_SECTIONS)) {
+    if (parent === section) next[child] = { ...off, ...next[child], ...accessSwitchesFor("off"), notifications: false };
+  }
+  return next;
+}
+
 /** Change or Alerts on => See on. See off => Change and Alerts off. */
 export function togglePermission(perm: SectionPerm | undefined, field: PermField, value: boolean): SectionPerm {
   const cur = { ...off, ...perm };
-  if (field === "view") return value ? { ...cur, view: true } : { ...cur, view: false, edit: false, notifications: false, ...(cur.see_drafts !== undefined ? { see_drafts: false } : {}) };
+  if (field === "view") return value ? { ...cur, view: true } : { ...cur, view: false, ...(cur.add !== undefined ? { add: false } : {}), edit: false, notifications: false, ...(cur.see_drafts !== undefined ? { see_drafts: false } : {}) };
   return { ...cur, [field]: value, ...(value ? { view: true } : {}) };
 }
 
 export function setGroup(perms: SectionPermissions, sections: string[], on: boolean): SectionPermissions {
   const next = { ...perms };
-  for (const s of sections) next[s] = on ? togglePermission(next[s], "view", true) : togglePermission(next[s], "view", false);
+  for (const s of sections) Object.assign(next, setSectionLevel(next, s, on ? "view" : "off"));
   return next;
 }
 
 export function groupOnCount(perms: SectionPermissions, sections: string[]) {
-  return sections.filter(s => perms[s]?.view).length;
+  return sections.filter(s => s !== "calendar-construction" && perms[s]?.view && (!CHILD_SECTIONS[s] || perms[CHILD_SECTIONS[s]]?.view)).length;
 }
 
 export function sectionsOn(perms: SectionPermissions) {
-  return Object.entries(perms).filter(([k, p]) => k !== "_quick_actions" && p?.view).length;
+  return Object.entries(perms).filter(([k, p]) => k !== "_quick_actions" && k !== "calendar-construction" && p?.view && (!CHILD_SECTIONS[k] || perms[CHILD_SECTIONS[k]]?.view)).length;
 }
 
 export function switchesOn(perms: SectionPermissions) {
@@ -133,12 +150,16 @@ export function switchesOn(perms: SectionPermissions) {
 
 /** Rows to save: only sections with a switch on; sections with all three off are deleted. */
 export function buildPermissionRows(perms: SectionPermissions) {
-  const upserts: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }[] = [];
+  const upserts: { section: string; can_view: boolean; can_add: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }[] = [];
   const deletes: string[] = [];
   for (const [section, p] of Object.entries(perms)) {
-    if (section === "_quick_actions" || !p || typeof p !== "object") continue;
-    if (p.view || p.edit || p.notifications) {
-      upserts.push({ section, can_view: !!p.view, can_edit: !!p.edit, notifications: !!p.notifications, see_drafts: section === "staff-schedule" && !!p.view && !!p.see_drafts, scope: p.scope ?? null });
+    if (section === "_quick_actions" || section === "calendar-construction" || !p || typeof p !== "object") continue;
+    const parent = CHILD_SECTIONS[section];
+    const derived = accessLevelOf(p);
+    const level = parent ? (perms[parent]?.view && p.view ? "view" : "off") : levelsForSection(section).includes(derived) ? derived : (p.view ? "view" : "off");
+    const flags = accessSwitchesFor(level);
+    if (flags.view) {
+      upserts.push({ section, can_view: flags.view, can_add: flags.add, can_edit: flags.edit, notifications: !!p.notifications, see_drafts: section === "staff-schedule" && flags.view && !!p.see_drafts, scope: p.scope ?? null });
     } else deletes.push(section);
   }
   return { upserts, deletes };
@@ -147,7 +168,9 @@ export function buildPermissionRows(perms: SectionPermissions) {
 /** Shortcuts this person's access allows (admins may use any). */
 export function allowedQuickActions(perms: SectionPermissions, isAdminRole: boolean) {
   return ALL_QUICK_ACTIONS.filter(qa => {
-    if (isAdminRole || qa.key === "requestItem") return true;
+    if (isAdminRole) return true;
+    if (qa.key === "requestItem") return allowsAdd(perms.orders);
+    if (qa.key === "reportIssue") return allowsAdd(perms.maintenance);
     const section = QUICK_ACTION_SECTION[qa.key] ?? qa.key;
     return ALWAYS_ON_SECTIONS.includes(section) || perms[section]?.view === true;
   });

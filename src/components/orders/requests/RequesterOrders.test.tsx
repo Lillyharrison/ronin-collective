@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-const mocks=vi.hoisted(()=>({es:false,properties:[{id:'h',name:'Rockingham'}],rows:[] as any[],rpc:vi.fn(),refresh:vi.fn(),insert:vi.fn(),single:vi.fn()}));
-vi.mock('@/hooks/usePermissions',()=>({usePermissions:()=>({userId:'me'})}));
+const mocks=vi.hoisted(()=>({es:false,add:true,properties:[{id:'h',name:'Rockingham'}],rows:[] as any[],rpc:vi.fn(),refresh:vi.fn(),insert:vi.fn(),single:vi.fn()}));
+vi.mock('@/hooks/usePermissions',()=>({usePermissions:()=>({userId:'me',canAdd:()=>mocks.add})}));
 vi.mock('@/contexts/LanguageContext',()=>({useLanguage:()=>({language:mocks.es?'es':'en'})}));
 vi.mock('@/hooks/useScopedProperties',()=>({useScopedProperties:()=>({properties:mocks.properties,loading:false})}));
 vi.mock('@/contexts/NavigationContext',()=>({useNavigation:()=>({registerBackHandler:()=>{},activePropertyId:null,setActivePropertyId:()=>{}})}));
@@ -12,7 +12,7 @@ vi.mock('@/integrations/supabase/client',()=>({supabase:{rpc:mocks.rpc,from:()=>
 import { RequesterOrders } from './RequesterOrders';
 const row=(id:string,creator='me',extra:any={})=>({id,property_id:'h',name:id==='1'?'Soap':'Towels',category:'other',quantity:'2',notes:null,created_by:creator,library_item_id:'soap',photo_url:null,urgent:false,status:'draft',order_id:null,created_at:'2026-11-13T10:00:00Z',ordered_at:null,received_at:null,...extra});
 function mount(path='/orders'){return render(<MemoryRouter initialEntries={[path]}><QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><RequesterOrders/></QueryClientProvider></MemoryRouter>);}
-beforeEach(()=>{vi.clearAllMocks();localStorage.clear();mocks.es=false;mocks.properties=[{id:'h',name:'Rockingham'}];mocks.rows=[row('1'),row('2','colleague')];mocks.rpc.mockResolvedValue({data:1,error:null});mocks.insert.mockReturnValue({select:()=>({single:mocks.single})});mocks.single.mockResolvedValue({data:{id:'new'},error:null});});
+beforeEach(()=>{vi.clearAllMocks();localStorage.clear();mocks.es=false;mocks.add=true;mocks.properties=[{id:'h',name:'Rockingham'}];mocks.rows=[row('1'),row('2','colleague')];mocks.rpc.mockResolvedValue({data:1,error:null});mocks.insert.mockReturnValue({select:()=>({single:mocks.single})});mocks.single.mockResolvedValue({data:{id:'new'},error:null});});
 describe('requester screens',()=>{
   it('confirm sends all drafts without ids and opens arrivals',async()=>{mocks.rpc.mockResolvedValue({data:{sent:1,batch_id:'b',urgent:false},error:null});mount('/orders?view=list');fireEvent.click(screen.getByRole('button',{name:'Send list (1)'}));expect(screen.getByRole('button',{name:'Keep editing'})).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Send'}));await waitFor(()=>expect(mocks.rpc).toHaveBeenCalledWith('send_request_list',{_property_id:'h'}));await waitFor(()=>expect(screen.getByRole('heading',{name:'On the way'})).toBeTruthy());});
   it('failed send keeps list and offers retry',async()=>{mocks.rpc.mockResolvedValueOnce({data:null,error:{message:'offline'}});mount('/orders?view=list');fireEvent.click(screen.getByRole('button',{name:'Send list (1)'}));fireEvent.click(screen.getByRole('button',{name:'Send'}));await screen.findByRole('alert');expect(screen.getByRole('button',{name:'Retry'})).toBeTruthy();expect(screen.getByText('Soap × 2')).toBeTruthy();});
@@ -28,3 +28,9 @@ describe('requester screens',()=>{
   it('Got everything sends every item in the group',async()=>{mocks.rows=[row('1','me',{status:'ordered',order_id:'o'}),row('2','colleague',{status:'ordered',order_id:'o'})];mount('/orders?view=way');fireEvent.click(screen.getByRole('button',{name:'Everything arrived'}));await waitFor(()=>expect(mocks.rpc).toHaveBeenCalledWith('confirm_items_received',{_ids:['1','2']}));});
   it('Spanish requester navigation',()=>{mocks.es=true;mount();for(const label of ['Pedir','Biblioteca','Mi lista','En camino'])expect(screen.getByRole('button',{name:new RegExp(label)})).toBeTruthy();});
 });
+
+it('without Add, Request and library add controls are hidden while browsing stays available',()=>{
+ mocks.add=false;const home=mount();expect(screen.queryByRole('button',{name:/^Request/})).toBeNull();expect(screen.getByRole('button',{name:/Library/})).toBeTruthy();home.unmount();
+ mount('/orders?view=library');expect(screen.getByText('Soap')).toBeTruthy();expect(screen.queryByRole('button',{name:'Add Soap'})).toBeNull();
+});
+it('without Add a request shortcut returns to the tile home',()=>{mocks.add=false;mount('/orders?view=request');expect(screen.getByRole('button',{name:/Library/})).toBeTruthy();expect(screen.queryByRole('button',{name:'Add to my list'})).toBeNull();});

@@ -39,9 +39,10 @@ type StaffProfileRow = { id: string; full_name: string | null; avatar_url: strin
 const PLANNED_FULL_COLS = "id, title, description, vendor_id, property_id, assigned_to, date_type, scheduled_date, scheduled_time, scheduled_month, scheduled_year, reminder_days, recurrence_months, status, last_service_date, calendar_event_id, created_by, created_at, updated_at";
 
 export function MaintenanceSection() {
-  const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit } = usePermissions();
+  const { isAdmin, isManager, isMasterAdmin, isFamily, userId, assignedPropertyIds, canEdit, canAdd } = usePermissions();
   const { t, language } = useLanguage();
-  const canManage = isMasterAdmin || isAdmin || isManager || canEdit("maintenance");
+  const canManage = canEdit("maintenance");
+  const canReport = canAdd("maintenance");
   const [activeTab, setActiveTab] = useLocalStorage<MaintenanceTab>("maintenance_tab", "repairs");
   // Pass scoped property IDs to the hook so non-admins only fetch their properties server-side
   const scopedPropertyIds = isMasterAdmin ? undefined : assignedPropertyIds;
@@ -443,10 +444,10 @@ export function MaintenanceSection() {
               {openIssues.length} {openIssues.length !== 1 ? t("openIssuesPlural") : t("openIssues")}
             </p>
           </div>
-          <button onClick={() => { setModalOpen(true); setEditIssue(null); }}
+          {canReport && <button onClick={() => { setModalOpen(true); setEditIssue(null); }}
             className="flex items-center gap-2 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
             <Plus size={14} /> {t("reportButton")}
-          </button>
+          </button>}
         </div>
 
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide">
@@ -476,7 +477,7 @@ export function MaintenanceSection() {
           </div>
         )}
 
-        <IssueModal open={modalOpen} onClose={() => { setModalOpen(false); setEditIssue(null); }} onSave={editIssue ? handleEdit : handleCreate}
+        <IssueModal open={modalOpen && (editIssue ? canManage : canReport)} onClose={() => { setModalOpen(false); setEditIssue(null); }} onSave={editIssue ? handleEdit : handleCreate}
           initial={editIssue ?? undefined}
           categories={categories} onCategoryAdded={fetchIssues}
           properties={properties} profiles={profiles}
@@ -484,7 +485,7 @@ export function MaintenanceSection() {
           mode={editIssue ? "edit" : "create"} />
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
-            onEdit={openIssueEditor}
+            onEdit={canManage ? openIssueEditor : undefined}
             categories={categories} />
         )}
       </div>
@@ -502,10 +503,10 @@ export function MaintenanceSection() {
               {openCount} {openCount !== 1 ? t("openIssuesPlural") : t("openIssues")}
             </p>
           </div>
-          <button onClick={() => { setModalOpen(true); setEditIssue(null); }}
+          {canReport && <button onClick={() => { setModalOpen(true); setEditIssue(null); }}
             className="flex items-center gap-2 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
             <Plus size={14} /> {t("reportButton")}
-          </button>
+          </button>}
         </div>
 
         {/* Repairs / Planned tabs */}
@@ -564,7 +565,7 @@ export function MaintenanceSection() {
           />
         )}
 
-        <IssueModal open={modalOpen} onClose={() => { setModalOpen(false); setEditIssue(null); }}
+        <IssueModal open={modalOpen && (editIssue ? canManage : canReport)} onClose={() => { setModalOpen(false); setEditIssue(null); }}
           onSave={editIssue ? handleEdit : handleCreate}
           initial={editIssue ?? undefined}
           categories={categories} onCategoryAdded={fetchIssues}
@@ -573,9 +574,7 @@ export function MaintenanceSection() {
           mode={editIssue ? "edit" : "create"} />
         {detailIssue && (
           <IssueDetailDrawer issue={detailIssue} onClose={() => setDetailIssue(null)}
-            onEdit={detailIssue.reported_by === userId && detailIssue.status === "reported"
-              ? openIssueEditor
-              : undefined}
+            onEdit={canManage ? openIssueEditor : undefined}
             categories={categories} />
         )}
       </div>
@@ -632,10 +631,10 @@ export function MaintenanceSection() {
                   className={cn("p-2 rounded-lg border border-border hover:bg-muted transition-colors", loading ? "text-gold" : "text-muted-foreground")}>
                   <RefreshCw size={15} className={cn(loading && "animate-spin")} />
                 </button>
-                <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
+                {canReport && <button onClick={() => { setEditIssue(null); setModalOpen(true); }}
                   className="flex items-center gap-1.5 bg-gold/90 hover:bg-gold text-charcoal text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
                   <Plus size={14} /> {t("reportIssueTitle")}
-                </button>
+                </button>}
               </>
             ) : (
               <button onClick={() => { setEditPlanned(null); setPlannedModalOpen(true); }}
@@ -1015,7 +1014,7 @@ export function MaintenanceSection() {
 
       {/* ─── Shared modals ─── */}
       <IssueModal
-        open={modalOpen}
+        open={modalOpen && (editIssue ? canManage : canReport)}
         onClose={() => { setModalOpen(false); setEditIssue(null); }}
         onSave={editIssue ? handleEdit : handleCreate}
         initial={editIssue ?? undefined}
@@ -1031,7 +1030,7 @@ export function MaintenanceSection() {
         <IssueDetailDrawer
           issue={detailIssue}
           onClose={() => setDetailIssue(null)}
-          onEdit={openIssueEditor}
+          onEdit={canManage ? openIssueEditor : undefined}
           onStatusChange={canManage ? handleStatusChange : undefined}
           onArchiveToggle={canManage ? handleArchiveToggle : undefined}
           onDelete={(isMasterAdmin || isAdmin) ? async (id) => { await deleteIssue(id); setDetailIssue(null); } : undefined}
@@ -1040,7 +1039,7 @@ export function MaintenanceSection() {
       )}
 
       <PlannedMaintenanceModal
-        open={plannedModalOpen}
+        open={plannedModalOpen && canManage}
         onClose={() => {
           setPlannedModalOpen(false);
           setEditPlanned(null);

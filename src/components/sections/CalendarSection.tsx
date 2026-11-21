@@ -1257,6 +1257,8 @@ function RightPanel({
 
 // ─── Main CalendarSection ─────────────────────────────────────────────────────
 
+export function canSeeConstruction(canSee: (section: string) => boolean) { return canSee("timeline"); }
+
 export function CalendarSection() {
   const { isMasterAdmin, isAdmin, isManager, isFamily, userId, level, canSee, assignedPropertyIds } = usePermissions();
   const { setActiveSection, setPendingMaintenanceIssueId, setPendingPlannedMaintenanceEntryId, setMaintenanceReturnSection } = useNavigation();
@@ -1633,7 +1635,7 @@ export function CalendarSection() {
               if (key === "maintenance") return canSee("calendar-maintenance");
               if (key === "deliveries") return canSee("calendar-deliveries");
               if (key === "travel") return canSee("calendar-travel");
-              if (key === "construction") return canSee("calendar-construction");
+              if (key === "construction") return canSeeConstruction(canSee);
               return true;
             })
             .map(([key, cfg]) => {

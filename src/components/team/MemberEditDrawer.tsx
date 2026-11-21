@@ -19,10 +19,11 @@ import {
   type TeamMember, type Property, type Level, type Department, type AppRole, type SectionPermissions,
 } from "./teamConstants";
 import {
-  accessGroups, sectionInfo, canHaveClock, timeSettingWrite, payFromSetting, missingRate, withClockShortcut, parseContractNumber, CURRENCIES, ROUNDING_CHOICES, type TimeSetting, type PayEdit, type PayBasis, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
+  accessGroups, sectionInfo, levelsForSection, setSectionLevel, accessLevelOf, type AccessLevel, canHaveClock, timeSettingWrite, payFromSetting, missingRate, withClockShortcut, parseContractNumber, CURRENCIES, ROUNDING_CHOICES, type TimeSetting, type PayEdit, type PayBasis, togglePermission, setGroup, groupOnCount, sectionsOn, switchesOn,
   buildPermissionRows, allowedQuickActions, isValidEmail, type PermField,
   invalidateTimeSettings,
 } from "./memberAccess";
+import { CHILD_SECTIONS } from "@/lib/accessLevels";
 import { ALL_QUICK_ACTIONS } from "./teamConstants";
 import { cn } from "@/lib/utils";
 import { LoginEmailRow, canChangeLoginEmail } from "./LoginEmailRow";
@@ -52,8 +53,34 @@ function Field({ label, children, wide }: { label: string; children: React.React
   );
 }
 
-/** Shared fixed width for the Access tab See/Change/Alerts heading and switch columns. */
+/** Alerts and roster extras retain their shared column alignment. */
 const ACCESS_COL = "w-[4.75rem] shrink-0";
+const LEVEL_COL = "w-28 shrink-0";
+const LEVEL_LABELS: Record<AccessLevel, [string, string]> = {
+  off: ["Off", "Desactivado"], view: ["View", "Ver"], add: ["Add", "Añadir"], manage: ["Manage", "Gestionar"],
+};
+const LEVEL_DESCRIPTIONS: Record<AccessLevel, [string, string]> = {
+  off: ["No access", "Sin acceso"], view: ["See entries", "Ver entradas"],
+  add: ["View and report new ones", "Ver y registrar nuevas entradas"],
+  manage: ["Everything, including edit, assign and schedule", "Todo, incluso editar, asignar y programar"],
+};
+function AccessLevelControl({ section, name, value, isEN, disabled, onChange }: {
+  section: string; name: string; value: AccessLevel; isEN: boolean; disabled: boolean; onChange: (v: AccessLevel) => void;
+}) {
+  const options = levelsForSection(section);
+  const viewOnly = options.length === 2;
+  const label = (v: AccessLevel) => v === "view" && viewOnly ? (isEN ? "View only" : "Solo ver") : LEVEL_LABELS[v][isEN ? 0 : 1];
+  return <DropdownMenu><DropdownMenuTrigger asChild>
+    <Button variant="outline" disabled={disabled} aria-label={`${name} ${isEN ? "access level" : "nivel de acceso"}`}
+      className="w-full min-h-11 h-auto px-2 py-1 gap-1 whitespace-normal text-sm bg-charcoal-light border-cream/20 text-cream">
+      <span className="min-w-0 break-words">{label(value)}</span><ChevronDown size={14} className="shrink-0" />
+    </Button>
+  </DropdownMenuTrigger><DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
+    {options.map(v => <DropdownMenuItem key={v} onSelect={() => onChange(v)} className="min-h-11 flex-col items-start whitespace-normal">
+      <span className="font-semibold">{label(v)}</span><span className="text-xs text-muted-foreground break-words">{LEVEL_DESCRIPTIONS[v][isEN ? 0 : 1]}</span>
+    </DropdownMenuItem>)}
+  </DropdownMenuContent></DropdownMenu>;
+}
 
 export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAdmin, onClose, onSaved, onDeleted, onArchive, initialTab = "details" }: {
   member: TeamMember;
@@ -155,7 +182,7 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
   }
   const savedQuickActions = withClockShortcut(quickActions, showClock && clockOn);
   const draftCount = draftWeeksOn ? 1 : 0;
-  const switchCount = switchesOn(perms) + clockCounts + (isSchedulable ? 1 : 0) + (isAdminRole && !(perms["staff-schedule"]?.view && perms["staff-schedule"]?.see_drafts) ? 1 : 0);
+  const switchCount = sectionsOn(perms) + Object.values(perms).filter(p => p?.view && p.notifications).length + clockCounts + (isSchedulable ? 1 : 0) + draftCount;
   const accessCount = sectionsOn(perms) + (isSchedulable ? 1 : 0) + draftCount;
   const nothingOn = switchCount === 0;
   const canInvite = !!fullName.trim() && isValidEmail(draftEmail);
@@ -614,9 +641,8 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               {/* Group headers: one group open at a time */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {visible.map(g => {
-                  const hasClock = g.key === "schedule" && showClock;
-                  const on = groupOnCount(perms, g.sections) + (hasClock && clockOn ? 1 : 0) + (g.key === "schedule" ? (isSchedulable ? 1 : 0) + draftCount : 0);
-                  const total = g.sections.length + (hasClock ? 1 : 0) + (g.key === "schedule" ? 1 + (perms["staff-schedule"]?.view || isAdminRole ? 1 : 0) : 0);
+                  const on = groupOnCount(perms, g.sections);
+                  const total = g.sections.length;
                   const open = openGroup === g.key;
                   return (
                     <div key={g.key} className={cn("flex items-center gap-1 rounded-lg border pr-1.5 min-w-0",
@@ -634,25 +660,27 @@ export function MemberEditDrawer({ member, properties, isEN, canEdit, isMasterAd
               </div>
               <div className="flex items-center gap-x-1 px-2 border-x border-transparent text-[0.8125rem] leading-tight uppercase tracking-normal text-muted-foreground">
                 <span className="flex-1 min-w-0 normal-case tracking-normal text-xs">{isEN ? "Home and Profile: always on" : "Inicio y Perfil: siempre activo"}</span>
-                {current && [isEN ? "See" : "Ver", isEN ? "Change" : "Editar", isEN ? "Alerts" : "Alertas"].map(h => <span key={h} data-testid="access-col-head" className={cn(ACCESS_COL, "text-center break-words")}>{h}</span>)}
+                {current && <><span className={cn(LEVEL_COL, "text-center break-words")}>{isEN ? "Level" : "Nivel"}</span><span className={cn(ACCESS_COL, "text-center break-words")}>{isEN ? "Alerts" : "Alertas"}</span></>}
               </div>
               {current ? (
                 <div className="rounded-lg border border-charcoal-light px-2">
                   {current.sections.map(key => {
                     const info = sectionInfo(key);
-                    const sp = perms[key];
+                    const parent = CHILD_SECTIONS[key];
+                    const parentOff = !!parent && !perms[parent]?.view;
+                    const sp = parentOff ? undefined : perms[key];
                     const name = isEN ? info.label : info.labelEs;
                     return (
                       <div key={key}>
-                        <div className="flex items-center gap-x-1 min-h-10 sm:min-h-8">
-                          <span className={cn("flex-1 min-w-0 truncate text-sm", sp?.view ? "text-cream" : "text-cream/60")}>{name}</span>
-                          {(["view", "edit", "notifications"] as PermField[]).map(f => (
-                            <span key={f} data-testid="access-col" className={cn(ACCESS_COL, "flex justify-center")}>
-                              <Switch checked={!!sp?.[f]} disabled={!canEdit || (f === "edit" && !info.hasEdit)}
-                                aria-label={`${name} ${f === "view" ? (isEN ? "see" : "ver") : f === "edit" ? (isEN ? "change" : "editar") : (isEN ? "alerts" : "alertas")}`}
-                                className={switchCls} onCheckedChange={v => toggle(key, f, v)} />
-                            </span>
-                          ))}
+                        <div className="flex items-center gap-x-1 min-h-11 py-1">
+                          <span className={cn("flex-1 min-w-0 break-words text-sm", parent && "pl-3", sp?.view ? "text-cream" : "text-cream/60")}>{name}</span>
+                          <span className={cn(LEVEL_COL, "flex justify-center")}>
+                            {parent ? <Switch checked={!!sp?.view} disabled={!canEdit || parentOff} aria-label={`${name} ${isEN ? "see" : "ver"}`} className={switchCls} onCheckedChange={v => toggle(key, "view", v)} />
+                              : <AccessLevelControl section={key} name={name} value={levelsForSection(key).includes(accessLevelOf(sp)) ? accessLevelOf(sp) : sp?.view ? "view" : "off"} isEN={isEN} disabled={!canEdit} onChange={v => setPerms(prev => setSectionLevel(prev, key, v))} />}
+                          </span>
+                          <span className={cn(ACCESS_COL, "flex justify-center")}>
+                            <Switch checked={!!sp?.notifications} disabled={!canEdit || parentOff} aria-label={`${name} ${isEN ? "alerts" : "alertas"}`} className={switchCls} onCheckedChange={v => toggle(key, "notifications", v)} />
+                          </span>
                         </div>
                         {key === "staff-schedule" && (sp?.view || isAdminRole) && (
                           <div className="border-t border-charcoal-light py-1.5">

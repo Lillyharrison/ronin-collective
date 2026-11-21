@@ -21,7 +21,7 @@ async function writeSectionPermissionRows(
   // deno-lint-ignore no-explicit-any
   client: any,
   userId: string,
-  rows: Array<{ section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts?: boolean; scope?: "own" | "department" | "all" | null }> | null | undefined,
+  rows: Array<{ section: string; can_view: boolean; can_add?: boolean; can_edit: boolean; notifications: boolean; see_drafts?: boolean; scope?: "own" | "department" | "all" | null }> | null | undefined,
   deleteSections?: unknown,
 ): Promise<void> {
   // Sections with every switch off are removed rather than stored as empty rows.
@@ -36,7 +36,8 @@ async function writeSectionPermissionRows(
     user_id: userId,
     section: r.section,
     can_view: r.can_view === true,
-    can_edit: r.can_edit === true,
+    can_add: r.can_view === true && (r.can_add === true || r.can_edit === true),
+    can_edit: r.can_view === true && r.can_edit === true,
     notifications: r.notifications === true,
     see_drafts: r.section === "staff-schedule" && r.can_view === true && r.see_drafts === true,
     scope: ["own", "department", "all"].includes(r.scope ?? "") ? r.scope : null,

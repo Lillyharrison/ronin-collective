@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const m = vi.hoisted(() => ({ change: false, role: 'staff', count: 3 }));
-vi.mock('@/hooks/usePermissions', () => ({ usePermissions: () => ({ userId: 'me', isAdmin: m.role !== 'staff', isMasterAdmin: m.role === 'master_admin', isManager: false, canEdit: (s: string) => s === 'orders' && m.change }) }));
+vi.mock('@/hooks/usePermissions', () => ({ usePermissions: () => ({ userId: 'me', isAdmin: m.role !== 'staff', isMasterAdmin: m.role === 'master_admin', isManager: false, canAdd: (s: string) => s === 'orders' && m.change, canEdit: (s: string) => s === 'orders' && m.change }) }));
 vi.mock('@/contexts/LanguageContext', () => ({ useLanguage: () => ({ language: 'es' }) }));
 vi.mock('@/contexts/NavigationContext', () => ({ useNavigation: () => ({ registerBackHandler: () => {}, activePropertyId: null, setActivePropertyId: () => {} }) }));
 vi.mock('@/components/ContentTranslation', () => ({ useContentTranslation: () => ({ text: (s: string) => s }), TranslationNotice: () => null }));

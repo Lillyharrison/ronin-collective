@@ -37,7 +37,8 @@ const STATUS_LABEL: Record<string, { en: string; es: string; cls: string }> = {
 };
 
 export function FamilyTasksView() {
-  const { userId } = usePermissions();
+  const { userId, canAdd } = usePermissions();
+  const canSend = canAdd("tasks");
   const { language } = useLanguage();
   const isL = language === "es";
   const { pendingTaskIdRef, setPendingTaskId } = useNavigation();
@@ -168,6 +169,7 @@ export function FamilyTasksView() {
     staff.find(s => s.id === id)?.full_name ?? (isL ? "Sin asignar" : "Unassigned");
 
   const submit = async () => {
+    if (!canSend) return;
     if (!what.trim()) { toast.error(isL ? "Escribe la tarea" : "Please describe the task"); return; }
     if (!assignedTo) { toast.error(isL ? "Elige a quién enviar" : "Please choose who to send it to"); return; }
     setSaving(true);
@@ -211,7 +213,7 @@ export function FamilyTasksView() {
   return (
     <div className="px-4 py-4 space-y-5">
       {/* Send a task */}
-      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+      {canSend && <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
         <p className="text-sm font-semibold text-foreground">
           {isL ? "Enviar una tarea" : "Send a task"}
         </p>
@@ -256,7 +258,7 @@ export function FamilyTasksView() {
         >
           <Send size={15} /> {saving ? (isL ? "Enviando…" : "Sending…") : (isL ? "Enviar tarea" : "Send task")}
         </button>
-      </div>
+      </div>}
 
       <TranslationNotice value={content}/>
       {/* Sent tasks */}

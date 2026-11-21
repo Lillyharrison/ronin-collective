@@ -66,7 +66,7 @@ export function NotificationRecordDialog({ target, onClose, onEditPlanned }: {
           <div className="flex-1 min-h-0 overflow-y-auto p-5">
             {isPending ? <div role="status" aria-label={es ? "Cargando" : "Loading"} className="space-y-5"><Skeleton className="h-8 w-3/4" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
             : !data ? <p className="text-base">{es ? "Este elemento ya no existe o ya no tienes acceso a él." : "This item no longer exists, or you no longer have access to it."}</p>
-            : data.type === "planned_maintenance" ? <PlannedMaintenanceDetail entry={data.record} onEdit={canEdit("maintenance") || isManager || isAdmin || isMasterAdmin ? () => onEditPlanned(data.record.id) : undefined} />
+            : data.type === "planned_maintenance" ? <PlannedMaintenanceDetail entry={data.record} onEdit={canEdit("maintenance") ? () => onEditPlanned(data.record.id) : undefined} />
             : data.type === "task" ? <div className="space-y-5">
               {!target.notification && <EntryAcknowledgement kind="task" entry={data.record} />}
               <dl className="grid gap-5">

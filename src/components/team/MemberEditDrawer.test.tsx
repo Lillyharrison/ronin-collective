@@ -86,16 +86,16 @@ describe("clock row in Schedule", () => {
   it("shows for staff and counts in the group", () => {
     openSchedule(draft);
     expect(screen.getByTestId("clock-row")).toHaveTextContent("Clock in and out on site");
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 3 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 1 on");
     fireEvent.click(screen.getByRole("switch", { name: "Clock in and out on site" }));
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("1 of 3 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 1 on");
     expect(screen.getByTestId("member-status")).toHaveTextContent("1 switch on");
     expect(screen.getByTestId("clock-no-rate")).toBeTruthy();
   });
   it("is hidden for managers", () => {
     openSchedule({ ...draft, level: "manager", role: "manager" as never });
     expect(screen.queryByTestId("clock-row")).toBeNull();
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 2 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 1 on");
   });
 });
 
@@ -149,7 +149,7 @@ describe("roster setup", () => {
     updates.length = 0; open();
     expect(screen.getByRole("switch", { name: "Appears on the roster" })).not.toBeChecked();
     fireEvent.click(screen.getByRole("switch", { name: "Appears on the roster" }));
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("1 of 3 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("0 of 1 on");
     expect(screen.getByTestId("member-status")).toHaveTextContent("1 switch on");
     fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
     await vi.waitFor(() => expect(updates.some(v => (v as { is_schedulable?: boolean }).is_schedulable === true)).toBe(true));
@@ -157,9 +157,10 @@ describe("roster setup", () => {
   it("only shows draft-week switch with See, counts and saves it on the schedule row", async () => {
     invoke.mockClear(); open();
     expect(screen.queryByRole("switch", { name: "Can see draft weeks" })).toBeNull();
-    fireEvent.click(screen.getByRole("switch", { name: "Staff Schedule see" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Staff Schedule access level" }), { key: "ArrowDown" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^View/ }));
     fireEvent.click(screen.getByRole("switch", { name: "Can see draft weeks" }));
-    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("2 of 4 on");
+    expect(screen.getByRole("button", { name: /^Schedule/ })).toHaveTextContent("1 of 1 on");
     expect(screen.getByTestId("member-status")).toHaveTextContent("2 switches on");
     fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
     await vi.waitFor(() => expect(invoke).toHaveBeenCalled());
@@ -187,5 +188,22 @@ describe("roster setup", () => {
     }
     fireEvent.click(screen.getByRole("button", { name: /Save draft/ }));
     await vi.waitFor(() => expect(updates.at(-1)).toMatchObject({ contracted_days_per_week: null, contracted_hours_per_week: null, annual_leave_days: null }));
+  });
+});
+
+describe("Access levels and child layers", () => {
+  it("offers Maintenance levels and clears/disables children when parent is Off", async () => {
+    render(<MemberEditDrawer member={{...draft, section_permissions:{maintenance:{view:true,add:true,edit:true,notifications:true},"maintenance-repairs":{view:true,edit:false,notifications:true}}}} properties={[]} isEN canEdit isMasterAdmin onClose={vi.fn()} onSaved={vi.fn()} onDeleted={vi.fn()}/>);
+    fireEvent.click(screen.getByRole("tab",{name:/Access/}));fireEvent.click(screen.getByRole("button",{name:/^Maintenance\s*\d/}));
+    fireEvent.keyDown(screen.getByRole("button",{name:"Maintenance access level"}),{key:"ArrowDown"});
+    expect(await screen.findByRole("menuitem",{name:/^Add/})).toBeTruthy();expect(screen.getByRole("menuitem",{name:/^Manage/})).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem",{name:/^Off/}));
+    for(const name of ["Repairs see","Repairs alerts","Planned Maintenance see","Planned Maintenance alerts"]){const control=screen.getByRole("switch",{name});expect(control).toBeDisabled();expect(control).not.toBeChecked();}
+    expect(screen.queryByRole("button",{name:"Repairs access level"})).toBeNull();
+    expect(screen.getByRole("button",{name:/^Maintenance\s*\d/})).toHaveTextContent("0 of 3 on");
+  });
+  it("Calendar has child See/Alerts but no Construction layer",()=>{
+    show();fireEvent.click(screen.getByRole("tab",{name:/Access/}));fireEvent.click(screen.getByRole("button",{name:/^Calendar/}));
+    expect(screen.queryByText("Construction / Design")).toBeNull();expect(screen.queryByRole("button",{name:"Birthdays access level"})).toBeNull();expect(screen.getByRole("switch",{name:"Birthdays see"})).toBeDisabled();
   });
 });

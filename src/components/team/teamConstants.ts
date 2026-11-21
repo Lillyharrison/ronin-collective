@@ -7,6 +7,7 @@ export type AppRole = "master_admin" | "admin" | "manager" | "staff" | "principa
 
 export interface SectionPerm {
   view: boolean;
+  add?: boolean;
   edit: boolean;
   notifications: boolean;
   see_drafts?: boolean;
@@ -73,7 +74,6 @@ export const ALL_SECTIONS: { key: string; label: string; labelEs: string; hasEdi
   { key: "calendar-maintenance", label: "   ↳ Maintenance",          labelEs: "   ↳ Mantenimiento",          hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-deliveries",  label: "   ↳ Deliveries",           labelEs: "   ↳ Entregas",               hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "calendar-travel",      label: "   ↳ Travel",               labelEs: "   ↳ Viajes",                 hasEdit: false, isFeature: true, isCalendarSub: true },
-  { key: "calendar-construction",label: "   ↳ Construction / Design",labelEs: "   ↳ Construcción / Diseño",  hasEdit: false, isFeature: true, isCalendarSub: true },
   { key: "family-calendar",    label: "Family Calendar",     labelEs: "Calendario Familiar", hasEdit: false },
   { key: "timeline",           label: "Construction Timeline", labelEs: "Cronograma de Construcción", hasEdit: true  },
   { key: "staff-schedule",     label: "Staff Schedule",      labelEs: "Horario del Personal", hasEdit: true, hasScope: true },

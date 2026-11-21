@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   section: vi.fn(), clockSheet: vi.fn(), timesheet: vi.fn(), planned: vi.fn(), repair: vi.fn(), navigate: vi.fn(), rpc: vi.fn(),
   deleted: vi.fn(), updated: vi.fn(), rpcError: null as unknown,
-  notifications: [] as Record<string, unknown>[], language: "en", assignedPropertyIds: [] as string[],
+  add: false, shortcuts: [] as string[], notifications: [] as Record<string, unknown>[], language: "en", assignedPropertyIds: [] as string[],
 }));
 vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ language: mocks.language, t: (key: string) => key }) }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => mocks.navigate }));
@@ -14,8 +14,8 @@ vi.mock("@/contexts/NavigationContext", () => ({ useNavigation: () => ({
   setClockSheetRequested: mocks.clockSheet,
 }) }));
 vi.mock("@/hooks/usePermissions", () => ({
-  usePermissions: () => ({ userId: "tester", fullName: "Tester", isAdmin: false, isMasterAdmin: false, canEdit: () => false,
-    assignedPropertyIds: mocks.assignedPropertyIds, canSee: () => false, loading: false, error: null }),
+  usePermissions: () => ({ userId: "tester", fullName: "Tester", isAdmin: false, isMasterAdmin: false, canEdit: () => false, canAdd: () => mocks.add,
+    assignedPropertyIds: mocks.assignedPropertyIds, canSee: () => true, loading: false, error: null }),
   usePermissionsControl: () => ({ retry: vi.fn() }),
 }));
 vi.mock("@/hooks/useScopedProperties", () => ({ useScopedProperties: () => ({ properties: [] }) }));
@@ -36,7 +36,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
     const chain = {
       select: () => chain, eq: () => chain, in: () => chain, gte: () => chain, lt: () => chain,
       not: () => chain, order: () => chain, limit: () => chain,
-      maybeSingle: () => Promise.resolve({ data: null }),
+      maybeSingle: () => Promise.resolve({ data: table === "profiles" ? {quick_actions:mocks.shortcuts} : null }),
       delete: () => { op = "delete"; mocks.deleted(table); return chain; },
       update: (patch: unknown) => { op = "update"; mocks.updated(table, patch); return chain; },
       then: (resolve: (value: unknown) => void) => Promise.resolve(result()).then(resolve),
@@ -50,7 +50,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
 import { Dashboard } from "./Dashboard";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 
-beforeEach(() => { vi.clearAllMocks(); mocks.rpcError = null; mocks.language = "en"; });
+beforeEach(() => { vi.clearAllMocks(); mocks.rpcError = null; mocks.language = "en"; mocks.add=false; mocks.shortcuts=[]; });
 afterEach(cleanup);
 function notice(type = "task", action: string | null = null) {
   mocks.notifications = [{ id: "notice-id", title: "Test notice", body: "Details", type: "info", is_read: false,
@@ -159,4 +159,9 @@ describe("dashboard notifications", () => {
     await waitFor(() => expect(mocks.clockSheet).toHaveBeenCalledWith(true));
     expect(mocks.section).toHaveBeenCalledWith("dashboard");
   });
+});
+it('creation shortcuts require Add while normal Orders remains visible',async()=>{
+ mocks.shortcuts=['reportIssue','requestItem','orders'];const {rerender}=render(<Dashboard/>);
+ await screen.findByRole('button',{name:'orders'});expect(screen.queryByRole('button',{name:'reportIssue'})).toBeNull();expect(screen.queryByRole('button',{name:'Request something'})).toBeNull();
+ mocks.add=true;rerender(<Dashboard/>);expect(screen.getByRole('button',{name:'reportIssue'})).toBeTruthy();expect(screen.getByRole('button',{name:'Request something'})).toBeTruthy();
 });

@@ -102,14 +102,15 @@ export function MeetTeamSection() {
     const userIds = profiles.map(p => p.id);
     const { data: permRows } = await supabase
       .from("user_section_permissions")
-      .select("user_id, section, can_view, can_edit, notifications, see_drafts, scope")
+      .select("user_id, section, can_view, can_add, can_edit, notifications, see_drafts, scope")
       .in("user_id", userIds).limit(10000);
 
     const permsByUser: Record<string, SectionPermissions> = {};
-    for (const row of (permRows ?? []) as Array<{ user_id: string; section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }>) {
+    for (const row of (permRows ?? []) as Array<{ user_id: string; section: string; can_view: boolean; can_add: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }>) {
       if (!permsByUser[row.user_id]) permsByUser[row.user_id] = {};
       permsByUser[row.user_id][row.section] = {
         view: row.can_view,
+        add: row.can_add,
         edit: row.can_edit,
         notifications: row.notifications,
         see_drafts: row.see_drafts,

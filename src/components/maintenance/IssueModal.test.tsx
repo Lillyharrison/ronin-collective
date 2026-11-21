@@ -1,11 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ allowed: new Set(["allowed"]) as ReadonlySet<string> | null }));
+const mocks = vi.hoisted(() => ({ add: true, manage: true, allowed: new Set(["allowed"]) as ReadonlySet<string> | null }));
 vi.mock("@/hooks/useAssignableProfileIds", () => ({ useAssignableProfileIds: () => mocks.allowed }));
-vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isAdmin: true, canEdit: () => false }) }));
+vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isAdmin: true, canAdd: () => mocks.add, canEdit: () => mocks.manage }) }));
 vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ language: "en", t: (key: string) => key }) }));
 import { IssueModal } from "./IssueModal";
-afterEach(cleanup);
+afterEach(() => { cleanup(); mocks.add = true; mocks.manage = true; });
 const originalTZ = process.env.TZ;
 afterEach(() => { process.env.TZ = originalTZ; });
 describe("repair date saves", () => {
@@ -45,4 +45,9 @@ describe("repair assignee editor", () => {
     const option = screen.getByRole("option", { name: /Previous person/ });
     expect(option.closest("select")).toHaveValue("missing");
   });
+});
+it('View cannot report, and Add cannot assign or schedule a repair',()=>{
+ mocks.add=false;const noAccess=render(<IssueModal open onClose={vi.fn()} onSave={vi.fn()} categories={[]} properties={[]} profiles={[]}/>);expect(noAccess.container).toBeEmptyDOMElement();noAccess.unmount();
+ mocks.add=true;mocks.manage=false;render(<IssueModal open onClose={vi.fn()} onSave={vi.fn()} categories={[]} properties={[]} profiles={[{id:'allowed',name:'Available',avatar:null}]}/>);
+ expect(screen.queryByText('assignTo')).toBeNull();expect(screen.queryByText('scheduledDate')).toBeNull();expect(screen.getByRole('button',{name:'save'})).toBeTruthy();
 });

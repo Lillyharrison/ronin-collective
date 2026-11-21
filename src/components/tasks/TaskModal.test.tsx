@@ -2,8 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const mocks = vi.hoisted(() => ({ update: vi.fn(), properties: [] as string[] }));
-vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isAdmin: true, assignedPropertyIds: mocks.properties }) }));
+const mocks = vi.hoisted(() => ({ add:true, update: vi.fn(), properties: [] as string[] }));
+vi.mock("@/hooks/usePermissions", () => ({ usePermissions: () => ({ userId: "tester", isAdmin: true, canAdd:()=>mocks.add, canEdit:()=>true, assignedPropertyIds: mocks.properties }) }));
 vi.mock("@/contexts/LanguageContext", () => ({ useLanguage: () => ({ language: "en" }) }));
 vi.mock("@/hooks/useAssignableProfileIds", () => ({ useAssignableProfileIds: () => null }));
 vi.mock("@/lib/notifySection", () => ({ notifyUsers: vi.fn(), notifySection: vi.fn() }));
@@ -20,7 +20,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
 import { TaskModal } from "./TaskModal";
 
 const originalTZ = process.env.TZ;
-afterEach(() => { cleanup(); vi.clearAllMocks(); process.env.TZ = originalTZ; });
+afterEach(() => { cleanup(); mocks.add=true; vi.clearAllMocks(); process.env.TZ = originalTZ; });
 it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auckland"])("task date load/save tolerates old stamps and writes plain DATE values in %s", async tz => {
   process.env.TZ = tz;
   for (const stamp of ["2026-11-23T00:00:00.000Z", "2026-11-23T00:00:00+00:00", "2026-11-10T22:28:44Z"]) {
@@ -35,4 +35,8 @@ it.each(["America/Los_Angeles", "America/New_York", "Europe/Rome", "Pacific/Auck
     await waitFor(() => expect(mocks.update).toHaveBeenLastCalledWith(expect.objectContaining({ due_date: "2026-11-24" })));
     unmount();
   }
+});
+it('new task controls are absent without Add',()=>{
+ mocks.add=false;const {container}=render(<QueryClientProvider client={new QueryClient()}><TaskModal onClose={vi.fn()} onSaved={vi.fn()}/></QueryClientProvider>);
+ expect(container).toBeEmptyDOMElement();expect(screen.queryByRole('button',{name:/Save|Publish/})).toBeNull();
 });

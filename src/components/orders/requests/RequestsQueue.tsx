@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { usePermissions } from "@/hooks/usePermissions";
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useScopedProperties } from '@/hooks/useScopedProperties';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ import { byBatch, createOrderArgs, toggleQueueSelection, urgentFirst, type House
 import { RequestThumbnail } from './RequesterOrders';
 import { useHouseRequests } from './useHouseRequests';
 export function RequestsQueue({ onCreated, onRequest }: {onCreated:(id:string)=>void;onRequest:()=>void}) {
+  const {canAdd,canEdit}=usePermissions();
   const {language}=useLanguage(); const es=language==='es';const {properties}=useScopedProperties();
   const data=useHouseRequests(null,true);const [selected,setSelected]=useState<string[]>([]);
   const [confirm,setConfirm]=useState(false);const [delivery,setDelivery]=useState('');const [busy,setBusy]=useState(false);
@@ -30,8 +32,9 @@ export function RequestsQueue({ onCreated, onRequest }: {onCreated:(id:string)=>
     if(error||!id)throw error;await data.refresh();setConfirm(false);setSelected([]);onCreated(id);
   }catch{toast.error(es?'No se pudo crear el pedido. Vuelve a intentarlo.':'Could not create the order. Please try again.');}finally{setBusy(false);}};
   const remove=async()=>{if(!cancel||busy)return;setBusy(true);try{const{data:row,error}=await supabase.from('shopping_list_items').update({status:'cancelled'}).eq('id',cancel.id).eq('status','requested').select('id').single();if(error||!row)throw error;await data.refresh();setCancel(null);}catch{toast.error(es?'No se pudo quitar.':'Could not remove.');}finally{setBusy(false);}};
+  if (!canEdit("orders")) return null;
   return <div className="px-4 py-4 pb-32 max-w-3xl mx-auto min-w-0 text-base">
-    <div className="flex items-center justify-between gap-3 mb-5"><h2 className="font-display text-2xl">{es?'Solicitudes':'Requests'} ({data.counts.requested})</h2><Button variant="outline" className="min-h-11 h-auto whitespace-normal" onClick={onRequest}>{es?'Pedir algo':'Request something'}</Button></div>
+    <div className="flex items-center justify-between gap-3 mb-5"><h2 className="font-display text-2xl">{es?'Solicitudes':'Requests'} ({data.counts.requested})</h2>{canAdd("orders")&&<Button variant="outline" className="min-h-11 h-auto whitespace-normal" onClick={onRequest}>{es?'Pedir algo':'Request something'}</Button>}</div>
     <TranslationNotice value={content}/>
     {data.isLoading&&<p>{es?'Cargando…':'Loading…'}</p>}{data.isError&&<><p role="alert">{es?'No se pudieron cargar las solicitudes.':'Could not load requests.'}</p><Button onClick={()=>{void data.refetch();}}>{es?'Reintentar':'Retry'}</Button></>}
     {!data.isLoading&&!data.isError&&!rows.length&&<p className="text-muted-foreground">{es?'No hay solicitudes pendientes.':'No requests waiting.'}</p>}

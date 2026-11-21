@@ -178,8 +178,9 @@ function KanbanColumn({ status, tasks, onTaskClick, onAddClick, isAdmin, canDrag
 // ─── Main TasksSection ────────────────────────────────────────────────────────
 export function TasksSection() {
   const { language } = useLanguage();
-  const { userId, isAdmin, isManager, isMasterAdmin, isFamily, department, assignedPropertyIds, loading: permLoading, canEdit } = usePermissions();
-  const canManageTasks = isMasterAdmin || isAdmin || isManager || canEdit("tasks");
+  const { userId, isAdmin, isManager, isMasterAdmin, isFamily, department, assignedPropertyIds, loading: permLoading, canEdit, canAdd } = usePermissions();
+  const canManageTasks = canEdit("tasks");
+  const canCreateTasks = canAdd("tasks");
   const { activePropertyId, setActivePropertyId, pendingTaskIdRef, setPendingTaskId } = useNavigation();
   const isL = language === "es";
 
@@ -337,6 +338,7 @@ export function TasksSection() {
   const activeDragTask = activeDragId ? tasks.find(t => t.id === activeDragId) : null;
 
   const openNew = (status: TaskStatus) => {
+    if (!canCreateTasks) return;
     setNewStatus(status);
     setModalTask(null);
   };
@@ -418,7 +420,7 @@ export function TasksSection() {
             {assigneeOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
         )}
-        {canManageTasks && (
+        {canCreateTasks && (
           <button
             onClick={() => openNew("pending")}
             className="flex items-center gap-1.5 bg-[hsl(var(--gold))] text-charcoal text-xs font-semibold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
@@ -486,8 +488,8 @@ export function TasksSection() {
                 status={s}
                 tasks={byStatus(s)}
                 onTaskClick={openEdit}
-                onAddClick={() => openNew(s)}
-                isAdmin={canManageTasks}
+                onAddClick={canCreateTasks ? () => openNew(s) : undefined}
+                isAdmin={canCreateTasks}
                 canDrag={canManageTasks}
               />
             ))}

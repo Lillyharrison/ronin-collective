@@ -45,4 +45,4 @@
 
 - Screen content translation batches source strings without changing edit models; successful changed translations are cached by user/source hash/language and cleared on sign-out to avoid repeat charges and cross-account reuse.
 
-- Roster work evidence excludes leave; draft visibility is separate from publishing. Saves carry see_drafts; salaried pay disables tracking per owner rules.
+- Roster uses work, not leave. Draft/publish rights stay separate. Level helpers drive editor/context; saves retain can_add/see_drafts and salaried tracking.

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { accessLevelOf, allowsAdd, type AccessLevel } from "@/lib/accessLevels";
 import { supabase } from "@/integrations/supabase/client";
 
 export type UserLevel = "principal" | "extended_family" | "manager" | "staff";
@@ -7,6 +8,7 @@ export type AppRole = "master_admin" | "admin" | "manager" | "staff" | "principa
 
 export interface SectionPermEntry {
   view: boolean;
+  add?: boolean;
   edit: boolean;
   notifications: boolean;
   see_drafts?: boolean;
@@ -28,6 +30,8 @@ export interface UserPermissions {
   sectionPermissions: Record<string, SectionPermEntry> | null;
   canSee: (section: string) => boolean;
   canEdit: (section: string) => boolean;
+  canAdd: (section: string) => boolean;
+  levelOf: (section: string) => AccessLevel;
   wantsAlerts: (section: string) => boolean;
   canSeeScheduleDrafts: boolean;
   loading: boolean;
@@ -50,7 +54,7 @@ export const BASELINE_SECTIONS = ["dashboard", "profile"] as const;
 const SECTION_ALIASES: Record<string, string> = { vendors: "contacts" };
 
 // ── localStorage cache helpers ────────────────────────────────────────────────
-const CACHE_VERSION = "v6"; // v6: explicit draft-week visibility
+const CACHE_VERSION = "v7"; // v7: explicit Add access
 const CACHE_TTL_MS  = 5 * 60 * 1000;
 
 interface PermissionsCache {
@@ -123,6 +127,8 @@ const defaultPermissions: UserPermissions = {
   sectionPermissions: null,
   canSee: () => false,
   canEdit: () => false,
+  canAdd: () => false,
+  levelOf: () => "off",
   wantsAlerts: () => false,
   canSeeScheduleDrafts: false,
   loading: true,
@@ -206,6 +212,8 @@ export function buildPermissions(
     sectionPermissions,
     canSee,
     canEdit,
+    canAdd: section => isAdmin || (!!userId && allowsAdd(explicit(section))),
+    levelOf: section => isAdmin ? "manage" : userId ? accessLevelOf(explicit(section)) : "off",
     wantsAlerts,
     canSeeScheduleDrafts: isAdmin || (!!userId && canSee("staff-schedule") && explicit("staff-schedule")?.see_drafts === true),
     loading,
@@ -225,9 +233,9 @@ async function fetchPermissionsSnapshot(userId: string) {
       .select("level, department, assigned_property_ids, full_name, avatar_url, is_schedulable")
       .eq("id", userId).maybeSingle(),
     (supabase.from("user_section_permissions" as never)
-      .select("section, can_view, can_edit, notifications, see_drafts, scope")
+      .select("section, can_view, can_add, can_edit, notifications, see_drafts, scope")
       .eq("user_id", userId).limit(200)) as unknown as Promise<{
-        data: { section: string; can_view: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }[] | null
+        data: { section: string; can_view: boolean; can_add: boolean; can_edit: boolean; notifications: boolean; see_drafts: boolean; scope: "own" | "department" | "all" | null }[] | null
       }>,
   ]);
 
@@ -245,6 +253,7 @@ async function fetchPermissionsSnapshot(userId: string) {
     for (const row of rowPerms) {
       sectionPermissions[row.section] = {
         view: row.can_view,
+        add: row.can_add,
         edit: row.can_edit,
         notifications: row.notifications,
         see_drafts: row.see_drafts,
