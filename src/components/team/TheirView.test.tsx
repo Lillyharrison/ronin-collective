@@ -49,7 +49,7 @@ describe("Their view", () => {
     expect(mock.rpc).not.toHaveBeenCalledWith("admin_delete_notifications", expect.anything());
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete selected (1)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
     await waitFor(() => expect(mock.rpc).toHaveBeenCalledWith("admin_delete_notifications", { _target: "julia", _ids: ["wrong"] }));
     await waitFor(() => expect(mock.rpc.mock.calls.filter(c => c[0] === "admin_their_view")).toHaveLength(2));
     expect(mock.success).toHaveBeenCalledWith("1 alerts deleted");
@@ -60,7 +60,7 @@ describe("Their view", () => {
     fireEvent.click(screen.getByRole("button", { name: button }));
     expect(screen.getByRole("alertdialog")).toHaveTextContent("Delete 1 alerts for Julia?");
     expect(mock.rpc).not.toHaveBeenCalledWith(rpc, args);
-    fireEvent.click(screen.getByRole("button", { name: "Delete", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
     await waitFor(() => expect(mock.rpc).toHaveBeenCalledWith(rpc, args));
   });
   it("supports manual multi-selection and deselection", async () => {
